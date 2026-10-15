@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Reparto y contadores de trabajadores — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Las órdenes de recolección distribuyen grupos por depósitos cercanos, con objetivos de dos trabajadores por mineral y tres por gas/catalizador. Las reservas incluyen viajes y entregas; las órdenes repetidas no duplican asignaciones. Los excedentes siguen recolectando y se redistribuyen al entregar si hay puestos libres. No se introdujo un límite rígido ni se modificó la velocidad de extracción.
+
+El panel muestra asignados/óptimo y cantidad restante al apuntar o seleccionar recursos, totales por base y ocupación por extractor. El gas sin extractor muestra el objetivo de tres junto al requisito de construcción. La orden contextual acepta toda la superficie del extractor. Se conserva la carga al cambiar de recurso y se buscan alternativas tras agotamiento o destrucción del extractor, respetando información explorada y rutas accesibles.
+
+- **131 comprobaciones aprobadas**: las 89 regresiones existentes, 34 comprobaciones nuevas de recolección y ocho partidas de IA. Las pruebas cubren ambas facciones, grupos, órdenes repetidas, entregas, liberación de puestos, agotamiento, extractores, cambio de carga, excedentes, rutas y privacidad bajo niebla de guerra.
+- **8/8 partidas de IA completas**, cuatro cruces de facciones por dos dificultades. Duración entre 1.028 y 1.237 segundos simulados; seis victorias de la posición 0 y dos de la posición 1. Son escenarios deterministas, no una evaluación de equilibrio competitivo.
+- **Scripts compilados y comprobación del panel aprobada en Unity Editor**: órdenes contextuales, selección de depósitos, totales de base, exceso y selección/órdenes del extractor. Se inspeccionaron las capturas del gas disponible y sin extractor; las cinco vistas estáticas usan la geometría y disposición del panel real. Registro en `TestResults/unity-harvesting.log`; capturas en `TestResults/Harvesting`. No se ejecutó una partida interactiva en el Editor.
+
+Evidencias del núcleo: `TestResults/harvesting-core.log` y `TestResults/harvesting-matches.json`. Los comandos reproducibles están en [desarrollo](development.md). No se generó APK ni ejecutable desktop. El APK 0.1.3 disponible no incluye estos cambios; falta comprobar interacción, legibilidad y rendimiento en Quest.
+
 ## Identificación de unidades — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 - Cinco siluetas por facción: recolector con carga y pinzas, explorador con aletas y sensor, infantería con escudo, tirador de arma larga y artillería de doble cañón o espina. Industrial conserva formas angulares; biológica usa cuerpos lobulados.

@@ -47,17 +47,10 @@ namespace Frontier.Core
             }
             return null;
         }
-        private void ResumeGather(EntityState worker)
-        {
-            var resource = Resources.Where(r => r.kind == "mineral" && r.remaining > 0 && Explored(worker.owner, r.position)).OrderBy(r => r.position.Distance(worker.position)).FirstOrDefault();
-            worker.path = null; worker.target = 0;
-            if (resource == null) { worker.order = CommandKind.Stop; return; }
-            worker.order = CommandKind.Gather; worker.resourceId = worker.target = resource.id; worker.depositing = worker.cargo > 0;
-        }
         private void Gather(EntityState worker)
         {
             var resource = Resources.FirstOrDefault(r => r.id == worker.resourceId);
-            if (worker.depositing || worker.cargo >= 8 || (resource != null && resource.remaining == 0 && worker.cargo > 0))
+            if (worker.depositing || worker.cargo >= 8 || (resource != null && KnownRemaining(worker.owner, resource) == 0 && worker.cargo > 0))
             {
                 worker.depositing = true;
                 var hq = Entities.Values.Where(e => e.owner == worker.owner && e.complete && Type(e).role == "hq").OrderBy(e => Center(e).Distance(worker.position)).FirstOrDefault();
@@ -66,12 +59,13 @@ namespace Frontier.Core
                 {
                     if (worker.cargoKind == "catalyst") Players[worker.owner].catalyst += worker.cargo; else Players[worker.owner].minerals += worker.cargo;
                     worker.cargo = 0; worker.depositing = false; worker.path = null;
+                    if (resource != null) RebalanceGather(worker, resource);
                 }
                 return;
             }
-            if (resource == null || resource.remaining <= 0) { ResumeGather(worker); return; }
-            if (resource.kind == "catalyst" && !Extractor(worker.owner, resource)) { worker.order = CommandKind.Stop; return; }
-            if (Travel(worker, resource.position, resource.kind == "catalyst" ? 3f : 1.5f) && Tick % 8 == worker.id % 8)
+            if (resource == null || KnownRemaining(worker.owner, resource) == 0) { ResumeGather(worker); return; }
+            if (resource.kind == "catalyst" && !Extractor(worker.owner, resource)) { ResumeGather(worker); return; }
+            if (Travel(worker, resource.position, GatherRange(resource)) && resource.remaining > 0 && Tick % 8 == worker.id % 8)
             { resource.remaining--; worker.cargo++; worker.cargoKind = resource.kind; }
         }
         private void Repair(EntityState worker)
@@ -154,7 +148,8 @@ namespace Frontier.Core
             }
             foreach (var entry in memories[player]) if (!visible.Any(e => e.id == entry.Key))
             { var e = entry.Value; visible.Add(new VisibleEntity { id = e.id, owner = e.owner, definition = e.definition, position = e.position, health = e.health, complete = e.complete, progress = e.progress, remembered = true }); }
-            var knownResources = Resources.Where(r => Explored(player, r.position)).Select(r => new ResourceState { id = r.id, definition = r.definition, kind = r.kind, position = r.position, remaining = Visible(player, r.position) ? r.remaining : resourceMemories[player].TryGetValue(r.id, out var remembered) ? remembered : -1 }).ToArray();
+            var assignments = GatherAssignments(player, Array.Empty<int>());
+            var knownResources = Resources.Where(r => Explored(player, r.position)).Select(r => ObserveResource(player, r, assignments)).ToArray();
             var upgrades = new List<string>(); if (Players[player].attackLevel > 0) upgrades.Add("attack"); if (Players[player].armorLevel > 0) upgrades.Add("armor");
             return new PlayerView { player = player, tick = Tick, winner = Winner, faction = Players[player].faction, minerals = Players[player].minerals, catalyst = Players[player].catalyst,
                 supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray() };

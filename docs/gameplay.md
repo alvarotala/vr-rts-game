@@ -6,6 +6,16 @@ Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y c
 
 Luego iniciar la partida. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
 
+### Recolección y ocupación de depósitos
+
+El reparto automático usa un objetivo de **2 trabajadores por depósito de mineral** y **3 por depósito de gas/catalizador con extractor terminado**. Al dar una orden a un grupo, cada trabajador reserva su puesto antes de asignar el siguiente. Si el depósito indicado ya está al nivel óptimo, buscan otro cercano del mismo recurso, explorado y accesible. Los trabajadores que viajan o entregan carga conservan su puesto.
+
+Si todos los depósitos cercanos están al nivel óptimo, los trabajadores adicionales siguen recolectando y el indicador muestra **exceso**; estos valores son objetivos de reparto, no un límite rígido de asignación ni un cambio de la velocidad de extracción. Al terminar una entrega, los excedentes aprovechan los puestos que se hayan liberado. Los depósitos agotados y los extractores destruidos provocan una nueva búsqueda; se conserva el tipo de cualquier carga pendiente de entrega.
+
+Apuntar o seleccionar un depósito muestra **Trabajadores asignados/óptimo** y la cantidad restante en el panel. Seleccionar el centro principal muestra los totales de minerales y gas de su zona; seleccionar un extractor muestra su ocupación de gas. Se puede dar la orden de gas sobre toda la superficie del extractor. Los indicadores cuentan tus trabajadores, no los del rival.
+
+### Movimiento e interacción
+
 Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Mantener posición** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
 
 El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVER MENÚ**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Restablecer posición** lo devuelve arriba del mapa; pulsar el stick secundario también lo recupera si quedó fuera de vista (tecla **M** en escritorio).

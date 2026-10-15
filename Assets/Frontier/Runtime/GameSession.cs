@@ -13,6 +13,7 @@ namespace Frontier.Runtime
         public PlayerView View { get; private set; }
         public MapDefinition Map { get; private set; }
         public readonly HashSet<int> Selection = new HashSet<int>();
+        public int SelectedResource { get; private set; }
         public bool Running { get; private set; }
         public bool LeftHanded;
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
@@ -46,7 +47,7 @@ namespace Frontier.Runtime
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
             bot = new Strategist(1, Difficulty == "easy", Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
-            Selection.Clear(); foreach (var group in groups) group.Clear();
+            Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
             BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
             pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
@@ -80,14 +81,17 @@ namespace Frontier.Runtime
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
         public void SetLeftHanded(bool enabled) { LeftHanded = enabled; PlayerPrefs.SetInt("frontier.leftHanded", enabled ? 1 : 0); }
         public void Announce(string text) { Message = text; messageUntil = Time.unscaledTime + 6; }
-        public void Select(int id, bool additive)
+        public void Select(int id, bool additive, int resourceId = 0)
         {
             if (!additive) Selection.Clear();
+            SelectedResource = 0;
             if (View != null && View.entities.Any(e => e.id == id && e.owner == 0)) { if (!Selection.Add(id) && additive) Selection.Remove(id); }
+            else if (!additive && View != null && View.resources.Any(r => r.id == resourceId)) SelectedResource = resourceId;
             Feedback?.Invoke(true); Changed?.Invoke();
         }
         public void SelectRectangle(Point a, Point b, bool additive)
         {
+            SelectedResource = 0;
             if (!additive) Selection.Clear();
             if (View == null) return;
             foreach (var e in View.entities)
@@ -98,7 +102,7 @@ namespace Frontier.Runtime
         {
             if(View==null||index<0||index>=groups.Length)return;
             if (save) { groups[index].Clear(); groups[index].AddRange(Selection); Announce("Grupo " + (index + 1) + " guardado."); }
-            else { Selection.Clear(); foreach (int id in groups[index]) if (View.entities.Any(e=>e.id==id && e.owner==0)) Selection.Add(id); }
+            else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (View.entities.Any(e=>e.id==id && e.owner==0)) Selection.Add(id); }
             Changed?.Invoke();
         }
         public int GroupSize(int index) => groups[index].Count(id=>View != null && View.entities.Any(e=>e.id==id));
@@ -112,6 +116,9 @@ namespace Frontier.Runtime
             if (AttackMoveMode) { Send(CommandKind.AttackMove, position: point); AttackMoveMode = false; return; }
             var entity = View.entities.FirstOrDefault(e=>e.id==entityId && !e.remembered);
             var selected = View.entities.Where(e=>Selection.Contains(e.id)).ToArray();
+            // The whole extractor footprint is a gas-order target, not only the deposit's center.
+            if (entity != null && entity.owner == 0 && Catalog[entity.definition].role == "extractor" && entity.complete)
+                resourceId = View.resources.FirstOrDefault(r => r.extractorId == entity.id)?.id ?? resourceId;
             if (entity != null && entity.owner != 0) Send(CommandKind.Attack, target: entity.id);
             else if (resourceId > 0 && selected.All(e=>Catalog[e.definition].role=="worker")) Send(CommandKind.Gather,target:resourceId);
             else if (entity != null && entity.owner==0 && entity.health < Catalog[entity.definition].health && Faction=="industrial" && selected.All(e=>Catalog[e.definition].role=="worker")) Send(CommandKind.Repair,target:entity.id);

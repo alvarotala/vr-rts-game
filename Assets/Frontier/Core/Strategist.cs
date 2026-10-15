@@ -30,12 +30,12 @@ namespace Frontier.Core
             recovering.RemoveWhere(id => !army.Any(e => e.id == id && e.health < Type(e).health * .85f));
             foreach (var hurt in army.Where(e => e.health < Type(e).health * .22f)) recovering.Add(hurt.id);
 
-            var assigned = view.resources.ToDictionary(r => r.id, r => workers.Count(w => w.target == r.id && w.order == CommandKind.Gather));
+            var assigned = view.resources.ToDictionary(r => r.id, r => r.assignedWorkers);
             foreach (var worker in workers.Where(w => w.order == CommandKind.Stop || (view.tick % 400 == 0 && w.order == CommandKind.Gather)))
             {
                 if (assigned.ContainsKey(worker.target)) assigned[worker.target] = Math.Max(0, assigned[worker.target] - 1);
-                var resource = view.resources.Where(r => r.remaining != 0 && (r.kind == "mineral" || own.Any(b => Type(b).role == "extractor" && b.complete && b.position.Distance(r.position) < 4)))
-                    .OrderBy(r => r.kind == "catalyst" && assigned[r.id] < 3 && view.catalyst < 350 ? -100 : worker.position.Distance(r.position) + assigned[r.id] * (r.kind == "catalyst" ? 25 : 8)).FirstOrDefault();
+                var resource = view.resources.Where(r => r.remaining != 0 && r.optimalWorkers > 0)
+                    .OrderBy(r => r.kind == "catalyst" && assigned[r.id] < r.optimalWorkers && view.catalyst < 350 ? -100 : worker.position.Distance(r.position) + assigned[r.id] * (r.kind == "catalyst" ? 25 : 8)).FirstOrDefault();
                 if (resource != null) { assigned[resource.id]++; yield return Command(CommandKind.Gather, worker.id, target: resource.id); }
             }
             foreach (var building in own.Where(b => !b.complete && !catalog.Faction(view.faction).grows))

@@ -188,6 +188,8 @@ namespace Frontier.Core
         public int id, remaining;
         public string definition, kind;
         public Point position;
+        // PlayerView only: own assignments (including travel/delivery) and own operating buildings.
+        public int assignedWorkers, optimalWorkers, baseId, extractorId;
     }
     [Serializable] public sealed class VisibleEntity
     {

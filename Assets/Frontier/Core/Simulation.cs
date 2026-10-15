@@ -41,13 +41,11 @@ namespace Frontier.Core
                 {
                     Point? position = FreeExit(hq);
                     if (!position.HasValue) throw new ArgumentException("No hay espacio para los trabajadores iniciales.");
-                    var worker = Spawn(player, Catalog.Role(Players[player].faction, "worker").id, position.Value);
-                    var deposits = Resources.Where(r => r.kind == "mineral").OrderBy(r => r.position.Distance(Center(hq))).Take(4).ToArray();
-                    var nearest = deposits[i % deposits.Length];
-                    worker.order = CommandKind.Gather; worker.target = worker.resourceId = nearest.id;
+                    Spawn(player, Catalog.Role(Players[player].faction, "worker").id, position.Value);
                 }
             }
             UpdateVision();
+            foreach (var worker in Entities.Values.Where(e => Type(e).role == "worker").OrderBy(e => e.id)) ResumeGather(worker);
         }
         public Archetype Type(EntityState entity) => Catalog[entity.definition];
         public Point Center(EntityState entity)
@@ -126,13 +124,13 @@ namespace Frontier.Core
                 var resource = Resources.FirstOrDefault(r => r.id == command.target);
                 if (resource == null || !Explored(command.player, resource.position) || selected.Any(e => Type(e).role != "worker")) return Reject("Seleccioná trabajadores y un recurso explorado.");
                 if (resource.kind == "catalyst" && !Extractor(command.player, resource)) return Reject("Construí un extractor sobre el catalizador.");
+                return AssignGather(selected, resource);
             }
             else if (command.kind != CommandKind.Stop && command.kind != CommandKind.Hold) return Reject("Orden desconocida.");
             foreach (var entity in selected)
             {
                 ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
                 if (command.kind == CommandKind.Repair && !Entities[command.target].complete) entity.order = CommandKind.Build;
-                if (command.kind == CommandKind.Gather) { entity.resourceId = command.target; entity.depositing = entity.cargo > 0; }
             }
             return Accept();
         }
@@ -251,6 +249,6 @@ namespace Frontier.Core
         }
         private static CommandResult Accept() => new CommandResult(true);
         private static CommandResult Reject(string reason) => new CommandResult(false, reason);
-        private bool Extractor(int player, ResourceState resource) => Entities.Values.Any(e => e.owner == player && e.complete && Type(e).role == "extractor" && InsideFootprint(resource.position, e.position, Type(e).footprint));
+        private bool Extractor(int player, ResourceState resource) => Entities.Values.Any(e => e.owner == player && e.health > 0 && e.complete && Type(e).role == "extractor" && InsideFootprint(resource.position, e.position, Type(e).footprint));
     }
 }

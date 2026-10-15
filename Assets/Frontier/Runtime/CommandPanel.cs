@@ -15,7 +15,7 @@ namespace Frontier.Runtime
         public Action PlaceRequested;
         private Canvas canvas;
         private RectTransform root, actions;
-        private Text headline, economy, selection, status;
+        private Text headline, economy, selection, harvesting, status;
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
@@ -44,8 +44,9 @@ namespace Frontier.Runtime
             headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-84),new Vector2(1040,44),30,accent);
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
             selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
+            harvesting=Label(root,"",new Vector2(30,-207),new Vector2(1040,28),18,accent);
             status=Label(root,"",new Vector2(30,-473),new Vector2(1040,44),20,accent);
-            actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-220),new Vector2(1040,245));
+            actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -78,7 +79,8 @@ namespace Frontier.Runtime
             {
                 var pointed=Session.View?.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
                 selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {Session.Difficulty} · {Session.Map.title}":
-                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Aliado":"Enemigo"):"Seleccioná unidades o un edificio para dar órdenes.";
+                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Aliado":"Enemigo"):
+                    Session.SelectedResource!=0?"Depósito seleccionado · asigná trabajadores con la orden contextual.":"Seleccioná unidades o un edificio para dar órdenes.";
             }
             else if(selected.Length==1)
             {
@@ -88,8 +90,49 @@ namespace Frontier.Runtime
             }
             else selection.text=string.Join(" · ",selected.GroupBy(e=>
                 {var type=Session.Catalog[e.definition];return type.building?type.name:UnitVisuals.RoleName(type.role);}).Select(g=>$"{g.Count()}× {g.Key}"));
+            UpdateHarvesting(selected);
             status.text=Session.Message;
         }
+        private void UpdateHarvesting(VisibleEntity[] selected)
+        {
+            harvesting.text="";harvesting.color=accent;
+            if(Session.View==null)return;
+            var view=Session.View;
+            int pointedResource=Board.Pointer.HasValue?Board.ResourceAt(Board.Pointer.Value):0;
+            var resource=view.resources.FirstOrDefault(r=>r.id==pointedResource);
+            var building=view.entities.FirstOrDefault(e=>e.id==Board.Hovered&&e.owner==view.player);
+            if(resource==null&&building==null)
+            {
+                resource=view.resources.FirstOrDefault(r=>r.id==Session.SelectedResource);
+                if(selected?.Length==1)building=selected[0];
+            }
+            if(resource==null&&building!=null&&Session.Catalog[building.definition].role=="extractor")
+            {
+                int size=Session.Catalog[building.definition].footprint;
+                resource=view.resources.FirstOrDefault(r=>r.kind=="catalyst"&&r.position.x>=building.position.x&&r.position.x<building.position.x+size
+                    &&r.position.y>=building.position.y&&r.position.y<building.position.y+size);
+            }
+            if(resource!=null)
+            {
+                string name=resource.kind=="mineral"?"MINERAL":"GAS / CATALIZADOR";
+                string remaining=resource.remaining<0?"?":resource.remaining.ToString();
+                int optimum=resource.remaining==0?0:Harvesting.OptimalWorkers(resource.kind);
+                harvesting.text=$"{name} · {Saturation(resource.assignedWorkers,optimum)} · Restante: {remaining}";
+                if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)harvesting.text+=" · Requiere extractor terminado";
+                if(resource.assignedWorkers>resource.optimalWorkers)harvesting.color=new Color(1,.65f,.3f);
+            }
+            else if(building!=null&&Session.Catalog[building.definition].role=="hq")
+            {
+                var minerals=view.resources.Where(r=>r.baseId==building.id&&r.kind=="mineral").ToArray();
+                var gas=view.resources.Where(r=>r.baseId==building.id&&r.kind=="catalyst").ToArray();
+                harvesting.text="MINERALES · "+Saturation(minerals.Sum(r=>r.assignedWorkers),minerals.Sum(r=>r.optimalWorkers))+
+                    "     GAS · "+Saturation(gas.Sum(r=>r.assignedWorkers),gas.Sum(r=>r.optimalWorkers));
+            }
+            else if(selected!=null&&selected.Any(e=>Session.Catalog[e.definition].role=="worker"))
+                harvesting.text="Óptimo: 2 trabajadores por mineral · 3 por gas · Reparto automático entre depósitos cercanos";
+        }
+        private static string Saturation(int assigned,int optimal)=>$"Trabajadores {assigned}/{optimal}"+
+            (assigned>optimal?" (exceso)":optimal>0&&assigned==optimal?" (óptimo)":"");
         private void Rebuild()
         {
             if(actions==null)return;

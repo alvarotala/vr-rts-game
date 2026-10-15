@@ -59,7 +59,7 @@ namespace Frontier.Runtime
             }
             if(dragging)Board.DrawSelection(start,point,start.Distance(point)>1.5f);
             if(up&&dragging)
-            {if(start.Distance(point)>1.5f)Session.SelectRectangle(start,point,add);else Session.Select(Board.Hovered,add);dragging=false;Board.DrawSelection(start,point,false);}
+            {if(start.Distance(point)>1.5f)Session.SelectRectangle(start,point,add);else Session.Select(Board.Hovered,add,Board.ResourceAt(point));dragging=false;Board.DrawSelection(start,point,false);}
             if(order)Session.Context(point,Board.Hovered,Board.ResourceAt(point));
         }
         private void Haptic(bool success)
