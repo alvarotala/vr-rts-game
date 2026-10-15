@@ -13,7 +13,7 @@ namespace Frontier.Core
             if (!active) active = Entities.Values.Any(w => w.owner == building.owner && w.order == CommandKind.Build && w.target == building.id && w.position.Distance(Center(building)) <= type.footprint * .75f + 1.3f);
             if (!active) return;
             building.remaining--; building.health = Math.Min(type.health, building.health + type.health * .85f / type.duration);
-            if (building.remaining <= 0) { building.complete = true; Notice?.Invoke(building.owner, type.name + " listo."); }
+            if (building.remaining <= 0) { building.complete = true; Notice?.Invoke(building.owner, type.name + " ready."); }
         }
         private void Construct(EntityState worker)
         {
@@ -29,7 +29,7 @@ namespace Frontier.Core
             if (order.research)
             {
                 if (order.definition == "attack") Players[producer.owner].attackLevel++; else Players[producer.owner].armorLevel++;
-                producer.queue.RemoveAt(0); Notice?.Invoke(producer.owner, "Investigación completada."); return;
+                producer.queue.RemoveAt(0); Notice?.Invoke(producer.owner, "Research complete."); return;
             }
             if (Units(producer.owner) >= Capacity(producer.owner)) return;
             Point? exit = FreeExit(producer,Catalog[order.definition].collisionRadius); if (!exit.HasValue) return;

@@ -16,10 +16,10 @@ namespace Frontier.Core
         public int Count => Width * Height;
         public GridMap(MapDefinition definition)
         {
-            if (definition == null || definition.schemaVersion != 1) throw new ArgumentException("Versión de mapa incompatible.");
-            if (string.IsNullOrWhiteSpace(definition.id) || string.IsNullOrWhiteSpace(definition.title)) throw new ArgumentException("El mapa necesita ID y título.");
+            if (definition == null || definition.schemaVersion != 1) throw new ArgumentException("Incompatible map version.");
+            if (string.IsNullOrWhiteSpace(definition.id) || string.IsNullOrWhiteSpace(definition.title)) throw new ArgumentException("The map needs an ID and a title.");
             if (definition.width < 16 || definition.height < 16 || definition.width > 256 || definition.height > 256)
-                throw new ArgumentException("El mapa debe medir entre 16 y 256 celdas por lado.");
+                throw new ArgumentException("Map dimensions must be between 16 and 256 cells per side.");
             Definition = definition;
             definition.terrain = definition.terrain ?? Array.Empty<TerrainRegion>();
             definition.decoration = definition.decoration ?? Array.Empty<DecorationDefinition>();
@@ -29,8 +29,8 @@ namespace Frontier.Core
             foreach (var region in definition.terrain ?? Array.Empty<TerrainRegion>())
             {
                 if (region == null || region.width < 1 || region.height < 1 || region.width > Width || region.height > Height || !Inside(region.x, region.y) || !Inside(region.x + region.width - 1, region.y + region.height - 1) || region.elevation < 0 || region.elevation > 1)
-                    throw new ArgumentException("Región de terreno inválida.");
-                if (region.ramp && ((region.rampAxis != "x" && region.rampAxis != "y") || Math.Abs(region.rampDirection) != 1)) throw new ArgumentException("Orientación de rampa inválida.");
+                    throw new ArgumentException("Invalid terrain region.");
+                if (region.ramp && ((region.rampAxis != "x" && region.rampAxis != "y") || Math.Abs(region.rampDirection) != 1)) throw new ArgumentException("Invalid ramp orientation.");
                 for (int y = region.y; y < region.y + region.height; y++) for (int x = region.x; x < region.x + region.width; x++)
                 {
                     int i = Index(x, y); Walkable[i] = region.walkable; Buildable[i] = region.buildable; Ramp[i] = region.ramp; Elevation[i] = (byte)region.elevation;
@@ -115,32 +115,32 @@ namespace Frontier.Core
         }
         private void Validate()
         {
-            if (Definition.spawns == null || Definition.spawns.Length != 2) throw new ArgumentException("Se requieren dos posiciones iniciales.");
+            if (Definition.spawns == null || Definition.spawns.Length != 2) throw new ArgumentException("Two starting positions are required.");
             var players = new HashSet<int>();
             foreach (var spawn in Definition.spawns)
                 if (spawn == null || !players.Add(spawn.player) || spawn.player < 0 || spawn.player > 1 || !CanPlace(new Point(spawn.x, spawn.y), 4))
-                    throw new ArgumentException("Posición inicial inválida.");
+                    throw new ArgumentException("Invalid starting position.");
             if (Math.Abs(Definition.spawns[0].x - Definition.spawns[1].x) < 6 && Math.Abs(Definition.spawns[0].y - Definition.spawns[1].y) < 6)
-                throw new ArgumentException("Las bases iniciales se superponen.");
+                throw new ArgumentException("Starting bases overlap.");
             var seen = new bool[Count]; var open = new Queue<int>();
             int start = Index(Definition.spawns[0].x, Definition.spawns[0].y); seen[start] = true; open.Enqueue(start);
             while (open.Count > 0) foreach (int cell in Neighbors(open.Dequeue(), true)) if (!seen[cell]) { seen[cell] = true; open.Enqueue(cell); }
             var second = Definition.spawns[1];
-            if (!seen[Index(second.x, second.y)]) throw new ArgumentException("Las bases no están conectadas.");
+            if (!seen[Index(second.x, second.y)]) throw new ArgumentException("The bases are not connected.");
             var ids = new HashSet<string>(); var cells = new HashSet<int>(); bool mineral = false, catalyst = false;
             foreach (var resource in Definition.resources ?? Array.Empty<ResourceDefinition>())
             {
                 if (resource == null || string.IsNullOrWhiteSpace(resource.id) || !ids.Add(resource.id) || !Inside(resource.x, resource.y) || resource.amount <= 0 || (resource.kind != "mineral" && resource.kind != "catalyst"))
-                    throw new ArgumentException("Recurso inválido.");
+                    throw new ArgumentException("Invalid resource.");
                 mineral |= resource.kind == "mineral"; catalyst |= resource.kind == "catalyst";
                 int cell = Index(resource.x, resource.y);
-                if (!seen[cell] || !cells.Add(cell)) throw new ArgumentException("Recurso inaccesible o superpuesto.");
+                if (!seen[cell] || !cells.Add(cell)) throw new ArgumentException("Resource is unreachable or overlaps another resource.");
                 foreach (var spawn in Definition.spawns) if (resource.x >= spawn.x && resource.x < spawn.x + 4 && resource.y >= spawn.y && resource.y < spawn.y + 4)
-                    throw new ArgumentException("Recurso sobre una base inicial.");
+                    throw new ArgumentException("Resource overlaps a starting base.");
             }
-            if (Definition.resources == null || Definition.resources.Length < 4 || !mineral || !catalyst) throw new ArgumentException("El mapa necesita depósitos de mineral y catalizador para ambos jugadores.");
+            if (Definition.resources == null || Definition.resources.Length < 4 || !mineral || !catalyst) throw new ArgumentException("The map needs mineral and catalyst deposits for both players.");
             foreach (var decoration in Definition.decoration ?? Array.Empty<DecorationDefinition>())
-                if (decoration == null || decoration.id != "rock" || !Inside(decoration.x, decoration.y)) throw new ArgumentException("Decoración desconocida o fuera del mapa.");
+                if (decoration == null || decoration.id != "rock" || !Inside(decoration.x, decoration.y)) throw new ArgumentException("Decoration is unknown or outside the map.");
         }
     }
 

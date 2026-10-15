@@ -77,24 +77,24 @@ namespace Frontier.Runtime
         private void OnDisable(){if(manager!=null)manager.shouldBoundaryVisibilityBeSuppressed=false;}
         public async void LoadRoom()
         {
-            useScene=true;if(!Active||mruk==null){Session.Announce("En escritorio se usa un plano manual.");return;}
+            useScene=true;if(!Active||mruk==null){Session.Announce("Desktop mode uses a manual plane.");return;}
             try
             {
                 const string permission="com.oculus.permission.USE_SCENE";
                 if(!Permission.HasUserAuthorizedPermission(permission))
                 {
-                    var callbacks=new PermissionCallbacks();callbacks.PermissionGranted+=_=>LoadRoom();callbacks.PermissionDenied+=_=>Session.Announce("Sin acceso a la habitación. Podés usar el plano manual.");
+                    var callbacks=new PermissionCallbacks();callbacks.PermissionGranted+=_=>LoadRoom();callbacks.PermissionDenied+=_=>Session.Announce("Room access unavailable. You can use the manual plane.");
                     Permission.RequestUserPermission(permission,callbacks);return;
                 }
-                await mruk.LoadSceneFromDevice(false);Session.Announce(mruk.GetCurrentRoom()!=null?"Superficies disponibles. Ubicá el tablero.":"No hay habitación registrada. Usá Mesa o Piso.");
+                await mruk.LoadSceneFromDevice(false);Session.Announce(mruk.GetCurrentRoom()!=null?"Surfaces available. Place the board.":"No room data found. Use Table or Floor.");
             }
-            catch(Exception e){Debug.LogWarning(e);Session.Announce("No se pudo leer la habitación. Usá colocación manual.");}
+            catch(Exception e){Debug.LogWarning(e);Session.Announce("Could not load room data. Use manual placement.");}
         }
         public void BeginPlacement()
         {
-            if(busy){Session.Announce("Esperá a que termine de guardarse el ancla.");return;}
+            if(busy){Session.Announce("Wait for the anchor to finish saving.");return;}
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
-            Session.Announce("Apuntá y confirmá con gatillo. Stick izq.: altura. Der.: tamaño y giro.");
+            Session.Announce("Point and press the trigger. Off-hand stick: height. Main stick: size/rotate.");
         }
         public void PlaceRay(Ray ray,Vector2 left,Vector2 right,bool confirm)
         {
@@ -108,7 +108,7 @@ namespace Frontier.Runtime
             if(!hit){var plane=new Plane(Vector3.up,new Vector3(0,manualHeight,0));if(plane.Raycast(ray,out float d)&&d<5){point=ray.GetPoint(d);hit=true;}}
             if(!hit)return;
             Board.transform.position=point+Vector3.up*.005f;
-            if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Tablero colocado. Podés comenzar o continuar.");}
+            if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");}
         }
         public Ray PointerRay(bool left)
         {
@@ -123,16 +123,16 @@ namespace Frontier.Runtime
             {
                 anchorRoot=new GameObject("Board spatial anchor").transform;anchorRoot.SetPositionAndRotation(Board.transform.position,Board.transform.rotation);
                 anchor=anchorRoot.gameObject.AddComponent<OVRSpatialAnchor>();
-                if(!await anchor.WhenCreatedAsync()||!await anchor.WhenLocalizedAsync())throw new InvalidOperationException("No se localizó el ancla.");
+                if(!await anchor.WhenCreatedAsync()||!await anchor.WhenLocalizedAsync())throw new InvalidOperationException("Could not locate the anchor.");
                 if(generation!=anchorGeneration)return;
                 // Keep session placement world-locked even if persistence is unavailable.
                 Board.transform.SetParent(anchorRoot,true);
-                var result=await anchor.SaveAnchorAsync();if(!result.Success)throw new InvalidOperationException("No se pudo guardar el ancla.");
+                var result=await anchor.SaveAnchorAsync();if(!result.Success)throw new InvalidOperationException("Could not save the anchor.");
                 var placement=new BoardPlacement{anchorUuid=anchor.Uuid.ToString(),width=Board.Width};
                 File.WriteAllText(SavePath,JsonUtility.ToJson(placement,true));
                 if(previous!=null){await previous.EraseAnchorAsync();Destroy(previous.gameObject);}
             }
-            catch(Exception e){Debug.LogWarning(e);Session.Announce("Tablero colocado para esta sesión; el ancla no se guardó.");}
+            catch(Exception e){Debug.LogWarning(e);Session.Announce("Board placed for this session; the anchor was not saved.");}
             finally{busy=false;}
         }
         private async void Restore()
@@ -142,18 +142,18 @@ namespace Frontier.Runtime
             try
             {
                 var saved=JsonUtility.FromJson<BoardPlacement>(File.ReadAllText(SavePath));
-                if(saved.schemaVersion!=1||!Guid.TryParse(saved.anchorUuid,out var uuid))throw new InvalidDataException("Ancla guardada inválida.");
+                if(saved.schemaVersion!=1||!Guid.TryParse(saved.anchorUuid,out var uuid))throw new InvalidDataException("Invalid saved anchor.");
                 var anchors=new List<OVRSpatialAnchor.UnboundAnchor>();var result=await OVRSpatialAnchor.LoadUnboundAnchorsAsync(new[]{uuid},anchors);
-                if(!result.Success||anchors.Count==0)throw new InvalidOperationException("No se encontró el ancla.");
-                var unbound=anchors[0];if(!unbound.Localized&&!await unbound.LocalizeAsync(10))throw new InvalidOperationException("No se localizó el ancla.");
+                if(!result.Success||anchors.Count==0)throw new InvalidOperationException("Anchor not found.");
+                var unbound=anchors[0];if(!unbound.Localized&&!await unbound.LocalizeAsync(10))throw new InvalidOperationException("Could not locate the anchor.");
                 if(generation!=anchorGeneration||Placing)return;
                 anchorRoot=new GameObject("Restored board anchor").transform;anchor=anchorRoot.gameObject.AddComponent<OVRSpatialAnchor>();unbound.BindTo(anchor);
                 Board.transform.SetParent(anchorRoot,false);Board.transform.localPosition=Vector3.zero;Board.transform.localRotation=Quaternion.identity;
-                Board.Width=Mathf.Clamp(saved.width,.6f,2);Board.Placed=true;Session.Announce("Ubicación anterior recuperada.");
+                Board.Width=Mathf.Clamp(saved.width,.6f,2);Board.Placed=true;Session.Announce("Previous board placement restored.");
             }
-            catch(Exception e){Debug.LogWarning(e);Session.Announce("Volvé a colocar el tablero en tu mesa o piso.");}
+            catch(Exception e){Debug.LogWarning(e);Session.Announce("Place the board on your table or floor again.");}
         }
-        private void TrackingLost(){Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Seguimiento perdido. Recuperá el espacio y confirmá la ubicación.");}
+        private void TrackingLost(){Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Tracking lost. Restore tracking and confirm the board placement.");}
         private void TrackingAcquired(){if(anchor!=null&&anchor.Localized){Board.Placed=true;Session.Pause("tracking",false);}else BeginPlacement();}
         private void Unmounted()=>Session.Pause("headset",true);
         private void Mounted()=>Session.Pause("headset",false);

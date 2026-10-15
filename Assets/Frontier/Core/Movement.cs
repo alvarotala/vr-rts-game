@@ -72,7 +72,7 @@ namespace Frontier.Core
                 {
                     unit.repathAt=Tick+20;
                     // Traffic only changes costs: a null route means static terrain actually blocks the order.
-                    if(!yielding){Notice?.Invoke(unit.owner,"Destino inaccesible.");unit.order=CommandKind.Stop;}
+                    if(!yielding){Notice?.Invoke(unit.owner,"Destination unreachable.");unit.order=CommandKind.Stop;}
                     return false;
                 }
                 SetPath(unit,route,destination,range);

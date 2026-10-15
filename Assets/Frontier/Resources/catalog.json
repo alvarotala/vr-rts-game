@@ -3,13 +3,13 @@
   "factions": [
     {
       "id": "industrial",
-      "name": "El Consorcio",
+      "name": "The Consortium",
       "grows": false,
       "regenerates": false
     },
     {
       "id": "biological",
-      "name": "La Simbiosis",
+      "name": "Symbiosis",
       "grows": true,
       "regenerates": true
     }
@@ -18,7 +18,7 @@
     {
       "id": "industrial.worker",
       "faction": "industrial",
-      "name": "Operario",
+      "name": "Operator",
       "role": "worker",
       "building": false,
       "minerals": 50,
@@ -40,7 +40,7 @@
     {
       "id": "industrial.scout",
       "faction": "industrial",
-      "name": "Rastreador",
+      "name": "Tracker",
       "role": "scout",
       "building": false,
       "minerals": 65,
@@ -62,7 +62,7 @@
     {
       "id": "industrial.melee",
       "faction": "industrial",
-      "name": "Bastión",
+      "name": "Bastion",
       "role": "melee",
       "building": false,
       "minerals": 90,
@@ -84,7 +84,7 @@
     {
       "id": "industrial.ranged",
       "faction": "industrial",
-      "name": "Lancero",
+      "name": "Lancer",
       "role": "ranged",
       "building": false,
       "minerals": 75,
@@ -106,7 +106,7 @@
     {
       "id": "industrial.siege",
       "faction": "industrial",
-      "name": "Martillo",
+      "name": "Hammer",
       "role": "siege",
       "building": false,
       "minerals": 160,
@@ -128,7 +128,7 @@
     {
       "id": "industrial.hq",
       "faction": "industrial",
-      "name": "Núcleo de mando",
+      "name": "Command Core",
       "role": "hq",
       "building": true,
       "minerals": 350,
@@ -149,7 +149,7 @@
     {
       "id": "industrial.extractor",
       "faction": "industrial",
-      "name": "Refinería",
+      "name": "Refinery",
       "role": "extractor",
       "building": true,
       "minerals": 90,
@@ -170,7 +170,7 @@
     {
       "id": "industrial.supply",
       "faction": "industrial",
-      "name": "Relé",
+      "name": "Relay",
       "role": "supply",
       "building": true,
       "minerals": 85,
@@ -191,7 +191,7 @@
     {
       "id": "industrial.barracks",
       "faction": "industrial",
-      "name": "Cuartel",
+      "name": "Barracks",
       "role": "barracks",
       "building": true,
       "minerals": 150,
@@ -233,7 +233,7 @@
     {
       "id": "industrial.defense",
       "faction": "industrial",
-      "name": "Centinela",
+      "name": "Sentinel",
       "role": "defense",
       "building": true,
       "minerals": 125,
@@ -254,7 +254,7 @@
     {
       "id": "biological.worker",
       "faction": "biological",
-      "name": "Sembrador",
+      "name": "Seeder",
       "role": "worker",
       "building": false,
       "minerals": 45,
@@ -276,7 +276,7 @@
     {
       "id": "biological.scout",
       "faction": "biological",
-      "name": "Acechador",
+      "name": "Prowler",
       "role": "scout",
       "building": false,
       "minerals": 58,
@@ -298,7 +298,7 @@
     {
       "id": "biological.melee",
       "faction": "biological",
-      "name": "Desgarrador",
+      "name": "Ripper",
       "role": "melee",
       "building": false,
       "minerals": 81,
@@ -320,7 +320,7 @@
     {
       "id": "biological.ranged",
       "faction": "biological",
-      "name": "Espinador",
+      "name": "Spitter",
       "role": "ranged",
       "building": false,
       "minerals": 68,
@@ -342,7 +342,7 @@
     {
       "id": "biological.siege",
       "faction": "biological",
-      "name": "Bombardero",
+      "name": "Bombardier",
       "role": "siege",
       "building": false,
       "minerals": 144,
@@ -364,7 +364,7 @@
     {
       "id": "biological.hq",
       "faction": "biological",
-      "name": "Corazón",
+      "name": "Heart",
       "role": "hq",
       "building": true,
       "minerals": 350,
@@ -385,7 +385,7 @@
     {
       "id": "biological.extractor",
       "faction": "biological",
-      "name": "Sifón",
+      "name": "Siphon",
       "role": "extractor",
       "building": true,
       "minerals": 90,
@@ -406,7 +406,7 @@
     {
       "id": "biological.supply",
       "faction": "biological",
-      "name": "Nódulo",
+      "name": "Node",
       "role": "supply",
       "building": true,
       "minerals": 85,
@@ -427,7 +427,7 @@
     {
       "id": "biological.barracks",
       "faction": "biological",
-      "name": "Criadero",
+      "name": "Brood Nest",
       "role": "barracks",
       "building": true,
       "minerals": 150,
@@ -448,7 +448,7 @@
     {
       "id": "biological.tech",
       "faction": "biological",
-      "name": "Crisálida",
+      "name": "Chrysalis",
       "role": "tech",
       "building": true,
       "minerals": 180,
@@ -469,7 +469,7 @@
     {
       "id": "biological.defense",
       "faction": "biological",
-      "name": "Aguijón",
+      "name": "Stinger",
       "role": "defense",
       "building": true,
       "minerals": 125,
@@ -491,14 +491,14 @@
   "upgrades": [
     {
       "id": "attack",
-      "name": "Potencia I",
+      "name": "Firepower I",
       "minerals": 150,
       "catalyst": 100,
       "duration": 700
     },
     {
       "id": "armor",
-      "name": "Resistencia I",
+      "name": "Armor I",
       "minerals": 150,
       "catalyst": 100,
       "duration": 700

@@ -62,7 +62,7 @@ namespace Frontier.Core
             foreach (var worker in workers.OrderBy(w => w.id))
             {
                 var resource = FindGatherResource(worker, requested.kind, requested.position, requested.id, assigned);
-                if (resource == null) return Reject("No hay depósitos accesibles de ese recurso cerca del destino.");
+                if (resource == null) return Reject("No reachable deposits of that resource near the target.");
                 plan.Add((worker, resource)); assigned[resource.id]++;
             }
             foreach (var item in plan) SetGather(item.worker, item.resource);

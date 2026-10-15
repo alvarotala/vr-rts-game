@@ -17,7 +17,7 @@ namespace Frontier.Runtime
         public bool Running { get; private set; }
         public bool LeftHanded;
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
-        public string Message { get; private set; } = "Ubicá el tablero para comenzar.";
+        public string Message { get; private set; } = "Place the board to begin.";
         public event Action Changed;
         public event Action NewMatch;
         public event Action<bool> Feedback;
@@ -39,7 +39,7 @@ namespace Frontier.Runtime
         public void LoadMap(string id)
         {
             var asset = Resources.Load<TextAsset>("Maps/" + id);
-            if (asset == null) throw new ArgumentException("Mapa inexistente: " + id);
+            if (asset == null) throw new ArgumentException("Map not found: " + id);
             Map = JsonUtility.FromJson<MapDefinition>(asset.text); _ = new GridMap(Map); MapId = id;
         }
         public void StartMatch()
@@ -51,7 +51,7 @@ namespace Frontier.Runtime
             BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
             pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
-            Announce(MapId == "training" ? "1 · Seleccioná trabajadores. Construí un relé y un cuartel." : "Expandí tu base. Explorá antes de atacar.");
+            Announce(MapId == "training" ? $"1 · Select a worker. Build: {Catalog.Role(Faction, "supply").name} + {Catalog.Role(Faction, "barracks").name}." : "Expand your base. Scout before attacking.");
             NewMatch?.Invoke(); Changed?.Invoke();
         }
         private void Update()
@@ -69,9 +69,9 @@ namespace Frontier.Runtime
             if (steps > 0)
             {
                 View = Match.View(0); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == 0));
-                if (Match.Winner != -1) Announce(Match.Winner == 0 ? "VICTORIA · El territorio es tuyo." : Match.Winner == 2 ? "EMPATE" : "DERROTA · Tu colonia cayó.");
+                if (Match.Winner != -1) Announce(Match.Winner == 0 ? "VICTORY · The territory is yours." : Match.Winner == 2 ? "DRAW" : "DEFEAT · Your colony has fallen.");
                 else if (MapId == "training" && Time.unscaledTime > messageUntil)
-                    Message = !Match.HasRole(0, "barracks") ? "1 · Construí un cuartel con un trabajador." : Match.Units(0) < 10 ? "2 · Seleccioná el cuartel y entrená un ejército." : "3 · Usá Avanzar y atacar para explorar y destruir los edificios enemigos.";
+                    Message = !Match.HasRole(0, "barracks") ? $"1 · Use a worker to build: {Catalog.Role(Faction, "barracks").name}." : Match.Units(0) < 10 ? $"2 · Select {Catalog.Role(Faction, "barracks").name} and train an army." : "3 · Use Attack Move to explore and destroy enemy buildings.";
                 Changed?.Invoke();
             }
         }
@@ -101,12 +101,12 @@ namespace Frontier.Runtime
         public void Group(int index, bool save)
         {
             if(View==null||index<0||index>=groups.Length)return;
-            if (save) { groups[index].Clear(); groups[index].AddRange(Selection); Announce("Grupo " + (index + 1) + " guardado."); }
+            if (save) { groups[index].Clear(); groups[index].AddRange(Selection); Announce("Group " + (index + 1) + " saved."); }
             else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (View.entities.Any(e=>e.id==id && e.owner==0)) Selection.Add(id); }
             Changed?.Invoke();
         }
         public int GroupSize(int index) => groups[index].Count(id=>View != null && View.entities.Any(e=>e.id==id));
-        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Apuntá al terreno y confirmá la construcción."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void CancelMode() { BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke(); }
         public void Context(Point point, int entityId, int resourceId)
         {

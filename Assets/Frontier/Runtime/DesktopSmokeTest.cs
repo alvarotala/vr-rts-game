@@ -41,7 +41,7 @@ namespace Frontier.Runtime
             panel.ResetPosition();yield return null;
             game.Group(0,false); // Shortcuts before starting must be harmless.
             yield return Capture("01-setup.png");
-            var button=GameObject.Find("COMENZAR PARTIDA");
+            var button=GameObject.Find("START MATCH");
             if(button==null){Debug.LogError("Start button not found");Application.Quit(1);yield break;}
             game.Pause("tracking",true);
             var rect=button.GetComponent<RectTransform>();Vector3 center=rect.TransformPoint(rect.rect.center);var ray=new Ray(quest.Camera.transform.position,(center-quest.Camera.transform.position).normalized);

@@ -12,11 +12,11 @@ namespace Frontier.Runtime
         {
             switch(role)
             {
-                case "worker":return "Trabajador";
-                case "scout":return "Explorador";
-                case "melee":return "Cuerpo a cuerpo";
-                case "ranged":return "Tirador";
-                case "siege":return "Artillería";
+                case "worker":return "Worker";
+                case "scout":return "Scout";
+                case "melee":return "Melee";
+                case "ranged":return "Ranged";
+                case "siege":return "Artillery";
                 default:return role;
             }
         }

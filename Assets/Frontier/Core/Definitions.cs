@@ -76,12 +76,12 @@ namespace Frontier.Core
         private readonly Dictionary<string, FactionDefinition> factions = new Dictionary<string, FactionDefinition>();
         public Catalog(CatalogDefinition definition)
         {
-            if (definition == null || definition.schemaVersion != 1) throw new ArgumentException("Catálogo incompatible.");
-            if (definition.factions == null || definition.archetypes == null || definition.upgrades == null) throw new ArgumentException("Catálogo incompleto.");
+            if (definition == null || definition.schemaVersion != 1) throw new ArgumentException("Incompatible catalog version.");
+            if (definition.factions == null || definition.archetypes == null || definition.upgrades == null) throw new ArgumentException("Incomplete catalog.");
             Definition = definition;
             foreach (var faction in definition.factions)
             {
-                if (faction == null || string.IsNullOrWhiteSpace(faction.id) || factions.ContainsKey(faction.id)) throw new ArgumentException("Facción inválida o duplicada.");
+                if (faction == null || string.IsNullOrWhiteSpace(faction.id) || factions.ContainsKey(faction.id)) throw new ArgumentException("Invalid or duplicate faction.");
                 factions.Add(faction.id, faction);
             }
             foreach (var type in definition.archetypes)
@@ -90,27 +90,27 @@ namespace Frontier.Core
                     || !Positive(type.health) || !Nonnegative(type.speed) || !Nonnegative(type.damage) || !Nonnegative(type.range) || !Positive(type.vision)
                     || (!type.building && (!Positive(type.collisionRadius) || type.collisionRadius > .49f))
                     || type.duration < 1 || type.attackPeriod < 1 || type.footprint < 1 || type.footprint > 8 || type.minerals < 0 || type.catalyst < 0 || type.capacity < 0)
-                    throw new ArgumentException("Definición inválida: " + type?.id);
+                    throw new ArgumentException("Invalid definition: " + type?.id);
                 types.Add(type.id, type);
             }
             foreach (var faction in definition.factions)
             {
                 var roles = new HashSet<string>();
                 foreach (var type in definition.archetypes) if (type.faction == faction.id)
-                    if (string.IsNullOrWhiteSpace(type.role) || !roles.Add(type.role)) throw new ArgumentException("Rol inválido o duplicado: " + type.id);
+                    if (string.IsNullOrWhiteSpace(type.role) || !roles.Add(type.role)) throw new ArgumentException("Invalid or duplicate role: " + type.id);
                 foreach (string role in new[]{"worker","scout","melee","ranged","siege","hq","extractor","supply","barracks","tech","defense"})
-                    if (!roles.Contains(role)) throw new ArgumentException("Falta el rol " + role + " en " + faction.id);
-                if (Role(faction.id,"hq").footprint != 4) throw new ArgumentException("La base inicial v1 debe ocupar 4 x 4 celdas.");
+                    if (!roles.Contains(role)) throw new ArgumentException("Missing role " + role + " in " + faction.id);
+                if (Role(faction.id,"hq").footprint != 4) throw new ArgumentException("The v1 starting base must occupy 4 x 4 cells.");
                 foreach (var type in definition.archetypes) if (type.faction == faction.id)
                 {
-                    if (!type.building && (string.IsNullOrEmpty(type.producer) || !roles.Contains(type.producer) || !Role(faction.id,type.producer).building)) throw new ArgumentException("Productor inválido: " + type.id);
-                    if (!string.IsNullOrEmpty(type.requires) && (!roles.Contains(type.requires) || !Role(faction.id,type.requires).building)) throw new ArgumentException("Requisito inválido: " + type.id);
+                    if (!type.building && (string.IsNullOrEmpty(type.producer) || !roles.Contains(type.producer) || !Role(faction.id,type.producer).building)) throw new ArgumentException("Invalid producer: " + type.id);
+                    if (!string.IsNullOrEmpty(type.requires) && (!roles.Contains(type.requires) || !Role(faction.id,type.requires).building)) throw new ArgumentException("Invalid prerequisite: " + type.id);
                 }
             }
             var upgrades = new HashSet<string>();
             foreach (var upgrade in definition.upgrades)
                 if (upgrade == null || (upgrade.id != "attack" && upgrade.id != "armor") || !upgrades.Add(upgrade.id) || upgrade.minerals < 0 || upgrade.catalyst < 0 || upgrade.duration < 1)
-                    throw new ArgumentException("Mejora inválida o duplicada.");
+                    throw new ArgumentException("Invalid or duplicate upgrade.");
         }
         private static bool Nonnegative(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0;
         private static bool Positive(float value) => Nonnegative(value) && value > 0;
@@ -120,7 +120,7 @@ namespace Frontier.Core
         public Archetype Role(string faction, string role)
         {
             foreach (var a in Definition.archetypes) if (a.faction == faction && a.role == role) return a;
-            throw new ArgumentException("Rol desconocido: " + faction + "/" + role);
+            throw new ArgumentException("Unknown role: " + faction + "/" + role);
         }
         public UpgradeDefinition Upgrade(string id)
         {

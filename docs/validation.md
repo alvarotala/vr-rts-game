@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Juego en inglés — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+La interfaz, ayuda de controles, colocación y recuperación del tablero, tutorial, avisos de órdenes y resultado, contadores de recursos y catálogo se presentan en inglés. Los mapas se llaman **The Rift** y **Training Grounds**; las facciones **The Consortium** y **Symbiosis**. El tutorial toma los nombres de edificios de la facción elegida y las colas muestran el nombre del catálogo para unidades y mejoras. Se actualizaron también los textos propios de permisos de escritorio y diagnósticos de carga. Los idiomas adicionales quedan para una etapa posterior.
+
+- **123 comprobaciones del núcleo aprobadas**, sin ejecutar nuevas partidas de IA: `TestResults/english-core.log`.
+- **Compilación de scripts y 15 vistas estáticas del panel aprobadas en Unity Editor**: inicio en ambos mapas, cinco estados de recolección, trabajador/tutorial, producción e investigación de ambas facciones, pausa y partida terminada. Comprobación de altura de las etiquetas sin desbordes y revisión visual de inicio, trabajador biológico, producción industrial, investigación biológica, gas sin extractor y pausa. Evidencias en `TestResults/unity-english.log` y `TestResults/English`.
+- Revisión de cadenas en fuentes y comparación estructural de datos: solo cambiaron nombres y títulos en JSON, conservando identificadores, estadísticas, terreno y recursos.
+- No se generó APK ni ejecutable desktop. Se verificó el hash del APK existente y se conservaron los cambios locales previos de configuración; en `ProjectSettings.asset` solo se añadieron las traducciones de las descripciones de cámara y micrófono.
+
+Pendiente: comprobar la lectura y los controles en Quest. Las vistas del Editor no son una partida interactiva ni una validación física del visor. El APK disponible sigue siendo 0.1.3 y no contiene esta traducción.
+
 ## Hover de unidades y edificios — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 El hover usa un contorno de terreno independiente de la selección: círculo para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. El cuerpo se realza mediante un bloque de propiedades del renderer, conservando los materiales de facción y rol. El contorno se dibuja en el shader del terreno, sigue rampas, excluye paredes y respeta el recorte del tablero y la visión actual. El disco de selección solo se activa para entidades seleccionadas. La entrada limpia el puntero al perder foco o desactivarse.

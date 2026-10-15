@@ -40,7 +40,7 @@ namespace Frontier.Core
                 for (int i = 0; i < 6; i++)
                 {
                     Point? position = FreeExit(hq);
-                    if (!position.HasValue) throw new ArgumentException("No hay espacio para los trabajadores iniciales.");
+                    if (!position.HasValue) throw new ArgumentException("No space for starting workers.");
                     Spawn(player, Catalog.Role(Players[player].faction, "worker").id, position.Value);
                 }
             }
@@ -63,26 +63,26 @@ namespace Frontier.Core
 
         public CommandResult Submit(GameCommand command)
         {
-            if (command == null || command.player < 0 || command.player > 1) return Reject("Jugador inválido.");
-            if (Winner != -1 || Paused) return Reject("La partida no está activa.");
-            if (command.sequence > 0 && command.sequence <= lastSequences[command.player]) return Reject("Orden repetida.");
+            if (command == null || command.player < 0 || command.player > 1) return Reject("Invalid player.");
+            if (Winner != -1 || Paused) return Reject("The match is not active.");
+            if (command.sequence > 0 && command.sequence <= lastSequences[command.player]) return Reject("Duplicate command.");
             if (command.sequence > 0) lastSequences[command.player] = command.sequence;
             if (command.kind == CommandKind.Surrender) { Winner = 1 - command.player; return Accept(); }
-            if (command.entities == null || command.entities.Length == 0 || command.entities.Length > UnitLimit) return Reject("Seleccioná una unidad o edificio.");
+            if (command.entities == null || command.entities.Length == 0 || command.entities.Length > UnitLimit) return Reject("Select a unit or building.");
             var selected = new List<EntityState>();
             foreach (int id in command.entities.Distinct())
             {
-                if (!Entities.TryGetValue(id, out var entity) || entity.owner != command.player) return Reject("La selección no te pertenece.");
+                if (!Entities.TryGetValue(id, out var entity) || entity.owner != command.player) return Reject("You do not own the selected units or buildings.");
                 selected.Add(entity);
             }
             EntityState first = selected[0];
             if (command.kind == CommandKind.Build) return Build(command, first);
             if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, first);
             if (command.kind == CommandKind.Cancel) return Cancel(first);
-            if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Seleccioná unidades terminadas.");
+            if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {
-                if (!Finite(command.position) || Map.Cell(command.position) < 0) return Reject("Destino fuera del mapa.");
+                if (!Finite(command.position) || Map.Cell(command.position) < 0) return Reject("Destination outside the map.");
                 int accepted = 0;
                 int formationRadius=Math.Max(12,(int)Math.Ceiling(Math.Sqrt(selected.Count))*2);
                 var reserved = new HashSet<int>();
@@ -111,22 +111,22 @@ namespace Frontier.Core
                         accepted++;break;
                     }
                 }
-                return accepted > 0 ? Accept() : Reject("No hay un camino hasta ese destino.");
+                return accepted > 0 ? Accept() : Reject("No path to that destination.");
             }
             if (command.kind == CommandKind.Attack || command.kind == CommandKind.Repair)
             {
-                if (!Entities.TryGetValue(command.target, out var target)) return Reject("Objetivo inexistente.");
-                if (command.kind == CommandKind.Attack && (target.owner == command.player || !Visible(command.player, Center(target)))) return Reject("No hay un enemigo visible en ese punto.");
-                if (command.kind == CommandKind.Repair && (target.owner != command.player || Catalog.Faction(Players[command.player].faction).regenerates || selected.Any(e => Type(e).role != "worker"))) return Reject("Solo los trabajadores industriales pueden reparar aliados.");
+                if (!Entities.TryGetValue(command.target, out var target)) return Reject("Target does not exist.");
+                if (command.kind == CommandKind.Attack && (target.owner == command.player || !Visible(command.player, Center(target)))) return Reject("No visible enemy at that location.");
+                if (command.kind == CommandKind.Repair && (target.owner != command.player || Catalog.Faction(Players[command.player].faction).regenerates || selected.Any(e => Type(e).role != "worker"))) return Reject("Only industrial workers can repair allies.");
             }
             else if (command.kind == CommandKind.Gather)
             {
                 var resource = Resources.FirstOrDefault(r => r.id == command.target);
-                if (resource == null || !Explored(command.player, resource.position) || selected.Any(e => Type(e).role != "worker")) return Reject("Seleccioná trabajadores y un recurso explorado.");
-                if (resource.kind == "catalyst" && !Extractor(command.player, resource)) return Reject("Construí un extractor sobre el catalizador.");
+                if (resource == null || !Explored(command.player, resource.position) || selected.Any(e => Type(e).role != "worker")) return Reject("Select workers and an explored resource deposit.");
+                if (resource.kind == "catalyst" && !Extractor(command.player, resource)) return Reject("Build an extractor over the catalyst deposit.");
                 return AssignGather(selected, resource);
             }
-            else if (command.kind != CommandKind.Stop && command.kind != CommandKind.Hold) return Reject("Orden desconocida.");
+            else if (command.kind != CommandKind.Stop && command.kind != CommandKind.Hold) return Reject("Unknown command.");
             foreach (var entity in selected)
             {
                 ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
@@ -136,24 +136,24 @@ namespace Frontier.Core
         }
         private CommandResult Build(GameCommand command, EntityState worker)
         {
-            if (!worker.complete || Type(worker).role != "worker" || !Catalog.Has(command.definition)) return Reject("Seleccioná un trabajador.");
+            if (!worker.complete || Type(worker).role != "worker" || !Catalog.Has(command.definition)) return Reject("Select a worker.");
             var type = Catalog[command.definition]; int player = worker.owner;
-            if (!type.building || type.faction != Players[player].faction) return Reject("Edificio inválido.");
-            if (!Finite(command.position)) return Reject("Posición inválida.");
+            if (!type.building || type.faction != Players[player].faction) return Reject("Invalid building.");
+            if (!Finite(command.position)) return Reject("Invalid position.");
             Point position = new Point((float)Math.Floor(command.position.x), (float)Math.Floor(command.position.y));
-            if (Buildings(player) >= BuildingLimit) return Reject("Límite de 20 edificios.");
-            if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Falta el edificio requerido.");
-            if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Recursos insuficientes.");
-            if (!Map.CanPlace(position, type.footprint)) return Reject("El terreno no permite construir aquí.");
+            if (Buildings(player) >= BuildingLimit) return Reject("Building limit reached (20).");
+            if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Required building missing.");
+            if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
+            if (!Map.CanPlace(position, type.footprint)) return Reject("Cannot build on this terrain.");
             for (int y = (int)position.y; y < position.y + type.footprint; y++) for (int x = (int)position.x; x < position.x + type.footprint; x++)
-                if (!Visible(player, new Point(x + .5f, y + .5f))) return Reject("Necesitás visión del área de construcción.");
+                if (!Visible(player, new Point(x + .5f, y + .5f))) return Reject("You need vision of the construction area.");
             var covered = Resources.Where(r => r.remaining > 0 && InsideFootprint(r.position, position, type.footprint)).ToArray();
             if (type.role == "extractor")
-            { if (covered.Length != 1 || covered[0].kind != "catalyst") return Reject("El extractor debe cubrir un depósito de catalizador."); }
-            else if (covered.Length > 0) return Reject("Hay recursos en ese espacio.");
-            if (Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Hay unidades en ese espacio.");
+            { if (covered.Length != 1 || covered[0].kind != "catalyst") return Reject("The extractor must cover a catalyst deposit."); }
+            else if (covered.Length > 0) return Reject("Resources block that location.");
+            if (Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Units block that location.");
             var center = new Point(position.x + type.footprint / 2f, position.y + type.footprint / 2f);
-            if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("El trabajador no puede llegar.");
+            if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("The worker cannot reach that location.");
             Pay(player, type.minerals, type.catalyst);
             var building = Spawn(player, type.id, position); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
             ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
@@ -162,24 +162,24 @@ namespace Frontier.Core
         private CommandResult Produce(GameCommand command, EntityState producer)
         {
             int player = producer.owner;
-            if (!producer.complete || !Type(producer).building || producer.queue.Count >= 5) return Reject("Edificio no disponible o cola llena.");
+            if (!producer.complete || !Type(producer).building || producer.queue.Count >= 5) return Reject("Building unavailable or queue full.");
             if (command.kind == CommandKind.Research)
             {
                 var upgrade = Catalog.Upgrade(command.definition);
-                if (upgrade == null || Type(producer).role != "tech") return Reject("Mejora inválida.");
-                if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Mejora ya investigada o en cola.");
-                if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Recursos insuficientes.");
+                if (upgrade == null || Type(producer).role != "tech") return Reject("Invalid upgrade.");
+                if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Upgrade already researched or queued.");
+                if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");
                 Pay(player, upgrade.minerals, upgrade.catalyst);
                 producer.queue.Add(new ProductionOrder { definition = upgrade.id, research = true, remaining = upgrade.duration, total = upgrade.duration });
             }
             else
             {
-                if (!Catalog.Has(command.definition)) return Reject("Unidad desconocida.");
+                if (!Catalog.Has(command.definition)) return Reject("Unknown unit.");
                 var type = Catalog[command.definition];
-                if (type.building || type.faction != Players[player].faction || type.producer != Type(producer).role) return Reject("Este edificio no produce esa unidad.");
-                if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Falta tecnología.");
-                if (Units(player) + Reserved(player) >= Capacity(player)) return Reject("Necesitás más suministro.");
-                if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Recursos insuficientes.");
+                if (type.building || type.faction != Players[player].faction || type.producer != Type(producer).role) return Reject("This building cannot train that unit.");
+                if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Required technology missing.");
+                if (Units(player) + Reserved(player) >= Capacity(player)) return Reject("You need more supply.");
+                if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
                 Pay(player, type.minerals, type.catalyst);
                 producer.queue.Add(new ProductionOrder { definition = type.id, remaining = type.duration, total = type.duration });
             }
@@ -189,7 +189,7 @@ namespace Frontier.Core
         {
             if (!entity.complete)
             { var type = Type(entity); Pay(entity.owner, -(int)(type.minerals * .75f), -(int)(type.catalyst * .75f)); Remove(entity); return Accept(); }
-            if (entity.queue.Count == 0) return Reject("No hay producción que cancelar.");
+            if (entity.queue.Count == 0) return Reject("Nothing in the queue to cancel.");
             var order = entity.queue[entity.queue.Count - 1]; entity.queue.RemoveAt(entity.queue.Count - 1);
             if (order.research) { var u = Catalog.Upgrade(order.definition); Pay(entity.owner, -u.minerals, -u.catalyst); }
             else { var t = Catalog[order.definition]; Pay(entity.owner, -t.minerals, -t.catalyst); }

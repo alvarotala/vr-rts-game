@@ -38,8 +38,8 @@ namespace Frontier.Editor
             PlayerSettings.defaultInterfaceOrientation=UIOrientation.LandscapeLeft;
             PlayerSettings.defaultScreenWidth=1440;PlayerSettings.defaultScreenHeight=1000;
             // Meta's linked desktop assemblies reference capture APIs. The playtest never requests them.
-            PlayerSettings.macOS.microphoneUsageDescription="Audio para pruebas locales de realidad virtual.";
-            PlayerSettings.macOS.cameraUsageDescription="Cámara para pruebas locales de realidad mixta.";
+            PlayerSettings.macOS.microphoneUsageDescription="Audio for local virtual reality testing.";
+            PlayerSettings.macOS.cameraUsageDescription="Camera for local mixed reality testing.";
             var settings=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
             var input=settings.FindProperty("activeInputHandler");if(input!=null)input.intValue=1;settings.ApplyModifiedPropertiesWithoutUndo();
             var pipeline=AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Frontier/Settings/MobileURP.asset");
@@ -62,10 +62,10 @@ namespace Frontier.Editor
             }
             android.InitManagerOnStart=true;
             if(!XRPackageMetadataStore.AssignLoader(android.Manager,"UnityEngine.XR.OpenXR.OpenXRLoader",BuildTargetGroup.Android))
-                throw new BuildFailedException("No se pudo configurar el loader OpenXR.");
+                throw new BuildFailedException("Could not configure the OpenXR loader.");
             FeatureHelpers.RefreshFeatures(BuildTargetGroup.Android);
             var openxr=OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Android);
-            if(openxr==null)throw new BuildFailedException("No se generaron las opciones OpenXR.");
+            if(openxr==null)throw new BuildFailedException("OpenXR settings were not generated.");
             openxr.renderMode=OpenXRSettings.RenderMode.SinglePassInstanced;
             foreach(var feature in openxr.GetFeatures())
             {
@@ -93,7 +93,7 @@ namespace Frontier.Editor
             var shaders=graphics.FindProperty("m_AlwaysIncludedShaders");
             foreach(string name in new[]{"Frontier/Board","Universal Render Pipeline/Unlit","UI/Default"})
             {
-                var shader=Shader.Find(name);if(shader==null)throw new BuildFailedException("Shader inexistente: "+name);
+                var shader=Shader.Find(name);if(shader==null)throw new BuildFailedException("Shader not found: "+name);
                 bool found=false;for(int i=0;i<shaders.arraySize;i++)if(shaders.GetArrayElementAtIndex(i).objectReferenceValue==shader)found=true;
                 if(!found){int i=shaders.arraySize;shaders.InsertArrayElementAtIndex(i);shaders.GetArrayElementAtIndex(i).objectReferenceValue=shader;}
             }
@@ -106,10 +106,10 @@ namespace Frontier.Editor
         public static void BuildQuest()
         {
             Configure();
-            if(!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android,BuildTarget.Android))throw new BuildFailedException("Falta Android Build Support.");
+            if(!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android,BuildTarget.Android))throw new BuildFailedException("Android Build Support is missing.");
             PrepareOutput("Builds/Quest");
             var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Quest/FrontierCommand.apk",target=BuildTarget.Android,options=BuildOptions.None});
-            if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Falló la compilación Quest: "+report.summary.result);
+            if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Quest build failed: "+report.summary.result);
             Debug.Log("FRONTIER_APK_BUILT "+report.summary.totalSize);
         }
         [MenuItem("Frontier/Build desktop playtest")]
@@ -119,7 +119,7 @@ namespace Frontier.Editor
             // MRUK 203 ships a standalone macOS library for Apple Silicon only.
             EditorUserBuildSettings.SetPlatformSettings(BuildPipeline.GetBuildTargetName(BuildTarget.StandaloneOSX),"Architecture","ARM64");
             var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Desktop/FrontierCommand.app",target=BuildTarget.StandaloneOSX,options=BuildOptions.Development});
-            if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Falló el playtest desktop.");
+            if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Desktop playtest failed.");
         }
         private static void PrepareOutput(string directory)
         {

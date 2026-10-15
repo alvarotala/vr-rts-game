@@ -39,8 +39,8 @@ namespace Frontier.Runtime
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
             root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
             var image=go.AddComponent<Image>();image.color=background;
-            moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVER MENÚ · mantener gatillo y arrastrar",out moveImage);
-            resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Restablecer posición",out resetImage);
+            moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold trigger and drag",out moveImage);
+            resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
             headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-84),new Vector2(1040,44),30,accent);
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
             selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
@@ -72,21 +72,21 @@ namespace Frontier.Runtime
             string state=(!Session.Running?"setup":settings?"settings":Session.Match.Winner!=-1?"finished":string.Join(",",Session.Selection.OrderBy(x=>x)))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete)));
             if(state!=signature){signature=state;Rebuild();}
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
-            headline.text=!Session.Running?"FRONTIER / COMMAND":Session.Match.Winner!=-1?(Session.Match.Winner==0?"VICTORIA":"PARTIDA TERMINADA"):Session.IsPaused?"PARTIDA EN PAUSA":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
-            economy.text=Session.View==null?"Estrategia sobre tu mesa · Quest 3":$"MINERAL  {Session.View.minerals}      CATALIZADOR  {Session.View.catalyst}      SUMINISTRO  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
+            headline.text=!Session.Running?"FRONTIER / COMMAND":Session.Match.Winner!=-1?(Session.Match.Winner==0?"VICTORY":"MATCH OVER"):Session.IsPaused?"MATCH PAUSED":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
+            economy.text=Session.View==null?"Tabletop strategy · Quest 3":$"MINERALS  {Session.View.minerals}      CATALYST  {Session.View.catalyst}      SUPPLY  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
             var selected=Session.View?.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             if(selected==null||selected.Length==0)
             {
                 var pointed=Session.View?.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
-                selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {Session.Difficulty} · {Session.Map.title}":
-                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Aliado":"Enemigo"):
-                    Session.SelectedResource!=0?"Depósito seleccionado · asigná trabajadores con la orden contextual.":"Seleccioná unidades o un edificio para dar órdenes.";
+                selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}":
+                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Ally":"Enemy"):
+                    Session.SelectedResource!=0?"Deposit selected · use a context order to assign workers.":"Select units or a building to give orders.";
             }
             else if(selected.Length==1)
             {
-                var e=selected[0];selection.text=UnitLabel(Session.Catalog[e.definition])+" · "+Mathf.CeilToInt(e.health)+" PV";
-                if(!e.complete)selection.text+=$" · Construcción {e.progress*100:0}%";
-                if(e.queue.Length>0)selection.text+=$" · Cola {e.queue.Length}: {e.queue[0].definition.Split('.').Last()} {100*(1-e.queue[0].remaining/(float)e.queue[0].total):0}%";
+                var e=selected[0];selection.text=UnitLabel(Session.Catalog[e.definition])+" · "+Mathf.CeilToInt(e.health)+" HP";
+                if(!e.complete)selection.text+=$" · Building {e.progress*100:0}%";
+                if(e.queue.Length>0)selection.text+=$" · Queue {e.queue.Length}: {QueueLabel(e.queue[0].definition)} {100*(1-e.queue[0].remaining/(float)e.queue[0].total):0}%";
             }
             else selection.text=string.Join(" · ",selected.GroupBy(e=>
                 {var type=Session.Catalog[e.definition];return type.building?type.name:UnitVisuals.RoleName(type.role);}).Select(g=>$"{g.Count()}× {g.Key}"));
@@ -114,25 +114,25 @@ namespace Frontier.Runtime
             }
             if(resource!=null)
             {
-                string name=resource.kind=="mineral"?"MINERAL":"GAS / CATALIZADOR";
+                string name=resource.kind=="mineral"?"MINERALS":"GAS / CATALYST";
                 string remaining=resource.remaining<0?"?":resource.remaining.ToString();
                 int optimum=resource.remaining==0?0:Harvesting.OptimalWorkers(resource.kind);
-                harvesting.text=$"{name} · {Saturation(resource.assignedWorkers,optimum)} · Restante: {remaining}";
-                if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)harvesting.text+=" · Requiere extractor terminado";
+                harvesting.text=$"{name} · {Saturation(resource.assignedWorkers,optimum)} · Remaining: {remaining}";
+                if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)harvesting.text+=" · Requires a completed extractor";
                 if(resource.assignedWorkers>resource.optimalWorkers)harvesting.color=new Color(1,.65f,.3f);
             }
             else if(building!=null&&Session.Catalog[building.definition].role=="hq")
             {
                 var minerals=view.resources.Where(r=>r.baseId==building.id&&r.kind=="mineral").ToArray();
                 var gas=view.resources.Where(r=>r.baseId==building.id&&r.kind=="catalyst").ToArray();
-                harvesting.text="MINERALES · "+Saturation(minerals.Sum(r=>r.assignedWorkers),minerals.Sum(r=>r.optimalWorkers))+
+                harvesting.text="MINERALS · "+Saturation(minerals.Sum(r=>r.assignedWorkers),minerals.Sum(r=>r.optimalWorkers))+
                     "     GAS · "+Saturation(gas.Sum(r=>r.assignedWorkers),gas.Sum(r=>r.optimalWorkers));
             }
             else if(selected!=null&&selected.Any(e=>Session.Catalog[e.definition].role=="worker"))
-                harvesting.text="Óptimo: 2 trabajadores por mineral · 3 por gas · Reparto automático entre depósitos cercanos";
+                harvesting.text="Optimal: 2 workers per mineral patch · 3 per gas · Automatically assigned to nearby deposits";
         }
-        private static string Saturation(int assigned,int optimal)=>$"Trabajadores {assigned}/{optimal}"+
-            (assigned>optimal?" (exceso)":optimal>0&&assigned==optimal?" (óptimo)":"");
+        private static string Saturation(int assigned,int optimal)=>$"Workers {assigned}/{optimal}"+
+            (assigned>optimal?" (excess)":optimal>0&&assigned==optimal?" (optimal)":"");
         private void Rebuild()
         {
             if(actions==null)return;
@@ -147,27 +147,27 @@ namespace Frontier.Runtime
             }
             if(!Session.Running)
             {
-                Add("Facción: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
-                Add("Rival: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
-                Add("IA: "+(Session.Difficulty=="easy"?"Fácil":"Normal"),()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":"easy";Rebuild();});
-                Add(Session.MapId=="rift"?"Mapa: La Fractura":"Mapa: Entrenamiento",()=>{Session.LoadMap(Session.MapId=="rift"?"training":"rift");Board.Rebuild();Rebuild();});
-                Add("Ubicar tablero",()=>PlaceRequested?.Invoke());
-                Add("Mesa / altura 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
-                Add("Piso / altura 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
-                Add("Mano: "+(Session.LeftHanded?"Izquierda":"Derecha"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
-                Add("COMENZAR PARTIDA",()=>{if(Board.Placed)Session.StartMatch();else Session.Announce("Primero confirmá la ubicación del tablero.");});
-                Add("Detectar superficies",()=>Quest.LoadRoom());
-                Add("Ayuda de controles",Help);
+                Add("Faction: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
+                Add("Opponent: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
+                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":"easy";Rebuild();});
+                Add("Map: "+Session.Map.title,()=>{Session.LoadMap(Session.MapId=="rift"?"training":"rift");Board.Rebuild();Rebuild();});
+                Add("Place board",()=>PlaceRequested?.Invoke());
+                Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
+                Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
+                Add("Hand: "+(Session.LeftHanded?"Left":"Right"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
+                Add("START MATCH",()=>{if(Board.Placed)Session.StartMatch();else Session.Announce("Confirm the board placement first.");});
+                Add("Detect surfaces",()=>Quest.LoadRoom());
+                Add("Controls",Help);
                 return;
             }
             if(settings||Session.Match.Winner!=-1)
             {
-                Add("Volver a la partida",()=>{settings=false;Session.Pause("menu",false);Rebuild();});
-                Add("Revancha",()=>{settings=false;Session.StartMatch();});
-                Add("Reubicar tablero",()=>PlaceRequested?.Invoke());
-                Add("Rendirse",()=>{Session.Pause("menu",false);Session.Send(CommandKind.Surrender);settings=false;});
-                Add("Mano: "+(Session.LeftHanded?"Izquierda":"Derecha"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
-                Add("Ayuda de controles",Help);return;
+                Add("Resume match",()=>{settings=false;Session.Pause("menu",false);Rebuild();});
+                Add("Rematch",()=>{settings=false;Session.StartMatch();});
+                Add("Reposition board",()=>PlaceRequested?.Invoke());
+                Add("Surrender",()=>{Session.Pause("menu",false);Session.Send(CommandKind.Surrender);settings=false;});
+                Add("Hand: "+(Session.LeftHanded?"Left":"Right"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
+                Add("Controls",Help);return;
             }
             var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             if(selected.Length==1&&Session.Catalog[selected[0].definition].building)
@@ -180,18 +180,18 @@ namespace Frontier.Runtime
                     if(role=="tech")foreach(var upgrade in Session.Catalog.Definition.upgrades)
                     {var captured=upgrade;Add(upgrade.name+" · "+Cost(upgrade.minerals,upgrade.catalyst),()=>Session.Send(CommandKind.Research,captured.id));}
                 }
-                Add("Cancelar / devolver",()=>Session.Send(CommandKind.Cancel));
+                Add("Cancel / refund",()=>Session.Send(CommandKind.Cancel));
             }
             else if(selected.Length>0)
             {
                 if(selected.All(e=>Session.Catalog[e.definition].role=="worker"))
                     foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&t.building))
                     {var captured=type;Add(type.name+" · "+Cost(type.minerals,type.catalyst),()=>Session.ChooseBuild(captured.id));}
-                Add("Avanzar y atacar",()=>{Session.AttackMoveMode=true;Session.Announce("Confirmá el destino del ataque.");});
-                Add("Detener",()=>Session.Send(CommandKind.Stop));Add("Mantener posición",()=>Session.Send(CommandKind.Hold));
+                Add("Attack Move",()=>{Session.AttackMoveMode=true;Session.Announce("Confirm the attack destination.");});
+                Add("Stop",()=>Session.Send(CommandKind.Stop));Add("Hold Position",()=>Session.Send(CommandKind.Hold));
             }
-            for(int g=0;g<3;g++){int n=g;Add("Grupo "+(g+1)+" · mantener: guardar",()=>Session.Group(n,false),()=>Session.Group(n,true));}
-            Add("Ver mapa completo",()=>Board.Fit());Add("Pausa / opciones",()=>{settings=true;Session.Pause("menu",true);Rebuild();});
+            for(int g=0;g<3;g++){int n=g;Add("Group "+(g+1)+" · hold to save",()=>Session.Group(n,false),()=>Session.Group(n,true));}
+            Add("Full map",()=>Board.Fit());Add("Pause / options",()=>{settings=true;Session.Pause("menu",true);Rebuild();});
         }
         public void ToggleMenu(){settings=!settings;Session.Pause("menu",settings);Rebuild();}
         public void ResetPosition(bool forgetSaved=true)
@@ -205,7 +205,7 @@ namespace Frontier.Runtime
             positionInitialized=true;
         }
         // Called on a controller shortcut even when the console has been moved out of view.
-        public void Recall(){moving=false;pressed=null;ResetPosition();Session.Announce("Menú restablecido arriba del tablero.");}
+        public void Recall(){moving=false;pressed=null;ResetPosition();Session.Announce("Menu reset above the board.");}
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -228,10 +228,16 @@ namespace Frontier.Runtime
         }
         private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
-        private static string ShortFaction(string faction)=>faction=="industrial"?"Consorcio":"Simbiosis";
+        private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
         private static string Cost(int m,int c)=>c>0?$"{m}M {c}C":$"{m}M";
         private static string UnitLabel(Archetype type)=>type.building?type.name:UnitVisuals.RoleName(type.role)+" / "+type.name;
-        private void Help()=>Session.Announce(Quest.Active?"Gatillo: seleccionar/arrastrar · A: ordenar · B: cancelar · sticks: desplazar/zoom":"Clic/arrastre: seleccionar · derecho: ordenar · WASD: desplazar · rueda: zoom · Espacio: pausa");
+        private string DifficultyLabel=>Session.Difficulty=="easy"?"Easy":"Normal";
+        private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
+        private void Help()
+        {
+            string order=Session.LeftHanded?"X":"A",cancel=Session.LeftHanded?"Y":"B";
+            Session.Announce(Quest.Active?$"Trigger: select/drag · {order}: order · {cancel}: cancel · sticks: pan/zoom":"Click/drag: select · right-click: order · WASD: pan · wheel: zoom · Space: pause");
+        }
         public bool Point(Ray ray,bool down,bool up,float depth=0)
         {
             if(root==null)return false;
