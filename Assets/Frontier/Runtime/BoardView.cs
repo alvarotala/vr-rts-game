@@ -288,6 +288,23 @@ namespace Frontier.Runtime
             if(point.x<0||point.y<0||point.x>=Session.Map.width||point.y>=Session.Map.height)return false;
             worldHit=world;return true;
         }
+        public bool RayToSelectionPlane(Ray ray,out Point point)
+        {
+            point=default;
+            if(Content==null||!Content.gameObject.activeInHierarchy)return false;
+            UpdateTransform();
+            if(Vector3.Dot(ray.direction,transform.up)>=-.0001f||!new Plane(transform.up,transform.position).Raycast(ray,out float distance)||distance>20)return false;
+            var local=Content.InverseTransformPoint(ray.GetPoint(distance));point=new Point(local.x,local.z);return true;
+        }
+        public bool TrySelectionBounds(Point a,Point b,out Point min,out Point max)
+        {
+            // Intersect with the visible map window, not just the full map, so zoom cannot select clipped units.
+            float centerX=Session.Map.width*.5f+Pan.x,centerY=Session.Map.height*.5f+Pan.y;
+            float halfX=Session.Map.width*.5f/Zoom,halfY=Session.Map.height*.5f/Zoom;
+            min=new Point(Mathf.Max(Mathf.Min(a.x,b.x),Mathf.Max(0,centerX-halfX)),Mathf.Max(Mathf.Min(a.y,b.y),Mathf.Max(0,centerY-halfY)));
+            max=new Point(Mathf.Min(Mathf.Max(a.x,b.x),Mathf.Min(Session.Map.width,centerX+halfX)),Mathf.Min(Mathf.Max(a.y,b.y),Mathf.Min(Session.Map.height,centerY+halfY)));
+            return max.x-min.x>.001f&&max.y-min.y>.001f;
+        }
         public int EntityAt(Point point)
         {
             if(Session.View==null)return 0;
@@ -299,10 +316,10 @@ namespace Frontier.Runtime
         public void DrawSelection(Point a,Point b,bool visible)
         {
             if(ground==null)return;
-            if(!visible){ground.SetFloat("_SelectionWidth",0);return;}
+            if(!visible||!TrySelectionBounds(a,b,out var min,out var max)){ground.SetFloat("_SelectionWidth",0);return;}
             // Paint the outline in the terrain material: exactly on the surface, including ramps.
             // There is no elevated mesh, depth offset or vertical wall geometry.
-            float x0=Mathf.Min(a.x,b.x),x1=Mathf.Max(a.x,b.x),z0=Mathf.Min(a.y,b.y),z1=Mathf.Max(a.y,b.y);
+            float x0=min.x,x1=max.x,z0=min.y,z1=max.y;
             float width=Mathf.Min(.002f/CellScale,Mathf.Min(x1-x0,z1-z0)*.5f);
             ground.SetVector("_SelectionBounds",new Vector4(x0,z0,x1,z1));
             ground.SetFloat("_SelectionWidth",width);

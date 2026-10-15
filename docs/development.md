@@ -101,6 +101,15 @@ unity run . --log-file TestResults/unity-pointer.log --no-tail -- \
 
 Guarda ocho vistas en `TestResults/Pointer`: suelo, rampa, altura, selección, borde, zoom con tablero girado, niebla y cursor retirado. Comprueba rayos contra el terreno real, coincidencia del punto de impacto tras zoom/desplazamiento/giro, tamaño físico, rechazo de paredes y limpieza al pausar/ocultar/salir. La línea dibujada en estas vistas representa un rayo de ejemplo; no valida mandos físicos ni genera ejecutables.
 
+Para revisar selección desde fuera del tablero, usar **Frontier → Preview selection from outside board**, o:
+
+```sh
+unity run . --log-file TestResults/unity-edge-selection.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.EdgeSelectionPreview.Render
+```
+
+Ejecuta rayos mediante el mismo procesamiento de selección usado por mandos y mouse. Verifica los cuatro bordes, esquina, liberación fuera, cruce completo, clic externo, selección individual/aditiva, zoom/giro, cancelación y ausencia de órdenes/construcciones externas. Guarda seis vistas estáticas en `TestResults/EdgeSelection`, sin generar ejecutables.
+
 Para revisar la señal de daño recibido, usar **Frontier → Preview received damage**, o:
 
 ```sh

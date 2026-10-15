@@ -7,7 +7,7 @@ namespace Frontier.Runtime
     public sealed class CommanderInput:MonoBehaviour
     {
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;
-        private Point start;private bool dragging;private LineRenderer laser;private float hapticEnd;
+        private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
         private void Start()
         {
             Panel.PlaceRequested=Quest.BeginPlacement;Session.Feedback+=Haptic;
@@ -56,18 +56,32 @@ namespace Frontier.Runtime
             if(!Panel.AcceptsGameInput)
             {if(Panel.Page==CommandPanel.MenuPage.MatchSetup)Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);ClearPointer();return;}
             Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);
-            if(!Board.RayToMap(ray,out var point,out var worldHit)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
-            Board.Pointer=point;Board.Hovered=Board.EntityAt(point);
-            if(Quest.Active)laser.SetPosition(1,worldHit);
+            PointBoard(ray,down,up,order,add);
+        }
+        private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
+        {
+            bool onMap=Board.RayToMap(ray,out var point,out var worldHit);
+            Board.Pointer=onMap?point:(Point?)null;Board.Hovered=onMap?Board.EntityAt(point):0;
+            // The board plane extends beyond its edges for selection only.
+            if(!onMap&&!Board.RayToSelectionPlane(ray,out point)){ClearPointer();return;}
             if(down)
             {
-                if(Session.BuildDefinition!=null||Session.AttackMoveMode)Session.Context(point,Board.Hovered,Board.ResourceAt(point));
-                else{start=point;dragging=true;}
+                if(Session.BuildDefinition!=null||Session.AttackMoveMode)
+                {if(onMap)Session.Context(point,Board.Hovered,Board.ResourceAt(point));}
+                else{start=point;startedOnMap=onMap;dragging=true;}
             }
-            if(dragging)Board.DrawSelection(start,point,start.Distance(point)>1.5f);
+            if(Quest.Active&&laser!=null&&(onMap||dragging))
+                laser.SetPosition(1,onMap?worldHit:Board.Content.TransformPoint(new Vector3(point.x,0,point.y)));
+            bool area=start.Distance(point)>1.5f||!startedOnMap||!onMap;
+            if(dragging)Board.DrawSelection(start,point,area);
             if(up&&dragging)
-            {if(start.Distance(point)>1.5f)Session.SelectRectangle(start,point,add);else Session.Select(Board.Hovered,add,Board.ResourceAt(point));dragging=false;Board.DrawSelection(start,point,false);}
-            if(order)Session.Context(point,Board.Hovered,Board.ResourceAt(point));
+            {
+                if(area)
+                {if(Board.TrySelectionBounds(start,point,out var min,out var max))Session.SelectRectangle(min,max,add);}
+                else if(onMap&&startedOnMap)Session.Select(Board.Hovered,add,Board.ResourceAt(point));
+                dragging=false;Board.DrawSelection(start,point,false);
+            }
+            if(order&&onMap)Session.Context(point,Board.Hovered,Board.ResourceAt(point));
         }
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Session.LeftHanded?OVRInput.Controller.LTouch:OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}

@@ -4,6 +4,14 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Selección desde fuera del tablero — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+El arrastre puede empezar o terminar fuera del mapa usando la continuación del plano físico del tablero. Se conserva hasta soltar el gatillo o mouse y se recorta tanto el contorno como la selección a la ventana visible. Esto permite seleccionar en bordes y esquinas sin incluir unidades recortadas por zoom. Los arrastres enteramente externos no modifican la selección; movimiento, construcción y ataque desplazándose siguen requiriendo un impacto real sobre el terreno.
+
+Validación en Unity Editor: **33 comprobaciones aprobadas y seis vistas estáticas**, usando rayos oblicuos por el mismo procesamiento de selección de la entrada real. Cubren los cuatro bordes, esquina, empezar dentro/soltar fuera, ambos extremos fuera, clic externo, clic individual, selección aditiva, zoom y giro, cancelación y bloqueo de órdenes externas. Inspeccionados borde izquierdo, esquina y recorte con zoom. Registro: `TestResults/unity-edge-selection.log`; vistas: `TestResults/EdgeSelection`.
+
+No cambió el núcleo de simulación y no se repitieron sus pruebas ni partidas de IA. No se generó APK ni ejecutable desktop; se conservaron el APK y las configuraciones locales preexistentes. Pendiente: comprobar comodidad del gesto en mesa y piso con mandos físicos en Quest. El APK disponible no contiene este cambio.
+
 ## Señal de daño recibido — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Unidades y edificios visibles reciben un destello claro breve, un aro naranja expansivo y una barra de vida naranja al ser golpeados. La señal procede del momento del impacto, incluye daño de área y no se confunde con reparación, regeneración o disparo. Se mantienen hover y selección; se reutiliza un único marcador por entidad y se limpia al ocultar, reutilizar o retirar la representación. El aro desaparece a los doce pasos (0,6 segundos de simulación), y el destello del modelo a los cuatro.
