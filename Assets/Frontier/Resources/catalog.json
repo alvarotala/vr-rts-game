@@ -34,7 +34,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 10
+      "vision": 10,
+      "collisionRadius": 0.45
     },
     {
       "id": "industrial.scout",
@@ -55,7 +56,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 14
+      "vision": 14,
+      "collisionRadius": 0.34
     },
     {
       "id": "industrial.melee",
@@ -76,7 +78,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 9
+      "vision": 9,
+      "collisionRadius": 0.45
     },
     {
       "id": "industrial.ranged",
@@ -97,7 +100,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 11
+      "vision": 11,
+      "collisionRadius": 0.45
     },
     {
       "id": "industrial.siege",
@@ -118,7 +122,8 @@
       "requires": "tech",
       "supply": 1,
       "capacity": 0,
-      "vision": 12
+      "vision": 12,
+      "collisionRadius": 0.49
     },
     {
       "id": "industrial.hq",
@@ -265,7 +270,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 10
+      "vision": 10,
+      "collisionRadius": 0.45
     },
     {
       "id": "biological.scout",
@@ -286,7 +292,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 14
+      "vision": 14,
+      "collisionRadius": 0.34
     },
     {
       "id": "biological.melee",
@@ -307,7 +314,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 9
+      "vision": 9,
+      "collisionRadius": 0.45
     },
     {
       "id": "biological.ranged",
@@ -328,7 +336,8 @@
       "requires": "",
       "supply": 1,
       "capacity": 0,
-      "vision": 11
+      "vision": 11,
+      "collisionRadius": 0.45
     },
     {
       "id": "biological.siege",
@@ -349,7 +358,8 @@
       "requires": "tech",
       "supply": 1,
       "capacity": 0,
-      "vision": 12
+      "vision": 12,
+      "collisionRadius": 0.49
     },
     {
       "id": "biological.hq",

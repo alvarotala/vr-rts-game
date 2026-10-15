@@ -161,7 +161,8 @@ namespace Frontier.Runtime
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
             bool bio=type.faction=="biological";Material color=owner==0?blue:red;
-            float size=type.building?type.footprint*.85f:type.role=="siege"?1.5f:type.role=="scout"?.7f:1;
+            // The ground body fits its circular collision footprint, including rotated cube corners.
+            float size=type.building?type.footprint*.85f:type.collisionRadius*(bio?2f:1.4142f);
             float height=type.building?type.role=="hq"?3.4f:2:type.role=="siege"?1:type.role=="scout"?.65f:type.role=="melee"?1.6f:1.25f;
             var body=Primitive(bio?PrimitiveType.Sphere:PrimitiveType.Cube,root,color);body.localScale=new Vector3(size,height,size);body.localPosition=Vector3.up*height*.5f;
             var top=Primitive(bio?PrimitiveType.Capsule:PrimitiveType.Cube,root,color);top.localPosition=new Vector3(0,height,0);top.localScale=new Vector3(size*.4f,type.role=="defense"||type.role=="siege"?.8f:.35f,size*.4f);

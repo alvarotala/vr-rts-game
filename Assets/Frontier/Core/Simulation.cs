@@ -85,17 +85,33 @@ namespace Frontier.Core
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {
                 if (!Finite(command.position) || Map.Cell(command.position) < 0) return Reject("Destino fuera del mapa.");
-                int index = 0, accepted = 0;
-                foreach (var entity in selected)
+                int accepted = 0;
+                int formationRadius=Math.Max(12,(int)Math.Ceiling(Math.Sqrt(selected.Count))*2);
+                var reserved = new HashSet<int>();
+                var selectedIds = new HashSet<int>(selected.Select(e=>e.id));
+                foreach(var other in Entities.Values)
+                    if(!Type(other).building && !selectedIds.Contains(other.id) && (other.owner==command.player || Visible(command.player,other.position)))
+                    {
+                        reserved.Add(Map.Cell(other.position));
+                        if(other.owner==command.player&&(other.order==CommandKind.Move||other.order==CommandKind.AttackMove))reserved.Add(Map.Cell(other.destination));
+                    }
+                foreach (var entity in selected.OrderBy(e=>e.position.Distance(command.position)).ThenBy(e=>e.id))
                 {
-                    int n = index++; Point desired = command.position;
-                    if (selected.Count > 1) desired = new Point(command.position.x + n % 7 - Math.Min(3, selected.Count / 2), command.position.y + n / 7);
-                    Point? destination = NearbyFree(desired, 3);
-                    if (!destination.HasValue) continue;
-                    var path = paths.Find(entity.position, destination.Value);
-                    if (path == null) continue;
-                    entity.order = command.kind; entity.destination = destination.Value; entity.target = 0;
-                    entity.path = path; entity.pathIndex = 0; entity.pathVersion = Map.Version; accepted++;
+                    foreach(var destination in DestinationSlots(command.position,formationRadius,reserved,Type(entity).collisionRadius))
+                    {
+                        var path = paths.Find(entity.position,destination,.1f,null,Type(entity).collisionRadius);
+                        if(path==null)continue;
+                        ResetTravel(entity);
+                        entity.order=command.kind;entity.destination=destination;entity.target=0;
+                        entity.moveGoal=command.kind==CommandKind.Move;
+                        SetPath(entity,path,destination,.1f);
+                        // Leave a lane between formation slots so later arrivals can pass settled units.
+                        int gap=selected.Count>1?1:0;
+                        for(int y=(int)destination.y-gap;y<=(int)destination.y+gap;y++)
+                            for(int x=(int)destination.x-gap;x<=(int)destination.x+gap;x++)
+                                if(Map.Inside(x,y))reserved.Add(Map.Index(x,y));
+                        accepted++;break;
+                    }
                 }
                 return accepted > 0 ? Accept() : Reject("No hay un camino hasta ese destino.");
             }
@@ -114,7 +130,7 @@ namespace Frontier.Core
             else if (command.kind != CommandKind.Stop && command.kind != CommandKind.Hold) return Reject("Orden desconocida.");
             foreach (var entity in selected)
             {
-                entity.order = command.kind; entity.target = command.target; entity.path = null;
+                ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
                 if (command.kind == CommandKind.Repair && !Entities[command.target].complete) entity.order = CommandKind.Build;
                 if (command.kind == CommandKind.Gather) { entity.resourceId = command.target; entity.depositing = entity.cargo > 0; }
             }
@@ -137,12 +153,12 @@ namespace Frontier.Core
             if (type.role == "extractor")
             { if (covered.Length != 1 || covered[0].kind != "catalyst") return Reject("El extractor debe cubrir un depósito de catalizador."); }
             else if (covered.Length > 0) return Reject("Hay recursos en ese espacio.");
-            if (Entities.Values.Any(e => !Type(e).building && InsideFootprint(e.position, position, type.footprint))) return Reject("Hay unidades en ese espacio.");
+            if (Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Hay unidades en ese espacio.");
             var center = new Point(position.x + type.footprint / 2f, position.y + type.footprint / 2f);
             if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("El trabajador no puede llegar.");
             Pay(player, type.minerals, type.catalyst);
             var building = Spawn(player, type.id, position); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
-            worker.order = CommandKind.Build; worker.target = building.id; worker.path = null;
+            ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
             return Accept();
         }
         private CommandResult Produce(GameCommand command, EntityState producer)
@@ -185,15 +201,19 @@ namespace Frontier.Core
         {
             if (Paused || Winner != -1) return;
             Tick++; Array.Clear(unitCells, 0, unitCells.Length);
-            foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c] = e.id; }
+            foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c]++; }
             var active = Entities.Values.OrderBy(e => e.id).ToArray();
-            foreach (var e in active)
+            BeginMovementStep(active);
+            for(int index=0;index<active.Length;index++)
             {
+                var e=active[(index+Tick%active.Length)%active.Length];
                 if (e.health <= 0 || !Entities.ContainsKey(e.id)) continue;
                 var type = Type(e);
                 if (!e.complete) { AdvanceConstruction(e); continue; }
                 if (Catalog.Faction(type.faction).regenerates && Tick - e.lastDamageTick > 120) e.health = Math.Min(type.health, e.health + type.health * .00015f);
                 if (type.building) { AdvanceProduction(e); if (type.damage > 0) Fight(e, false); continue; }
+                if(e.yieldUntil>Tick){Travel(e,e.position,0);continue;}
+                if(e.order==CommandKind.Move&&Tick<e.resumeMoveTick)continue;
                 switch (e.order)
                 {
                     case CommandKind.Build: Construct(e); break;
@@ -205,6 +225,7 @@ namespace Frontier.Core
                     default: if (type.role != "worker") Fight(e, e.order != CommandKind.Hold); break;
                 }
             }
+            EndMovementStep();
             foreach (var e in active) if (e.health <= 0 && Entities.ContainsKey(e.id)) Remove(e);
             if (Tick % 4 == 0) UpdateVision();
             bool a = Buildings(0) > 0, b = Buildings(1) > 0;
@@ -216,13 +237,18 @@ namespace Frontier.Core
             var e = new EntityState { id = nextId++, owner = player, definition = definition, position = position, health = type.health };
             Entities.Add(e.id, e);
             if (type.building) Map.Occupy(position, type.footprint, e.id);
-            else { int c = Map.Cell(position); if (c >= 0) unitCells[c] = e.id; }
+            else { int c = Map.Cell(position); if (c >= 0) unitCells[c]++; e.stepOrigin=position;mobiles.Add(e); }
             return e;
         }
         private void Remove(EntityState e) { if (Type(e).building) Map.Occupy(e.position, Type(e).footprint, 0); Entities.Remove(e.id); }
         private void Pay(int player, int minerals, int catalyst) { Players[player].minerals -= minerals; Players[player].catalyst -= catalyst; }
         private static bool Finite(Point p) => !float.IsNaN(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.x) && !float.IsInfinity(p.y);
         private static bool InsideFootprint(Point p, Point origin, int size) => p.x >= origin.x && p.x < origin.x + size && p.y >= origin.y && p.y < origin.y + size;
+        private static bool OverlapsFootprint(Point p,float radius,Point origin,int size)
+        {
+            var closest=new Point(Math.Max(origin.x,Math.Min(origin.x+size,p.x)),Math.Max(origin.y,Math.Min(origin.y+size,p.y)));
+            return p.Distance(closest)<radius;
+        }
         private static CommandResult Accept() => new CommandResult(true);
         private static CommandResult Reject(string reason) => new CommandResult(false, reason);
         private bool Extractor(int player, ResourceState resource) => Entities.Values.Any(e => e.owner == player && e.complete && Type(e).role == "extractor" && InsideFootprint(resource.position, e.position, Type(e).footprint));

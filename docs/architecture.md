@@ -21,7 +21,11 @@
 
 El jugador y la IA pasan por el mismo validador de órdenes. La producción reserva suministro antes de empezar; una salida bloqueada conserva la unidad en cola. Las construcciones rechazadas no cobran recursos. Cancelar producción devuelve su costo; cancelar una construcción devuelve el 75 %. Destruir un edificio no devuelve recursos.
 
-La visibilidad se actualiza a 5 Hz. Las alturas y rocas limitan visión y tránsito. La navegación usa A* sobre una cuadrícula, posiciones de destino repartidas para grupos y reserva local de celdas para evitar superposición.
+La visibilidad se actualiza a 5 Hz. Las alturas y rocas limitan visión y tránsito. La navegación combina A* sobre la cuadrícula con cuerpos circulares en coordenadas continuas. El catálogo define `collisionRadius` por unidad (hasta 0,49 celdas, para conservar el paso por corredores de una celda); el cuerpo visual cabe dentro de esa huella.
+
+Las órdenes de grupo reservan destinos distintos con espacio entre ellos, incluso cerca del borde del mapa. Durante el recorrido, las unidades evitan el tráfico cercano, recalculan rutas con un costo de congestión y pueden ceder el paso temporalmente conservando su orden. Los aliados se empujan de forma gradual: cada desplazamiento comprueba cuerpos, edificios, límites, acantilados y rampas, sin exceder la velocidad de la unidad en ese paso. Si una cadena de empujes no cabe, se revierte completa. Los enemigos y las unidades en **Mantener posición** no se empujan.
+
+La prioridad de actualización rota cada paso para repartir el avance entre unidades. Las salidas de producción y los nuevos edificios comprueban la huella completa de los cuerpos, evitando generar unidades superpuestas o encerrar una unidad en una construcción. Las pruebas de navegación cubren cruces, pasillos, rampas, formaciones de 50 unidades y recolección compartida.
 
 La IA mueve sus refuerzos a un punto de reunión para despejar salidas de producción y rutas de trabajadores. La dificultad fácil reacciona cada tres segundos, usa una composición menos especializada, limita su decisión de producir artillería a dos unidades y omite la investigación de resistencia. La normal reacciona cada segundo, usa ambas mejoras, produce hasta seis unidades de artillería y retira unidades heridas. Son decisiones de la IA; las reglas, los límites máximos y los costos de las facciones son los mismos.
 

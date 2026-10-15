@@ -49,6 +49,7 @@ namespace Frontier.Core
         public bool building;
         public int minerals, catalyst, duration, footprint = 1, supply, capacity;
         public float health, speed, damage, range, vision = 9;
+        public float collisionRadius = .45f;
         public int attackPeriod = 20;
     }
     [Serializable] public sealed class FactionDefinition
@@ -87,6 +88,7 @@ namespace Frontier.Core
             {
                 if (type == null || string.IsNullOrWhiteSpace(type.id) || types.ContainsKey(type.id) || type.faction == null || !factions.ContainsKey(type.faction)
                     || !Positive(type.health) || !Nonnegative(type.speed) || !Nonnegative(type.damage) || !Nonnegative(type.range) || !Positive(type.vision)
+                    || (!type.building && (!Positive(type.collisionRadius) || type.collisionRadius > .49f))
                     || type.duration < 1 || type.attackPeriod < 1 || type.footprint < 1 || type.footprint > 8 || type.minerals < 0 || type.catalyst < 0 || type.capacity < 0)
                     throw new ArgumentException("Definición inválida: " + type?.id);
                 types.Add(type.id, type);
@@ -167,6 +169,12 @@ namespace Frontier.Core
         public List<ProductionOrder> queue = new List<ProductionOrder>();
         [NonSerialized] internal List<int> path;
         [NonSerialized] internal int pathIndex, pathVersion = -1, blockedTicks;
+        [NonSerialized] internal Point pathGoal, stepOrigin, velocity, yieldGoal;
+        [NonSerialized] internal float pathRange;
+        [NonSerialized] internal float progressDistance = float.MaxValue;
+        [NonSerialized] internal int repathAt, yieldUntil, yieldFor;
+        [NonSerialized] internal bool moveGoal;
+        [NonSerialized] internal int resumeMoveTick;
         [NonSerialized] internal bool depositing;
     }
     [Serializable] public sealed class PlayerState

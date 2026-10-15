@@ -58,6 +58,33 @@ namespace Frontier.Core
             { int i = Index(x, y); if (!Buildable[i] || !Walkable[i] || Ramp[i] || Occupant[i] != 0 || Elevation[i] != level) return false; }
             return true;
         }
+        public bool CanStand(Point point, float radius)
+        {
+            int center = Cell(point);
+            if (center < 0 || !Traversable(-1, center) || point.x < radius || point.y < radius || point.x > Width-radius || point.y > Height-radius) return false;
+            for (int y=(int)Math.Floor(point.y-radius); y<=(int)Math.Floor(point.y+radius); y++)
+                for (int x=(int)Math.Floor(point.x-radius); x<=(int)Math.Floor(point.x+radius); x++)
+                {
+                    if (!Inside(x,y)) return false;
+                    float dx=point.x-Math.Max(x,Math.Min(x+1,point.x)), dy=point.y-Math.Max(y,Math.Min(y+1,point.y));
+                    if (dx*dx+dy*dy < radius*radius-.00001f && !Traversable(center,Index(x,y))) return false;
+                }
+            return true;
+        }
+        public bool CanTraverse(Point from, Point to, float radius)
+        {
+            int previousCell=Cell(from);
+            int steps=Math.Max(1,(int)Math.Ceiling(from.Distance(to)/.15f));
+            for(int i=1;i<=steps;i++)
+            {
+                float t=i/(float)steps;
+                var p=new Point(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t);
+                int cell=Cell(p);
+                if(!Traversable(previousCell,cell)||!CanStand(p,radius))return false;
+                previousCell=cell;
+            }
+            return true;
+        }
         public void Occupy(Point point, int size, int id)
         {
             for (int y = (int)point.y; y < (int)point.y + size; y++) for (int x = (int)point.x; x < (int)point.x + size; x++) Occupant[Index(x, y)] = id;
@@ -125,7 +152,7 @@ namespace Frontier.Core
         private readonly List<HeapEntry> heap = new List<HeapEntry>();
         private struct HeapEntry { public int cell, priority; public HeapEntry(int c, int p) { cell = c; priority = p; } }
         public Pathfinder(GridMap map) { this.map = map; visited = new int[map.Count]; previous = new int[map.Count]; cost = new int[map.Count]; }
-        public List<int> Find(Point from, Point destination, float stopRange = .1f)
+        public List<int> Find(Point from, Point destination, float stopRange = .1f, Func<int,int> extraCost = null, float radius = 0)
         {
             int start = map.Cell(from), target = map.Cell(destination);
             if (start < 0 || target < 0) return null;
@@ -141,7 +168,9 @@ namespace Frontier.Core
                 }
                 foreach (int next in map.Neighbors(current))
                 {
-                    int nextCost = cost[current] + 10;
+                    if(radius>0&&!map.CanStand(map.Center(next),radius))continue;
+                    int penalty=extraCost==null?0:extraCost(next);if(penalty<0)continue;
+                    int nextCost = cost[current] + 10 + penalty;
                     if (visited[next] == search && cost[next] <= nextCost) continue;
                     visited[next] = search; cost[next] = nextCost; previous[next] = current;
                     int h = Math.Abs(next % map.Width - target % map.Width) + Math.Abs(next / map.Width - target / map.Width);

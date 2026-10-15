@@ -113,6 +113,8 @@ Check(s.Submit(Cmd(CommandKind.Repair,worker.id,target:unfinished.id)).accepted,
 for(int i=0;i<1000;i++)s.Step();
 Check(unfinished.complete,"resumed construction completes");
 
+NavigationChecks.Run(catalog,map,Check);
+
 if(args.Contains("--matches"))
 {
     int count = int.Parse(args.FirstOrDefault(a=>a.StartsWith("--count="))?.Substring(8) ?? "4");

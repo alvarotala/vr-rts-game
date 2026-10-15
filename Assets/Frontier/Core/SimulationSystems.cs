@@ -32,64 +32,20 @@ namespace Frontier.Core
                 producer.queue.RemoveAt(0); Notice?.Invoke(producer.owner, "Investigación completada."); return;
             }
             if (Units(producer.owner) >= Capacity(producer.owner)) return;
-            Point? exit = FreeExit(producer); if (!exit.HasValue) return;
+            Point? exit = FreeExit(producer,Catalog[order.definition].collisionRadius); if (!exit.HasValue) return;
             var spawned = Spawn(producer.owner, order.definition, exit.Value); producer.queue.RemoveAt(0);
             if (Type(spawned).role == "worker") ResumeGather(spawned);
         }
-        private Point? FreeExit(EntityState building)
+        private Point? FreeExit(EntityState building,float radius=.45f)
         {
             var t = Type(building); int size = t.footprint, x0 = (int)building.position.x, y0 = (int)building.position.y;
             for (int y = y0 - 1; y <= y0 + size; y++) for (int x = x0 - 1; x <= x0 + size; x++)
             {
                 if (x != x0 - 1 && x != x0 + size && y != y0 - 1 && y != y0 + size) continue;
                 if (!Map.Inside(x, y)) continue; int cell = Map.Index(x, y);
-                if (Map.Traversable(Map.Cell(Center(building)), cell) && unitCells[cell] == 0) return Map.Center(cell);
+                if (Map.Traversable(Map.Cell(Center(building)), cell) && ClearForSpawn(Map.Center(cell),radius)) return Map.Center(cell);
             }
             return null;
-        }
-        private Point? NearbyFree(Point desired, int radius)
-        {
-            int x0 = (int)Math.Floor(desired.x), y0 = (int)Math.Floor(desired.y);
-            for (int r = 0; r <= radius; r++) for (int y = y0 - r; y <= y0 + r; y++) for (int x = x0 - r; x <= x0 + r; x++)
-            { if (!Map.Inside(x, y)) continue; int cell = Map.Index(x, y); if (Map.Traversable(-1, cell)) return Map.Center(cell); }
-            return null;
-        }
-        private bool Travel(EntityState unit, Point destination, float range)
-        {
-            if (unit.position.Distance(destination) <= range) { unit.path = null; return true; }
-            if (unit.path == null || unit.pathVersion != Map.Version || unit.pathIndex >= unit.path.Count)
-            {
-                if (unit.blockedTicks > 0 && Tick % 20 != unit.id % 20) return false;
-                unit.path = paths.Find(unit.position, destination, range); unit.pathIndex = 0; unit.pathVersion = Map.Version;
-                if (unit.path == null || unit.path.Count == 0)
-                {
-                    unit.blockedTicks++;
-                    if (unit.blockedTicks > 3) { Notice?.Invoke(unit.owner, "Destino inaccesible."); unit.order = CommandKind.Stop; unit.blockedTicks = 0; }
-                    return false;
-                }
-            }
-            Point target = Map.Center(unit.path[unit.pathIndex]);
-            Point next = Point.Towards(unit.position, target, Type(unit).speed / TickRate);
-            int current = Map.Cell(unit.position), nextCell = Map.Cell(next);
-            if (nextCell < 0 || !Map.Traversable(current, nextCell)) { unit.path = null; return false; }
-            if (unitCells[nextCell] != 0 && unitCells[nextCell] != unit.id)
-            {
-                unit.blockedTicks++;
-                if (unit.blockedTicks >= 12)
-                {
-                    foreach (int cell in Map.Neighbors(current).OrderBy(c => Map.Center(c).Distance(destination)))
-                    {
-                        if (unitCells[cell] != 0) continue;
-                        unitCells[current] = 0; unit.position = Point.Towards(unit.position, Map.Center(cell), Type(unit).speed / TickRate);
-                        unitCells[Map.Cell(unit.position)] = unit.id; unit.path = null; break;
-                    }
-                }
-                return false;
-            }
-            unit.blockedTicks = 0; if (current >= 0 && unitCells[current] == unit.id) unitCells[current] = 0;
-            unit.position = next; unitCells[nextCell] = unit.id;
-            if (next.Distance(target) < .02f) unit.pathIndex++;
-            return unit.position.Distance(destination) <= range;
         }
         private void ResumeGather(EntityState worker)
         {
