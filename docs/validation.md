@@ -4,6 +4,14 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Hover de unidades y edificios — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+El hover usa un contorno de terreno independiente de la selección: círculo para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. El cuerpo se realza mediante un bloque de propiedades del renderer, conservando los materiales de facción y rol. El contorno se dibuja en el shader del terreno, sigue rampas, excluye paredes y respeta el recorte del tablero y la visión actual. El disco de selección solo se activa para entidades seleccionadas. La entrada limpia el puntero al perder foco o desactivarse.
+
+Validación: scripts y shader compilados en Unity Editor, con siete vistas estáticas del `BoardView` real en `TestResults/Hover`. Se inspeccionaron unidad, edificio, enemigo, edificio seleccionado bajo hover y salida del hover: el borde desaparece y la selección persiste. Registro final sin errores de compilación, shader ni excepciones en `TestResults/unity-hover.log`. La vista previa no constituye una prueba interactiva ni física en Quest.
+
+No cambió la simulación y no se repitieron las partidas entre IA. No se generó APK ni ejecutable desktop; el APK 0.1.3 y las configuraciones preexistentes conservaron sus hashes. Pendiente: comprobar tamaño aparente y contraste del hover en Quest, desde mesa y piso.
+
 ## Reparto y contadores de trabajadores — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Las órdenes de recolección distribuyen grupos por depósitos cercanos, con objetivos de dos trabajadores por mineral y tres por gas/catalizador. Las reservas incluyen viajes y entregas; las órdenes repetidas no duplican asignaciones. Los excedentes siguen recolectando y se redistribuyen al entregar si hay puestos libres. No se introdujo un límite rígido ni se modificó la velocidad de extracción.

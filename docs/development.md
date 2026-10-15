@@ -55,6 +55,15 @@ unity run . --log-file TestResults/unity-harvesting.log --no-tail -- \
 
 Comprueba las órdenes contextuales, selección de recursos, totales de base, exceso y órdenes sobre el extractor. Renderiza cinco estados del panel en `TestResults/Harvesting`. Son vistas estáticas del panel real desde el Editor; no certifican legibilidad en el visor. `HarvestingChecks` forma parte de `check-core.sh` y comprueba reparto, reservas, agotamiento, gas, carga y niebla de guerra para ambas facciones.
 
+Para inspeccionar el hover en el tablero real desde el Editor, usar **Frontier → Preview hover**, o:
+
+```sh
+unity run . --log-file TestResults/unity-hover.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HoverPreview.Render
+```
+
+Guarda siete vistas en `TestResults/Hover`: unidad y edificio con/sin hover, edificio seleccionado al apuntar y retirar el puntero, y enemigo resaltado. Usa `BoardView` y su shader en una vista estática; no genera ejecutables ni valida interacción física en Quest.
+
 ## Resultados y entregas
 
 Guardar registros, capturas e informes locales en `TestResults/` y los ejecutables en `Builds/`. Ambos directorios están excluidos de Git. Conservar en [validación](validation.md) las conclusiones, las rutas de evidencia y las limitaciones de cada entrega; indicar si los cambios de fuentes aún no están incluidos en el APK disponible.

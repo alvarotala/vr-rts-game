@@ -8,6 +8,10 @@ Shader "Frontier/Board"
         _Grid("Grid", Float) = 0
         _SelectionBounds("Selection bounds", Vector) = (0,0,0,0)
         _SelectionWidth("Selection width", Float) = 0
+        _HoverArea("Hover center, radius, square", Vector) = (0,0,0,0)
+        _HoverWidth("Hover ground width", Float) = 0
+        _HoverAmount("Hover model amount", Float) = 0
+        _HoverColor("Hover color", Color) = (1,.92,.32,1)
     }
     SubShader
     {
@@ -25,6 +29,7 @@ Shader "Frontier/Board"
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseColor; float _UseFog; float _Grid;
             float4 _SelectionBounds; float _SelectionWidth;
+            float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -42,6 +47,11 @@ Shader "Frontier/Board"
                 clip(_FrontierBounds.x-abs(p.x)); clip(_FrontierBounds.y-abs(p.z));
                 half light=.63+.37*saturate(dot(normalize(input.normal),normalize(float3(-.3,.9,-.5))));
                 half3 color=_BaseColor.rgb*input.color.rgb*light;
+                if(_HoverAmount>0)
+                {
+                    half rim=1-saturate(abs(dot(normalize(input.normal),GetWorldSpaceNormalizeViewDir(input.world))));
+                    color=lerp(color,_HoverColor.rgb,saturate(_HoverAmount*(.22+rim*rim*.6)));
+                }
                 if(_UseFog>.5)
                 {
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
@@ -58,6 +68,15 @@ Shader "Frontier/Board"
                         half outline=smoothstep(-aa*.5,aa*.5,edge)*(1-smoothstep(_SelectionWidth-aa*.5,_SelectionWidth+aa*.5,edge));
                         // Only paint the ground and ramps; cliff faces stay unhighlighted.
                         color=lerp(color,half3(.9,1,.6),outline*step(.5,input.topSurface));
+                    }
+                    if(_HoverWidth>0)
+                    {
+                        float2 offset=abs(input.uv*_FrontierBounds.zw-_HoverArea.xy);
+                        float distanceFromCenter=lerp(length(offset),max(offset.x,offset.y),_HoverArea.w);
+                        float edge=_HoverArea.z-distanceFromCenter;
+                        float aa=max(fwidth(edge),.001);
+                        half outline=smoothstep(-aa*.5,aa*.5,edge)*(1-smoothstep(_HoverWidth-aa*.5,_HoverWidth+aa*.5,edge));
+                        color=lerp(color,_HoverColor.rgb,outline*step(.5,input.topSurface)*step(.9,visibility));
                     }
                 }
                 return half4(color,1);

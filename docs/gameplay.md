@@ -38,6 +38,8 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 
 El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
 
+Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno sobre el suelo: circular para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. Se muestra antes de seleccionar y se apaga al retirar el puntero, apuntar al menú o perder el foco. El disco de selección permanece en los objetos seleccionados. El contorno de hover sigue el terreno y las rampas, respeta el borde del tablero y no aparece sobre recuerdos enemigos bajo niebla de guerra.
+
 ## Contenido
 
 - **Consorcio**: unidades resistentes, construcción atendida por trabajadores y reparación con recursos.

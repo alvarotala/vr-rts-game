@@ -65,6 +65,9 @@ namespace Frontier.Runtime
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Session.LeftHanded?OVRInput.Controller.LTouch:OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
-        {if(!focused){dragging=false;if(Board!=null)Board.DrawSelection(start,start,false);}}
+        {if(!focused)ClearPointer();}
+        private void OnDisable()=>ClearPointer();
+        private void ClearPointer()
+        {dragging=false;if(Board!=null){Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }
 }

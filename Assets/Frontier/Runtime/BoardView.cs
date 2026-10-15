@@ -27,10 +27,12 @@ namespace Frontier.Runtime
         {
             public Transform selection, health, flash;
             public Renderer[] body;
-            public bool remembered;
+            public bool remembered, hovered;
         }
         private Material ground, blue, red, neutral, crystal, catalyst, highlight;
         private Material unitStructure;
+        private MaterialPropertyBlock hoverProperties;
+        private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
@@ -42,6 +44,7 @@ namespace Frontier.Runtime
         public float Depth => Width * Session.Map.height / Session.Map.width;
         private void Start()
         {
+            hoverProperties=new MaterialPropertyBlock();
             Content = new GameObject("Map coordinates").transform; Content.SetParent(transform,false);
             ground=Material(new Color(.16f,.31f,.31f));ground.SetFloat("_UseFog",1);ground.SetFloat("_Grid",1);
             blue=Material(new Color(.2f,.8f,1));red=Material(new Color(1,.36f,.23f));
@@ -68,6 +71,7 @@ namespace Frontier.Runtime
             if(terrainCollider!=null&&terrainCollider.sharedMesh!=null)Destroy(terrainCollider.sharedMesh);
             foreach(Transform child in Content)Destroy(child.gameObject);
             entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;
+            Hovered=0;Pointer=null;ground.SetFloat("_HoverWidth",0);
             DrawSelection(default,default,false);
             if(fog!=null)Destroy(fog);
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
@@ -122,6 +126,7 @@ namespace Frontier.Runtime
         private void LateUpdate()
         {
             UpdateTransform(); UpdateFog();
+            if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null)return;
             alive.Clear();
             foreach(var e in Session.View.entities)
@@ -140,8 +145,24 @@ namespace Frontier.Runtime
                 if(!type.building&&direction.sqrMagnitude>.01f)visual.localRotation=Quaternion.Slerp(visual.localRotation,Quaternion.LookRotation(direction),Time.unscaledDeltaTime*12);
                 visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
-                var cached=parts[visual];cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id)||Hovered==e.id);
-                cached.health.gameObject.SetActive(e.health<type.health-.5f||Session.Selection.Contains(e.id)||Hovered==e.id);
+                bool hovered=Hovered==e.id&&!e.remembered;
+                var cached=parts[visual];cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id));
+                Color hoverColor=e.owner==Session.View.player?AllyHover:EnemyHover;
+                if(cached.hovered!=hovered)
+                {
+                    hoverProperties.SetFloat("_HoverAmount",hovered?1:0);hoverProperties.SetColor("_HoverColor",hoverColor);
+                    foreach(var renderer in cached.body)renderer.SetPropertyBlock(hoverProperties);
+                    cached.hovered=hovered;
+                }
+                if(hovered)
+                {
+                    // Paint the hint on the terrain itself so it follows ramps and never forms walls.
+                    float radius=type.building?type.footprint*.5f+.45f:Mathf.Max(type.collisionRadius+.35f,.008f/CellScale);
+                    ground.SetVector("_HoverArea",new Vector4(visual.localPosition.x,visual.localPosition.z,radius,type.building?1:0));
+                    ground.SetFloat("_HoverWidth",Mathf.Clamp(.0018f/CellScale,.035f,.2f));
+                    ground.SetColor("_HoverColor",hoverColor);
+                }
+                cached.health.gameObject.SetActive(e.health<type.health-.5f||Session.Selection.Contains(e.id)||hovered);
                 cached.health.localScale=new Vector3(Mathf.Max(.03f,e.health/type.health)*(type.building?type.footprint:1.4f),.1f,.12f);
                 cached.flash.gameObject.SetActive(!e.remembered&&e.attackTick>0&&Session.View.tick-e.attackTick<3);
                 // Mobile units retain their role accents; only buildings become fog memories.
@@ -194,7 +215,7 @@ namespace Frontier.Runtime
             return root;
         }
         private static Transform Primitive(PrimitiveType type,Transform parent,Material material)
-        {var go=GameObject.CreatePrimitive(type);Destroy(go.GetComponent<Collider>());go.transform.SetParent(parent,false);go.GetComponent<Renderer>().sharedMaterial=material;return go.transform;}
+        {var go=GameObject.CreatePrimitive(type);Release(go.GetComponent<Collider>());go.transform.SetParent(parent,false);go.GetComponent<Renderer>().sharedMaterial=material;return go.transform;}
         private void UpdateFog()
         {
             if(fog==null||Session.Match!=null&&fogTick==Session.View.tick/4)return;
