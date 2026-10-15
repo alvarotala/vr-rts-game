@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Unity writes trailing spaces for empty serialized fields.
+*.meta whitespace=-blank-at-eol
+*.asset whitespace=-blank-at-eol
+*.unity whitespace=-blank-at-eol

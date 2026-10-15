@@ -1,0 +1,48 @@
+Shader "Frontier/Board"
+{
+    Properties { _BaseColor("Color", Color) = (1,1,1,1) _FogTex("Visibility", 2D) = "white" {} _UseFog("Fog", Float) = 0 _Grid("Grid", Float) = 0 }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
+        Pass
+        {
+            Tags { "LightMode"="UniversalForward" }
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
+            CBUFFER_START(UnityPerMaterial)
+            float4 _BaseColor; float _UseFog; float _Grid;
+            CBUFFER_END
+            float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
+            TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
+            Varyings vert(Attributes input)
+            {
+                Varyings o; UNITY_SETUP_INSTANCE_ID(input); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                o.world=TransformObjectToWorld(input.positionOS.xyz); o.positionCS=TransformWorldToHClip(o.world);
+                o.normal=TransformObjectToWorldNormal(input.normalOS); o.uv=input.uv; o.color=input.color; return o;
+            }
+            half4 frag(Varyings input):SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                float3 p=mul(_FrontierWorldToBoard,float4(input.world,1)).xyz;
+                clip(_FrontierBounds.x-abs(p.x)); clip(_FrontierBounds.y-abs(p.z));
+                half light=.63+.37*saturate(dot(normalize(input.normal),normalize(float3(-.3,.9,-.5))));
+                half3 color=_BaseColor.rgb*input.color.rgb*light;
+                if(_UseFog>.5)
+                {
+                    half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
+                    color=lerp(half3(.018,.035,.05),color,visibility);
+                    float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
+                    float gridLine=step(.48,max(tile.x,tile.y));
+                    color*=1-gridLine*.1*_Grid;
+                }
+                return half4(color,1);
+            }
+            ENDHLSL
+        }
+    }
+}
