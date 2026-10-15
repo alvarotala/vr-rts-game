@@ -1,0 +1,5 @@
+{
+  "name": "Frontier.Core",
+  "rootNamespace": "Frontier.Core",
+  "noEngineReferences": true
+}
