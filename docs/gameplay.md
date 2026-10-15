@@ -26,6 +26,16 @@ Si todos los depósitos cercanos están al nivel óptimo, los trabajadores adici
 
 Apuntar o seleccionar un depósito muestra **Workers asignados/óptimo** y la cantidad restante en el panel. Seleccionar el centro principal muestra los totales de minerales y gas de su zona; seleccionar un extractor muestra su ocupación de gas. Se puede dar la orden de gas sobre toda la superficie del extractor. Los indicadores cuentan tus trabajadores, no los del rival.
 
+### Panel de partida
+
+La franja superior separa **MINERALS**, **GAS** y **SUPPLY / CAPACITY**, con cantidades grandes y colores propios. Gas corresponde al catalizador del catálogo. La capacidad muestra usados/total y lugares disponibles; **FULL** aparece en naranja cuando está completa. Los costos de las acciones usan **M** para minerales y **G** para gas.
+
+La ficha de selección muestra el nombre de la unidad o edificio, su rol, facción, vida actual/máxima y orden o estado. Las construcciones y colas muestran progreso; seleccionar varias entidades muestra su cantidad y composición por nombre. Sin selección, apuntar a una entidad visible muestra su ficha. Los depósitos seleccionados muestran el tipo y la cantidad restante conocida.
+
+**ACTIONS** contiene únicamente las órdenes de la selección: construcción para trabajadores, órdenes militares para unidades y producción o investigación para edificios compatibles. **Cancel / refund** aparece mientras hay una construcción o cola que cancelar. Los edificios automáticos y las selecciones incompatibles muestran una explicación.
+
+**CONTROL GROUPS** tiene su propia franja: cada grupo muestra **Empty** o su cantidad asignada. Pulsar recupera el grupo; mantener guarda la selección. **MATCH** contiene el reloj, **Full map** y **Pause**, separados de las acciones de unidades y edificios. La ocupación de depósitos y el aviso **excess** permanecen en otra franja, sin reemplazar los recursos globales.
+
 ### Movimiento e interacción
 
 Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Hold Position** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
@@ -66,4 +76,4 @@ El juego se presenta íntegramente en inglés; la incorporación de otros idioma
 
 Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores y **tres proyectiles violetas** para artillería. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.
 
-El panel muestra el rol junto al nombre al apuntar sin selección, seleccionar o producir. Las selecciones mixtas muestran cantidades por rol. Las barras de vida aparecen al seleccionar, apuntar o recibir daño, para despejar la vista del ejército.
+El panel muestra el rol junto al nombre al apuntar sin selección, seleccionar o producir. Las selecciones mixtas muestran cantidades por nombre de unidad o edificio. Las barras de vida sobre las unidades aparecen al seleccionar, apuntar o recibir daño, para despejar la vista del ejército.

@@ -63,7 +63,16 @@ unity run . --log-file TestResults/unity-english.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HarvestingPreview.RenderEnglish
 ```
 
-Incluye los cinco estados de recolección y añade inicio en ambos mapas, trabajadores y tutorial de cada facción, colas de unidades y mejoras, pausa y final de partida. Comprueba que las etiquetas entren en su altura disponible y guarda quince vistas estáticas en `TestResults/English`, sin generar ejecutables.
+Incluye los cinco estados de recolección y añade inicio en ambos mapas, trabajadores y tutorial de cada facción, colas de unidades y mejoras, selección mixta con capacidad completa, unidad dañada, construcción, pausa y final de partida. Comprueba que las etiquetas entren en su altura disponible y guarda dieciocho vistas estáticas en `TestResults/English`, sin generar ejecutables.
+
+Para revisar específicamente el panel de partida, usar **Frontier → Preview match HUD**, o:
+
+```sh
+unity run . --log-file TestResults/unity-match-hud.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HarvestingPreview.RenderHud
+```
+
+Ejecuta los mismos dieciocho estados y guarda las vistas en `TestResults/MatchHud`. Comprueba nombres y contadores respecto de `PlayerView`, separación de controles, capacidad completa y, mediante rayos sobre los botones reales, producción/cancelación con devolución, elección de construcción y guardado/recuperación de un grupo de diez unidades. Son comprobaciones del panel del Editor, sin partida interactiva ni seguimiento físico.
 
 Para comprobar navegación entre menús y ciclo de partida, usar **Frontier → Preview and check menu flow**, o:
 

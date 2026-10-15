@@ -96,10 +96,10 @@ namespace Frontier.Editor
 
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;Debug.Log("MENU_PASS: "+message);}
                 void Refresh(){typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Invoke(panel,"LateUpdate");}
-                bool Has(string name)=>Field<RectTransform>(panel,"actions").Cast<Transform>().Any(t=>t.gameObject.activeSelf&&t.name==name);
+                bool Has(string name)=>panel.GetComponentsInChildren<RectTransform>().Any(t=>t.gameObject.activeInHierarchy&&t.name==name);
                 void Click(string name)
                 {
-                    Refresh();var button=Field<RectTransform>(panel,"actions").Cast<Transform>().FirstOrDefault(t=>t.gameObject.activeSelf&&t.name==name) as RectTransform;
+                    Refresh();var button=panel.GetComponentsInChildren<RectTransform>().FirstOrDefault(t=>t.gameObject.activeInHierarchy&&t.name==name);
                     if(button==null)throw new Exception("Menu button missing: "+name);
                     var center=button.TransformPoint(button.rect.center);var ray=new Ray(center-button.forward,button.forward);
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Menu ray did not hit: "+name);

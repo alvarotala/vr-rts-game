@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Frontier.Runtime
 {
-    public sealed class CommandPanel : MonoBehaviour
+    public sealed partial class CommandPanel : MonoBehaviour
     {
         public GameSession Session;
         public BoardView Board;
@@ -52,6 +52,10 @@ namespace Frontier.Runtime
             harvesting=Label(root,"",new Vector2(30,-207),new Vector2(1040,28),18,accent);
             status=Label(root,"",new Vector2(30,-473),new Vector2(1040,44),20,accent);
             actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
+            CreateMatchHud();
+            // Shared labels and action buttons sit above the HUD section backgrounds.
+            foreach(var label in new[]{headline,economy,selection,harvesting,status})label.transform.SetAsLastSibling();
+            actions.SetAsLastSibling();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -85,29 +89,11 @@ namespace Frontier.Runtime
             }
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             Board.SetVisible(ShowsBoard);
-            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete)));
+            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.queue.Length)));
             if(state!=signature){signature=state;Rebuild();}
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
             if(Page!=MenuPage.Actions){UpdateMenuText();return;}
-            headline.text=Session.IsPaused?"MATCH PAUSED":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
-            economy.text=$"MINERALS  {Session.View.minerals}      CATALYST  {Session.View.catalyst}      SUPPLY  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
-            var selected=Session.View?.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            if(selected==null||selected.Length==0)
-            {
-                var pointed=Session.View?.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
-                selection.text=pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Ally":"Enemy"):
-                    Session.SelectedResource!=0?"Deposit selected · use a context order to assign workers.":"Select units or a building to give orders.";
-            }
-            else if(selected.Length==1)
-            {
-                var e=selected[0];selection.text=UnitLabel(Session.Catalog[e.definition])+" · "+Mathf.CeilToInt(e.health)+" HP";
-                if(!e.complete)selection.text+=$" · Building {e.progress*100:0}%";
-                if(e.queue.Length>0)selection.text+=$" · Queue {e.queue.Length}: {QueueLabel(e.queue[0].definition)} {100*(1-e.queue[0].remaining/(float)e.queue[0].total):0}%";
-            }
-            else selection.text=string.Join(" · ",selected.GroupBy(e=>
-                {var type=Session.Catalog[e.definition];return type.building?type.name:UnitVisuals.RoleName(type.role);}).Select(g=>$"{g.Count()}× {g.Key}"));
-            UpdateHarvesting(selected);
-            status.text=Session.Message;
+            UpdateMatchHud();
         }
         private void UpdateHarvesting(VisibleEntity[] selected)
         {
@@ -207,10 +193,9 @@ namespace Frontier.Runtime
             // Hide the old controls immediately, including between pointer events in the same frame.
             for(int i=actions.childCount-1;i>=0;i--)
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
+            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
-            bool controls=Page==MenuPage.Controls;
-            selection.rectTransform.sizeDelta=new Vector2(1040,controls?225:38);
-            TopLeft(actions,new Vector2(30,controls?-411:-240),new Vector2(1040,controls?58:225));
+            LayoutPage();
             if(Page==MenuPage.Main)
             {
                 Add("New Match",()=>Show(MenuPage.MatchSetup),primary:true);
@@ -256,29 +241,7 @@ namespace Frontier.Runtime
                 Add("Rematch",()=>Session.StartMatch(),primary:true);
                 Add("Main menu",()=>Session.LeaveMatch());return;
             }
-            var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            if(selected.Length==1&&Session.Catalog[selected[0].definition].building)
-            {
-                var e=selected[0];string role=Session.Catalog[e.definition].role;
-                if(e.complete)
-                {
-                    foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&!t.building&&t.producer==role))
-                    {var captured=type;Add(UnitLabel(type)+" · "+Cost(type.minerals,type.catalyst),()=>Session.Send(CommandKind.Train,captured.id));}
-                    if(role=="tech")foreach(var upgrade in Session.Catalog.Definition.upgrades)
-                    {var captured=upgrade;Add(upgrade.name+" · "+Cost(upgrade.minerals,upgrade.catalyst),()=>Session.Send(CommandKind.Research,captured.id));}
-                }
-                Add("Cancel / refund",()=>Session.Send(CommandKind.Cancel));
-            }
-            else if(selected.Length>0)
-            {
-                if(selected.All(e=>Session.Catalog[e.definition].role=="worker"))
-                    foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&t.building))
-                    {var captured=type;Add(type.name+" · "+Cost(type.minerals,type.catalyst),()=>Session.ChooseBuild(captured.id));}
-                Add("Attack Move",()=>{Session.AttackMoveMode=true;Session.Announce("Confirm the attack destination.");});
-                Add("Stop",()=>Session.Send(CommandKind.Stop));Add("Hold Position",()=>Session.Send(CommandKind.Hold));
-            }
-            for(int g=0;g<3;g++){int n=g;Add("Group "+(g+1)+" · hold to save",()=>Session.Group(n,false),()=>Session.Group(n,true));}
-            Add("Full map",()=>Board.Fit());Add("Pause",()=>Show(MenuPage.Pause));
+            BuildMatchActions();
         }
         private void Show(MenuPage page)
         {
@@ -344,8 +307,7 @@ namespace Frontier.Runtime
         private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
-        private static string Cost(int m,int c)=>c>0?$"{m}M {c}C":$"{m}M";
-        private static string UnitLabel(Archetype type)=>type.building?type.name:UnitVisuals.RoleName(type.role)+" / "+type.name;
+        private static string Cost(int m,int c)=>c>0?$"{m} M / {c} G":$"{m} M";
         private string DifficultyLabel=>Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
         public bool Point(Ray ray,bool down,bool up,float depth=0)

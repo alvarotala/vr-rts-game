@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Panel de partida por secciones — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+El panel separa contadores grandes de minerales/gas/capacidad, ficha de selección con nombre/rol/vida/estado, acciones contextuales, ocupación de depósitos, grupos de control y controles de partida. Incluye composición de selecciones múltiples, progreso de construcción/colas, cantidad por grupo y aviso de capacidad completa. La cancelación aparece cuando existe una construcción o cola que cancelar. Se conserva el panel movible y los textos en inglés.
+
+Los trabajadores excedentes siguen recolectando y el indicador muestra **excess**, según la decisión confirmada por el usuario; el óptimo continúa en dos por mineral y tres por gas, sin introducir un límite rígido.
+
+- **Scripts compilados y comprobación del panel aprobada en Unity Editor**, con dieciocho vistas estáticas sin desbordes de etiquetas. Verificación de nombre, recursos, capacidad, separación de grupos/pausa y botones reales mediante rayos: producir, cancelar y devolver recursos, elegir construcción, guardar y recuperar diez unidades. Inspeccionadas base, trabajador, gas sin extractor, exceso, investigación, selección mixta y unidad dañada. Registro: `TestResults/unity-match-hud.log`; vistas: `TestResults/MatchHud`.
+- **33 comprobaciones del flujo de menús aprobadas**, con diez vistas estáticas: `TestResults/unity-hud-menu-flow.log` y `TestResults/Menus`. Sin errores de compilación ni excepciones en los registros finales.
+- No se modificaron reglas del núcleo ni datos y no se repitieron partidas entre IA. No se generó APK ni ejecutable desktop. Se verificaron sin cambios los hashes de las configuraciones locales preexistentes y del APK.
+
+Pendiente: comprobar tamaño aparente, lectura e interacción de las secciones con mandos en Quest. Las vistas estáticas y los rayos del Editor no equivalen a una partida interactiva ni a validación física. El APK disponible sigue en 0.1.3 y no incluye esta reorganización.
+
 ## Menú principal y ciclo de partida — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 La aplicación abre en un menú principal con **New Match**, **Settings** y **Controls**. La preparación de facción, rival, dificultad, mapa y tablero tiene su propia pantalla. El panel de acciones aparece al comenzar. La pausa ofrece continuar, configurar, consultar controles o regresar al inicio con confirmación de pérdida de la partida; el resultado ofrece revancha o menú principal.

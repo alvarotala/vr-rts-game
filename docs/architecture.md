@@ -14,6 +14,8 @@
 
 `CommandPanel.MenuPage` separa inicio, preparación de partida, configuración, controles, acciones, pausa, confirmación de salida y resultado. Comparten el lienzo movible y la entrada por rayos. Las pantallas de configuración y controles recuerdan el menú de origen; abrirlas en partida mantiene la pausa de menú. `CommanderInput` solo permite selección, órdenes y grupos cuando `AcceptsGameInput` está activo. Retroceder y pausar se procesan antes de interceptar el rayo sobre el panel.
 
+`CommandPanel.MatchHud.cs` contiene la presentación de partida: recursos, ficha de selección, acciones contextuales, ocupación de depósitos, grupos y controles de partida. Usa `PlayerView` y nombres del catálogo, sin consultar estado enemigo oculto. Las acciones y los menús conservan la misma entrada por rayos; grupos y pausa son controles persistentes separados del contenedor que se reconstruye al cambiar la selección o la cola. Los costos se presentan como minerales/gas, conservando el identificador interno de catalizador.
+
 `GameSession.LeaveMatch()` detiene y libera la simulación y la vista, vacía selección, grupos y modos de órdenes y emite `MatchClosed`. `BoardView` limpia las entidades y recursos de esa partida, `CommandPanel` vuelve al inicio y `FrameMetrics` guarda las muestras pendientes. No se elimina el ancla ni se cambia la colocación física. La pausa del menú se libera de manera independiente de seguimiento, visor y foco.
 
 El terreno se muestra durante la preparación, colocación o partida, y se oculta en el menú principal. Cancelar la colocación restaura posición, giro, ancho, padre y estado de confirmación anteriores. No modifica la ubicación guardada del ancla.

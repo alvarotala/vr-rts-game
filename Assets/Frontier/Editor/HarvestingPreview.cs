@@ -26,9 +26,12 @@ namespace Frontier.Editor
         [MenuItem("Frontier/Preview full command panel")]
         public static void RenderEnglish()=>Render(true);
 
-        private static void Render(bool fullPanel)
+        [MenuItem("Frontier/Preview match HUD")]
+        public static void RenderHud()=>Render(true,"TestResults/MatchHud");
+
+        private static void Render(bool fullPanel,string outputDirectory=null)
         {
-            string output=fullPanel?"TestResults/English":"TestResults/Harvesting";
+            string output=outputDirectory??(fullPanel?"TestResults/English":"TestResults/Harvesting");
             Directory.CreateDirectory(output);
             var preview=new PreviewRenderUtility();
             var fixture=new GameObject("Harvesting preview fixture");
@@ -82,18 +85,36 @@ namespace Frontier.Editor
                         session.Select(worker.id,false);Capture(faction+"-worker",session.Catalog.Role(faction,"barracks").name,"status");
                         var baseEntity=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                         session.Select(baseEntity.id,false);session.Send(CommandKind.Train,worker.definition);
-                        Capture(faction+"-production","Queue 1: "+session.Catalog[worker.definition].name,"selection");
+                        Capture(faction+"-production","Training: "+session.Catalog[worker.definition].name,"selectionDetails");
                         // A completed technology building exposes the real research buttons and queue.
                         var tech=session.Catalog.Role(faction,"tech");
                         session.Match.Entities.Add(1000,new EntityState{id=1000,owner=0,definition=tech.id,position=new Point(20,20),health=tech.health});
                         session.Match.Players[0].minerals=1000;session.Match.Players[0].catalyst=1000;
                         session.Send(CommandKind.Stop);session.Select(1000,false);session.Send(CommandKind.Research,"attack");
-                        Capture(faction+"-research","Firepower I","selection");
+                        Capture(faction+"-research","Firepower I","selectionDetails");
                     }
+                    var headquarters=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
+                    session.Select(headquarters.id,false);session.Send(CommandKind.Cancel);
+                    int unitId=2000;
+                    foreach(string role in new[]{"scout","melee","ranged","siege"})
+                    {
+                        var unit=session.Catalog.Role(session.Faction,role);
+                        session.Match.Entities.Add(unitId,new EntityState{id=unitId++,owner=0,definition=unit.id,position=new Point(20,20),health=unit.health});
+                    }
+                    session.Select(session.View.entities.First(e=>e.owner==0&&!session.Catalog[e.definition].building).id,false);session.Send(CommandKind.Stop);
+                    session.Selection.Clear();foreach(var unit in session.View.entities.Where(e=>e.owner==0&&!session.Catalog[e.definition].building))session.Selection.Add(unit.id);
+                    Check(session.View.supply==session.View.capacity,"Full supply fixture not saturated");
+                    Capture("mixed-army","10 units","selection");
+                    session.Select(2002,false);session.Match.Entities[2002].health=3;session.Send(CommandKind.Stop);
+                    Capture("damaged-soldier","3 / ","selectionHealth");
+                    var supply=session.Catalog.Role(session.Faction,"supply");
+                    session.Match.Entities.Add(2100,new EntityState{id=2100,owner=0,definition=supply.id,position=new Point(22,24),health=10,complete=false,remaining=supply.duration/2});
+                    session.Send(CommandKind.Stop);session.Select(2100,false);
+                    Capture("construction","Construction 50%","selectionDetails");
                     session.Pause("menu",true);Capture("paused","MATCH PAUSED","headline",true);
                     session.Pause("menu",false);session.Send(CommandKind.Surrender);Capture("finished","DEFEAT","headline");
                 }
-                Debug.Log("FRONTIER_HARVESTING_PREVIEW passed: context allocation, resource selection, base totals, excess, extractor footprint; "+(fullPanel?15:5)+" panels rendered");
+                Debug.Log("FRONTIER_HARVESTING_PREVIEW passed: context allocation, resource selection, base totals, excess, extractor footprint; "+(fullPanel?18:5)+" panels rendered");
 
                 void Capture(string name,string expected,string field="harvesting",bool settings=false)
                 {
@@ -103,9 +124,48 @@ namespace Frontier.Editor
                     if(!session.Running)typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.MatchSetup});
                     if(settings)panel.ToggleMenu();
                     Invoke(panel,"LateUpdate");
+                    if(panel.Page==CommandPanel.MenuPage.Actions)
+                    {
+                        var selected=session.View.entities.Where(e=>session.Selection.Contains(e.id)).ToArray();
+                        if(selected.Length==1)Check(Field<Text>(panel,"selection").text==session.Catalog[selected[0].definition].name,"Selected item name missing");
+                        Check(Field<Text>(panel,"mineralValue").text==session.View.minerals.ToString("N0",System.Globalization.CultureInfo.InvariantCulture),"Minerals counter does not match player view");
+                        Check(Field<Text>(panel,"gasValue").text==session.View.catalyst.ToString("N0",System.Globalization.CultureInfo.InvariantCulture),"Gas counter does not match player view");
+                        Check(Field<Text>(panel,"supplyValue").text==$"{session.View.supply} / {session.View.capacity}","Supply counter does not match player view");
+                        Check(!Field<RectTransform>(panel,"actions").Cast<Transform>().Any(t=>t.name=="Pause"||t.name.StartsWith("Group ")),"Match and group controls mixed with context actions");
+                        if(name=="base")
+                        {
+                            int minerals=session.View.minerals;
+                            Click("Train "+session.Catalog.Role(session.Faction,"worker").name);
+                            Check(session.View.entities.First(e=>e.id==selected[0].id).queue.Length==1,"HUD production button did not queue a worker");
+                            Click("Cancel / refund");Check(session.View.minerals==minerals,"HUD cancellation did not refund production");
+                        }
+                        if(name=="industrial-worker")
+                        {
+                            string previousMessage=session.Message;
+                            Click("Build "+session.Catalog.Role(session.Faction,"supply").name);
+                            Check(session.BuildDefinition==session.Catalog.Role(session.Faction,"supply").id,"HUD construction button did not select its building");session.CancelMode();
+                            session.Announce(previousMessage);Refresh();
+                        }
+                        if(name=="mixed-army")
+                        {
+                            var ids=session.Selection.ToArray();Click("Group 1",true);session.Select(0,false);Click("Group 1");
+                            Check(session.Selection.SetEquals(ids)&&session.GroupSize(0)==10,"HUD control group did not save and restore selection");
+                            Check(Field<Text[]>(panel,"groupCounts")[0].text=="10 assigned","HUD group count did not update");
+                            Check(Field<Text>(panel,"supplyHint").text=="FULL","Full supply warning missing");
+                        }
+                    }
                     var line=Field<Text>(panel,field);Check(line.text.Contains(expected),name+": "+line.text);
                     preview.AddSingleGO(panelObject);
                     SavePanel(panel,output+"/"+name+".png",preview);
+                    void Click(string title,bool hold=false)
+                    {
+                        Refresh();var rect=panel.GetComponentsInChildren<RectTransform>().First(t=>t.name==title&&t.gameObject.activeInHierarchy);
+                        var center=rect.TransformPoint(rect.rect.center);var ray=new Ray(center-rect.forward,rect.forward);
+                        Check(panel.Point(ray,true,false),"HUD pointer press missed "+title);
+                        if(hold)typeof(CommandPanel).GetField("pressedAt",Private).SetValue(panel,Time.unscaledTime-1);
+                        Check(panel.Point(ray,false,true),"HUD pointer release missed "+title);Refresh();
+                    }
+                    void Refresh(){typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Invoke(panel,"LateUpdate");}
                     Object.DestroyImmediate(panelObject);
                 }
             }
@@ -116,13 +176,13 @@ namespace Frontier.Editor
             foreach(var label in panel.GetComponentsInChildren<Text>())
                 Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
             var root=Field<RectTransform>(panel,"root");root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
-            preview.camera.orthographic=true;preview.camera.orthographicSize=.30f;preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
+            preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,root.rect.height*.0005f+.03f);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
             preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
             preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
             // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
             // meshes with their font textures, preserving hierarchy order and runtime layout.
             var meshes=new List<Mesh>();var materials=new List<Material>();
-            preview.BeginStaticPreview(new Rect(0,0,1600,800));Canvas.ForceUpdateCanvases();
+            preview.BeginStaticPreview(new Rect(0,0,1600,root.rect.height>526?960:800));Canvas.ForceUpdateCanvases();
             foreach(var graphic in panel.GetComponentsInChildren<Graphic>())
             {
                 graphic.Rebuild(CanvasUpdate.PreRender);
