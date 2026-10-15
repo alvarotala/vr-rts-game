@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## APK integrado — 0.1.4 (5) — 15 de octubre de 2026
+
+Compilación solicitada por el usuario con todos los cambios hasta `d9f40ed`: siluetas de unidades, asignación y saturación de trabajadores, hover, textos en inglés, menú principal, panel de partida por secciones, cursor sobre el mapa, daño recibido, selección desde fuera del tablero y partículas/trayectorias de armas. Las entradas anteriores que indican «sin nuevo APK» describen su estado histórico; estos cambios ahora están incluidos en 0.1.4.
+
+- **APK:** `Builds/Quest/FrontierCommand.apk`, **58.883.605 bytes**, paquete `com.alvaro.frontiercommand`, versión **0.1.4**, código **5**, ARM64/IL2CPP, Android mínimo 32 y objetivo 36.
+- **SHA-256:** `eb7cdf6eab3b6adb6c6aa01656e469aa50cbf1159257a6d0385ae1173dfe6f65`.
+- Unity **6000.3.26f1** y Unity CLI **1.0.0-beta.13**: compilación correcta, `editorErrors` vacío; shaders `Frontier/Board`, `Frontier/Impact` y `Frontier/Weapons` compilados para Android. Evidencias: `TestResults/unity-apk-0.1.4.log`, `TestResults/apk-0.1.4-build.json` y `Builds/Quest/FrontierCommand.provenance.json`.
+- Integridad ZIP y **firma APK v2 verificadas**. El certificado coincide con 0.1.3, por lo que se puede actualizar mediante `adb install -r`. Metadatos y firma: `TestResults/apk-0.1.4-badging.txt`, `TestResults/apk-0.1.4-signature.txt`, `TestResults/apk-0.1.4-manifest.txt`.
+- Copia del APK anterior: `Builds/Quest/Archive/FrontierCommand-0.1.3.apk`. Las configuraciones locales ajenas a esta tarea permanecen fuera del commit; se registran únicamente versión y conservación de los shaders nuevos, junto con este resultado.
+
+No se modificó la jugabilidad ni se repitieron las pruebas ya aprobadas en las entradas de cada tarea. Esta entrega valida compilación y empaquetado; no se instaló ni probó en un Quest físico. Para actualizar: `adb install -r Builds/Quest/FrontierCommand.apk`, siguiendo los requisitos de conexión de la guía inicial.
+
 ## Partículas y trayectorias de armas — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Se reemplazó la esfera fija de disparo por destello en el arma, orientación al objetivo real, trazadora industrial, proyectil biológico, arco de artillería, golpe cercano y chispas en destino. Las torres usan el mismo sistema. Una estela tenue conecta al atacante con su destino; los golpes letales conservan esa referencia aunque la entidad ya haya desaparecido. No cambió el daño ni la cadencia: el vuelo es visual.
