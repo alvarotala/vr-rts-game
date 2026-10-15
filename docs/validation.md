@@ -4,6 +4,14 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Indicador del cursor sobre el mapa — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Punto blanco y líneas de mira turquesa, con borde oscuro, dibujados al ras del terreno y las rampas. Mantienen tamaño físico al hacer zoom y se recortan al tablero. Se ocultan al limpiar el puntero, pausar u ocultar el mapa. El láser termina en el impacto real del collider, evitando la aproximación de altura por celda. La consulta actualiza la transformación y sincroniza física cuando cambia, para evitar desfases al desplazar, girar o ampliar el tablero.
+
+Validación en Unity Editor: scripts y shader compilados, rayos contra suelo/rampa/altura, zoom/desplazamiento/giro, tamaño del marcador, rechazo de paredes y fuera del tablero, limpieza al pausar/ocultar/salir. Ocho vistas estáticas en `TestResults/Pointer`; registro `TestResults/unity-pointer.log`. La comprobación inicial detectó el desfase del collider tras cambiar la transformación; la versión corregida pasa ese escenario. Las vistas usan la representación real del tablero y una línea de ejemplo, sin entrada de mandos físicos.
+
+No se modificaron reglas del núcleo ni se repitieron partidas de IA. No se generó APK ni ejecutable desktop. Pendiente: comprobar contraste, tamaño aparente y coincidencia binocular con el láser en Quest. El APK existente no contiene este indicador.
+
 ## Panel de partida por secciones — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 El panel separa contadores grandes de minerales/gas/capacidad, ficha de selección con nombre/rol/vida/estado, acciones contextuales, ocupación de depósitos, grupos de control y controles de partida. Incluye composición de selecciones múltiples, progreso de construcción/colas, cantidad por grupo y aviso de capacidad completa. La cancelación aparece cuando existe una construcción o cola que cancelar. Se conserva el panel movible y los textos en inglés.

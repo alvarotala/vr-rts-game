@@ -12,6 +12,7 @@ Shader "Frontier/Board"
         _HoverWidth("Hover ground width", Float) = 0
         _HoverAmount("Hover model amount", Float) = 0
         _HoverColor("Hover color", Color) = (1,.92,.32,1)
+        _PointerArea("Pointer center, dot radius, guide length", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -30,6 +31,7 @@ Shader "Frontier/Board"
             float4 _BaseColor; float _UseFog; float _Grid;
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
+            float4 _PointerArea;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -77,6 +79,23 @@ Shader "Frontier/Board"
                         float aa=max(fwidth(edge),.001);
                         half outline=smoothstep(-aa*.5,aa*.5,edge)*(1-smoothstep(_HoverWidth-aa*.5,_HoverWidth+aa*.5,edge));
                         color=lerp(color,_HoverColor.rgb,outline*step(.5,input.topSurface)*step(.9,visibility));
+                    }
+                    if(_PointerArea.w>0)
+                    {
+                        float2 offset=abs(input.uv*_FrontierBounds.zw-_PointerArea.xy);
+                        float radius=_PointerArea.z,halfWidth=radius/3;
+                        float dotDistance=length(offset)-radius;
+                        float vertical=max(offset.x-halfWidth,max(radius*2-offset.y,offset.y-_PointerArea.w));
+                        float horizontal=max(offset.y-halfWidth,max(radius*2-offset.x,offset.x-_PointerArea.w));
+                        float distanceToMark=min(dotDistance,min(vertical,horizontal));
+                        float aa=max(fwidth(distanceToMark),.001);
+                        half surface=step(.5,input.topSurface);
+                        half border=(1-smoothstep(radius*.5-aa,radius*.5+aa,distanceToMark))*surface;
+                        half mark=(1-smoothstep(-aa,aa,distanceToMark))*surface;
+                        half dot=1-smoothstep(-aa,aa,dotDistance);
+                        // Input feedback stays readable over fog without revealing terrain or entities.
+                        color=lerp(color,half3(.012,.025,.035),border);
+                        color=lerp(color,lerp(half3(.3,.95,.94),half3(1,1,1),dot),mark);
                     }
                 }
                 return half4(color,1);

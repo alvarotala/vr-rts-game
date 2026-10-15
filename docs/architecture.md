@@ -8,6 +8,8 @@
 
 `BoardView` transforma coordenadas lógicas en una maqueta, interpola posiciones y recorta la representación al área física. Cambiar escala, orientación o zoom no modifica las distancias de la simulación. Las unidades enemigas no visibles no se presentan; edificios observados previamente aparecen como recuerdos sin actualizar su información.
 
+El marcador de cursor se dibuja en el material del terreno, con punto y líneas de mira al ras de suelo/rampas, sin geometría adicional. `RayToMap` devuelve también la posición mundial exacta del impacto para terminar allí el láser; sincroniza el collider cuando cambia la transformación y descarta caras verticales. El marcador se dimensiona en metros y respeta el recorte; se compone después de la niebla como información de entrada, sin revelar contenido oculto.
+
 `CommanderInput` convierte mandos o mouse en selección y órdenes. `CommandPanel` comparte sus acciones entre escritorio y Quest. `QuestBridge` encapsula passthrough, permisos, superficies, colocación, anclas y eventos de seguimiento.
 
 ## Menús y ciclo de partida

@@ -56,9 +56,9 @@ namespace Frontier.Runtime
             if(!Panel.AcceptsGameInput)
             {if(Panel.Page==CommandPanel.MenuPage.MatchSetup)Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);ClearPointer();return;}
             Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);
-            if(!Board.RayToMap(ray,out var point)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
+            if(!Board.RayToMap(ray,out var point,out var worldHit)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
             Board.Pointer=point;Board.Hovered=Board.EntityAt(point);
-            if(Quest.Active)laser.SetPosition(1,Board.Content.TransformPoint(new Vector3(point.x,Board.HeightAt(point),point.y)));
+            if(Quest.Active)laser.SetPosition(1,worldHit);
             if(down)
             {
                 if(Session.BuildDefinition!=null||Session.AttackMoveMode)Session.Context(point,Board.Hovered,Board.ResourceAt(point));

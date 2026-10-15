@@ -16,6 +16,7 @@ namespace Frontier.Runtime
         public int Hovered;
         private Transform terrainRoot;
         private MeshCollider terrainCollider;
+        private Matrix4x4 raycastTransform;
         private readonly Dictionary<int, Transform> entities = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> resources = new Dictionary<int, Transform>();
         private readonly Dictionary<string, Stack<Transform>> pools = new Dictionary<string, Stack<Transform>>();
@@ -39,7 +40,12 @@ namespace Frontier.Runtime
         private Color32[] fogColors;
         private int fogTick = -1;
         private Transform preview;
-        public Point? Pointer;
+        private Point? pointer;
+        public Point? Pointer
+        {
+            get=>pointer;
+            set{pointer=value;UpdatePointer();}
+        }
         public float CellScale => Width / Session.Map.width * Zoom;
         public float Depth => Width * Session.Map.height / Session.Map.width;
         private void Start()
@@ -104,6 +110,7 @@ namespace Frontier.Runtime
             var mesh=new Mesh{indexFormat=IndexFormat.UInt32};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.SetColors(colors);mesh.RecalculateNormals();mesh.RecalculateBounds();
             terrainRoot.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;terrainRoot.gameObject.AddComponent<MeshRenderer>().sharedMaterial=ground;
             terrainCollider=terrainRoot.gameObject.AddComponent<MeshCollider>();terrainCollider.sharedMesh=mesh;
+            raycastTransform=Matrix4x4.zero;
             foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
         }
@@ -136,7 +143,7 @@ namespace Frontier.Runtime
         }
         private void LateUpdate()
         {
-            UpdateTransform(); UpdateFog();
+            UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null)return;
             alive.Clear();
@@ -237,14 +244,29 @@ namespace Frontier.Runtime
         private static float Height(GridMap map,int cell) => map.SurfaceLevel[cell]*1.5f;
         public float HeightAt(Point point)
         {if(Session.Match==null)return 0;int c=Session.Match.Map.Cell(point);return c<0?0:Height(Session.Match.Map,c);}
-        public bool RayToMap(Ray ray,out Point point)
+        private void UpdatePointer()
         {
-            point=default;
-            if(terrainCollider==null||!terrainCollider.gameObject.activeInHierarchy||!terrainCollider.Raycast(ray,out var hit,20))return false;
+            if(ground==null)return;
+            bool visible=pointer.HasValue&&Content!=null&&Content.gameObject.activeInHierarchy&&Session.Running&&!Session.IsPaused;
+            // Keep the dot and guide lines the same physical size when zooming the map.
+            ground.SetVector("_PointerArea",visible?new Vector4(pointer.Value.x,pointer.Value.y,.0018f/CellScale,.01f/CellScale):Vector4.zero);
+        }
+        public bool RayToMap(Ray ray,out Point point)=>RayToMap(ray,out point,out _);
+        public bool RayToMap(Ray ray,out Point point,out Vector3 worldHit)
+        {
+            point=default;worldHit=default;
+            // Input can change pan/zoom before LateUpdate; raycast the transform drawn this frame.
+            UpdateTransform();
+            if(terrainCollider==null||!terrainCollider.gameObject.activeInHierarchy)return false;
+            var currentTransform=terrainRoot.localToWorldMatrix;
+            if(raycastTransform!=currentTransform){Physics.SyncTransforms();raycastTransform=currentTransform;}
+            if(!terrainCollider.Raycast(ray,out var hit,20))return false;
+            if(Vector3.Dot(hit.normal,transform.up)<.5f)return false;
             var world=hit.point;var local=transform.InverseTransformPoint(world);
             if(Mathf.Abs(local.x)>Width*.5f||Mathf.Abs(local.z)>Depth*.5f)return false;
             var map=Content.InverseTransformPoint(world);point=new Point(map.x,map.z);
-            return point.x>=0&&point.y>=0&&point.x<Session.Map.width&&point.y<Session.Map.height;
+            if(point.x<0||point.y<0||point.x>=Session.Map.width||point.y>=Session.Map.height)return false;
+            worldHit=world;return true;
         }
         public int EntityAt(Point point)
         {

@@ -92,6 +92,15 @@ unity run . --log-file TestResults/unity-hover.log --no-tail -- \
 
 Guarda siete vistas en `TestResults/Hover`: unidad y edificio con/sin hover, edificio seleccionado al apuntar y retirar el puntero, y enemigo resaltado. Usa `BoardView` y su shader en una vista estática; no genera ejecutables ni valida interacción física en Quest.
 
+Para revisar el marcador de intersección del cursor, usar **Frontier → Preview map pointer**, o:
+
+```sh
+unity run . --log-file TestResults/unity-pointer.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.PointerPreview.Render
+```
+
+Guarda ocho vistas en `TestResults/Pointer`: suelo, rampa, altura, selección, borde, zoom con tablero girado, niebla y cursor retirado. Comprueba rayos contra el terreno real, coincidencia del punto de impacto tras zoom/desplazamiento/giro, tamaño físico, rechazo de paredes y limpieza al pausar/ocultar/salir. La línea dibujada en estas vistas representa un rayo de ejemplo; no valida mandos físicos ni genera ejecutables.
+
 ## Resultados y entregas
 
 Guardar registros, capturas e informes locales en `TestResults/` y los ejecutables en `Builds/`. Ambos directorios están excluidos de Git. Conservar en [validación](validation.md) las conclusiones, las rutas de evidencia y las limitaciones de cada entrega; indicar si los cambios de fuentes aún no están incluidos en el APK disponible.
