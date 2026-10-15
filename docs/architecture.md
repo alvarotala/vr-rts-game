@@ -10,6 +10,14 @@
 
 `CommanderInput` convierte mandos o mouse en selección y órdenes. `CommandPanel` comparte sus acciones entre escritorio y Quest. `QuestBridge` encapsula passthrough, permisos, superficies, colocación, anclas y eventos de seguimiento.
 
+## Menús y ciclo de partida
+
+`CommandPanel.MenuPage` separa inicio, preparación de partida, configuración, controles, acciones, pausa, confirmación de salida y resultado. Comparten el lienzo movible y la entrada por rayos. Las pantallas de configuración y controles recuerdan el menú de origen; abrirlas en partida mantiene la pausa de menú. `CommanderInput` solo permite selección, órdenes y grupos cuando `AcceptsGameInput` está activo. Retroceder y pausar se procesan antes de interceptar el rayo sobre el panel.
+
+`GameSession.LeaveMatch()` detiene y libera la simulación y la vista, vacía selección, grupos y modos de órdenes y emite `MatchClosed`. `BoardView` limpia las entidades y recursos de esa partida, `CommandPanel` vuelve al inicio y `FrameMetrics` guarda las muestras pendientes. No se elimina el ancla ni se cambia la colocación física. La pausa del menú se libera de manera independiente de seguimiento, visor y foco.
+
+El terreno se muestra durante la preparación, colocación o partida, y se oculta en el menú principal. Cancelar la colocación restaura posición, giro, ancho, padre y estado de confirmación anteriores. No modifica la ubicación guardada del ancla.
+
 ## Datos
 
 - `MapDefinition`: terreno y contenido inicial versionado, sin referencias a Unity.

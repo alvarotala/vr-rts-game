@@ -16,7 +16,7 @@ namespace Frontier.Runtime
         private void Update()
         {
             if(Board.Content==null)return;
-            bool down=false,up=false,order=false,add=false,cancel=false;Vector2 pan=Vector2.zero;float zoom=0;Ray ray;
+            bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0;Ray ray;
             Vector2 primaryStick=Vector2.zero,secondaryStick=Vector2.zero;
             if(Quest.Active)
             {
@@ -27,7 +27,7 @@ namespace Frontier.Runtime
                 pan=secondaryStick;zoom=primaryStick.y;
                 if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,primary))Board.Fit();
                 if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,secondary))Panel.Recall();
-                if(OVRInput.GetDown(OVRInput.Button.Start))Panel.ToggleMenu();
+                toggleMenu=OVRInput.GetDown(OVRInput.Button.Start);
                 if(Time.unscaledTime>hapticEnd)OVRInput.SetControllerVibration(0,0,primary);
                 laser.SetPosition(0,ray.origin);laser.SetPosition(1,ray.GetPoint(2));
             }
@@ -40,15 +40,22 @@ namespace Frontier.Runtime
                 {
                     var k=Keyboard.current;add=k.leftShiftKey.isPressed||k.rightShiftKey.isPressed;cancel=k.escapeKey.wasPressedThisFrame;
                     pan=new Vector2((k.dKey.isPressed?1:0)-(k.aKey.isPressed?1:0),(k.wKey.isPressed?1:0)-(k.sKey.isPressed?1:0));
-                    if(k.spaceKey.wasPressedThisFrame)Session.TogglePause();if(k.fKey.wasPressedThisFrame)Board.Fit();
+                    toggleMenu=k.spaceKey.wasPressedThisFrame;if(k.fKey.wasPressedThisFrame)Board.Fit();
                     if(k.mKey.wasPressedThisFrame)Panel.Recall();
-                    if(k.digit1Key.wasPressedThisFrame)Session.Group(0,k.leftCtrlKey.isPressed);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,k.leftCtrlKey.isPressed);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,k.leftCtrlKey.isPressed);
+                    if(Panel.AcceptsGameInput)
+                    {if(k.digit1Key.wasPressedThisFrame)Session.Group(0,k.leftCtrlKey.isPressed);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,k.leftCtrlKey.isPressed);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,k.leftCtrlKey.isPressed);}
                 }
             }
-            if(Quest.Placing){Quest.PlaceRay(ray,secondaryStick,primaryStick,down);return;}
-            if(Panel.Point(ray,down,up,zoom)){Board.Hovered=0;Board.Pointer=null;dragging=false;Board.DrawSelection(start,start,false);return;}
+            if(Quest.Placing)
+            {ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,secondaryStick,primaryStick,down);return;}
+            // Back/pause must work even when the pointer is over a menu button.
+            if(cancel)
+            {if(Panel.AcceptsGameInput&&(Session.BuildDefinition!=null||Session.AttackMoveMode))Session.CancelMode();else Panel.Back();ClearPointer();return;}
+            if(toggleMenu){Panel.ToggleMenu();ClearPointer();return;}
+            if(Panel.Point(ray,down,up,zoom)){ClearPointer();return;}
+            if(!Panel.AcceptsGameInput)
+            {if(Panel.Page==CommandPanel.MenuPage.MatchSetup)Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);ClearPointer();return;}
             Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);
-            if(cancel){if(Session.BuildDefinition!=null||Session.AttackMoveMode)Session.CancelMode();else Panel.ToggleMenu();}
             if(!Board.RayToMap(ray,out var point)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
             Board.Pointer=point;Board.Hovered=Board.EntityAt(point);
             if(Quest.Active)laser.SetPosition(1,Board.Content.TransformPoint(new Vector3(point.x,Board.HeightAt(point),point.y)));

@@ -24,6 +24,11 @@ namespace Frontier.Runtime
         private Transform anchorRoot;
         private float manualHeight=.75f;
         private bool useScene=true,busy;
+        private Transform placementParent;
+        private Vector3 placementPosition;
+        private Quaternion placementRotation;
+        private float placementWidth;
+        private bool wasPlaced;
         private int anchorGeneration;
         private string SavePath=>Path.Combine(Application.persistentDataPath,"board-placement.json");
         private void Awake()
@@ -92,9 +97,19 @@ namespace Frontier.Runtime
         }
         public void BeginPlacement()
         {
+            if(Placing)return;
             if(busy){Session.Announce("Wait for the anchor to finish saving.");return;}
+            placementParent=Board.transform.parent;placementPosition=Board.transform.position;placementRotation=Board.transform.rotation;
+            placementWidth=Board.Width;wasPlaced=Board.Placed;
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
-            Session.Announce("Point and press the trigger. Off-hand stick: height. Main stick: size/rotate.");
+            Session.Announce("Trigger: place · B/Y: cancel · Off-hand stick: height · Main stick: size/rotate");
+        }
+        public void CancelPlacement()
+        {
+            if(!Placing)return;
+            Placing=false;Board.transform.SetParent(placementParent,true);
+            Board.transform.SetPositionAndRotation(placementPosition,placementRotation);Board.Width=placementWidth;Board.Placed=wasPlaced;
+            Session.Pause("placement",false);Session.Announce(wasPlaced?"Previous board placement kept.":"Place the board before starting a match.");
         }
         public void PlaceRay(Ray ray,Vector2 left,Vector2 right,bool confirm)
         {

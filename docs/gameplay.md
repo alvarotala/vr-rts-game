@@ -2,9 +2,21 @@
 
 ## Empezar una partida
 
-Elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el stick secundario modifica la altura y el principal modifica tamaño y orientación.
+Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Controls**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 
-Luego iniciar la partida. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
+Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el stick secundario modifica la altura y el principal modifica tamaño y orientación.
+
+Usar **START MATCH** cuando el tablero esté confirmado. Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
+
+### Configuración, pausa y regreso al inicio
+
+**Settings** permite elegir la mano principal, recolocar el tablero, elegir mesa o piso y detectar superficies. **Controls** muestra una guía completa adaptada a mandos Touch o mouse y teclado; en modo zurdo indica X/Y. **Back** vuelve al menú desde el que se abrió esa pantalla.
+
+Dentro de una partida, **Pause**, el botón de menú del mando o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Controls** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
+
+Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la partida, conservando facciones/mapa elegidos y la colocación física del tablero. Las pausas por seguimiento, foco o visor continúan vigentes hasta que el sistema las libere. Mientras hay un menú de partida abierto no se pueden dar órdenes al tablero.
+
+**B/Y** o **Escape** cancelan la acción actual, retroceden en los menús o abren la pausa. Durante la colocación, cancelan el ajuste y recuperan la posición previa del tablero. Si no había una posición confirmada, sigue siendo necesario colocar el tablero para empezar.
 
 ### Recolección y ocupación de depósitos
 

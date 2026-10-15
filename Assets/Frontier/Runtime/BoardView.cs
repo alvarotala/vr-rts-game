@@ -51,11 +51,11 @@ namespace Frontier.Runtime
             neutral=Material(new Color(.2f,.28f,.35f));crystal=Material(new Color(.35f,.85f,1));catalyst=Material(new Color(.8f,.46f,1));highlight=Material(new Color(.9f,1,.6f));
             unitStructure=Material(new Color(.12f,.17f,.22f));
             foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
-            Session.NewMatch += Rebuild; Rebuild();
+            Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Rebuild();
         }
         private void OnDestroy()
         {
-            if(Session!=null)Session.NewMatch-=Rebuild;
+            if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;}
             unitVisuals.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure})Release(material);
@@ -68,12 +68,12 @@ namespace Frontier.Runtime
         public void Rebuild()
         {
             if(Content==null)return;
-            if(terrainCollider!=null&&terrainCollider.sharedMesh!=null)Destroy(terrainCollider.sharedMesh);
-            foreach(Transform child in Content)Destroy(child.gameObject);
+            if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
+            for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
             entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;
             Hovered=0;Pointer=null;ground.SetFloat("_HoverWidth",0);
             DrawSelection(default,default,false);
-            if(fog!=null)Destroy(fog);
+            Release(fog);
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             var grid=new GridMap(Session.Map);
@@ -108,6 +108,17 @@ namespace Frontier.Runtime
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
+        public void SetVisible(bool visible)
+        {
+            if(Content==null)return;
+            Content.gameObject.SetActive(visible);
+            if(!visible)
+            {
+                Hovered=0;Pointer=null;DrawSelection(default,default,false);
+                if(ground!=null)ground.SetFloat("_HoverWidth",0);
+                if(preview!=null)preview.gameObject.SetActive(false);
+            }
+        }
         public void Navigate(Vector2 move,float zoom,float delta)
         {
             Zoom=Mathf.Clamp(Zoom*Mathf.Exp(zoom*delta),1,4);
@@ -229,7 +240,7 @@ namespace Frontier.Runtime
         public bool RayToMap(Ray ray,out Point point)
         {
             point=default;
-            if(terrainCollider==null||!terrainCollider.Raycast(ray,out var hit,20))return false;
+            if(terrainCollider==null||!terrainCollider.gameObject.activeInHierarchy||!terrainCollider.Raycast(ray,out var hit,20))return false;
             var world=hit.point;var local=transform.InverseTransformPoint(world);
             if(Mathf.Abs(local.x)>Width*.5f||Mathf.Abs(local.z)>Depth*.5f)return false;
             var map=Content.InverseTransformPoint(world);point=new Point(map.x,map.z);

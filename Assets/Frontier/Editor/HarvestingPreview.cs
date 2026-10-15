@@ -91,7 +91,7 @@ namespace Frontier.Editor
                         Capture(faction+"-research","Firepower I","selection");
                     }
                     session.Pause("menu",true);Capture("paused","MATCH PAUSED","headline",true);
-                    session.Pause("menu",false);session.Send(CommandKind.Surrender);Capture("finished","MATCH OVER","headline");
+                    session.Pause("menu",false);session.Send(CommandKind.Surrender);Capture("finished","DEFEAT","headline");
                 }
                 Debug.Log("FRONTIER_HARVESTING_PREVIEW passed: context allocation, resource selection, base totals, excess, extractor footprint; "+(fullPanel?15:5)+" panels rendered");
 
@@ -100,42 +100,44 @@ namespace Frontier.Editor
                     var panelObject=new GameObject("Console preview");
                     var panel=panelObject.AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;
                     Invoke(panel,"Start");
-                    // Clear the first action set immediately in Edit mode before the runtime rebuild.
-                    var actions=Field<RectTransform>(panel,"actions");
-                    while(actions.childCount>0)Object.DestroyImmediate(actions.GetChild(0).gameObject);
-                    if(settings)typeof(CommandPanel).GetField("settings",Private).SetValue(panel,true);
+                    if(!session.Running)typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.MatchSetup});
+                    if(settings)panel.ToggleMenu();
                     Invoke(panel,"LateUpdate");
                     var line=Field<Text>(panel,field);Check(line.text.Contains(expected),name+": "+line.text);
-                    foreach(var label in panel.GetComponentsInChildren<Text>())
-                        Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
-                    var root=Field<RectTransform>(panel,"root");root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
                     preview.AddSingleGO(panelObject);
-                    preview.camera.orthographic=true;preview.camera.orthographicSize=.30f;preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
-                    preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
-                    preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
-                    // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
-                    // meshes with their font textures, preserving hierarchy order and runtime layout.
-                    var meshes=new List<Mesh>();var materials=new List<Material>();
-                    preview.BeginStaticPreview(new Rect(0,0,1600,800));Canvas.ForceUpdateCanvases();
-                    foreach(var graphic in panel.GetComponentsInChildren<Graphic>())
-                    {
-                        graphic.Rebuild(CanvasUpdate.PreRender);
-                        var source=graphic.canvasRenderer.GetMesh();if(source==null)continue;
-                        var mesh=Object.Instantiate(source);meshes.Add(mesh);
-                        if(mesh.vertexCount==0)continue;
-                        var material=new Material(graphic.materialForRendering){mainTexture=graphic.mainTexture};materials.Add(material);
-                        if(graphic is Text)material.SetVector("_TextureSampleAdd",new Vector4(1,1,1,0));
-                        var matrix=Matrix4x4.Translate(Vector3.back*.0001f*meshes.Count)*graphic.transform.localToWorldMatrix;
-                        preview.DrawMesh(mesh,matrix,material,0);
-                    }
-                    Check(meshes.Sum(m=>m.vertexCount)>100,"Console did not generate UI geometry");
-                    preview.Render(true);
-                    var image=preview.EndStaticPreview();File.WriteAllBytes(output+"/"+name+".png",image.EncodeToPNG());Object.DestroyImmediate(image);
-                    foreach(var mesh in meshes)Object.DestroyImmediate(mesh);foreach(var material in materials)Object.DestroyImmediate(material);
+                    SavePanel(panel,output+"/"+name+".png",preview);
                     Object.DestroyImmediate(panelObject);
                 }
             }
             finally { Object.DestroyImmediate(fixture);preview.Cleanup(); }
+        }
+        internal static void SavePanel(CommandPanel panel,string path,PreviewRenderUtility preview)
+        {
+            foreach(var label in panel.GetComponentsInChildren<Text>())
+                Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
+            var root=Field<RectTransform>(panel,"root");root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
+            preview.camera.orthographic=true;preview.camera.orthographicSize=.30f;preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
+            preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
+            preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
+            // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
+            // meshes with their font textures, preserving hierarchy order and runtime layout.
+            var meshes=new List<Mesh>();var materials=new List<Material>();
+            preview.BeginStaticPreview(new Rect(0,0,1600,800));Canvas.ForceUpdateCanvases();
+            foreach(var graphic in panel.GetComponentsInChildren<Graphic>())
+            {
+                graphic.Rebuild(CanvasUpdate.PreRender);
+                var source=graphic.canvasRenderer.GetMesh();if(source==null)continue;
+                var mesh=Object.Instantiate(source);meshes.Add(mesh);
+                if(mesh.vertexCount==0)continue;
+                var material=new Material(graphic.materialForRendering){mainTexture=graphic.mainTexture};materials.Add(material);
+                if(graphic is Text)material.SetVector("_TextureSampleAdd",new Vector4(1,1,1,0));
+                var matrix=Matrix4x4.Translate(Vector3.back*.0001f*meshes.Count)*graphic.transform.localToWorldMatrix;
+                preview.DrawMesh(mesh,matrix,material,0);
+            }
+            Check(meshes.Sum(m=>m.vertexCount)>100,"Console did not generate UI geometry");
+            preview.Render(true);
+            var image=preview.EndStaticPreview();File.WriteAllBytes(path,image.EncodeToPNG());Object.DestroyImmediate(image);
+            foreach(var mesh in meshes)Object.DestroyImmediate(mesh);foreach(var material in materials)Object.DestroyImmediate(material);
         }
     }
 }

@@ -19,7 +19,12 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        private bool settings;
+        public enum MenuPage { Main, MatchSetup, Settings, Controls, Actions, Pause, LeaveConfirmation, Result }
+        public MenuPage Page { get; private set; } = MenuPage.Main;
+        public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
+        public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
+        private MenuPage returnPage=MenuPage.Main;
+        private int actionIndex;
         private Target pressed, hovered;
         private float pressedAt;
         private float nextText;
@@ -30,7 +35,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Action click, hold; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -57,8 +62,17 @@ namespace Frontier.Runtime
                 }
                 catch(ArgumentException){PlayerPrefs.DeleteKey(PlacementKey);}
             }
+            Session.NewMatch+=OnMatchStarted;Session.MatchClosed+=OnMatchClosed;
+            Page=Session.Running?(Session.Match.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
             Rebuild();
         }
+        private void OnDestroy()
+        {
+            if(Session==null)return;
+            Session.NewMatch-=OnMatchStarted;Session.MatchClosed-=OnMatchClosed;
+        }
+        private void OnMatchStarted()=>Show(MenuPage.Actions);
+        private void OnMatchClosed()=>Show(MenuPage.Main);
         private void LateUpdate()
         {
             if(root==null)return;
@@ -69,17 +83,19 @@ namespace Frontier.Runtime
                 root.position=Board.transform.TransformPoint(new Vector3(boardOffset.x*Board.Width,boardOffset.y,boardOffset.z*Board.Depth));
                 FaceViewer();
             }
-            string state=(!Session.Running?"setup":settings?"settings":Session.Match.Winner!=-1?"finished":string.Join(",",Session.Selection.OrderBy(x=>x)))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete)));
+            if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
+            Board.SetVisible(ShowsBoard);
+            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete)));
             if(state!=signature){signature=state;Rebuild();}
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
-            headline.text=!Session.Running?"FRONTIER / COMMAND":Session.Match.Winner!=-1?(Session.Match.Winner==0?"VICTORY":"MATCH OVER"):Session.IsPaused?"MATCH PAUSED":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
-            economy.text=Session.View==null?"Tabletop strategy · Quest 3":$"MINERALS  {Session.View.minerals}      CATALYST  {Session.View.catalyst}      SUPPLY  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
+            if(Page!=MenuPage.Actions){UpdateMenuText();return;}
+            headline.text=Session.IsPaused?"MATCH PAUSED":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
+            economy.text=$"MINERALS  {Session.View.minerals}      CATALYST  {Session.View.catalyst}      SUPPLY  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
             var selected=Session.View?.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             if(selected==null||selected.Length==0)
             {
                 var pointed=Session.View?.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
-                selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}":
-                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Ally":"Enemy"):
+                selection.text=pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Ally":"Enemy"):
                     Session.SelectedResource!=0?"Deposit selected · use a context order to assign workers.":"Select units or a building to give orders.";
             }
             else if(selected.Length==1)
@@ -133,19 +149,75 @@ namespace Frontier.Runtime
         }
         private static string Saturation(int assigned,int optimal)=>$"Workers {assigned}/{optimal}"+
             (assigned>optimal?" (excess)":optimal>0&&assigned==optimal?" (optimal)":"");
+        private void UpdateMenuText()
+        {
+            harvesting.text="";harvesting.color=accent;
+            status.text=Session.Message;
+            switch(Page)
+            {
+                case MenuPage.Main:
+                    headline.text="FRONTIER / COMMAND";economy.text="MAIN MENU";
+                    selection.text="Lead your faction from a tabletop battlefield. Play offline against the AI.";
+                    status.text="Choose New Match to begin.";break;
+                case MenuPage.MatchSetup:
+                    headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
+                    selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
+                    harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";break;
+                case MenuPage.Settings:
+                    headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
+                    selection.text="Choose your dominant hand and adjust the board's position in your room.";break;
+                case MenuPage.Controls:
+                    headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
+                    string order=Session.LeftHanded?"X":"A",cancel=Session.LeftHanded?"Y":"B";
+                    selection.text=Quest.Active?
+                        $"Main trigger: select a unit / drag to select a group\nOff-hand trigger: add to selection\n{order}: move, attack, gather or repair · {cancel}: cancel / back / pause\nOff-hand stick: pan · Main stick: zoom\nPress main stick: full map · Press off-hand stick: recall menu\nMOVE MENU: hold trigger and drag · Main stick: adjust distance\nControl groups: press to recall / hold to save\nMenu button: pause / resume":
+                        "Left-click: select / drag to select a group · Shift: add to selection\nRight-click: move, attack, gather or repair\nEscape: cancel / back / pause · Space: pause / resume\nWASD: pan · Mouse wheel: zoom · F: full map\nM: recall menu · Drag MOVE MENU to reposition it\nWhile dragging the menu: mouse wheel adjusts distance\n1–3: recall group · Ctrl+1–3: save group";
+                    status.text="Use Back to return to the previous menu.";break;
+                case MenuPage.Pause:
+                    headline.text="MATCH PAUSED";economy.text=Session.Map.title;
+                    selection.text="Your match is paused. Resume when you are ready.";
+                    status.text="Returning to the main menu ends the current match.";break;
+                case MenuPage.LeaveConfirmation:
+                    headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
+                    selection.text="Leave this match and return to the main menu? Match progress will be lost.";
+                    status.text="Choose Keep playing to resume the match.";break;
+                case MenuPage.Result:
+                    headline.text=Session.Match.Winner==0?"VICTORY":Session.Match.Winner==2?"DRAW":"DEFEAT";
+                    economy.text="MATCH COMPLETE · "+Session.Map.title;
+                    selection.text="Play again with the same setup or return to the main menu.";
+                    status.text="Choose Rematch for a fresh start.";break;
+            }
+            if(Quest.Placing)status.text=Session.Message;
+        }
+        private void Add(string label,Action action,Action hold=null,bool primary=false)
+        {
+            bool grid=Page==MenuPage.Actions||Page==MenuPage.MatchSetup;
+            int columns=Page==MenuPage.Main?1:grid?4:2;
+            int n=actionIndex++,col=n%columns,row=n/columns;
+            float width=columns==1?600:columns==2?505:246,height=grid?49:58;
+            var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
+            TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
+            var image=go.GetComponent<Image>();image.color=primary?new Color(.1f,.32f,.36f):button;
+            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,Color.white,TextAnchor.MiddleCenter);
+            targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
+        }
         private void Rebuild()
         {
             if(actions==null)return;
-            foreach(Transform child in actions)Destroy(child.gameObject);targets.Clear();pressed=null;hovered=null;
-            int index=0;
-            void Add(string label,Action action,Action hold=null)
+            // Hide the old controls immediately, including between pointer events in the same frame.
+            for(int i=actions.childCount-1;i>=0;i--)
+            {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
+            targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
+            bool controls=Page==MenuPage.Controls;
+            selection.rectTransform.sizeDelta=new Vector2(1040,controls?225:38);
+            TopLeft(actions,new Vector2(30,controls?-411:-240),new Vector2(1040,controls?58:225));
+            if(Page==MenuPage.Main)
             {
-                int n=index++;int col=n%4,row=n/4;
-                var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);TopLeft(rt,new Vector2(col*260,-row*58),new Vector2(246,49));
-                var image=go.GetComponent<Image>();image.color=button;Label(rt,label,new Vector2(9,-4),new Vector2(228,41),18,Color.white,TextAnchor.MiddleCenter);
-                targets.Add(new Target{rect=rt,image=image,click=action,hold=hold});
+                Add("New Match",()=>Show(MenuPage.MatchSetup),primary:true);
+                Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
+                Add("Controls",()=>OpenSubmenu(MenuPage.Controls));return;
             }
-            if(!Session.Running)
+            if(Page==MenuPage.MatchSetup)
             {
                 Add("Faction: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                 Add("Opponent: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
@@ -154,20 +226,35 @@ namespace Frontier.Runtime
                 Add("Place board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
-                Add("Hand: "+(Session.LeftHanded?"Left":"Right"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
-                Add("START MATCH",()=>{if(Board.Placed)Session.StartMatch();else Session.Announce("Confirm the board placement first.");});
                 Add("Detect surfaces",()=>Quest.LoadRoom());
-                Add("Controls",Help);
-                return;
+                Add("START MATCH",()=>{if(Board.Placed&&!Quest.Placing)Session.StartMatch();else Session.Announce("Confirm the board placement first.");},primary:true);
+                Add("Back",Back);return;
             }
-            if(settings||Session.Match.Winner!=-1)
+            if(Page==MenuPage.Settings)
             {
-                Add("Resume match",()=>{settings=false;Session.Pause("menu",false);Rebuild();});
-                Add("Rematch",()=>{settings=false;Session.StartMatch();});
-                Add("Reposition board",()=>PlaceRequested?.Invoke());
-                Add("Surrender",()=>{Session.Pause("menu",false);Session.Send(CommandKind.Surrender);settings=false;});
                 Add("Hand: "+(Session.LeftHanded?"Left":"Right"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
-                Add("Controls",Help);return;
+                Add("Reposition board",()=>PlaceRequested?.Invoke());
+                Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
+                Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
+                Add("Detect surfaces",()=>Quest.LoadRoom());Add("Back",Back);return;
+            }
+            if(Page==MenuPage.Controls){Add("Back",Back);return;}
+            if(Page==MenuPage.Pause)
+            {
+                Add("Resume match",()=>Show(MenuPage.Actions),primary:true);
+                Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
+                Add("Controls",()=>OpenSubmenu(MenuPage.Controls));
+                Add("Return to main menu",()=>Show(MenuPage.LeaveConfirmation));return;
+            }
+            if(Page==MenuPage.LeaveConfirmation)
+            {
+                Add("Keep playing",()=>Show(MenuPage.Actions),primary:true);
+                Add("Leave match",()=>Session.LeaveMatch());return;
+            }
+            if(Page==MenuPage.Result)
+            {
+                Add("Rematch",()=>Session.StartMatch(),primary:true);
+                Add("Main menu",()=>Session.LeaveMatch());return;
             }
             var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             if(selected.Length==1&&Session.Catalog[selected[0].definition].building)
@@ -191,9 +278,37 @@ namespace Frontier.Runtime
                 Add("Stop",()=>Session.Send(CommandKind.Stop));Add("Hold Position",()=>Session.Send(CommandKind.Hold));
             }
             for(int g=0;g<3;g++){int n=g;Add("Group "+(g+1)+" · hold to save",()=>Session.Group(n,false),()=>Session.Group(n,true));}
-            Add("Full map",()=>Board.Fit());Add("Pause / options",()=>{settings=true;Session.Pause("menu",true);Rebuild();});
+            Add("Full map",()=>Board.Fit());Add("Pause",()=>Show(MenuPage.Pause));
         }
-        public void ToggleMenu(){settings=!settings;Session.Pause("menu",settings);Rebuild();}
+        private void Show(MenuPage page)
+        {
+            Page=page;signature=null;moving=false;
+            // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
+            Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result);
+            Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(default,default,false);
+            Board.SetVisible(ShowsBoard);Rebuild();
+        }
+        private void OpenSubmenu(MenuPage page){returnPage=Page;Show(page);}
+        public void Back()
+        {
+            if(Quest.Placing){Quest.CancelPlacement();return;}
+            switch(Page)
+            {
+                case MenuPage.MatchSetup:Show(MenuPage.Main);break;
+                case MenuPage.Settings:case MenuPage.Controls:Show(returnPage);break;
+                case MenuPage.Actions:Show(MenuPage.Pause);break;
+                case MenuPage.Pause:Show(MenuPage.Actions);break;
+                case MenuPage.LeaveConfirmation:Show(MenuPage.Pause);break;
+                case MenuPage.Result:Session.LeaveMatch();break;
+            }
+        }
+        public void ToggleMenu()
+        {
+            if(Quest.Placing){Quest.CancelPlacement();return;}
+            if(!Session.Running){Back();return;}
+            if(Session.Match.Winner!=-1)return;
+            Show(Page==MenuPage.Actions?MenuPage.Pause:MenuPage.Actions);
+        }
         public void ResetPosition(bool forgetSaved=true)
         {
             if(forgetSaved){customPosition=false;PlayerPrefs.DeleteKey(PlacementKey);PlayerPrefs.Save();}
@@ -233,11 +348,6 @@ namespace Frontier.Runtime
         private static string UnitLabel(Archetype type)=>type.building?type.name:UnitVisuals.RoleName(type.role)+" / "+type.name;
         private string DifficultyLabel=>Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
-        private void Help()
-        {
-            string order=Session.LeftHanded?"X":"A",cancel=Session.LeftHanded?"Y":"B";
-            Session.Announce(Quest.Active?$"Trigger: select/drag · {order}: order · {cancel}: cancel · sticks: pan/zoom":"Click/drag: select · right-click: order · WASD: pan · wheel: zoom · Space: pause");
-        }
         public bool Point(Ray ray,bool down,bool up,float depth=0)
         {
             if(root==null)return false;
@@ -266,7 +376,7 @@ namespace Frontier.Runtime
             {
                 if(Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=button;hovered=hit;if(hovered!=null)hovered.image.color=new Color(.12f,.35f,.39f);}
+            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;if(hovered!=null)hovered.image.color=new Color(.12f,.35f,.39f);}
             if(down&&hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}
             if(up&&pressed!=null)
             {var p=pressed;pressed=null;if(hit==p){if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}

@@ -40,7 +40,13 @@ namespace Frontier.Runtime
             hadPanelPlacement=PlayerPrefs.HasKey(PanelKey);previousPanelPlacement=PlayerPrefs.GetString(PanelKey);
             panel.ResetPosition();yield return null;
             game.Group(0,false); // Shortcuts before starting must be harmless.
-            yield return Capture("01-setup.png");
+            yield return Capture("00-main-menu.png");
+            var newMatch=GameObject.Find("New Match");
+            if(newMatch==null){Debug.LogError("New Match button not found");Application.Quit(1);yield break;}
+            var newRect=newMatch.GetComponent<RectTransform>();var newCenter=newRect.TransformPoint(newRect.rect.center);
+            var newRay=new Ray(quest.Camera.transform.position,(newCenter-quest.Camera.transform.position).normalized);
+            panel.Point(newRay,true,false);panel.Point(newRay,false,true);
+            yield return null;yield return Capture("01-setup.png");
             var button=GameObject.Find("START MATCH");
             if(button==null){Debug.LogError("Start button not found");Application.Quit(1);yield break;}
             game.Pause("tracking",true);

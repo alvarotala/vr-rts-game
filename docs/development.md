@@ -65,6 +65,15 @@ unity run . --log-file TestResults/unity-english.log --no-tail -- \
 
 Incluye los cinco estados de recolección y añade inicio en ambos mapas, trabajadores y tutorial de cada facción, colas de unidades y mejoras, pausa y final de partida. Comprueba que las etiquetas entren en su altura disponible y guarda quince vistas estáticas en `TestResults/English`, sin generar ejecutables.
 
+Para comprobar navegación entre menús y ciclo de partida, usar **Frontier → Preview and check menu flow**, o:
+
+```sh
+unity run . --log-file TestResults/unity-menus.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
+```
+
+Ejecuta rayos contra los botones reales y comprueba inicio, configuración, pausa, regreso, limpieza de partida, conservación de colocación y pausas externas, nueva partida y revancha. Guarda diez vistas estáticas en `TestResults/Menus`. Restaura la preferencia de mano que usa durante la comprobación y no genera ejecutables. El escenario de prueba desktop también entra ahora por **New Match** antes de **START MATCH**.
+
 Para inspeccionar el hover en el tablero real desde el Editor, usar **Frontier → Preview hover**, o:
 
 ```sh

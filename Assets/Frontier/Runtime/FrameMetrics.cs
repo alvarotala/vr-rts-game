@@ -11,7 +11,9 @@ namespace Frontier.Runtime
         private readonly List<float> intervals=new List<float>(150000),cpu=new List<float>(),gpu=new List<float>();
         private readonly FrameTiming[] timings=new FrameTiming[1];
         private bool saved;
-        private void Start(){Session.NewMatch+=Reset;}
+        private void Start(){Session.NewMatch+=Reset;Session.MatchClosed+=SaveOnClose;}
+        private void SaveOnClose(){if(!saved)Save();}
+        private void OnDestroy(){if(Session!=null){Session.NewMatch-=Reset;Session.MatchClosed-=SaveOnClose;}}
         private void Reset(){intervals.Clear();cpu.Clear();gpu.Clear();saved=false;}
         private void Update()
         {

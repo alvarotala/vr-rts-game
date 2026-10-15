@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Menú principal y ciclo de partida — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+La aplicación abre en un menú principal con **New Match**, **Settings** y **Controls**. La preparación de facción, rival, dificultad, mapa y tablero tiene su propia pantalla. El panel de acciones aparece al comenzar. La pausa ofrece continuar, configurar, consultar controles o regresar al inicio con confirmación de pérdida de la partida; el resultado ofrece revancha o menú principal.
+
+Salir limpia simulación, vista, selección, grupos, órdenes pendientes y representación de entidades, conservando la colocación del tablero. Se mantienen las pausas externas. El botón de retroceso funciona también sobre el panel y cancela una recolocación sin perder la posición previa. La simulación no recibe órdenes desde los menús. Los informes de rendimiento pendientes se cierran al salir de la partida.
+
+- **33 comprobaciones del flujo aprobadas en Unity Editor**, pulsando los botones reales mediante rayos: inicio, configuración, controles de escritorio/Touch, requisito de colocación, cancelación de colocación, pausas externas, salida cancelada/confirmada, limpieza, nueva partida con otro mapa/facción, resultado y revancha. Diez vistas estáticas sin desbordes de texto; inspeccionados menú principal, configuración, controles Touch, preparación y pausa. Registro: `TestResults/unity-menus.log`; capturas: `TestResults/Menus`.
+- **Comprobación existente de acciones y recolección aprobada**, con quince vistas de preparación, contadores, trabajadores, producción, investigación, pausa y resultado. Registro: `TestResults/unity-menu-actions.log`. Scripts compilados sin errores ni excepciones en ambos registros.
+- No se modificaron reglas del núcleo ni datos y no se repitieron partidas entre IA. No se generó APK ni ejecutable desktop. Los hashes del APK existente y de los cambios locales de configuración preexistentes permanecieron intactos.
+
+Pendiente: recorrer el flujo con los mandos en Quest, comprobar distancias de lectura, recolocación/cancelación con ancla real e interrupciones del visor. Las comprobaciones del Editor no validan seguimiento físico ni una partida interactiva completa. El APK disponible todavía no incluye estos menús.
+
 ## Juego en inglés — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 La interfaz, ayuda de controles, colocación y recuperación del tablero, tutorial, avisos de órdenes y resultado, contadores de recursos y catálogo se presentan en inglés. Los mapas se llaman **The Rift** y **Training Grounds**; las facciones **The Consortium** y **Symbiosis**. El tutorial toma los nombres de edificios de la facción elegida y las colas muestran el nombre del catálogo para unidades y mejoras. Se actualizaron también los textos propios de permisos de escritorio y diagnósticos de carga. Los idiomas adicionales quedan para una etapa posterior.

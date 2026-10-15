@@ -17,9 +17,10 @@ namespace Frontier.Runtime
         public bool Running { get; private set; }
         public bool LeftHanded;
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
-        public string Message { get; private set; } = "Place the board to begin.";
+        public string Message { get; private set; } = "Choose New Match to begin.";
         public event Action Changed;
         public event Action NewMatch;
+        public event Action MatchClosed;
         public event Action<bool> Feedback;
         public string BuildDefinition { get; private set; }
         public bool AttackMoveMode;
@@ -53,6 +54,17 @@ namespace Frontier.Runtime
             pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
             Announce(MapId == "training" ? $"1 · Select a worker. Build: {Catalog.Role(Faction, "supply").name} + {Catalog.Role(Faction, "barracks").name}." : "Expand your base. Scout before attacking.");
             NewMatch?.Invoke(); Changed?.Invoke();
+        }
+        public void LeaveMatch()
+        {
+            if (Match != null) Match.Paused = true;
+            Running = false; Match = null; View = null; bot = null;
+            Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
+            BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;
+            // Closing a match must not dismiss headset, focus or tracking interruptions.
+            pauseReasons.Remove("menu");
+            Announce("Ready for a new match.");
+            MatchClosed?.Invoke(); Changed?.Invoke();
         }
         private void Update()
         {
