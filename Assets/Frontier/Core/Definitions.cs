@@ -202,11 +202,20 @@ namespace Frontier.Core
         public ProductionOrder[] queue = Array.Empty<ProductionOrder>();
     }
     [Serializable]
+    public struct AttackEvent
+    {
+        public int id, tick, attacker, owner;
+        public string definition, targetDefinition;
+        // Centers at the instant of firing, retained even when the target dies.
+        public Point origin, destination;
+    }
+    [Serializable]
     public sealed class PlayerView
     {
         public int player, tick, winner = -1, minerals, catalyst, supply, capacity;
         public string faction;
         public VisibleEntity[] entities = Array.Empty<VisibleEntity>();
+        public AttackEvent[] attacks = Array.Empty<AttackEvent>();
         public ResourceState[] resources = Array.Empty<ResourceState>();
         public byte[] visibility = Array.Empty<byte>();
         public string[] researched = Array.Empty<string>();

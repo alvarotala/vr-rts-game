@@ -26,7 +26,7 @@ namespace Frontier.Runtime
         private readonly List<int> removed = new List<int>();
         private sealed class VisualParts
         {
-            public Transform selection, health, flash, impact;
+            public Transform selection, health, impact;
             public Renderer healthRenderer, impactRenderer;
             public Renderer[] body;
             public bool remembered, hovered, receivingDamage;
@@ -37,6 +37,8 @@ namespace Frontier.Runtime
         private MaterialPropertyBlock hoverProperties, impactProperties;
         private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
+        private WeaponEffects weapons;
+        private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
         private Color32[] fogColors;
@@ -68,6 +70,7 @@ namespace Frontier.Runtime
         {
             if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;}
             unitVisuals.Dispose();
+            weapons?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure,impactMaterial})Release(material);
             Release(fog);
@@ -79,6 +82,7 @@ namespace Frontier.Runtime
         public void Rebuild()
         {
             if(Content==null)return;
+            weapons?.Dispose();weapons=null;firing.Clear();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
             entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;
@@ -87,6 +91,7 @@ namespace Frontier.Runtime
             Release(fog);
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
+            weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
             var grid=new GridMap(Session.Map);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
@@ -126,6 +131,7 @@ namespace Frontier.Runtime
             Content.gameObject.SetActive(visible);
             if(!visible)
             {
+                weapons?.Clear();
                 Hovered=0;Pointer=null;DrawSelection(default,default,false);
                 if(ground!=null)ground.SetFloat("_HoverWidth",0);
                 if(preview!=null)preview.gameObject.SetActive(false);
@@ -150,7 +156,10 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null)return;
+            if(Session.View==null){weapons?.Clear();return;}
+            firing.Clear();
+            foreach(var shot in Session.View.attacks)
+                if(Session.View.tick-shot.tick<6)firing[shot.attacker]=shot;
             alive.Clear();
             foreach(var e in Session.View.entities)
             {
@@ -166,6 +175,11 @@ namespace Frontier.Runtime
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
                 Vector3 direction=target-visual.localPosition;direction.y=0;
                 if(!type.building&&direction.sqrMagnitude>.01f)visual.localRotation=Quaternion.Slerp(visual.localRotation,Quaternion.LookRotation(direction),Time.unscaledDeltaTime*12);
+                if(!type.building&&!e.remembered&&firing.TryGetValue(e.id,out var shot))
+                {
+                    var aim=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y);
+                    if(aim.sqrMagnitude>.001f)visual.localRotation=Quaternion.LookRotation(aim);
+                }
                 visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
                 bool hovered=Hovered==e.id&&!e.remembered;
@@ -201,7 +215,6 @@ namespace Frontier.Runtime
                     cached.impact.localScale=Vector3.one*diameter;
                     impactProperties.SetFloat("_Progress",damageAge/12f);cached.impactRenderer.SetPropertyBlock(impactProperties);
                 }
-                cached.flash.gameObject.SetActive(!e.remembered&&e.attackTick>0&&Session.View.tick-e.attackTick<3);
                 // Mobile units retain their role accents; only buildings become fog memories.
                 if(type.building&&(newlyVisible||cached.remembered!=e.remembered))
                 {
@@ -226,6 +239,7 @@ namespace Frontier.Runtime
                 preview.GetComponent<Renderer>().sharedMaterial=valid?highlight:red;
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
+            weapons?.Update(this);
         }
         private Transform MakeEntity(Archetype type,int owner)
         {
@@ -247,9 +261,8 @@ namespace Frontier.Runtime
             }
             var ring=Primitive(PrimitiveType.Cylinder,root,highlight);ring.name="Selection";ring.localPosition=Vector3.up*.04f;ring.localScale=new Vector3(size*1.3f,.035f,size*1.3f);ring.gameObject.SetActive(false);
             var hp=Primitive(PrimitiveType.Cube,root,highlight);hp.name="Health";hp.localPosition=new Vector3(0,height+1,0);
-            var flash=Primitive(PrimitiveType.Sphere,root,highlight);flash.name="Flash";flash.localPosition=new Vector3(0,height*.6f,size*.6f);flash.localScale=Vector3.one*.65f;flash.gameObject.SetActive(false);
             var impact=Primitive(PrimitiveType.Quad,root,impactMaterial);impact.name="Damage impact";impact.localPosition=Vector3.up*(height+1.15f);impact.localRotation=Quaternion.Euler(90,0,0);impact.gameObject.SetActive(false);
-            parts[root]=new VisualParts{selection=ring,health=hp,flash=flash,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=root.GetComponentsInChildren<Renderer>(true).Where(r=>r.transform!=ring&&r.transform!=hp&&r.transform!=flash&&r.transform!=impact).ToArray()};
+            parts[root]=new VisualParts{selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=root.GetComponentsInChildren<Renderer>(true).Where(r=>r.transform!=ring&&r.transform!=hp&&r.transform!=impact).ToArray()};
             return root;
         }
         private static Transform Primitive(PrimitiveType type,Transform parent,Material material)

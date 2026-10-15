@@ -198,7 +198,7 @@ namespace Frontier.Core
         public void Step()
         {
             if (Paused || Winner != -1) return;
-            Tick++; Array.Clear(unitCells, 0, unitCells.Length);
+            Tick++; recentAttacks.RemoveAll(a=>Tick-a.shot.tick>=TickRate); Array.Clear(unitCells, 0, unitCells.Length);
             foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c]++; }
             var active = Entities.Values.OrderBy(e => e.id).ToArray();
             BeginMovementStep(active);

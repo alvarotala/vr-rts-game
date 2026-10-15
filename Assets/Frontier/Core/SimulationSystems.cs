@@ -6,6 +6,16 @@ namespace Frontier.Core
 {
     public sealed partial class Simulation
     {
+        private readonly List<(AttackEvent shot, int observers)> recentAttacks = new List<(AttackEvent, int)>();
+        private int nextAttackId;
+        private void RecordAttack(EntityState source, EntityState target)
+        {
+            Point origin=Center(source),destination=Center(target);int observers=0;
+            for(int player=0;player<2;player++)
+                if(Visible(player,origin)&&Visible(player,destination))observers|=1<<player;
+            recentAttacks.Add((new AttackEvent {id=++nextAttackId,tick=Tick,attacker=source.id,owner=source.owner,
+                definition=source.definition,targetDefinition=target.definition,origin=origin,destination=destination},observers));
+        }
         private void AdvanceConstruction(EntityState building)
         {
             var type = Type(building);
@@ -100,6 +110,7 @@ namespace Frontier.Core
             if (Tick < unit.attackReadyTick) return;
             float damage = Math.Max(1, type.damage * (1 + Players[unit.owner].attackLevel * .2f) - Players[target.owner].armorLevel * 2);
             target.health -= damage; target.lastDamageTick = Tick; unit.attackReadyTick = Tick + type.attackPeriod;
+            RecordAttack(unit,target);
             if (type.role == "siege") foreach (var other in Entities.Values)
                 if (other.id != target.id && other.owner != unit.owner && Center(other).Distance(Center(target)) < 2)
                 { other.health -= damage * .35f; other.lastDamageTick = Tick; }
@@ -153,7 +164,9 @@ namespace Frontier.Core
             var knownResources = Resources.Where(r => Explored(player, r.position)).Select(r => ObserveResource(player, r, assignments)).ToArray();
             var upgrades = new List<string>(); if (Players[player].attackLevel > 0) upgrades.Add("attack"); if (Players[player].armorLevel > 0) upgrades.Add("armor");
             return new PlayerView { player = player, tick = Tick, winner = Winner, faction = Players[player].faction, minerals = Players[player].minerals, catalyst = Players[player].catalyst,
-                supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray() };
+                supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray(),
+                // Never reveal a previously unseen shot when an observer arrives later, or keep a trail in lost vision.
+                attacks = recentAttacks.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.shot.origin) && Visible(player,a.shot.destination)).Select(a=>a.shot).ToArray() };
         }
         public MatchSnapshot Snapshot()
         {

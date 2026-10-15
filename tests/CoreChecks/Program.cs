@@ -120,6 +120,13 @@ foreach(string faction in new[]{"industrial","biological"})
     Check(victim.lastDamageTick>=0&&victim.health<victimType.health&&s.View(0).entities.First(e=>e.id==victim.id).damageTick==victim.lastDamageTick,"visible target exposes real received hit "+faction);
     Check(s.View(1).entities.First(e=>e.id==splash.id).damageTick==victim.lastDamageTick&&splash.health<victimType.health,"splash victims expose their own received hit "+faction);
     Check(s.View(0).entities.First(e=>e.id==shooter.id).damageTick<0,"firing does not trigger received damage feedback "+faction);
+    var shot=s.View(0).attacks.Single(a=>a.attacker==shooter.id);
+    Check(shooter.target==0&&shot.origin.Distance(s.Center(shooter))<.01f&&shot.destination.Distance(s.Center(victim))<.01f&&shot.tick==victim.lastDamageTick,"automatic fire records actual endpoints "+faction);
+    Check(s.View(1).attacks.Any(a=>a.id==shot.id)&&shot.definition==artillery.id&&shot.targetDefinition==victimType.id,"visible defenders receive same weapon event "+faction);
+    var copy=s.View(0);copy.attacks[0].origin=new Point(0,0);
+    Check(s.View(0).attacks.Single(a=>a.id==shot.id).origin.Distance(shot.origin)<.01f,"view cannot mutate authoritative weapon events "+faction);
+    s.Paused=true;s.Step();s.Paused=false;
+    Check(s.View(0).attacks.Count(a=>a.attacker==shooter.id)==1,"pause does not duplicate firing events "+faction);
     int hitTick=victim.lastDamageTick;victim.health=victimType.health;
     Check(s.View(1).entities.First(e=>e.id==victim.id).damageTick==hitTick,"health recovery does not create or erase hit timestamp "+faction);
     var targetType=catalog.Role(faction,"supply");
@@ -128,7 +135,28 @@ foreach(string faction in new[]{"industrial","biological"})
     shooter.order=CommandKind.Attack;shooter.target=targetBuilding.id;shooter.attackReadyTick=0;
     for(int i=0;i<8&&targetBuilding.lastDamageTick<0;i++)s.Step();
     Check(targetBuilding.health<targetType.health&&s.View(0).entities.First(e=>e.id==targetBuilding.id).damageTick==targetBuilding.lastDamageTick,"building receives visible hit feedback "+faction);
+    Check(s.View(0).attacks.Last(a=>a.attacker==shooter.id).destination.Distance(s.Center(targetBuilding))<.01f,"building shot points to center rather than origin "+faction);
+    targetBuilding.health=1;shooter.attackReadyTick=0;s.Step();
+    var lethal=s.View(0).attacks.Last(a=>a.attacker==shooter.id);
+    Check(!s.Entities.ContainsKey(targetBuilding.id)&&lethal.tick==s.Tick&&lethal.targetDefinition==targetBuilding.definition,"lethal shot remains renderable after target removal "+faction);
+    shooter.order=CommandKind.Hold;
+    for(int i=0;i<Simulation.TickRate;i++)s.Step();
+    Check(s.View(0).attacks.All(a=>a.attacker!=shooter.id),"weapon history expires after one second "+faction);
 }
+// A long-range attacker can see a worker without being visible to its victim.
+s=New();
+var hiddenGun=new EntityState{id=2000,owner=0,definition="industrial.siege",position=new Point(26.95f,20.95f),health=250,order=CommandKind.Hold};
+var distantWorker=new EntityState{id=2001,owner=1,definition="biological.worker",position=new Point(36.9f,20.95f),health=1000,order=CommandKind.Hold};
+s.Entities.Add(hiddenGun.id,hiddenGun);s.Entities.Add(distantWorker.id,distantWorker);
+for(int i=0;i<8&&!s.View(0).attacks.Any(a=>a.attacker==hiddenGun.id);i++)s.Step();
+var hiddenShot=s.View(0).attacks.Single(a=>a.attacker==hiddenGun.id);
+Check(!s.Visible(1,hiddenGun.position)&&s.View(1).attacks.All(a=>a.id!=hiddenShot.id),"weapon events do not reveal hidden attackers");
+hiddenGun.attackReadyTick=10000;distantWorker.position=new Point(29,20);
+for(int i=0;i<4;i++)s.Step();
+Check(s.Visible(1,hiddenGun.position)&&s.View(1).attacks.All(a=>a.id!=hiddenShot.id),"new vision does not replay previously hidden fire");
+hiddenGun.position=new Point(90,90);
+for(int i=0;i<4;i++)s.Step();
+Check(!s.Visible(0,hiddenShot.destination)&&s.View(0).attacks.All(a=>a.id!=hiddenShot.id),"lost vision removes visible weapon trails");
 s=New();worker=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="worker");
 Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:"industrial.supply",position:new Point(18,14))).accepted,"start interruptible industrial construction");
 var unfinished=s.Entities.Values.First(e=>e.definition=="industrial.supply");

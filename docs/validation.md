@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Partículas y trayectorias de armas — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Se reemplazó la esfera fija de disparo por destello en el arma, orientación al objetivo real, trazadora industrial, proyectil biológico, arco de artillería, golpe cercano y chispas en destino. Las torres usan el mismo sistema. Una estela tenue conecta al atacante con su destino; los golpes letales conservan esa referencia aunque la entidad ya haya desaparecido. No cambió el daño ni la cadencia: el vuelo es visual.
+
+- **151 comprobaciones del núcleo aprobadas**, incluidas 17 nuevas sobre objetivo de ataque automático, extremos de edificios, eventos letales, copia por valor, pausa, caducidad y privacidad al perder/ganar visión: `TestResults/weapons-core.log`. No se repitieron partidas de IA porque las reglas de combate no cambiaron.
+- **15 comprobaciones visuales y once vistas en Unity Editor**, con scripts y shader compilados: línea temporal de disparo, ambas facciones, cuerpo a cuerpo, artillería, torres, objetivo destruido, pausa, niebla, zoom/giro, desaparición, presupuesto de 192 disparos y limpieza al ocultar/salir/reiniciar. Registro: `TestResults/unity-weapons.log`; vistas: `TestResults/Weapons`. Se inspeccionaron trazadoras, proyectiles biológicos, arcos, impactos y recorte con zoom. Los eventos de estas capturas son fixtures; los ataques reales se verifican en el núcleo.
+- Una malla/material y buffers reutilizados evitan crear objetos por disparo. Esto no es una medición de rendimiento en Quest. Se añadió `Frontier/Weapons` a la lista de shaders conservados por `ProjectBuilder` para el próximo build.
+
+No se generó APK ni ejecutable desktop. El APK y las configuraciones locales preexistentes permanecen iguales. Pendiente: revisar legibilidad en una batalla real, percepción binocular, costo de CPU/GPU y comodidad en Quest. El APK disponible no contiene estos efectos.
+
 ## Selección desde fuera del tablero — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 El arrastre puede empezar o terminar fuera del mapa usando la continuación del plano físico del tablero. Se conserva hasta soltar el gatillo o mouse y se recorta tanto el contorno como la selección a la ventana visible. Esto permite seleccionar en bordes y esquinas sin incluir unidades recortadas por zoom. Los arrastres enteramente externos no modifican la selección; movimiento, construcción y ataque desplazándose siguen requiriendo un impacto real sobre el terreno.

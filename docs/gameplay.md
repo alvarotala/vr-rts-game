@@ -68,6 +68,8 @@ Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno s
 
 Al **recibir daño**, unidades y edificios visibles muestran un destello claro en el modelo durante unos 0,2 segundos y un aro naranja que se expande sobre ellos durante unos 0,6 segundos. La barra de vida se vuelve naranja durante ese intervalo. Varios impactos renuevan la señal sin acumular aros; también se indica el daño de área. El efecto no necesita selección y es independiente del destello del atacante. Los colores de equipo y rol vuelven al finalizar el pulso; los recuerdos enemigos bajo niebla no muestran impactos.
 
+Al **disparar**, las unidades se orientan hacia el objetivo real y aparece un destello en el arma, un proyectil con estela y chispas al llegar. Las armas industriales usan trazadoras doradas; las biológicas, proyectiles verdes más gruesos; la artillería dibuja un arco elevado y un impacto más amplio. Trabajadores y combatientes cercanos muestran un golpe corto. Las torres también muestran sus disparos. Una estela tenue conserva brevemente la conexión entre atacante y destino, incluso si el golpe destruyó al objetivo. Son efectos visuales: no cambian daño, cadencia ni tiempo de resolución del combate. Se recortan al tablero y a la visión actual, y se detienen durante la pausa.
+
 El juego se presenta íntegramente en inglés; la incorporación de otros idiomas queda pendiente para una etapa posterior.
 
 ## Contenido
