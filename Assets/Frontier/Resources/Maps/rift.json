@@ -1,0 +1,381 @@
+{
+  "schemaVersion": 1,
+  "id": "rift",
+  "title": "La Fractura",
+  "width": 128,
+  "height": 128,
+  "terrain": [
+    {
+      "x": 52,
+      "y": 30,
+      "width": 24,
+      "height": 68,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 50,
+      "y": 37,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 74,
+      "y": 37,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 50,
+      "y": 61,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 74,
+      "y": 61,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 50,
+      "y": 85,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 74,
+      "y": 85,
+      "width": 4,
+      "height": 6,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 36,
+      "y": 32,
+      "width": 5,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 87,
+      "y": 91,
+      "width": 5,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 30,
+      "y": 84,
+      "width": 5,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 93,
+      "y": 39,
+      "width": 5,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    }
+  ],
+  "spawns": [
+    {
+      "player": 0,
+      "x": 12,
+      "y": 12
+    },
+    {
+      "player": 1,
+      "x": 112,
+      "y": 112
+    }
+  ],
+  "resources": [
+    {
+      "id": "camp0.mineral0",
+      "kind": "mineral",
+      "x": 10,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral0",
+      "kind": "mineral",
+      "x": 117,
+      "y": 107,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral1",
+      "kind": "mineral",
+      "x": 12,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral1",
+      "kind": "mineral",
+      "x": 115,
+      "y": 107,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral2",
+      "kind": "mineral",
+      "x": 14,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral2",
+      "kind": "mineral",
+      "x": 113,
+      "y": 107,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral3",
+      "kind": "mineral",
+      "x": 16,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral3",
+      "kind": "mineral",
+      "x": 111,
+      "y": 107,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.catalyst",
+      "kind": "catalyst",
+      "x": 12,
+      "y": 25,
+      "amount": 2400
+    },
+    {
+      "id": "camp1.catalyst",
+      "kind": "catalyst",
+      "x": 115,
+      "y": 102,
+      "amount": 2400
+    },
+    {
+      "id": "camp2.mineral0",
+      "kind": "mineral",
+      "x": 28,
+      "y": 48,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral0",
+      "kind": "mineral",
+      "x": 99,
+      "y": 79,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral1",
+      "kind": "mineral",
+      "x": 30,
+      "y": 48,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral1",
+      "kind": "mineral",
+      "x": 97,
+      "y": 79,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral2",
+      "kind": "mineral",
+      "x": 32,
+      "y": 48,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral2",
+      "kind": "mineral",
+      "x": 95,
+      "y": 79,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral3",
+      "kind": "mineral",
+      "x": 34,
+      "y": 48,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral3",
+      "kind": "mineral",
+      "x": 93,
+      "y": 79,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.catalyst",
+      "kind": "catalyst",
+      "x": 30,
+      "y": 53,
+      "amount": 2400
+    },
+    {
+      "id": "camp3.catalyst",
+      "kind": "catalyst",
+      "x": 97,
+      "y": 74,
+      "amount": 2400
+    },
+    {
+      "id": "camp4.mineral0",
+      "kind": "mineral",
+      "x": 28,
+      "y": 99,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral0",
+      "kind": "mineral",
+      "x": 99,
+      "y": 28,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral1",
+      "kind": "mineral",
+      "x": 30,
+      "y": 99,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral1",
+      "kind": "mineral",
+      "x": 97,
+      "y": 28,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral2",
+      "kind": "mineral",
+      "x": 32,
+      "y": 99,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral2",
+      "kind": "mineral",
+      "x": 95,
+      "y": 28,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral3",
+      "kind": "mineral",
+      "x": 34,
+      "y": 99,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral3",
+      "kind": "mineral",
+      "x": 93,
+      "y": 28,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.catalyst",
+      "kind": "catalyst",
+      "x": 30,
+      "y": 104,
+      "amount": 2400
+    },
+    {
+      "id": "camp5.catalyst",
+      "kind": "catalyst",
+      "x": 97,
+      "y": 23,
+      "amount": 2400
+    }
+  ],
+  "decoration": [
+    {
+      "id": "rock",
+      "x": 38,
+      "y": 34,
+      "rotation": 0
+    },
+    {
+      "id": "rock",
+      "x": 89,
+      "y": 93,
+      "rotation": 0
+    },
+    {
+      "id": "rock",
+      "x": 32,
+      "y": 86,
+      "rotation": 0
+    },
+    {
+      "id": "rock",
+      "x": 95,
+      "y": 41,
+      "rotation": 0
+    }
+  ]
+}

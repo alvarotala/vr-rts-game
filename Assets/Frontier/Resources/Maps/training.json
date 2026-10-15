@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "training",
+  "title": "Campo de entrenamiento",
+  "width": 48,
+  "height": 48,
+  "terrain": [],
+  "spawns": [
+    {
+      "player": 0,
+      "x": 12,
+      "y": 12
+    },
+    {
+      "player": 1,
+      "x": 32,
+      "y": 32
+    }
+  ],
+  "resources": [
+    {
+      "id": "camp0.mineral0",
+      "kind": "mineral",
+      "x": 10,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral0",
+      "kind": "mineral",
+      "x": 37,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral1",
+      "kind": "mineral",
+      "x": 12,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral1",
+      "kind": "mineral",
+      "x": 35,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral2",
+      "kind": "mineral",
+      "x": 14,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral2",
+      "kind": "mineral",
+      "x": 33,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral3",
+      "kind": "mineral",
+      "x": 16,
+      "y": 20,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral3",
+      "kind": "mineral",
+      "x": 31,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.catalyst",
+      "kind": "catalyst",
+      "x": 12,
+      "y": 25,
+      "amount": 2400
+    },
+    {
+      "id": "camp1.catalyst",
+      "kind": "catalyst",
+      "x": 35,
+      "y": 22,
+      "amount": 2400
+    }
+  ],
+  "decoration": []
+}
