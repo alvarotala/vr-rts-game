@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Selección al ras del mapa — 0.1.3 — 15 de octubre de 2026
+
+El rectángulo se dibuja directamente en el material del terreno. Se eliminó la malla ubicada por encima de la cota máxima del mapa: el contorno queda a la misma altura que cada superficie, sigue las rampas y excluye las caras verticales de los acantilados. Al compartir la superficie del suelo no necesita un desplazamiento de profundidad ni genera parpadeo por superposición. Se conserva el ancho visual, el zoom y el recorte al tablero.
+
+Verificación local: compilaciones desktop y Android correctas con Unity CLI, sin errores del Editor. Prueba gráfica completa aprobada con cero errores. Se inspeccionaron `TestResults/Desktop/04-selection-ground.png` y `04-selection-ramps.png`, que muestran el contorno sobre suelo bajo y la zona de alturas; los desniveles verticales no se resaltan. El núcleo de simulación no cambió y no se repitieron las partidas entre IA.
+
+APK actual: `Builds/Quest/FrontierCommand.apk`, versión **0.1.3 (4)**, **58.778.881 bytes**, ARM64/IL2CPP y firma APK v2 verificada. SHA-256: `4201435c8db7145ab8dc5d90a76310107cea381a8217d235da6f672a26fddd03`.
+
+Evidencias: `TestResults/unity-selection-desktop.log`, `unity-selection-quest.log`, `selection-smoke.log`, `Desktop/smoke-result.json` y `delivery.json`. Los resultados anteriores se conservan en `delivery-0.1.2.json`. Pendiente: comprobar la selección con ambos ojos en Quest.
+
 ## Colisiones y navegación — 0.1.2 — 15 de octubre de 2026
 
 Las unidades ahora usan cuerpos circulares ajustados desde el catálogo. Evitan tráfico, empujan gradualmente a aliados, ceden el paso en cruces y recalculan rutas congestionadas. Las formaciones reservan destinos separados, también cerca de las esquinas. Los enemigos y las unidades en **Mantener posición** permanecen sólidos; los edificios nuevos y las salidas de producción respetan los cuerpos completos. La geometría del cuerpo visible se ajustó a esa huella.
@@ -13,7 +23,7 @@ Las unidades ahora usan cuerpos circulares ajustados desde el catálogo. Evitan 
 - **Build desktop y prueba gráfica aprobados**, con movimiento efectivo, interacción del panel y cero errores registrados. Captura `TestResults/Desktop/03-command-panel.png` inspeccionada para comprobar los cuerpos actualizados.
 - **APK Android ARM64/IL2CPP compilado**, versión **0.1.2 (3)**, 58.776.225 bytes. Unity CLI no reportó errores del Editor; firma APK v2 verificada y permisos MR conservados.
 
-APK actual: `Builds/Quest/FrontierCommand.apk`. SHA-256: `9043ba8eff06bd573e2794f6e5a13b98f7df2d8afb435ab667d1e17530f157af`.
+APK de esa entrega: `Builds/Quest/FrontierCommand.apk`. SHA-256: `9043ba8eff06bd573e2794f6e5a13b98f7df2d8afb435ab667d1e17530f157af`.
 
 Evidencias: `TestResults/navigation-final.log`, `matches.json`, `unity-navigation-desktop.log`, `unity-navigation-quest.log`, `Desktop/smoke-result.json` y `delivery.json`. La entrega 0.1.1 queda registrada en `delivery-0.1.1.json`.
 

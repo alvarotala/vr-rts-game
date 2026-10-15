@@ -50,7 +50,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Pausa | Menú o panel | Espacio |
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
 
-El juego incluye selección ampliada, contorno de selección, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. Los controles de la mano principal se invierten desde el panel.
+El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
 
 ## Contenido
 

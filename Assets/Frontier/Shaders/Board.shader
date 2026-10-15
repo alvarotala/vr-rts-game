@@ -1,6 +1,14 @@
 Shader "Frontier/Board"
 {
-    Properties { _BaseColor("Color", Color) = (1,1,1,1) _FogTex("Visibility", 2D) = "white" {} _UseFog("Fog", Float) = 0 _Grid("Grid", Float) = 0 }
+    Properties
+    {
+        _BaseColor("Color", Color) = (1,1,1,1)
+        _FogTex("Visibility", 2D) = "white" {}
+        _UseFog("Fog", Float) = 0
+        _Grid("Grid", Float) = 0
+        _SelectionBounds("Selection bounds", Vector) = (0,0,0,0)
+        _SelectionWidth("Selection width", Float) = 0
+    }
     SubShader
     {
         Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
@@ -13,9 +21,10 @@ Shader "Frontier/Board"
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
+            struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float topSurface:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
             float4 _BaseColor; float _UseFog; float _Grid;
+            float4 _SelectionBounds; float _SelectionWidth;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -23,7 +32,8 @@ Shader "Frontier/Board"
             {
                 Varyings o; UNITY_SETUP_INSTANCE_ID(input); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 o.world=TransformObjectToWorld(input.positionOS.xyz); o.positionCS=TransformWorldToHClip(o.world);
-                o.normal=TransformObjectToWorldNormal(input.normalOS); o.uv=input.uv; o.color=input.color; return o;
+                o.normal=TransformObjectToWorldNormal(input.normalOS); o.uv=input.uv; o.color=input.color;
+                o.topSurface=input.normalOS.y; return o;
             }
             half4 frag(Varyings input):SV_Target
             {
@@ -39,6 +49,16 @@ Shader "Frontier/Board"
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
                     float gridLine=step(.48,max(tile.x,tile.y));
                     color*=1-gridLine*.1*_Grid;
+                    if(_SelectionWidth>0)
+                    {
+                        float2 mapPosition=input.uv*_FrontierBounds.zw;
+                        float2 inset=min(mapPosition-_SelectionBounds.xy,_SelectionBounds.zw-mapPosition);
+                        float edge=min(inset.x,inset.y);
+                        float aa=max(fwidth(edge),.001);
+                        half outline=smoothstep(-aa*.5,aa*.5,edge)*(1-smoothstep(_SelectionWidth-aa*.5,_SelectionWidth+aa*.5,edge));
+                        // Only paint the ground and ramps; cliff faces stay unhighlighted.
+                        color=lerp(color,half3(.9,1,.6),outline*step(.5,input.topSurface));
+                    }
                 }
                 return half4(color,1);
             }

@@ -33,11 +33,6 @@ namespace Frontier.Runtime
         private Texture2D fog;
         private Color32[] fogColors;
         private int fogTick = -1;
-        private Mesh selectionMesh;
-        private Transform selectionRect;
-        private float selectionHeight;
-        private readonly Vector3[] selectionVertices=new Vector3[8];
-        private static readonly int[] selectionTriangles={0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7};
         private Transform preview;
         public Point? Pointer;
         public float CellScale => Width / Session.Map.width * Zoom;
@@ -55,14 +50,13 @@ namespace Frontier.Runtime
         {
             if(Content==null)return;
             if(terrainCollider!=null&&terrainCollider.sharedMesh!=null)Destroy(terrainCollider.sharedMesh);
-            if(selectionMesh!=null)Destroy(selectionMesh);
             foreach(Transform child in Content)Destroy(child.gameObject);
-            entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;selectionRect=null;selectionMesh=null;
+            entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;
+            DrawSelection(default,default,false);
             if(fog!=null)Destroy(fog);
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             var grid=new GridMap(Session.Map);
-            selectionHeight=grid.SurfaceLevel.Max()*1.5f+.04f;
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
             for(int y=0;y<grid.Height;y++)for(int x=0;x<grid.Width;x++)
@@ -208,29 +202,14 @@ namespace Frontier.Runtime
         public int ResourceAt(Point point) => Session.View?.resources.Where(r=>r.remaining!=0&&r.position.Distance(point)<2).OrderBy(r=>r.position.Distance(point)).FirstOrDefault()?.id??0;
         public void DrawSelection(Point a,Point b,bool visible)
         {
-            if(Content==null||(!visible&&selectionRect==null))return;
-            if(selectionRect==null)
-            {
-                selectionRect=new GameObject("Selection rectangle",typeof(MeshFilter),typeof(MeshRenderer)).transform;
-                selectionRect.SetParent(Content,false);
-                selectionMesh=new Mesh{name="Flat selection outline"};selectionMesh.MarkDynamic();
-                selectionMesh.vertices=selectionVertices;selectionMesh.triangles=selectionTriangles;
-                selectionMesh.colors=new[]{Color.white,Color.white,Color.white,Color.white,Color.white,Color.white,Color.white,Color.white};
-                selectionMesh.normals=new[]{Vector3.up,Vector3.up,Vector3.up,Vector3.up,Vector3.up,Vector3.up,Vector3.up,Vector3.up};
-                selectionRect.GetComponent<MeshFilter>().sharedMesh=selectionMesh;
-                var renderer=selectionRect.GetComponent<MeshRenderer>();renderer.sharedMaterial=highlight;
-                renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=false;
-            }
-            selectionRect.gameObject.SetActive(visible);if(!visible)return;
-            // Four horizontal strips form a continuous rectangle above the highest terrain.
-            // Unlike a camera-facing LineRenderer, it cannot turn into walls in stereo.
+            if(ground==null)return;
+            if(!visible){ground.SetFloat("_SelectionWidth",0);return;}
+            // Paint the outline in the terrain material: exactly on the surface, including ramps.
+            // There is no elevated mesh, depth offset or vertical wall geometry.
             float x0=Mathf.Min(a.x,b.x),x1=Mathf.Max(a.x,b.x),z0=Mathf.Min(a.y,b.y),z1=Mathf.Max(a.y,b.y);
             float width=Mathf.Min(.002f/CellScale,Mathf.Min(x1-x0,z1-z0)*.5f);
-            selectionVertices[0]=new Vector3(x0,selectionHeight,z0);selectionVertices[1]=new Vector3(x0,selectionHeight,z1);
-            selectionVertices[2]=new Vector3(x1,selectionHeight,z1);selectionVertices[3]=new Vector3(x1,selectionHeight,z0);
-            selectionVertices[4]=new Vector3(x0+width,selectionHeight,z0+width);selectionVertices[5]=new Vector3(x0+width,selectionHeight,z1-width);
-            selectionVertices[6]=new Vector3(x1-width,selectionHeight,z1-width);selectionVertices[7]=new Vector3(x1-width,selectionHeight,z0+width);
-            selectionMesh.vertices=selectionVertices;selectionMesh.RecalculateBounds();
+            ground.SetVector("_SelectionBounds",new Vector4(x0,z0,x1,z1));
+            ground.SetFloat("_SelectionWidth",width);
         }
     }
 }

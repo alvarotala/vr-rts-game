@@ -77,6 +77,12 @@ namespace Frontier.Runtime
             board.Fit();panel.Recall();yield return null;yield return null;
             board.DrawSelection(new Point(44,32),new Point(84,72),true);
             yield return Capture("04-flat-selection.png");
+            board.Zoom=2;board.Pan=new Vector2(0,-12);yield return null;yield return null;
+            yield return Capture("04-selection-ramps.png");
+            board.Zoom=4;board.Pan=new Vector2(-47,-40);
+            board.DrawSelection(new Point(8,18),new Point(26,30),true);yield return null;yield return null;
+            yield return Capture("04-selection-ground.png");
+            board.Fit();board.DrawSelection(new Point(44,32),new Point(84,72),true);yield return null;yield return null;
             var cameraPosition=quest.Camera.transform.position;var cameraRotation=quest.Camera.transform.rotation;
             bool orbitHit=true;
             for(int side=0;side<4;side++)
