@@ -193,7 +193,7 @@ namespace Frontier.Core
     }
     [Serializable] public sealed class VisibleEntity
     {
-        public int id, owner, target, attackTick = -1;
+        public int id, owner, target, attackTick = -1, damageTick = -1;
         public string definition;
         public Point position;
         public float health, progress;

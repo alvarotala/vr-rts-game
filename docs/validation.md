@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Señal de daño recibido — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Unidades y edificios visibles reciben un destello claro breve, un aro naranja expansivo y una barra de vida naranja al ser golpeados. La señal procede del momento del impacto, incluye daño de área y no se confunde con reparación, regeneración o disparo. Se mantienen hover y selección; se reutiliza un único marcador por entidad y se limpia al ocultar, reutilizar o retirar la representación. El aro desaparece a los doce pasos (0,6 segundos de simulación), y el destello del modelo a los cuatro.
+
+- **134 comprobaciones del núcleo aprobadas**, incluidas once comprobaciones nuevas de impactos reales sobre unidades/edificios de ambas facciones, daño de área, recuperación y privacidad: `TestResults/hit-core.log`. No se modificaron costos, daño ni reglas de combate; se añadió el dato de impacto a la vista autorizada. No se repitieron partidas entre IA.
+- **Scripts y shaders compilados en Unity Editor**, con ocho vistas y comprobaciones de objetivos simultáneos, hover/selección, renovación, caducidad, reutilización, recuerdos bajo niebla y salida. Inspeccionados impactos simultáneos, soldado seleccionado, edificio y desvanecimiento. Registro: `TestResults/unity-hits.log`; vistas: `TestResults/Hits`.
+- Se añadió el shader de impacto a la lista conservada por `ProjectBuilder` para la siguiente compilación. No se generó APK ni ejecutable desktop; se conservaron el APK y las configuraciones locales preexistentes.
+
+Pendiente: comprobar legibilidad con mucha acción, percepción binocular y costo de los indicadores simultáneos en Quest. Las vistas estáticas del Editor no certifican una partida interactiva ni rendimiento físico. El APK disponible no contiene este cambio.
+
 ## Indicador del cursor sobre el mapa — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Punto blanco y líneas de mira turquesa, con borde oscuro, dibujados al ras del terreno y las rampas. Mantienen tamaño físico al hacer zoom y se recortan al tablero. Se ocultan al limpiar el puntero, pausar u ocultar el mapa. El láser termina en el impacto real del collider, evitando la aproximación de altura por celda. La consulta actualiza la transformación y sincroniza física cuando cambia, para evitar desfases al desplazar, girar o ampliar el tablero.

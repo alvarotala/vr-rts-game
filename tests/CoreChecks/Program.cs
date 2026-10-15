@@ -104,6 +104,31 @@ mobile.position=new Point(20,20);for(int i=0;i<4;i++)s.Step();
 float observedHealth=s.View(0).entities.First(e=>e.id==targetHq.id).health;targetHq.health-=300;
 Check(s.View(0).entities.First(e=>e.id==targetHq.id).remembered&&s.View(0).entities.First(e=>e.id==targetHq.id).health==observedHealth,"remembered buildings do not leak health changes");
 Check(s.View(0).entities.Where(e=>e.owner==1).All(e=>e.queue.Length==0&&e.target==0),"enemy orders and queues never leak");
+targetHq.lastDamageTick=s.Tick;
+Check(s.View(0).entities.First(e=>e.id==targetHq.id).damageTick<0,"remembered buildings never expose live damage events");
+
+// Damage feedback consumes actual hit timestamps, including splash, independently of health recovery.
+foreach(string faction in new[]{"industrial","biological"})
+{
+    s=New(faction,faction);
+    var artillery=catalog.Role(faction,"siege");var victimType=catalog.Role(faction,"worker");
+    var shooter=new EntityState{id=1000,owner=0,definition=artillery.id,position=new Point(25,20),health=artillery.health,order=CommandKind.Hold};
+    var victim=new EntityState{id=1001,owner=1,definition=victimType.id,position=new Point(28,20),health=victimType.health,order=CommandKind.Hold};
+    var splash=new EntityState{id=1002,owner=1,definition=victimType.id,position=new Point(28,21),health=victimType.health,order=CommandKind.Hold};
+    s.Entities.Add(shooter.id,shooter);s.Entities.Add(victim.id,victim);s.Entities.Add(splash.id,splash);
+    for(int i=0;i<8&&victim.lastDamageTick<0;i++)s.Step();
+    Check(victim.lastDamageTick>=0&&victim.health<victimType.health&&s.View(0).entities.First(e=>e.id==victim.id).damageTick==victim.lastDamageTick,"visible target exposes real received hit "+faction);
+    Check(s.View(1).entities.First(e=>e.id==splash.id).damageTick==victim.lastDamageTick&&splash.health<victimType.health,"splash victims expose their own received hit "+faction);
+    Check(s.View(0).entities.First(e=>e.id==shooter.id).damageTick<0,"firing does not trigger received damage feedback "+faction);
+    int hitTick=victim.lastDamageTick;victim.health=victimType.health;
+    Check(s.View(1).entities.First(e=>e.id==victim.id).damageTick==hitTick,"health recovery does not create or erase hit timestamp "+faction);
+    var targetType=catalog.Role(faction,"supply");
+    var targetBuilding=new EntityState{id=1003,owner=1,definition=targetType.id,position=new Point(28,20),health=targetType.health};
+    s.Entities.Remove(victim.id);s.Entities.Remove(splash.id);s.Entities.Add(targetBuilding.id,targetBuilding);
+    shooter.order=CommandKind.Attack;shooter.target=targetBuilding.id;shooter.attackReadyTick=0;
+    for(int i=0;i<8&&targetBuilding.lastDamageTick<0;i++)s.Step();
+    Check(targetBuilding.health<targetType.health&&s.View(0).entities.First(e=>e.id==targetBuilding.id).damageTick==targetBuilding.lastDamageTick,"building receives visible hit feedback "+faction);
+}
 s=New();worker=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="worker");
 Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:"industrial.supply",position:new Point(18,14))).accepted,"start interruptible industrial construction");
 var unfinished=s.Entities.Values.First(e=>e.definition=="industrial.supply");

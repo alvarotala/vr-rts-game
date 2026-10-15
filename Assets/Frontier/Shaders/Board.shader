@@ -13,6 +13,7 @@ Shader "Frontier/Board"
         _HoverAmount("Hover model amount", Float) = 0
         _HoverColor("Hover color", Color) = (1,.92,.32,1)
         _PointerArea("Pointer center, dot radius, guide length", Vector) = (0,0,0,0)
+        _DamageAmount("Received damage flash", Float) = 0
     }
     SubShader
     {
@@ -32,6 +33,7 @@ Shader "Frontier/Board"
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea;
+            float _DamageAmount;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -54,6 +56,7 @@ Shader "Frontier/Board"
                     half rim=1-saturate(abs(dot(normalize(input.normal),GetWorldSpaceNormalizeViewDir(input.world))));
                     color=lerp(color,_HoverColor.rgb,saturate(_HoverAmount*(.22+rim*rim*.6)));
                 }
+                color=lerp(color,half3(1,.82,.52),saturate(_DamageAmount));
                 if(_UseFog>.5)
                 {
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;

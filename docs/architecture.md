@@ -10,6 +10,8 @@
 
 El marcador de cursor se dibuja en el material del terreno, con punto y líneas de mira al ras de suelo/rampas, sin geometría adicional. `RayToMap` devuelve también la posición mundial exacta del impacto para terminar allí el láser; sincroniza el collider cuando cambia la transformación y descarta caras verticales. El marcador se dimensiona en metros y respeta el recorte; se compone después de la niebla como información de entrada, sin revelar contenido oculto.
 
+`VisibleEntity.damageTick` proyecta el `lastDamageTick` del objetivo para efectos de daño recibido. Solo las entidades propias o visibles reciben ese dato; las copias recordadas lo omiten. No se calcula a partir de diferencias de vida, por lo que reparación/regeneración no crean impactos. `BoardView` combina hover y destello mediante un bloque de propiedades, conserva selección y reutiliza un marcador por entidad. El destello dura cuatro pasos; aro y color de barra, doce. El shader `Frontier/Impact` dibuja el aro transparente sin textura, respeta los límites del tablero y está incluido por `ProjectBuilder` para las próximas compilaciones. Las entidades destruidas se retiran como antes; no se incorpora un sistema de animaciones de muerte.
+
 `CommanderInput` convierte mandos o mouse en selección y órdenes. `CommandPanel` comparte sus acciones entre escritorio y Quest. `QuestBridge` encapsula passthrough, permisos, superficies, colocación, anclas y eventos de seguimiento.
 
 ## Menús y ciclo de partida

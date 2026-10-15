@@ -133,6 +133,7 @@ namespace Frontier.Core
             var type = Type(entity);
             return new VisibleEntity { id = entity.id, owner = entity.owner, definition = entity.definition, position = entity.position, health = entity.health,
                 attackTick = entity.attackReadyTick > 0 ? entity.attackReadyTick - type.attackPeriod : -1,
+                damageTick = remembered ? -1 : entity.lastDamageTick,
                 complete = entity.complete, progress = entity.complete ? 1 : 1 - entity.remaining / (float)type.duration, remembered = remembered, order = entity.order };
         }
         public PlayerView View(int player)

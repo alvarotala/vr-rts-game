@@ -64,6 +64,8 @@ Al apuntar al mapa aparece un **punto blanco con líneas de mira turquesa** en l
 
 Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno sobre el suelo: circular para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. Se muestra antes de seleccionar y se apaga al retirar el puntero, apuntar al menú o perder el foco. El disco de selección permanece en los objetos seleccionados. El contorno de hover sigue el terreno y las rampas, respeta el borde del tablero y no aparece sobre recuerdos enemigos bajo niebla de guerra.
 
+Al **recibir daño**, unidades y edificios visibles muestran un destello claro en el modelo durante unos 0,2 segundos y un aro naranja que se expande sobre ellos durante unos 0,6 segundos. La barra de vida se vuelve naranja durante ese intervalo. Varios impactos renuevan la señal sin acumular aros; también se indica el daño de área. El efecto no necesita selección y es independiente del destello del atacante. Los colores de equipo y rol vuelven al finalizar el pulso; los recuerdos enemigos bajo niebla no muestran impactos.
+
 El juego se presenta íntegramente en inglés; la incorporación de otros idiomas queda pendiente para una etapa posterior.
 
 ## Contenido

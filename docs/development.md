@@ -101,6 +101,15 @@ unity run . --log-file TestResults/unity-pointer.log --no-tail -- \
 
 Guarda ocho vistas en `TestResults/Pointer`: suelo, rampa, altura, selección, borde, zoom con tablero girado, niebla y cursor retirado. Comprueba rayos contra el terreno real, coincidencia del punto de impacto tras zoom/desplazamiento/giro, tamaño físico, rechazo de paredes y limpieza al pausar/ocultar/salir. La línea dibujada en estas vistas representa un rayo de ejemplo; no valida mandos físicos ni genera ejecutables.
 
+Para revisar la señal de daño recibido, usar **Frontier → Preview received damage**, o:
+
+```sh
+unity run . --log-file TestResults/unity-hits.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HitFeedbackPreview.Render
+```
+
+Guarda ocho vistas en `TestResults/Hits`: antes, impactos simultáneos, trabajador, soldado seleccionado/bajo hover, edificios de ambas facciones, desvanecimiento y final del efecto. Comprueba renovación sin acumular objetos, limpieza al reutilizar una unidad, niebla y salida de partida. Las comprobaciones del núcleo también verifican impactos reales en unidades/edificios, daño de área, recuperación de vida y privacidad de edificios recordados.
+
 ## Resultados y entregas
 
 Guardar registros, capturas e informes locales en `TestResults/` y los ejecutables en `Builds/`. Ambos directorios están excluidos de Git. Conservar en [validación](validation.md) las conclusiones, las rutas de evidencia y las limitaciones de cada entrega; indicar si los cambios de fuentes aún no están incluidos en el APK disponible.
