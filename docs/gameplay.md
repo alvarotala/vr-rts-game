@@ -1,0 +1,43 @@
+# Guía de juego
+
+## Empezar una partida
+
+Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Mesa** o **Piso** y ajustar el plano manualmente. Durante la colocación, el stick secundario modifica la altura y el principal modifica tamaño y orientación.
+
+Luego iniciar la partida. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
+
+Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Mantener posición** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
+
+El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVER MENÚ**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Restablecer posición** lo devuelve arriba del mapa; pulsar el stick secundario también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
+
+En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](https://developers.meta.com/vr/documentation/unity/unity-boundaryless/) mientras el passthrough está activo. Permite caminar alrededor del tablero sin que el círculo estacionario interrumpa la experiencia cuando el sistema lo admite. El mapa permanece unido a su ancla espacial. La confirmación final depende de Horizon OS y debe hacerse con el APK instalado directamente en el visor.
+
+| Acción | Mandos Quest | Prueba de escritorio |
+|---|---|---|
+| Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
+| Agregar a selección | Gatillo secundario | Shift |
+| Orden contextual | A, o X en modo zurdo | Clic derecho |
+| Cancelar / opciones | B, o Y en modo zurdo | Escape |
+| Desplazar mapa | Stick secundario | WASD |
+| Zoom | Stick principal vertical | Rueda |
+| Ver mapa completo | Pulsar stick principal | F |
+| Mover menú | Mantener gatillo sobre MOVER MENÚ; stick principal para distancia | Arrastrar MOVER MENÚ; rueda para distancia |
+| Recuperar menú arriba del tablero | Pulsar stick secundario | M |
+| Pausa | Menú o panel | Espacio |
+| Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
+
+El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
+
+## Contenido
+
+- **Consorcio**: unidades resistentes, construcción atendida por trabajadores y reparación con recursos.
+- **Simbiosis**: unidades más móviles, edificios que crecen y regeneración fuera del combate.
+- Cada facción: trabajador, explorador, combate cercano, tirador y asedio; seis edificios; dos mejoras.
+- Hasta 50 unidades móviles y 20 edificios por jugador.
+- **La Fractura**, mapa simétrico de 128 × 128, con dos bases, cuatro expansiones, alturas y rampas.
+- **Campo de entrenamiento**, mapa de 48 × 48 con instrucciones contextuales.
+- IA fácil y normal; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.
+
+Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores y **tres proyectiles violetas** para artillería. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.
+
+El panel muestra el rol junto al nombre al apuntar sin selección, seleccionar o producir. Las selecciones mixtas muestran cantidades por rol. Las barras de vida aparecen al seleccionar, apuntar o recibir daño, para despejar la vista del ejército.

@@ -85,7 +85,7 @@ Las partidas entre IA verifican invariantes de recursos y población y registran
 
 ### Unity y escritorio
 
-Los comandos reproducibles y las rutas de resultados están en el README. Las capturas de la prueba gráfica se guardan en `TestResults/Desktop`: configuración, partida y panel contextual del trabajador.
+Los comandos reproducibles y las rutas de resultados están en la [guía de desarrollo](development.md). Las capturas de la prueba gráfica se guardan en `TestResults/Desktop`: configuración, partida y panel contextual del trabajador.
 
 El build desktop excluye la precarga de ajustes OpenXR sin runtime y los ajustes de simulación exclusivos del editor. Usa ARM64 porque MRUK 203 distribuye su biblioteca macOS standalone para Apple Silicon. Se corrigió también la copia repetida del archivo generado `RuntimeActionBindings.json` al recompilar. Los paquetes de terceros no fueron modificados.
 
