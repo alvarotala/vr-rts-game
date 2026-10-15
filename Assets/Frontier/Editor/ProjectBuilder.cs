@@ -25,7 +25,7 @@ namespace Frontier.Editor
             Directory.CreateDirectory("Assets/Frontier/Settings");Directory.CreateDirectory("Assets/Frontier/Scenes");
             PlayerSettings.companyName="Frontier";PlayerSettings.productName="Frontier Command";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android,"com.alvaro.frontiercommand");
-            PlayerSettings.bundleVersion="0.1.0";PlayerSettings.Android.bundleVersionCode=1;
+            PlayerSettings.bundleVersion="0.1.1";PlayerSettings.Android.bundleVersionCode=2;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android,ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures=AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion=AndroidSdkVersions.AndroidApiLevel32;
@@ -80,6 +80,7 @@ namespace Frontier.Editor
             config.anchorSupport=OVRProjectConfig.AnchorSupport.Enabled;
             config.sceneSupport=OVRProjectConfig.FeatureSupport.Supported;
             config.insightPassthroughSupport=OVRProjectConfig.FeatureSupport.Required;
+            config.boundaryVisibilitySupport=OVRProjectConfig.FeatureSupport.Supported;
             OVRProjectConfig.CommitProjectConfig(config);
             if(!File.Exists(ScenePath))
             {

@@ -17,6 +17,8 @@ namespace Frontier.Runtime
         public bool Placing { get; private set; }
         public Transform TrackingSpace { get; private set; }
         private OVRCameraRig rig;
+        private OVRManager manager;
+        private OVRPassthroughLayer passthrough;
         private MRUK mruk;
         private OVRSpatialAnchor anchor;
         private Transform anchorRoot;
@@ -30,8 +32,8 @@ namespace Frontier.Runtime
             if(Active)
             {
                 var go=new GameObject("Quest rig");rig=go.AddComponent<OVRCameraRig>();
-                var manager=go.AddComponent<OVRManager>();manager.trackingOriginType=OVRManager.TrackingOrigin.FloorLevel;manager.isInsightPassthroughEnabled=true;
-                go.AddComponent<OVRPassthroughLayer>(); // Meta's default is the background underlay.
+                manager=go.AddComponent<OVRManager>();manager.trackingOriginType=OVRManager.TrackingOrigin.FloorLevel;manager.isInsightPassthroughEnabled=true;
+                passthrough=go.AddComponent<OVRPassthroughLayer>(); // Meta's default is the background underlay.
                 Camera=rig.centerEyeAnchor.GetComponent<Camera>();Camera.clearFlags=CameraClearFlags.SolidColor;Camera.backgroundColor=Color.clear;Camera.nearClipPlane=.03f;Camera.farClipPlane=30;
                 TrackingSpace=rig.trackingSpace;
                 var room=new GameObject("Room understanding");mruk=room.AddComponent<MRUK>();
@@ -44,8 +46,8 @@ namespace Frontier.Runtime
             else
             {
                 var go=new GameObject("Desktop camera",typeof(Camera),typeof(AudioListener));Camera=go.GetComponent<Camera>();
-                Camera.transform.position=new Vector3(0,2,-1.65f);Camera.transform.LookAt(new Vector3(0,.65f,-.15f));
-                Camera.fieldOfView=52;Camera.nearClipPlane=.02f;Camera.farClipPlane=40;Camera.backgroundColor=new Color(.018f,.031f,.055f);Camera.clearFlags=CameraClearFlags.SolidColor;
+                Camera.transform.position=new Vector3(0,2.2f,-2.25f);Camera.transform.LookAt(new Vector3(0,1.45f,.1f));
+                Camera.fieldOfView=60;Camera.nearClipPlane=.02f;Camera.farClipPlane=40;Camera.backgroundColor=new Color(.018f,.031f,.055f);Camera.clearFlags=CameraClearFlags.SolidColor;
             }
             Camera.tag="MainCamera";
         }
@@ -63,6 +65,16 @@ namespace Frontier.Runtime
             }
         }
         public void SetManualHeight(float height){manualHeight=height;useScene=false;}
+        private void Update()
+        {
+            if(!Active||manager==null)return;
+            // Contextual boundaryless is owned by the OS and only requested during MR.
+            // The board remains a child of its spatial anchor, never of the head/camera rig.
+            manager.shouldBoundaryVisibilityBeSuppressed=passthrough!=null&&passthrough.isActiveAndEnabled
+                &&!passthrough.hidden&&passthrough.textureOpacity>=.99f
+                &&manager.isInsightPassthroughEnabled&&OVRManager.IsInsightPassthroughInitialized();
+        }
+        private void OnDisable(){if(manager!=null)manager.shouldBoundaryVisibilityBeSuppressed=false;}
         public async void LoadRoom()
         {
             useScene=true;if(!Active||mruk==null){Session.Announce("En escritorio se usa un plano manual.");return;}
@@ -112,9 +124,10 @@ namespace Frontier.Runtime
                 anchorRoot=new GameObject("Board spatial anchor").transform;anchorRoot.SetPositionAndRotation(Board.transform.position,Board.transform.rotation);
                 anchor=anchorRoot.gameObject.AddComponent<OVRSpatialAnchor>();
                 if(!await anchor.WhenCreatedAsync()||!await anchor.WhenLocalizedAsync())throw new InvalidOperationException("No se localizó el ancla.");
-                var result=await anchor.SaveAnchorAsync();if(!result.Success)throw new InvalidOperationException("No se pudo guardar el ancla.");
                 if(generation!=anchorGeneration)return;
+                // Keep session placement world-locked even if persistence is unavailable.
                 Board.transform.SetParent(anchorRoot,true);
+                var result=await anchor.SaveAnchorAsync();if(!result.Success)throw new InvalidOperationException("No se pudo guardar el ancla.");
                 var placement=new BoardPlacement{anchorUuid=anchor.Uuid.ToString(),width=Board.Width};
                 File.WriteAllText(SavePath,JsonUtility.ToJson(placement,true));
                 if(previous!=null){await previous.EraseAnchorAsync();Destroy(previous.gameObject);}

@@ -30,6 +30,10 @@ Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y c
 
 Luego iniciar la partida. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
 
+El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVER MENÚ**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Restablecer posición** lo devuelve arriba del mapa; pulsar el stick secundario también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
+
+En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](https://developers.meta.com/vr/documentation/unity/unity-boundaryless/) mientras el passthrough está activo. Permite caminar alrededor del tablero sin que el círculo estacionario interrumpa la experiencia cuando el sistema lo admite. El mapa permanece unido a su ancla espacial. La confirmación final depende de Horizon OS y debe hacerse con el APK instalado directamente en el visor.
+
 | Acción | Mandos Quest | Prueba de escritorio |
 |---|---|---|
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
@@ -39,6 +43,8 @@ Luego iniciar la partida. Los seis trabajadores iniciales comienzan a recolectar
 | Desplazar mapa | Stick secundario | WASD |
 | Zoom | Stick principal vertical | Rueda |
 | Ver mapa completo | Pulsar stick principal | F |
+| Mover menú | Mantener gatillo sobre MOVER MENÚ; stick principal para distancia | Arrastrar MOVER MENÚ; rueda para distancia |
+| Recuperar menú arriba del tablero | Pulsar stick secundario | M |
 | Pausa | Menú o panel | Espacio |
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
 
@@ -70,7 +76,7 @@ Prueba gráfica automatizada, después de generar el ejecutable de escritorio:
 bash scripts/smoke-desktop.sh
 ```
 
-Esta prueba acciona el botón de inicio mediante su superficie real, comprueba movimiento efectivo y guarda capturas. También revisa el registro completo para detectar fallos anteriores al inicio de los scripts. No sustituye una prueba humana ni una prueba de Quest.
+Esta prueba acciona el botón de inicio mediante su superficie real, comprueba movimiento efectivo y guarda capturas. También arrastra el menú, verifica que siga ligado al tablero al reubicarlo y hacer zoom, prueba apuntar al mismo lugar desde cuatro lados y captura la selección sobre suelo, rampas y alturas. Revisa el registro completo para detectar fallos anteriores al inicio de los scripts. No sustituye una prueba humana ni una prueba de Quest.
 
 Ver [arquitectura](docs/architecture.md), [formato de mapas](docs/maps.md) y [validación y pendientes](docs/validation.md).
 

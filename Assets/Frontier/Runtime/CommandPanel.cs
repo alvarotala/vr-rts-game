@@ -23,6 +23,13 @@ namespace Frontier.Runtime
         private Target pressed, hovered;
         private float pressedAt;
         private float nextText;
+        private RectTransform moveHandle, resetHandle;
+        private Image moveImage, resetImage;
+        private bool moving, customPosition, positionInitialized;
+        private float grabDistance;
+        private Vector3 grabOffset, boardOffset;
+        private const string PlacementKey="frontier.panel-placement.v1";
+        [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
         private sealed class Target { public RectTransform rect; public Image image; public Action click, hold; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
@@ -30,20 +37,37 @@ namespace Frontier.Runtime
             font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
-            root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,460);
+            root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
             var image=go.AddComponent<Image>();image.color=background;
-            headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-18),new Vector2(1040,44),30,accent);
-            economy=Label(root,"",new Vector2(30,-64),new Vector2(1040,36),22,Color.white);
-            selection=Label(root,"",new Vector2(30,-103),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
-            status=Label(root,"",new Vector2(30,-407),new Vector2(1040,44),20,accent);
-            actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-154),new Vector2(1040,245));
+            moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVER MENÚ · mantener gatillo y arrastrar",out moveImage);
+            resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Restablecer posición",out resetImage);
+            headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-84),new Vector2(1040,44),30,accent);
+            economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
+            selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
+            status=Label(root,"",new Vector2(30,-473),new Vector2(1040,44),20,accent);
+            actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-220),new Vector2(1040,245));
+            if(PlayerPrefs.HasKey(PlacementKey))
+            {
+                try
+                {
+                    var saved=JsonUtility.FromJson<PanelPlacement>(PlayerPrefs.GetString(PlacementKey));
+                    if(saved!=null&&IsFinite(saved.offset)&&saved.offset.magnitude<8)
+                    {boardOffset=saved.offset;customPosition=true;positionInitialized=true;}
+                }
+                catch(ArgumentException){PlayerPrefs.DeleteKey(PlacementKey);}
+            }
             Rebuild();
         }
         private void LateUpdate()
         {
             if(root==null)return;
-            root.position=Board.transform.TransformPoint(new Vector3(0,.08f,-Board.Depth*.5f-.18f));
-            root.rotation=Board.transform.rotation*Quaternion.Euler(60,0,0);root.localScale=Vector3.one*Mathf.Clamp(Board.Width/1300f,.00065f,.0012f);
+            if(!positionInitialized||Quest.Placing)ResetPosition(false);
+            root.localScale=Vector3.one*Mathf.Clamp(Board.Width/1300f,.00065f,.0012f);
+            if(!moving)
+            {
+                root.position=Board.transform.TransformPoint(new Vector3(boardOffset.x*Board.Width,boardOffset.y,boardOffset.z*Board.Depth));
+                FaceViewer();
+            }
             string state=(!Session.Running?"setup":settings?"settings":Session.Match.Winner!=-1?"finished":string.Join(",",Session.Selection.OrderBy(x=>x)))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete)));
             if(state!=signature){signature=state;Rebuild();}
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
@@ -121,24 +145,89 @@ namespace Frontier.Runtime
             Add("Ver mapa completo",()=>Board.Fit());Add("Pausa / opciones",()=>{settings=true;Session.Pause("menu",true);Rebuild();});
         }
         public void ToggleMenu(){settings=!settings;Session.Pause("menu",settings);Rebuild();}
+        public void ResetPosition(bool forgetSaved=true)
+        {
+            if(forgetSaved){customPosition=false;PlayerPrefs.DeleteKey(PlacementKey);PlayerPrefs.Save();}
+            if(customPosition)return;
+            var viewer=Board.transform.InverseTransformPoint(Quest.Camera.transform.position);
+            var away=new Vector2(-viewer.x,-viewer.z).normalized;
+            if(away.sqrMagnitude<.1f)away=Vector2.up;
+            boardOffset=new Vector3(away.x*.65f,Mathf.Max(.65f,viewer.y+.15f),away.y*.65f);
+            positionInitialized=true;
+        }
+        // Called on a controller shortcut even when the console has been moved out of view.
+        public void Recall(){moving=false;pressed=null;ResetPosition();Session.Announce("Menú restablecido arriba del tablero.");}
+        private void FaceViewer()
+        {
+            var direction=root.position-Quest.Camera.transform.position;
+            if(direction.sqrMagnitude<.001f)return;
+            float pitch=-Mathf.Atan2(direction.y,new Vector2(direction.x,direction.z).magnitude)*Mathf.Rad2Deg;
+            root.rotation=Quaternion.Euler(Mathf.Clamp(pitch,-25,25),Mathf.Atan2(direction.x,direction.z)*Mathf.Rad2Deg,0);
+        }
+        private void SavePosition()
+        {
+            var local=Board.transform.InverseTransformPoint(root.position);
+            boardOffset=new Vector3(local.x/Board.Width,local.y,local.z/Board.Depth);
+            customPosition=true;
+            PlayerPrefs.SetString(PlacementKey,JsonUtility.ToJson(new PanelPlacement{offset=boardOffset}));PlayerPrefs.Save();
+        }
+        private void OnApplicationFocus(bool focused)
+        {
+            if(focused)return;
+            if(moving){moving=false;SavePosition();}
+            pressed=null;
+        }
+        private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consorcio":"Simbiosis";
         private static string Cost(int m,int c)=>c>0?$"{m}M {c}C":$"{m}M";
         private void Help()=>Session.Announce(Quest.Active?"Gatillo: seleccionar/arrastrar · A: ordenar · B: cancelar · sticks: desplazar/zoom":"Clic/arrastre: seleccionar · derecho: ordenar · WASD: desplazar · rueda: zoom · Espacio: pausa");
-        public bool Point(Ray ray,bool down,bool up)
+        public bool Point(Ray ray,bool down,bool up,float depth=0)
         {
+            if(root==null)return false;
+            if(moving)
+            {
+                grabDistance=Mathf.Clamp(grabDistance+depth*Time.unscaledDeltaTime,.4f,3);
+                var position=ray.GetPoint(grabDistance)+grabOffset;
+                position.y=Mathf.Clamp(position.y,.25f,2.5f);
+                var fromBoard=position-Board.transform.position;
+                root.position=Board.transform.position+Vector3.ClampMagnitude(fromBoard,3);
+                if(up){moving=false;SavePosition();}
+                return true;
+            }
+            bool onMove=Hit(moveHandle,ray,out float distance);
+            bool onReset=Hit(resetHandle,ray,out _);
+            moveImage.color=onMove?new Color(.12f,.35f,.39f):button;
+            resetImage.color=onReset?new Color(.12f,.35f,.39f):button;
+            if(down&&onMove)
+            {
+                moving=true;pressed=null;grabDistance=distance;grabOffset=root.position-ray.GetPoint(distance);
+                return true;
+            }
+            if(down&&onReset){Recall();return true;}
             Target hit=null;
             foreach(var target in targets)
             {
-                Vector3 origin=target.rect.InverseTransformPoint(ray.origin),direction=target.rect.InverseTransformDirection(ray.direction);
-                if(Mathf.Abs(direction.z)<.00001f)continue;float t=-origin.z/direction.z;if(t<0)continue;
-                Vector3 local=origin+direction*t;if(target.rect.rect.Contains(new Vector2(local.x,local.y))){hit=target;break;}
+                if(Hit(target.rect,ray,out _)){hit=target;break;}
             }
             if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=button;hovered=hit;if(hovered!=null)hovered.image.color=new Color(.12f,.35f,.39f);}
             if(down&&hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}
             if(up&&pressed!=null)
             {var p=pressed;pressed=null;if(hit==p){if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
-            return hit!=null;
+            // Empty areas also consume the ray, preventing orders through the panel.
+            return pressed!=null||Hit(root,ray,out _);
+        }
+        private static bool Hit(RectTransform rect,Ray ray,out float distance)
+        {
+            distance=0;if(rect==null)return false;
+            if(!new Plane(rect.forward,rect.position).Raycast(ray,out distance)||distance>8)return false;
+            var local=rect.InverseTransformPoint(ray.GetPoint(distance));return rect.rect.Contains(new Vector2(local.x,local.y));
+        }
+        private RectTransform Handle(string name,Vector2 position,Vector2 size,string label,out Image image)
+        {
+            var go=new GameObject(name,typeof(RectTransform),typeof(Image));var rect=go.GetComponent<RectTransform>();rect.SetParent(root,false);TopLeft(rect,position,size);
+            image=go.GetComponent<Image>();image.color=button;
+            Label(rect,label,new Vector2(8,0),size-new Vector2(16,0),18,accent,TextAnchor.MiddleCenter);return rect;
         }
         private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAnchor alignment=TextAnchor.MiddleLeft)
         {var go=new GameObject("Label",typeof(RectTransform),typeof(Text));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.raycastTarget=false;return text;}

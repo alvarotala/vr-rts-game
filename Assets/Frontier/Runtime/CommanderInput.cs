@@ -26,6 +26,7 @@ namespace Frontier.Runtime
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);secondaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,secondary);
                 pan=secondaryStick;zoom=primaryStick.y;
                 if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,primary))Board.Fit();
+                if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,secondary))Panel.Recall();
                 if(OVRInput.GetDown(OVRInput.Button.Start))Panel.ToggleMenu();
                 if(Time.unscaledTime>hapticEnd)OVRInput.SetControllerVibration(0,0,primary);
                 laser.SetPosition(0,ray.origin);laser.SetPosition(1,ray.GetPoint(2));
@@ -40,11 +41,12 @@ namespace Frontier.Runtime
                     var k=Keyboard.current;add=k.leftShiftKey.isPressed||k.rightShiftKey.isPressed;cancel=k.escapeKey.wasPressedThisFrame;
                     pan=new Vector2((k.dKey.isPressed?1:0)-(k.aKey.isPressed?1:0),(k.wKey.isPressed?1:0)-(k.sKey.isPressed?1:0));
                     if(k.spaceKey.wasPressedThisFrame)Session.TogglePause();if(k.fKey.wasPressedThisFrame)Board.Fit();
+                    if(k.mKey.wasPressedThisFrame)Panel.Recall();
                     if(k.digit1Key.wasPressedThisFrame)Session.Group(0,k.leftCtrlKey.isPressed);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,k.leftCtrlKey.isPressed);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,k.leftCtrlKey.isPressed);
                 }
             }
             if(Quest.Placing){Quest.PlaceRay(ray,secondaryStick,primaryStick,down);return;}
-            if(Panel.Point(ray,down,up)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
+            if(Panel.Point(ray,down,up,zoom)){Board.Hovered=0;Board.Pointer=null;dragging=false;Board.DrawSelection(start,start,false);return;}
             Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);
             if(cancel){if(Session.BuildDefinition!=null||Session.AttackMoveMode)Session.CancelMode();else Panel.ToggleMenu();}
             if(!Board.RayToMap(ray,out var point)){Board.Hovered=0;Board.Pointer=null;if(up){dragging=false;Board.DrawSelection(start,start,false);}return;}
@@ -62,5 +64,7 @@ namespace Frontier.Runtime
         }
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Session.LeftHanded?OVRInput.Controller.LTouch:OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
+        private void OnApplicationFocus(bool focused)
+        {if(!focused){dragging=false;if(Board!=null)Board.DrawSelection(start,start,false);}}
     }
 }
