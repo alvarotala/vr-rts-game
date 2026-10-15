@@ -74,14 +74,20 @@ namespace Frontier.Runtime
             headline.text=!Session.Running?"FRONTIER / COMMAND":Session.Match.Winner!=-1?(Session.Match.Winner==0?"VICTORIA":"PARTIDA TERMINADA"):Session.IsPaused?"PARTIDA EN PAUSA":"FRONTIER / "+Session.Catalog.Faction(Session.Faction).name.ToUpperInvariant();
             economy.text=Session.View==null?"Estrategia sobre tu mesa · Quest 3":$"MINERAL  {Session.View.minerals}      CATALIZADOR  {Session.View.catalyst}      SUMINISTRO  {Session.View.supply}/{Session.View.capacity}      {Session.View.tick/1200:00}:{Session.View.tick/20%60:00}";
             var selected=Session.View?.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            if(selected==null||selected.Length==0)selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {Session.Difficulty} · {Session.Map.title}":"Seleccioná unidades o un edificio para dar órdenes.";
+            if(selected==null||selected.Length==0)
+            {
+                var pointed=Session.View?.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
+                selection.text=!Session.Running?$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {Session.Difficulty} · {Session.Map.title}":
+                    pointed!=null?UnitLabel(Session.Catalog[pointed.definition])+" · "+(pointed.owner==0?"Aliado":"Enemigo"):"Seleccioná unidades o un edificio para dar órdenes.";
+            }
             else if(selected.Length==1)
             {
-                var e=selected[0];selection.text=Session.Catalog[e.definition].name+" · "+Mathf.CeilToInt(e.health)+" PV";
+                var e=selected[0];selection.text=UnitLabel(Session.Catalog[e.definition])+" · "+Mathf.CeilToInt(e.health)+" PV";
                 if(!e.complete)selection.text+=$" · Construcción {e.progress*100:0}%";
                 if(e.queue.Length>0)selection.text+=$" · Cola {e.queue.Length}: {e.queue[0].definition.Split('.').Last()} {100*(1-e.queue[0].remaining/(float)e.queue[0].total):0}%";
             }
-            else selection.text=$"{selected.Length} unidades seleccionadas";
+            else selection.text=string.Join(" · ",selected.GroupBy(e=>
+                {var type=Session.Catalog[e.definition];return type.building?type.name:UnitVisuals.RoleName(type.role);}).Select(g=>$"{g.Count()}× {g.Key}"));
             status.text=Session.Message;
         }
         private void Rebuild()
@@ -127,7 +133,7 @@ namespace Frontier.Runtime
                 if(e.complete)
                 {
                     foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&!t.building&&t.producer==role))
-                    {var captured=type;Add(type.name+" · "+Cost(type.minerals,type.catalyst),()=>Session.Send(CommandKind.Train,captured.id));}
+                    {var captured=type;Add(UnitLabel(type)+" · "+Cost(type.minerals,type.catalyst),()=>Session.Send(CommandKind.Train,captured.id));}
                     if(role=="tech")foreach(var upgrade in Session.Catalog.Definition.upgrades)
                     {var captured=upgrade;Add(upgrade.name+" · "+Cost(upgrade.minerals,upgrade.catalyst),()=>Session.Send(CommandKind.Research,captured.id));}
                 }
@@ -181,6 +187,7 @@ namespace Frontier.Runtime
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consorcio":"Simbiosis";
         private static string Cost(int m,int c)=>c>0?$"{m}M {c}C":$"{m}M";
+        private static string UnitLabel(Archetype type)=>type.building?type.name:UnitVisuals.RoleName(type.role)+" / "+type.name;
         private void Help()=>Session.Announce(Quest.Active?"Gatillo: seleccionar/arrastrar · A: ordenar · B: cancelar · sticks: desplazar/zoom":"Clic/arrastre: seleccionar · derecho: ordenar · WASD: desplazar · rueda: zoom · Espacio: pausa");
         public bool Point(Ray ray,bool down,bool up,float depth=0)
         {

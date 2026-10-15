@@ -62,6 +62,10 @@ El juego incluye selección ampliada, contorno de selección al ras del terreno,
 - **Campo de entrenamiento**, mapa de 48 × 48 con instrucciones contextuales.
 - IA fácil y normal; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.
 
+Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores y **tres proyectiles violetas** para artillería. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.
+
+El panel muestra el rol junto al nombre al apuntar sin selección, seleccionar o producir. Las selecciones mixtas muestran cantidades por rol. Las barras de vida aparecen al seleccionar, apuntar o recibir daño, para despejar la vista del ejército.
+
 ## Comprobaciones
 
 ```sh
@@ -83,6 +87,15 @@ bash scripts/smoke-desktop.sh
 Esta prueba acciona el botón de inicio mediante su superficie real, comprueba movimiento efectivo y guarda capturas. También arrastra el menú, verifica que siga ligado al tablero al reubicarlo y hacer zoom, prueba apuntar al mismo lugar desde cuatro lados y captura la selección sobre suelo, rampas y alturas. Revisa el registro completo para detectar fallos anteriores al inicio de los scripts. No sustituye una prueba humana ni una prueba de Quest.
 
 Ver [arquitectura](docs/architecture.md), [formato de mapas](docs/maps.md) y [validación y pendientes](docs/validation.md).
+
+Para revisar las siluetas sin generar un ejecutable, usar **Frontier → Preview unit roles** en Unity, o:
+
+```sh
+unity run . --log-file TestResults/unity-unit-roles.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.UnitVisualPreview.Render
+```
+
+Guarda vistas aliadas, enemigas y cenitales en `TestResults/UnitRoles`. De izquierda a derecha: trabajador, explorador, cuerpo a cuerpo, tirador y artillería; fila cercana industrial y fila lejana biológica.
 
 ## Próximas etapas
 

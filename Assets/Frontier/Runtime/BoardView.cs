@@ -30,6 +30,9 @@ namespace Frontier.Runtime
             public bool remembered;
         }
         private Material ground, blue, red, neutral, crystal, catalyst, highlight;
+        private Material unitStructure;
+        private readonly UnitVisuals unitVisuals=new UnitVisuals();
+        private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
         private Color32[] fogColors;
         private int fogTick = -1;
@@ -43,8 +46,21 @@ namespace Frontier.Runtime
             ground=Material(new Color(.16f,.31f,.31f));ground.SetFloat("_UseFog",1);ground.SetFloat("_Grid",1);
             blue=Material(new Color(.2f,.8f,1));red=Material(new Color(1,.36f,.23f));
             neutral=Material(new Color(.2f,.28f,.35f));crystal=Material(new Color(.35f,.85f,1));catalyst=Material(new Color(.8f,.46f,1));highlight=Material(new Color(.9f,1,.6f));
+            unitStructure=Material(new Color(.12f,.17f,.22f));
+            foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
             Session.NewMatch += Rebuild; Rebuild();
         }
+        private void OnDestroy()
+        {
+            if(Session!=null)Session.NewMatch-=Rebuild;
+            unitVisuals.Dispose();
+            foreach(var material in roleMaterials.Values)Release(material);
+            foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure})Release(material);
+            Release(fog);
+            if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
+        }
+        private static void Release(Object resource)
+        {if(resource!=null){if(Application.isPlaying)Destroy(resource);else DestroyImmediate(resource);}}
         private Material Material(Color color) { var m=new Material(Shader.Find("Frontier/Board")){enableInstancing=true};m.SetColor("_BaseColor",color);return m; }
         public void Rebuild()
         {
@@ -125,9 +141,11 @@ namespace Frontier.Runtime
                 visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
                 var cached=parts[visual];cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id)||Hovered==e.id);
+                cached.health.gameObject.SetActive(e.health<type.health-.5f||Session.Selection.Contains(e.id)||Hovered==e.id);
                 cached.health.localScale=new Vector3(Mathf.Max(.03f,e.health/type.health)*(type.building?type.footprint:1.4f),.1f,.12f);
                 cached.flash.gameObject.SetActive(!e.remembered&&e.attackTick>0&&Session.View.tick-e.attackTick<3);
-                if(newlyVisible||cached.remembered!=e.remembered)
+                // Mobile units retain their role accents; only buildings become fog memories.
+                if(type.building&&(newlyVisible||cached.remembered!=e.remembered))
                 {
                     foreach(var renderer in cached.body)renderer.sharedMaterial=e.remembered?neutral:e.owner==0?blue:red;
                     cached.remembered=e.remembered;
@@ -155,15 +173,19 @@ namespace Frontier.Runtime
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
             bool bio=type.faction=="biological";Material color=owner==0?blue:red;
-            // The ground body fits its circular collision footprint, including rotated cube corners.
-            float size=type.building?type.footprint*.85f:type.collisionRadius*(bio?2f:1.4142f);
-            float height=type.building?type.role=="hq"?3.4f:2:type.role=="siege"?1:type.role=="scout"?.65f:type.role=="melee"?1.6f:1.25f;
-            var body=Primitive(bio?PrimitiveType.Sphere:PrimitiveType.Cube,root,color);body.localScale=new Vector3(size,height,size);body.localPosition=Vector3.up*height*.5f;
-            var top=Primitive(bio?PrimitiveType.Capsule:PrimitiveType.Cube,root,color);top.localPosition=new Vector3(0,height,0);top.localScale=new Vector3(size*.4f,type.role=="defense"||type.role=="siege"?.8f:.35f,size*.4f);
-            if(!type.building)
+            float size=type.building?type.footprint*.85f:type.collisionRadius*2,height;
+            if(type.building)
             {
-                var nose=Primitive(PrimitiveType.Cube,root,color);nose.localPosition=new Vector3(0,height*.6f,.75f);nose.localScale=new Vector3(.2f,.2f,type.role=="ranged"||type.role=="siege"?1.6f:.5f);
-                if(type.role=="worker") {top.localRotation=Quaternion.Euler(0,0,45);top.localScale=Vector3.one*.6f;}
+                height=type.role=="hq"?3.4f:2;
+                var body=Primitive(bio?PrimitiveType.Sphere:PrimitiveType.Cube,root,color);body.localScale=new Vector3(size,height,size);body.localPosition=Vector3.up*height*.5f;
+                var top=Primitive(bio?PrimitiveType.Capsule:PrimitiveType.Cube,root,color);top.localPosition=new Vector3(0,height,0);top.localScale=new Vector3(size*.4f,type.role=="defense"?.8f:.35f,size*.4f);
+            }
+            else
+            {
+                var model=new GameObject("Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
+                var mesh=unitVisuals.Get(type);model.GetComponent<MeshFilter>().sharedMesh=mesh;
+                model.GetComponent<MeshRenderer>().sharedMaterials=new[]{color,unitStructure,roleMaterials[type.role]};
+                height=mesh.bounds.max.y;
             }
             var ring=Primitive(PrimitiveType.Cylinder,root,highlight);ring.name="Selection";ring.localPosition=Vector3.up*.04f;ring.localScale=new Vector3(size*1.3f,.035f,size*1.3f);ring.gameObject.SetActive(false);
             var hp=Primitive(PrimitiveType.Cube,root,highlight);hp.name="Health";hp.localPosition=new Vector3(0,height+1,0);

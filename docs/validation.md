@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Identificación de unidades — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+- Cinco siluetas por facción: recolector con carga y pinzas, explorador con aletas y sensor, infantería con escudo, tirador de arma larga y artillería de doble cañón o espina. Industrial conserva formas angulares; biológica usa cuerpos lobulados.
+- Símbolos de rol con forma y color redundantes, visibles desde arriba, dentro de la huella de colisión para evitar superposición. El cuerpo y el borde conservan el color del equipo. Las barras de vida se muestran para unidades dañadas, seleccionadas o bajo el puntero.
+- El panel identifica rol y nombre al apuntar sin selección, seleccionar o producir. La selección de grupos desglosa cantidades por rol.
+
+Validación: compilación de scripts con Unity CLI y render de las diez variantes desde el Editor mediante `UnitVisualPreview.Render`, sin construir jugadores. Las mallas se reutilizan por arquetipo, con tres submallas por unidad y 5.816 vértices en total para las diez variantes. Se inspeccionan las vistas aliada, enemiga y cenital en `TestResults/UnitRoles`; registro en `TestResults/unity-unit-roles.log`.
+
+No se modificó la simulación ni se repitieron partidas entre IA. No se generó APK ni build desktop: el APK disponible sigue siendo 0.1.3 y **no contiene estos cambios**. Pendiente: probar legibilidad durante una partida y a la distancia real de uso en Quest.
+
 ## Selección al ras del mapa — 0.1.3 — 15 de octubre de 2026
 
 El rectángulo se dibuja directamente en el material del terreno. Se eliminó la malla ubicada por encima de la cota máxima del mapa: el contorno queda a la misma altura que cada superficie, sigue las rampas y excluye las caras verticales de los acantilados. Al compartir la superficie del suelo no necesita un desplazamiento de profundidad ni genera parpadeo por superposición. Se conserva el ancho visual, el zoom y el recorte al tablero.
