@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Cola de producción visible — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+El productor seleccionado muestra una franja propia con cinco lugares: elemento activo destacado, barra, porcentaje, segundos restantes y cuatro tarjetas numeradas con los próximos nombres/roles. Incluye cola vacía/llena, investigación, pausa y espera por salida o suministro. Mantiene el espacio con cola vacía para que agregar unidades no desplace los botones. La cancelación conserva su comportamiento: elimina y devuelve el costo del último elemento.
+
+- **48 comprobaciones aprobadas y dieciséis vistas** en Unity Editor, con ambas facciones: producción desde botones reales, avance por ticks, orden y duplicados, rechazo del sexto elemento, devolución al cancelar, cambio de elemento activo sin cambiar la longitud de cola, investigación, pausa, hover, cambios de selección, regreso del menú, despliegue bloqueado y liberación de salida. Los escenarios preparan edificios/recursos y ocupación o pérdida de suministro; no representan una partida completa.
+- **Regresiones aprobadas:** panel general de partida/recolección (dieciocho vistas) y flujo de menús (**33 comprobaciones**, diez vistas). La validación comprueba que las etiquetas entren en su altura disponible. Se inspeccionaron visualmente cola llena, trabajador al 50%, investigación biológica y salida bloqueada.
+- Unity **6000.3.26f1** / CLI **1.0.0-beta.13**, ejecución final exitosa. Registro: `TestResults/unity-production-queue.log`; vistas: `TestResults/ProductionQueue`, `TestResults/MatchHud` y `TestResults/Menus`.
+- No cambió la simulación ni el catálogo. No se generó APK ni ejecutable desktop; el APK **0.1.4**, `ProjectSettings` y `Assets/XR` conservan sus hashes previos a esta tarea.
+
+Pendiente: comprobar lectura, tamaño físico del panel ampliado y comodidad con mandos en Quest. El APK existente aún no incluye esta mejora ni los modelos de edificios de la tarea anterior.
+
 ## Edificios reconocibles — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Doce modelos provisionales nuevos: seis roles para cada facción, con siluetas, alturas, acentos y símbolos distintos. La base central tiene una corona dorada y cuerpo escalonado; la barraca, una entrada ancha o nido con huevos y dos chevrones naranjas. Gas usa conductos dobles; suministro, depósitos bajos; tecnología, reactor/capullo vertical; defensa, torre con cañón/aguijón. Se mantienen colores de equipo y materiales apagados para recuerdos bajo niebla. Las torres se orientan hacia el ataque y su destello coincide con el extremo del cañón.

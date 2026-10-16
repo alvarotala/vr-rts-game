@@ -51,6 +51,7 @@ namespace Frontier.Runtime
             matchClock=Label(matchStrip,"00:00",new Vector2(164,-7),new Vector2(142,24),17,Color.white,TextAnchor.MiddleRight);
             matchTargets[0]=HudButton(matchStrip,"Full map","Reset view",new Vector2(14,-36),new Vector2(140,54),()=>Board.Fit(),null,out _);
             matchTargets[1]=HudButton(matchStrip,"Pause","Menu",new Vector2(166,-36),new Vector2(140,54),()=>Show(MenuPage.Pause),null,out _);
+            CreateProductionHud();
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
         {
@@ -76,14 +77,20 @@ namespace Frontier.Runtime
         private void LayoutPage()
         {
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls;
-            matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632:526);matchHud.sizeDelta=root.sizeDelta;
+            bool production=hud&&SelectedProducer()!=null;
+            float queueSpace=production?180:0;
+            productionStrip.gameObject.SetActive(production);
+            matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:526);matchHud.sizeDelta=root.sizeDelta;
+            harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
+            groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
+            matchStrip.anchoredPosition=new Vector2(756,-470-queueSpace);
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
             selection.fontSize=hud?28:20;selection.color=hud?Color.white:new Color(.65f,.76f,.82f);
             TopLeft(selection.rectTransform,hud?new Vector2(40,-211):new Vector2(30,-169),hud?new Vector2(288,42):new Vector2(1040,controls?225:38));
             harvesting.fontSize=hud?17:18;
-            TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
+            TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425-queueSpace):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
             status.fontSize=hud?18:20;
-            TopLeft(status.rectTransform,hud?new Vector2(24,-581):new Vector2(30,-473),hud?new Vector2(1052,40):new Vector2(1040,44));
+            TopLeft(status.rectTransform,hud?new Vector2(24,-581-queueSpace):new Vector2(30,-473),hud?new Vector2(1052,40):new Vector2(1040,44));
             TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,controls?-411:-240),hud?new Vector2(684,178):new Vector2(1040,controls?58:225));
         }
         private void UpdateMatchHud()
@@ -126,6 +133,7 @@ namespace Frontier.Runtime
                 else{selection.text="No selection";selectionDetails.text="Select a unit or building to see its name and available orders.";}
             }
             UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
+            UpdateProductionHud();
             status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
         }
         private void DescribeEntity(VisibleEntity entity,bool pointing)
@@ -140,8 +148,7 @@ namespace Frontier.Runtime
             if(!entity.complete)selectionDetails.text=$"Construction {entity.progress*100:0}%";
             else if(entity.queue.Length>0)
             {
-                var next=entity.queue[0];
-                selectionDetails.text=(next.research?"Research: ":"Training: ")+QueueLabel(next.definition)+$"\nProgress {100*(1-next.remaining/(float)next.total):0}% · Queue {entity.queue.Length}/5";
+                selectionDetails.text=pointing?$"{entity.queue.Length} queued\nSelect to view production":$"1 active · {entity.queue.Length-1} waiting\nSee production queue below";
             }
             else selectionDetails.text=type.building?"Ready":OrderLabel(entity.order);
         }

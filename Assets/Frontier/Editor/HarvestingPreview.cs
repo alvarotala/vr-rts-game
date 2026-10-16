@@ -85,13 +85,13 @@ namespace Frontier.Editor
                         session.Select(worker.id,false);Capture(faction+"-worker",session.Catalog.Role(faction,"barracks").name,"status");
                         var baseEntity=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                         session.Select(baseEntity.id,false);session.Send(CommandKind.Train,worker.definition);
-                        Capture(faction+"-production","Training: "+session.Catalog[worker.definition].name,"selectionDetails");
+                        Capture(faction+"-production",session.Catalog[worker.definition].name,"productionName");
                         // A completed technology building exposes the real research buttons and queue.
                         var tech=session.Catalog.Role(faction,"tech");
                         session.Match.Entities.Add(1000,new EntityState{id=1000,owner=0,definition=tech.id,position=new Point(20,20),health=tech.health});
                         session.Match.Players[0].minerals=1000;session.Match.Players[0].catalyst=1000;
                         session.Send(CommandKind.Stop);session.Select(1000,false);session.Send(CommandKind.Research,"attack");
-                        Capture(faction+"-research","Firepower I","selectionDetails");
+                        Capture(faction+"-research","Firepower I","productionName");
                     }
                     var headquarters=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                     session.Select(headquarters.id,false);session.Send(CommandKind.Cancel);

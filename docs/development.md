@@ -74,6 +74,15 @@ unity run . --log-file TestResults/unity-match-hud.log --no-tail -- \
 
 Ejecuta los mismos dieciocho estados y guarda las vistas en `TestResults/MatchHud`. Comprueba nombres y contadores respecto de `PlayerView`, separación de controles, capacidad completa y, mediante rayos sobre los botones reales, producción/cancelación con devolución, elección de construcción y guardado/recuperación de un grupo de diez unidades. Son comprobaciones del panel del Editor, sin partida interactiva ni seguimiento físico.
 
+Para revisar la cola de producción, usar **Frontier → Preview production queue**, o:
+
+```sh
+unity run . --log-file TestResults/unity-production-queue.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ProductionQueuePreview.Render
+```
+
+Genera dieciséis vistas en `TestResults/ProductionQueue` para ambas facciones: cola vacía, trabajador a mitad de producción, cinco órdenes, siguiente unidad, investigación, pausa y esperas por salida/suministro. Usa rayos contra los botones reales y pasos de simulación para comprobar orden, cancelación/devolución y avance. Los escenarios de espera preparan ocupación o pérdida de suministro antes de ejecutar el paso de producción. Comprueba también ocultación al cambiar selección/menú y ejecuta las regresiones de `HarvestingPreview.RenderHud` y `MenuFlowPreview.Render`. No genera APK ni ejecutable desktop.
+
 Para comprobar navegación entre menús y ciclo de partida, usar **Frontier → Preview and check menu flow**, o:
 
 ```sh

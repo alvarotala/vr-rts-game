@@ -34,6 +34,10 @@ La ficha de selección muestra el nombre de la unidad o edificio, su rol, facci�
 
 **ACTIONS** contiene únicamente las órdenes de la selección: construcción para trabajadores, órdenes militares para unidades y producción o investigación para edificios compatibles. **Cancel / refund** aparece mientras hay una construcción o cola que cancelar. Los edificios automáticos y las selecciones incompatibles muestran una explicación.
 
+Al seleccionar un edificio productor terminado, **PRODUCTION QUEUE** muestra una tarjeta grande para la unidad o investigación activa, su barra de progreso, porcentaje y segundos restantes. A su derecha aparecen los cuatro lugares siguientes, numerados en orden de salida y con nombre/rol. El contador incluye el elemento activo; **5 / 5 · FULL** indica que no entran más órdenes. **Queue empty** permanece visible antes de producir para que los botones no cambien de posición al agregar unidades. **Cancel / refund** elimina el último elemento y devuelve su costo.
+
+Una producción terminada que aún no puede salir muestra **WAITING TO DEPLOY**, con **Needs more supply** si faltan lugares para las unidades existentes o **Clear the building exit** si la salida está bloqueada. Las pausas por seguimiento/visor muestran **PAUSED** y conservan el progreso. La sección también distingue investigaciones de unidades y se oculta al seleccionar unidades, varios edificios, construcciones incompletas o edificios sin producción.
+
 **CONTROL GROUPS** tiene su propia franja: cada grupo muestra **Empty** o su cantidad asignada. Pulsar recupera el grupo; mantener guarda la selección. **MATCH** contiene el reloj, **Full map** y **Pause**, separados de las acciones de unidades y edificios. La ocupación de depósitos y el aviso **excess** permanecen en otra franja, sin reemplazar los recursos globales.
 
 ### Movimiento e interacción
