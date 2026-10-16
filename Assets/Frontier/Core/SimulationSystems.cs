@@ -154,7 +154,7 @@ namespace Frontier.Core
             {
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
-                if (entity.owner == player) { item.target = entity.target; item.queue = entity.queue.Select(q => new ProductionOrder { definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
+                if (entity.owner == player) { item.target = entity.target; item.queue = entity.queue.Select(q => new ProductionOrder { id = q.id, definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
                 else item.order = CommandKind.Stop;
                 visible.Add(item);
             }

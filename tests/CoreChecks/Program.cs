@@ -167,6 +167,7 @@ for(int i=0;i<1000;i++)s.Step();
 Check(unfinished.complete,"resumed construction completes");
 
 NavigationChecks.Run(catalog,map,Check);
+ProductionChecks.Run(catalog,map,Check);
 HarvestingChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
 if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);

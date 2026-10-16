@@ -33,6 +33,15 @@ Las comprobaciones de dificultad cubren reacción, límites con reservas, ritmo 
 
 Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
 
+`ProductionChecks` verifica cancelación por identidad del pedido, reembolso de minerales/gas, liberación de suministro, duplicados, avance de la cola, investigación, propiedad, pausa y órdenes obsoletas. Para comprobar además las tarjetas reales, hover rojo y entrada por A/gatillo sin generar un ejecutable:
+
+```sh
+unity run . --log-file TestResults/unity-queue-cancel.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ProductionCancelPreview.Render
+```
+
+Genera vistas en `TestResults/ProductionCancel` y ejecuta también las regresiones de ayuda, producción, HUD, menús y rueda. Los rayos y las pulsaciones son sintéticos; la comodidad de uso se comprueba en Quest.
+
 Prueba gráfica automatizada, después de generar el ejecutable de escritorio:
 
 ```sh

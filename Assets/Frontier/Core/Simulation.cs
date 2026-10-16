@@ -23,6 +23,8 @@ namespace Frontier.Core
         private readonly int[] lastSequences = new int[2];
         private readonly int[] unitCells;
         private int nextId = 1;
+        // Per-player sequences keep gaps from revealing the other player's hidden production.
+        private readonly int[] nextProductionOrderIds = { 1, 1 };
 
         public Simulation(MapDefinition map, Catalog catalog, string first = "industrial", string second = "biological")
         {
@@ -78,7 +80,7 @@ namespace Frontier.Core
             EntityState first = selected[0];
             if (command.kind == CommandKind.Build) return Build(command, first);
             if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, first);
-            if (command.kind == CommandKind.Cancel) return Cancel(first);
+            if (command.kind == CommandKind.Cancel) return Cancel(first, command.queueOrderId);
             if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {
@@ -170,7 +172,7 @@ namespace Frontier.Core
                 if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Upgrade already researched or queued.");
                 if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");
                 Pay(player, upgrade.minerals, upgrade.catalyst);
-                producer.queue.Add(new ProductionOrder { definition = upgrade.id, research = true, remaining = upgrade.duration, total = upgrade.duration });
+                producer.queue.Add(new ProductionOrder { id = nextProductionOrderIds[player]++, definition = upgrade.id, research = true, remaining = upgrade.duration, total = upgrade.duration });
             }
             else
             {
@@ -181,16 +183,22 @@ namespace Frontier.Core
                 if (Units(player) + Reserved(player) >= Capacity(player)) return Reject("You need more supply.");
                 if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
                 Pay(player, type.minerals, type.catalyst);
-                producer.queue.Add(new ProductionOrder { definition = type.id, remaining = type.duration, total = type.duration });
+                producer.queue.Add(new ProductionOrder { id = nextProductionOrderIds[player]++, definition = type.id, remaining = type.duration, total = type.duration });
             }
             return Accept();
         }
-        private CommandResult Cancel(EntityState entity)
+        private CommandResult Cancel(EntityState entity, int queueOrderId)
         {
+            if (queueOrderId < 0) return Reject("Invalid production order.");
             if (!entity.complete)
-            { var type = Type(entity); Pay(entity.owner, -(int)(type.minerals * .75f), -(int)(type.catalyst * .75f)); Remove(entity); return Accept(); }
+            {
+                if (queueOrderId != 0) return Reject("Production order no longer available.");
+                var type = Type(entity); Pay(entity.owner, -(int)(type.minerals * .75f), -(int)(type.catalyst * .75f)); Remove(entity); return Accept();
+            }
             if (entity.queue.Count == 0) return Reject("Nothing in the queue to cancel.");
-            var order = entity.queue[entity.queue.Count - 1]; entity.queue.RemoveAt(entity.queue.Count - 1);
+            int index = queueOrderId == 0 ? entity.queue.Count - 1 : entity.queue.FindIndex(q => q.id == queueOrderId);
+            if (index < 0) return Reject("Production order no longer available.");
+            var order = entity.queue[index]; entity.queue.RemoveAt(index);
             if (order.research) { var u = Catalog.Upgrade(order.definition); Pay(entity.owner, -u.minerals, -u.catalyst); }
             else { var t = Catalog[order.definition]; Pay(entity.owner, -t.minerals, -t.catalyst); }
             return Accept();

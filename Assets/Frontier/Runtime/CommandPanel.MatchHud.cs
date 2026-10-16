@@ -169,6 +169,7 @@ namespace Frontier.Runtime
         private void BuildMatchActions()
         {
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
+            BindProductionTargets();
             var available=SelectionActions.For(Session);
             actionHint.text=available.Hint;actionHeading.text=available.Heading;
             float y=0;

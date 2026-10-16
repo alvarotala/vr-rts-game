@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Cancelación individual de producción con hover rojo — fuentes, sin APK — 15 de octubre de 2026
+
+Cada tarjeta ocupada de la cola, incluida la producción activa, admite cancelación directa con A/gatillo/mouse, sin confirmación. Al apuntarla se vuelve roja y muestra **Cancel + refund**. Devuelve el costo completo, libera suministro reservado y mantiene los demás pedidos en orden. Los pedidos tienen identidad estable por jugador; terminar o sustituir un elemento mientras se pulsa no cancela otra unidad. Los lugares vacíos permanecen inactivos y el botón general **Cancel / refund** conserva su comportamiento de cancelar el último pedido.
+
+- Núcleo: **243 comprobaciones** aprobadas, incluidas las nuevas de cancelación para ambas facciones: cinco trabajadores idénticos, elemento intermedio/activo/último, reembolsos, suministro, avance, duplicados/IDs inválidos, productor incorrecto, propiedad, pausa, investigaciones y ausencia de información rival en la secuencia. Registro: `TestResults/queue-cancel-core.log`.
+- `ProductionCancelPreview.Render`: **168 comprobaciones y 14 vistas**; colas de cinco trabajadores y cinco soldados, hover y limpieza de rojo, A/gatillo, cancelación de investigación, liberación fuera del botón, selección diferente, pausa/salida, reemplazo con la misma longitud y finalización antes de reconstruir el panel.
+- Regresiones: ayuda (**134 comprobaciones / 36 vistas**), producción (**48 / 16**), HUD y recolección (**18 vistas**), flujo de menús (**46 / 12**) y rueda (**148 / 18**). Total Editor: **544 comprobaciones enumeradas y 114 vistas estáticas**. Sin desbordes de texto. Inspeccionadas cola llena de trabajadores, soldados biológicos, elemento activo e investigación con hover rojo.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones de pruebas. Registro: `TestResults/unity-queue-cancel.log`; vistas: `TestResults/ProductionCancel`. APK, `ProjectSettings` y `Assets/XR` conservan los **52 hashes** previos.
+
+No se generó APK. Pendiente: validar el clic y la legibilidad del hover con mandos físicos en Quest; las pruebas de entrada usan rayos sintéticos en el Editor.
+
 ## Ayuda de acciones, categorías y botón A en la consola — fuentes, sin APK — 15 de octubre de 2026
 
 Hover continuo de 1,5 segundos sobre una acción muestra una descripción en la tarjeta lateral de selección. Incluye los once roles de cada facción, mejoras, órdenes y cancelación; costos, tiempos y requisitos usan el catálogo vigente. La ayuda no tapa acciones, recursos ni colas y se limpia al cambiar de objetivo, pulsar, pausar, abrir la rueda, perder foco o cambiar de selección. Construcción, producción, investigación, órdenes y cancelación se separan por filas, encabezados y colores. La zona de selección/acciones gana 62 unidades de alto para conservar el tamaño de los botones.

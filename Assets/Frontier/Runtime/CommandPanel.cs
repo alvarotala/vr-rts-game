@@ -36,7 +36,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; public SelectionAction help; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -91,7 +91,7 @@ namespace Frontier.Runtime
             }
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             Board.SetVisible(ShowsBoard);
-            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.queue.Length)));
+            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
@@ -201,6 +201,7 @@ namespace Frontier.Runtime
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
+            ClearProductionTargets();
             HideActionHelp();
             LayoutPage();
             if(Page==MenuPage.Main)
@@ -295,6 +296,7 @@ namespace Frontier.Runtime
             pressed=null;
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             hovered=null;
+            UpdateProductionHover();
             HideActionHelp();
         }
         private void FaceViewer()
@@ -350,7 +352,8 @@ namespace Frontier.Runtime
             {
                 if(Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=Color.Lerp(hovered.normal,Color.white,.2f);}
+            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??Color.Lerp(hovered.normal,Color.white,.2f);}
+            UpdateProductionHover();
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
             UpdateActionHelp();
             if(up&&pressed!=null)

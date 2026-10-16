@@ -137,6 +137,8 @@ namespace Frontier.Core
         public int sequence;
         public int[] entities = Array.Empty<int>();
         public int target;
+        // Zero preserves Cancel's legacy behavior (last queued item / unfinished building).
+        public int queueOrderId;
         public Point position;
         public string definition;
     }
@@ -149,6 +151,7 @@ namespace Frontier.Core
     [Serializable]
     public sealed class ProductionOrder
     {
+        public int id;
         public string definition;
         public bool research;
         public int remaining, total;

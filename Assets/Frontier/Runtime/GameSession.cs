@@ -133,10 +133,10 @@ namespace Frontier.Runtime
             else if (entity != null && entity.owner==0 && entity.health < Catalog[entity.definition].health && Faction=="industrial" && selected.All(e=>Catalog[e.definition].role=="worker")) Send(CommandKind.Repair,target:entity.id);
             else Send(CommandKind.Move,position:point);
         }
-        public bool Send(CommandKind kind, string definition = null, int target = 0, Point position = default)
+        public bool Send(CommandKind kind, string definition = null, int target = 0, Point position = default, int queueOrderId = 0)
         {
             if (Match == null) return false;
-            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, entities=Selection.OrderBy(id=>id).ToArray() });
+            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=Selection.OrderBy(id=>id).ToArray() });
             if (!result.accepted) Announce(result.message);
             Feedback?.Invoke(result.accepted); View = Match.View(0); Changed?.Invoke(); return result.accepted;
         }

@@ -9,25 +9,30 @@ namespace Frontier.Runtime
     {
         private RectTransform productionStrip;
         private Text productionCount, productionState, productionName, productionProgress;
-        private Image productionFill, productionAccent;
+        private Image productionFill, productionAccent, productionCard;
         private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4];
         private readonly Image[] queuedCards=new Image[4];
+        private readonly Target[] productionTargets=new Target[5];
+        private readonly RectTransform[] cancelHints=new RectTransform[5];
         private static readonly Color QueueIdleTint=new Color(.52f,.65f,.72f);
+        private static readonly Color QueueCancelTint=new Color(.65f,.08f,.1f);
 
         private void CreateProductionHud()
         {
             productionStrip=Section(matchHud,"Production queue",new Vector2(24,-422),new Vector2(1052,168));
             Label(productionStrip,"PRODUCTION QUEUE",new Vector2(16,-8),new Vector2(350,26),18,accent);
-            Label(productionStrip,"NEXT IN ORDER  →",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
+            Label(productionStrip,"CLICK AN ITEM TO CANCEL",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
             productionCount=Label(productionStrip,"",new Vector2(802,-8),new Vector2(234,26),20,Color.white,TextAnchor.MiddleRight);
 
             var active=Section(productionStrip,"Current production",new Vector2(14,-42),new Vector2(352,112),new Color(.055f,.18f,.22f));
+            productionCard=active.GetComponent<Image>();
             productionAccent=Section(active,"Active accent",Vector2.zero,new Vector2(4,112),accent).GetComponent<Image>();
             productionState=Label(active,"",new Vector2(16,-4),new Vector2(320,22),15,accent);
             productionName=Label(active,"",new Vector2(16,-25),new Vector2(320,38),28,Color.white);
             var bar=Section(active,"Production progress track",new Vector2(16,-68),new Vector2(320,12),new Color(.12f,.28f,.31f));
             productionFill=Section(bar,"Production progress",Vector2.zero,new Vector2(0,12),accent).GetComponent<Image>();
             productionProgress=Label(active,"",new Vector2(16,-84),new Vector2(320,24),19,Color.white);
+            cancelHints[0]=CreateCancelHint(active,352);
             for(int i=0;i<4;i++)
             {
                 var card=Section(productionStrip,"Queue position "+(i+2),new Vector2(380+i*166,-42),new Vector2(160,112));
@@ -35,6 +40,53 @@ namespace Frontier.Runtime
                 Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
                 queuedNames[i]=Label(card,"",new Vector2(12,-30),new Vector2(136,52),21,Color.white);
                 queuedKinds[i]=Label(card,"",new Vector2(12,-87),new Vector2(136,22),14,QueueIdleTint);
+                cancelHints[i+1]=CreateCancelHint(card,160);
+            }
+        }
+
+        private RectTransform CreateCancelHint(RectTransform card,float width)
+        {
+            var hint=Section(card,"Cancel hint",new Vector2(8,-82),new Vector2(width-16,30),QueueCancelTint);
+            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,30),14,Color.white,TextAnchor.MiddleCenter);
+            hint.gameObject.SetActive(false);return hint;
+        }
+        private void ClearProductionTargets()
+        {
+            for(int i=0;i<productionTargets.Length;i++)
+            {
+                var target=productionTargets[i];
+                if(target!=null)target.image.color=target.normal;
+                productionTargets[i]=null;
+                if(cancelHints[i]!=null)cancelHints[i].gameObject.SetActive(false);
+            }
+        }
+        private void BindProductionTargets()
+        {
+            var producer=SelectedProducer();if(producer==null)return;
+            var match=Session.Match;int producerId=producer.id;
+            for(int i=0;i<producer.queue.Length&&i<productionTargets.Length;i++)
+            {
+                var order=producer.queue[i];int orderId=order.id;
+                if(orderId<=0)continue;
+                var card=i==0?productionCard:queuedCards[i-1];
+                var target=new Target{rect=card.rectTransform,image=card,normal=i==0?new Color(.055f,.18f,.22f):button,hoverColor=QueueCancelTint,
+                    click=()=>
+                    {
+                        if(!AcceptsGameInput||Session.Match!=match||SelectedProducer()?.id!=producerId)return;
+                        if(Session.Send(CommandKind.Cancel,queueOrderId:orderId))Session.Announce(QueueLabel(order.definition)+" cancelled. Resources refunded.");
+                        nextText=0;
+                    }};
+                productionTargets[i]=target;targets.Add(target);
+            }
+        }
+        private void UpdateProductionHover()
+        {
+            for(int i=0;i<productionTargets.Length;i++)
+            {
+                var target=productionTargets[i];
+                bool active=target!=null&&hovered==target&&AcceptsGameInput&&!Quest.Placing&&target.rect.gameObject.activeInHierarchy;
+                if(cancelHints[i]!=null)cancelHints[i].gameObject.SetActive(active);
+                if(target!=null)target.image.color=active?QueueCancelTint:target.normal;
             }
         }
 
@@ -95,6 +147,7 @@ namespace Frontier.Runtime
                 queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
                 queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
             }
+            UpdateProductionHover();
         }
     }
 }

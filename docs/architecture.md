@@ -36,7 +36,9 @@ En Quest, los ejes del joystick derecho se envían al tablero únicamente mientr
 
 `CommandPanel.MatchHud.cs` contiene la presentación de partida: recursos, ficha de selección, acciones contextuales, ocupación de depósitos, grupos y controles de partida. Usa `PlayerView` y nombres del catálogo, sin consultar estado enemigo oculto. Las acciones y los menús conservan la misma entrada por rayos; grupos y pausa son controles persistentes separados del contenedor que se reconstruye al cambiar la selección o la cola. Los costos se presentan como minerales/gas, conservando el identificador interno de catalizador.
 
-`CommandPanel.ProductionHud.cs` añade una franja de producción para un único productor propio, terminado y seleccionado. Sus cinco tarjetas se crean una vez; nombres, orden, progreso y tiempo se actualizan desde la cola de `PlayerView` cada 0,15 segundos, incluso si cambió su contenido pero no su longitud. El espacio se reserva también con cola vacía, evitando desplazar los botones al producir o cancelar. El contador global de suministro incluye reservas; la advertencia de despliegue compara únicamente unidades existentes contra capacidad, como hace la simulación. Esta presentación no modifica órdenes, tiempos ni cancelaciones.
+`CommandPanel.ProductionHud.cs` añade una franja de producción para un único productor propio, terminado y seleccionado. Sus cinco tarjetas se crean una vez; nombres, orden, progreso y tiempo se actualizan desde la cola de `PlayerView` cada 0,15 segundos. El espacio se reserva también con cola vacía, evitando desplazar los botones al producir o cancelar. El contador global de suministro incluye reservas; la advertencia de despliegue compara únicamente unidades existentes contra capacidad, como hace la simulación.
+
+Las tarjetas ocupadas son objetivos del mismo enrutador de A/gatillo/mouse que los demás botones. Al apuntarlas, el fondo se vuelve rojo y aparece **Cancel + refund**. El clic envía `Cancel` con `queueOrderId`, vinculado al productor, partida e identidad observados. `ProductionOrder.id` es una secuencia creciente por jugador, sin reutilización durante la partida ni saltos que revelen producción rival. La copia de la cola en `PlayerView` conserva esos IDs. Los objetivos se reconstruyen al cambiar las identidades, aunque la longitud no cambie, invalidando una pulsación anterior; el núcleo también rechaza IDs ya terminados o cancelados. Los lugares vacíos no registran objetivos. Se conserva `queueOrderId = 0` para cancelar el último pedido desde la consola/rueda o abandonar una construcción incompleta.
 
 `GameSession.LeaveMatch()` detiene y libera la simulación y la vista, vacía selección, grupos y modos de órdenes y emite `MatchClosed`. `BoardView` limpia las entidades y recursos de esa partida, `CommandPanel` vuelve al inicio y `FrameMetrics` guarda las muestras pendientes. No se elimina el ancla ni se cambia la colocación física. La pausa del menú se libera de manera independiente de seguimiento, visor y foco.
 
@@ -46,7 +48,7 @@ El terreno se muestra durante la preparación, colocación o partida, y se ocult
 
 - `MapDefinition`: terreno y contenido inicial versionado, sin referencias a Unity.
 - `CatalogDefinition`: estadísticas, costos, tiempos, requisitos y roles por identificador estable.
-- `GameCommand`: intención, emisor, secuencia, entidades, destino u objetivo.
+- `GameCommand`: intención, emisor, secuencia, entidades, destino u objetivo; `queueOrderId` opcional para cancelar un pedido concreto.
 - `PlayerView`: recursos propios, entidades autorizadas, recuerdos y visión. Es el contrato adecuado para clientes remotos.
 - `MatchSnapshot`: diagnóstico autoritativo completo, no debe enviarse a un rival. Actualmente contiene referencias al estado; serializar inmediatamente. No implementa restauración de partidas.
 - `BoardPlacement`: UUID de ancla local y ancho del tablero. Se guarda fuera del mapa en el directorio persistente de la aplicación.
