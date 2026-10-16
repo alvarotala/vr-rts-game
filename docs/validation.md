@@ -4,6 +4,12 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Destinos con puntos y líneas punteadas — fuentes, sin APK — 16 de octubre de 2026
+
+La cola del mapa usa puntos sólidos con aro y número separado, conectados por trazos punteados. Move es cian, Attack/Attack Move rojo y Gather/Build/Repair verde. Los enlaces conservan el color completo y aumentan su ancho para mejorar la lectura; la geometría sigue terreno/rampas y conserva el recorte y la selección existentes.
+
+`OrderQueuePreview.Render` aprobó **55 comprobaciones y generó cinco vistas** con Unity 6000.3.26f1 y CLI 1.0.0-beta.13, sin errores de compilación ni excepciones. Se inspeccionaron las capturas del mapa y el panel industrial en `TestResults/OrderQueue`. Registro: `TestResults/unity-dashed-queue.log`. Los **54 hashes** de `TestResults/dashed-queue-baseline.json` confirman que ProjectSettings, Assets/XR y APK existentes permanecen iguales. No se modificó la simulación ni se generó APK. La legibilidad física en Quest sigue pendiente.
+
 ## Colas de acciones y gestos del mando derecho — fuentes, sin APK — 16 de octubre de 2026
 
 Grip + A encola acciones por unidad; doble A convierte su primer toque en Attack Move o ataque directo sobre enemigo visible, sin duplicar un Move ni demorar el primer toque. Doble trigger selecciona unidades cercanas del mismo tipo. Grip + mantener trigger quieto durante 0,5 segundos quita la unidad apuntada y consume su liberación; el arrastre conserva selección de área. La pulsación del stick queda siempre para la rueda, incluso sosteniendo grip; doble grip sigue abriéndola.

@@ -168,7 +168,7 @@ namespace Frontier.Runtime
             }
             orderPlanSteps.text="1. "+PlanOrderLabel(representative.order)+"  →  "+string.Join("  →  ",representative.pendingOrders.Take(3).Select((order,index)=>(index+2)+". "+PlanOrderLabel(order.kind)));
             if(representative.pendingOrders.Length>3)orderPlanSteps.text+=$"  →  +{representative.pendingOrders.Length-3} more";
-            orderPlanHint.text=$"Waypoints: {Session.Catalog[representative.definition].name} #{representative.id} · Cyan: Move · Orange: Attack · Routes adapt to terrain";
+            orderPlanHint.text=$"Waypoints: {Session.Catalog[representative.definition].name} #{representative.id} · Cyan: Move · Red: Attack · Green: Work";
             if(representative.pendingOrders.Length>=OrderQueueVisuals.MaximumWaypoints)orderPlanHint.text+=$" · First {OrderQueueVisuals.MaximumWaypoints} shown";
         }
         private static string PlanOrderLabel(CommandKind order)

@@ -48,7 +48,7 @@ namespace Frontier.Editor
                     Check(Plan().GetComponentsInChildren<Collider>(true).Length==0,"Order waypoints do not intercept selection rays");
                     Check(Plan().GetComponent<Renderer>().sharedMaterial.shader.name=="Frontier/Board","Order waypoints use board clipping");
                     Check(PlanMesh().vertices.All(v=>Mathf.Abs(v.y-.025f)<.001f),"Flat terrain creates only flat overlay geometry");
-                    Check(PlanMesh().colors.Any(c=>c.b>.8f&&c.r<.4f)&&PlanMesh().colors.Any(c=>c.r>.9f&&c.b<.3f),"Move and attack waypoints have distinct colors");
+                    Check(PlanMesh().colors.Any(c=>c.b>.8f&&c.r<.4f)&&PlanMesh().colors.Any(c=>c.r>.9f&&c.g<.25f&&c.b<.3f),"Move waypoints are cyan and attack waypoints are red");
                     CaptureBoard(faction+"-waypoints");CapturePanel(faction+"-orders");
 
                     session.Select(hq.id,false);Check(session.Send(CommandKind.Train,workers[0].definition),"Production starts independently of unit orders");Refresh();

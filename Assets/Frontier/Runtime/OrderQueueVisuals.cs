@@ -11,7 +11,7 @@ namespace Frontier.Runtime
     public sealed class OrderQueueVisuals : System.IDisposable
     {
         public const int MaximumWaypoints=8;
-        private static readonly Color MoveTint=new Color(.25f,.9f,1),AttackTint=new Color(1,.53f,.2f),WorkTint=new Color(.58f,1,.53f);
+        private static readonly Color MoveTint=new Color(.25f,.9f,1),AttackTint=new Color(1,.16f,.2f),WorkTint=new Color(.58f,1,.53f);
         private readonly Transform root;
         private readonly Mesh mesh;
         private readonly Material material;
@@ -55,21 +55,47 @@ namespace Frontier.Runtime
             {
                 if(!TryPosition(kind,target,position,definition,active,out var destination)){number++;return;}
                 var tint=kind==CommandKind.Attack||kind==CommandKind.AttackMove?AttackTint:kind==CommandKind.Move?MoveTint:WorkTint;
-                float radius=Mathf.Clamp(.007f/board.CellScale,.55f,1.1f),width=Mathf.Clamp(.00065f/board.CellScale,.035f,.11f);
+                float radius=Mathf.Clamp(.007f/board.CellScale,.55f,1.1f),width=Mathf.Clamp(.00095f/board.CellScale,.05f,.15f);
                 var delta=new Vector2(destination.x-origin.x,destination.y-origin.y);float distance=delta.magnitude;
                 if(distance>radius*2)
                 {
                     var direction=delta/distance;
-                    Stroke(new Vector2(origin.x,origin.y)+direction*radius,new Vector2(destination.x,destination.y)-direction*radius,width,tint*.65f);
+                    DashedStroke(new Vector2(origin.x,origin.y)+direction*radius,new Vector2(destination.x,destination.y)-direction*radius,width,tint);
                 }
                 var center=new Vector2(destination.x,destination.y);
+                // The solid point is the exact destination. Put its number above the
+                // ring so the marker stays distinct from both the label and the route.
+                Dot(center,radius*.23f,tint);
                 for(int i=0;i<28;i++)
                 {
                     float a=i*Mathf.PI*2/28,b=(i+1)*Mathf.PI*2/28;
                     Stroke(center+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius,center+new Vector2(Mathf.Cos(b),Mathf.Sin(b))*radius,width*1.4f,tint);
                 }
-                Number(number,center,radius*.6f,width*1.5f);
+                Number(number,center+Vector2.up*radius*1.8f,radius*.45f,width*1.25f);
                 origin=destination;number++;
+            }
+        }
+        private void DashedStroke(Vector2 a,Vector2 b,float width,Color color)
+        {
+            var delta=b-a;float distance=delta.magnitude;if(distance<.0001f)return;
+            var direction=delta/distance;
+            float dash=Mathf.Clamp(.0065f/board.CellScale,.3f,.85f),gap=Mathf.Clamp(.004f/board.CellScale,.2f,.5f);
+            int count=Mathf.Max(1,Mathf.CeilToInt((distance+gap)/(dash+gap)));
+            float length=(distance-gap*(count-1))/count;
+            for(int i=0;i<count;i++)
+            {
+                float start=i*(length+gap);
+                Stroke(a+direction*start,a+direction*(start+length),width,color);
+            }
+        }
+        private void Dot(Vector2 center,float radius,Color color)
+        {
+            // Horizontal strips share Stroke's terrain/ramp projection and cliff guard.
+            const int strips=10;float height=radius*2/strips;
+            for(int i=0;i<strips;i++)
+            {
+                float y=-radius+height*(i+.5f),half=Mathf.Sqrt(radius*radius-y*y);
+                Stroke(center+new Vector2(-half,y),center+new Vector2(half,y),height,color);
             }
         }
         private bool TryPosition(CommandKind kind,int target,Point position,string definition,bool active,out Point result)
