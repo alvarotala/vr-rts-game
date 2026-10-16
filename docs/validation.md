@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Contadores de trabajadores sobre el tablero — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Cada base propia terminada muestra el total de trabajadores de sus minerales y cada extractor muestra su gas, sin necesidad de selección. Los números usan asignados/óptimo; `5/8` y `3/3` son blancos, mientras `9/8` y `4/3` se vuelven rojos. El panel de recolección también marca el exceso en rojo.
+
+- `HarvestingMarkersPreview.Render`: **96 comprobaciones y ocho vistas**, con ambas facciones. Comprueba trabajadores iniciales, órdenes reales, viajes/entregas, color normal/exceso, extractor en construcción, agotamiento, pausa, edificio destruido, ocultación y salida de partida. Verifica orientación desde cuatro lados, separación de contadores cercanos, tamaño físico en tablero de 0,6 m y ausencia de interceptación por los gráficos. Registro: `TestResults/unity-workforce-markers.log`; imágenes: `TestResults/Workforce/`.
+- `HarvestingPreview.RenderHud`: **18 vistas** y comprobaciones de órdenes contextuales, selección de recursos, totales de base, exceso y superficie del extractor. Registro: `TestResults/unity-workforce-hud.log`.
+- Inspeccionadas las vistas de `5/8`, exceso mineral/gas y tablero compacto. El render de prueba reproduce el orden de los elementos del Canvas al dibujar sus mallas en la cámara de preview.
+- Compilación en Unity **6000.3.26f1** / CLI **1.0.0-beta.13**. Sin cambios en simulación, mapas o catálogos. El APK, `ProjectSettings` y `Assets/XR` conservan los hashes de la línea base de 52 archivos; no se generó ningún ejecutable.
+
+Pendiente: validar legibilidad y separación de etiquetas con el visor y seguimiento reales en Quest.
+
 ## Selección de minerales más tolerante — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 El cursor ahora considera el volumen del cristal, además de su proximidad en el suelo. Un margen adaptado al tamaño del tablero facilita apuntar cerca de la base y el depósito se ilumina con un aro amarillo antes de pulsar. Los márgenes ampliados de trabajadores cercanos no ocultan el depósito; los impactos directos sobre el cuerpo de una unidad o edificio conservan prioridad. La pulsación de un recurso tolera pequeños movimientos al soltar sin convertirse en arrastre ni cambiar al depósito vecino. Hover, órdenes y datos del panel usan el mismo objetivo resuelto; una selección de recurso ya confirmada mantiene sus propios datos en el panel.

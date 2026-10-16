@@ -123,7 +123,6 @@ namespace Frontier.Runtime
                 int optimum=resource.remaining==0?0:Harvesting.OptimalWorkers(resource.kind);
                 harvesting.text=$"{name} · {Saturation(resource.assignedWorkers,optimum)} · Remaining: {remaining}";
                 if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)harvesting.text+=" · Requires a completed extractor";
-                if(resource.assignedWorkers>resource.optimalWorkers)harvesting.color=new Color(1,.65f,.3f);
             }
             else if(building!=null&&Session.Catalog[building.definition].role=="hq")
             {
@@ -135,8 +134,11 @@ namespace Frontier.Runtime
             else if(selected!=null&&selected.Any(e=>Session.Catalog[e.definition].role=="worker"))
                 harvesting.text="Optimal: 2 workers per mineral patch · 3 per gas · Automatically assigned to nearby deposits";
         }
-        private static string Saturation(int assigned,int optimal)=>$"Workers {assigned}/{optimal}"+
-            (assigned>optimal?" (excess)":optimal>0&&assigned==optimal?" (optimal)":"");
+        private static string Saturation(int assigned,int optimal)
+        {
+            string value=$"Workers {assigned}/{optimal}"+(assigned>optimal?" (excess)":optimal>0&&assigned==optimal?" (optimal)":"");
+            return assigned>optimal?"<color=#FF3830>"+value+"</color>":value;
+        }
         private void UpdateMenuText()
         {
             harvesting.text="";harvesting.color=accent;

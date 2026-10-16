@@ -9,6 +9,7 @@ namespace Frontier.Runtime
     public sealed class BoardView : MonoBehaviour
     {
         public GameSession Session;
+        public Camera Viewer;
         public Transform Content { get; private set; }
         public float Width = 1.2f, Zoom = 1;
         public Vector2 Pan;
@@ -44,6 +45,7 @@ namespace Frontier.Runtime
         private readonly Dictionary<string,Material> buildingMaterials=new Dictionary<string,Material>();
         private Material[] memoryMaterials;
         private WeaponEffects weapons;
+        private HarvestingMarkers harvestingMarkers;
         private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
@@ -80,6 +82,7 @@ namespace Frontier.Runtime
             unitVisuals.Dispose();
             buildingVisuals.Dispose();
             weapons?.Dispose();
+            harvestingMarkers?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
             foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure,impactMaterial})Release(material);
@@ -93,6 +96,7 @@ namespace Frontier.Runtime
         {
             if(Content==null)return;
             weapons?.Dispose();weapons=null;firing.Clear();
+            harvestingMarkers?.Dispose();harvestingMarkers=null;
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
             entities.Clear();entityTypes.Clear();resources.Clear();resourceRenderers.Clear();pools.Clear();parts.Clear();preview=null;
@@ -102,6 +106,7 @@ namespace Frontier.Runtime
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
+            harvestingMarkers=new HarvestingMarkers(Content);
             var grid=new GridMap(Session.Map);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
@@ -142,6 +147,7 @@ namespace Frontier.Runtime
             if(!visible)
             {
                 weapons?.Clear();
+                harvestingMarkers?.Hide();
                 Hovered=0;Pointer=null;DrawSelection(default,default,false);
                 if(ground!=null)ground.SetFloat("_HoverWidth",0);
                 if(preview!=null)preview.gameObject.SetActive(false);
@@ -166,7 +172,7 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();return;}
+            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();return;}
             firing.Clear();
             foreach(var shot in Session.View.attacks)
                 if(Session.View.tick-shot.tick<6)firing[shot.attacker]=shot;
@@ -258,6 +264,14 @@ namespace Frontier.Runtime
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
             weapons?.Update(this);
+            harvestingMarkers?.Update(this,Viewer!=null?Viewer:Camera.main);
+        }
+        public bool TryEntityTop(int id,out Vector3 top)
+        {
+            top=default;if(!entities.TryGetValue(id,out var visual)||!visual.gameObject.activeInHierarchy)return false;
+            var body=parts[visual].body;if(body.Length==0)return false;
+            var bounds=body[0].bounds;for(int i=1;i<body.Length;i++)bounds.Encapsulate(body[i].bounds);
+            top=new Vector3(bounds.center.x,bounds.max.y,bounds.center.z);return true;
         }
         private Transform MakeEntity(Archetype type,int owner)
         {

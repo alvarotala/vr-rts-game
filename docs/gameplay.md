@@ -34,6 +34,8 @@ Si todos los depósitos cercanos están al nivel óptimo, los trabajadores adici
 
 Apuntar o seleccionar un depósito muestra **Workers asignados/óptimo** y la cantidad restante en el panel. Seleccionar el centro principal muestra los totales de minerales y gas de su zona; seleccionar un extractor muestra su ocupación de gas. Se puede dar la orden de gas sobre toda la superficie del extractor. Los indicadores cuentan tus trabajadores, no los del rival.
 
+Sobre cada centro principal terminado aparece **MINERAL WORKERS** con el total asignado a sus minerales: por ejemplo, **5/8** para cinco trabajadores y cuatro depósitos activos. Sobre cada extractor terminado aparece **GAS WORKERS**, por ejemplo **3/3**. No hace falta seleccionar el edificio. Al superar el óptimo, el número se vuelve rojo (**9/8**, **4/3**); vuelve a blanco al retirar el exceso. Los trabajadores en viaje o entregando carga siguen incluidos y la capacidad baja cuando se agota un depósito. Las etiquetas miran al jugador, conservan su tamaño físico en tableros pequeños y se separan si se superponen.
+
 ### Panel de partida
 
 La franja superior separa **MINERALS**, **GAS** y **SUPPLY / CAPACITY**, con cantidades grandes y colores propios. Gas corresponde al catalizador del catálogo. La capacidad muestra usados/total y lugares disponibles; **FULL** aparece en naranja cuando está completa. Los costos de las acciones usan **M** para minerales y **G** para gas.

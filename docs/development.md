@@ -59,6 +59,15 @@ unity run . --log-file TestResults/unity-harvesting.log --no-tail -- \
 
 Comprueba las órdenes contextuales, selección de recursos, totales de base, exceso y órdenes sobre el extractor. Renderiza cinco estados del panel en `TestResults/Harvesting`. Son vistas estáticas del panel real desde el Editor; no certifican legibilidad en el visor. `HarvestingChecks` forma parte de `check-core.sh` y comprueba reparto, reservas, agotamiento, gas, carga y niebla de guerra para ambas facciones.
 
+Para comprobar los contadores persistentes sobre el tablero, usar **Frontier → Preview workforce counters**, o:
+
+```sh
+unity run . --log-file TestResults/unity-workforce-markers.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HarvestingMarkersPreview.Render
+```
+
+Usa órdenes reales de recolección para comprobar los totales de minerales y gas, color de exceso, viajes y entrega, agotamiento, pausa, destrucción y salida de partida. Renderiza ambas facciones desde varios lados y en tablero compacto en `TestResults/Workforce/`. Comprueba orientación, separación de etiquetas y tamaño físico; no genera ejecutables ni sustituye la prueba de legibilidad en Quest.
+
 Para revisar los textos en inglés, usar **Frontier → Preview full command panel**, o:
 
 ```sh
