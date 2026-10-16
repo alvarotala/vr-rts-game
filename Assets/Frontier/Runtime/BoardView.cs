@@ -29,6 +29,7 @@ namespace Frontier.Runtime
             public Transform selection, health, impact;
             public Renderer healthRenderer, impactRenderer;
             public Renderer[] body;
+            public Material[] visibleMaterials;
             public bool remembered, hovered, receivingDamage;
             public float damageAmount;
         }
@@ -37,6 +38,9 @@ namespace Frontier.Runtime
         private MaterialPropertyBlock hoverProperties, impactProperties;
         private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
+        private readonly BuildingVisuals buildingVisuals=new BuildingVisuals();
+        private readonly Dictionary<string,Material> buildingMaterials=new Dictionary<string,Material>();
+        private Material[] memoryMaterials;
         private WeaponEffects weapons;
         private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
@@ -64,14 +68,18 @@ namespace Frontier.Runtime
             neutral=Material(new Color(.2f,.28f,.35f));crystal=Material(new Color(.35f,.85f,1));catalyst=Material(new Color(.8f,.46f,1));highlight=Material(new Color(.9f,1,.6f));
             unitStructure=Material(new Color(.12f,.17f,.22f));
             foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
+            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
+            memoryMaterials=new[]{neutral,unitStructure,neutral};
             Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Rebuild();
         }
         private void OnDestroy()
         {
             if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;}
             unitVisuals.Dispose();
+            buildingVisuals.Dispose();
             weapons?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
+            foreach(var material in buildingMaterials.Values)Release(material);
             foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure,impactMaterial})Release(material);
             Release(fog);
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
@@ -175,7 +183,7 @@ namespace Frontier.Runtime
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
                 Vector3 direction=target-visual.localPosition;direction.y=0;
                 if(!type.building&&direction.sqrMagnitude>.01f)visual.localRotation=Quaternion.Slerp(visual.localRotation,Quaternion.LookRotation(direction),Time.unscaledDeltaTime*12);
-                if(!type.building&&!e.remembered&&firing.TryGetValue(e.id,out var shot))
+                if((!type.building||type.role=="defense")&&!e.remembered&&firing.TryGetValue(e.id,out var shot))
                 {
                     var aim=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y);
                     if(aim.sqrMagnitude>.001f)visual.localRotation=Quaternion.LookRotation(aim);
@@ -218,7 +226,7 @@ namespace Frontier.Runtime
                 // Mobile units retain their role accents; only buildings become fog memories.
                 if(type.building&&(newlyVisible||cached.remembered!=e.remembered))
                 {
-                    foreach(var renderer in cached.body)renderer.sharedMaterial=e.remembered?neutral:e.owner==0?blue:red;
+                    foreach(var renderer in cached.body)renderer.sharedMaterials=e.remembered?memoryMaterials:cached.visibleMaterials;
                     cached.remembered=e.remembered;
                 }
             }
@@ -244,25 +252,17 @@ namespace Frontier.Runtime
         private Transform MakeEntity(Archetype type,int owner)
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
-            bool bio=type.faction=="biological";Material color=owner==0?blue:red;
-            float size=type.building?type.footprint*.85f:type.collisionRadius*2,height;
-            if(type.building)
-            {
-                height=type.role=="hq"?3.4f:2;
-                var body=Primitive(bio?PrimitiveType.Sphere:PrimitiveType.Cube,root,color);body.localScale=new Vector3(size,height,size);body.localPosition=Vector3.up*height*.5f;
-                var top=Primitive(bio?PrimitiveType.Capsule:PrimitiveType.Cube,root,color);top.localPosition=new Vector3(0,height,0);top.localScale=new Vector3(size*.4f,type.role=="defense"?.8f:.35f,size*.4f);
-            }
-            else
-            {
-                var model=new GameObject("Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
-                var mesh=unitVisuals.Get(type);model.GetComponent<MeshFilter>().sharedMesh=mesh;
-                model.GetComponent<MeshRenderer>().sharedMaterials=new[]{color,unitStructure,roleMaterials[type.role]};
-                height=mesh.bounds.max.y;
-            }
+            Material color=owner==0?blue:red;
+            float size=type.building?type.footprint*.85f:type.collisionRadius*2;
+            var model=new GameObject(type.building?"Building silhouette":"Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
+            var mesh=type.building?buildingVisuals.Get(type):unitVisuals.Get(type);model.GetComponent<MeshFilter>().sharedMesh=mesh;
+            var visibleMaterials=new[]{color,unitStructure,type.building?buildingMaterials[type.role]:roleMaterials[type.role]};
+            model.GetComponent<MeshRenderer>().sharedMaterials=visibleMaterials;
+            float height=mesh.bounds.max.y;
             var ring=Primitive(PrimitiveType.Cylinder,root,highlight);ring.name="Selection";ring.localPosition=Vector3.up*.04f;ring.localScale=new Vector3(size*1.3f,.035f,size*1.3f);ring.gameObject.SetActive(false);
             var hp=Primitive(PrimitiveType.Cube,root,highlight);hp.name="Health";hp.localPosition=new Vector3(0,height+1,0);
             var impact=Primitive(PrimitiveType.Quad,root,impactMaterial);impact.name="Damage impact";impact.localPosition=Vector3.up*(height+1.15f);impact.localRotation=Quaternion.Euler(90,0,0);impact.gameObject.SetActive(false);
-            parts[root]=new VisualParts{selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=root.GetComponentsInChildren<Renderer>(true).Where(r=>r.transform!=ring&&r.transform!=hp&&r.transform!=impact).ToArray()};
+            parts[root]=new VisualParts{selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=new[]{model.GetComponent<Renderer>()},visibleMaterials=visibleMaterials};
             return root;
         }
         private static Transform Primitive(PrimitiveType type,Transform parent,Material material)

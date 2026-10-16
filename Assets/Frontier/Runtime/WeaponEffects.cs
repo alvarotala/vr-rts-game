@@ -59,7 +59,7 @@ namespace Frontier.Runtime
                 var side=Vector3.Cross(Vector3.up,direction);
                 float scale=type.building?1:type.collisionRadius/.45f;
                 float muzzleHeight=type.building?2.45f:(type.role=="ranged"?.74f:siege?.55f:melee?.8f:.5f)*scale;
-                float muzzleForward=type.building?type.footprint*.3f:(type.role=="ranged"||siege?.7f:.4f)*scale;
+                float muzzleForward=type.building?type.footprint*.46f:(type.role=="ranged"||siege?.7f:.4f)*scale;
                 Vector3 origin=new Vector3(shot.origin.x,board.HeightAt(shot.origin)+muzzleHeight,shot.origin.y)+direction*muzzleForward;
                 if(type.role=="ranged")origin+=side*(.17f*scale);
                 Vector3 end=new Vector3(shot.destination.x,board.HeightAt(shot.destination)+(targetType.building?1.2f:.7f*targetType.collisionRadius/.45f),shot.destination.y);

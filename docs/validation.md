@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Edificios reconocibles — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Doce modelos provisionales nuevos: seis roles para cada facción, con siluetas, alturas, acentos y símbolos distintos. La base central tiene una corona dorada y cuerpo escalonado; la barraca, una entrada ancha o nido con huevos y dos chevrones naranjas. Gas usa conductos dobles; suministro, depósitos bajos; tecnología, reactor/capullo vertical; defensa, torre con cañón/aguijón. Se mantienen colores de equipo y materiales apagados para recuerdos bajo niebla. Las torres se orientan hacia el ataque y su destello coincide con el extremo del cañón.
+
+- **33 comprobaciones aprobadas y diez vistas en Unity Editor**, sobre los modelos reales de `BoardView`: límites de huella, altura de barras/impactos, color enemigo, niebla/restauración, construcción, daño/hover/selección, dirección de torre, reutilización, zoom/giro y salida. Las doce mallas suman **8.734 vértices**, compartidos entre instancias, con un renderer por edificio y tres submallas. Esto no mide rendimiento del visor.
+- **Regresiones de daño recibido y armas aprobadas**, con ocho y once vistas respectivamente; las armas conservaron sus 15 comprobaciones. Registro conjunto: `TestResults/unity-building-roles.log`. Galería: `TestResults/BuildingRoles`; regresiones: `TestResults/Hits` y `TestResults/Weapons`. Se inspeccionaron las vistas aliada, enemiga, superior, comparativa de base/barraca y recuerdo bajo niebla.
+- No cambió el núcleo, el catálogo ni las reglas de combate; no se repitieron sus pruebas ni partidas entre IA. El APK **0.1.4** y las configuraciones existentes conservan sus hashes; no se generó APK ni ejecutable desktop.
+
+Pendiente: comprobar identificación a escala real de mesa/piso, percepción binocular y legibilidad durante combates en Quest. Las vistas del Editor no sustituyen esa prueba. El APK disponible aún no contiene estos modelos.
+
 ## APK integrado — 0.1.4 (5) — 15 de octubre de 2026
 
 Compilación solicitada por el usuario con todos los cambios hasta `d9f40ed`: siluetas de unidades, asignación y saturación de trabajadores, hover, textos en inglés, menú principal, panel de partida por secciones, cursor sobre el mapa, daño recibido, selección desde fuera del tablero y partículas/trayectorias de armas. Las entradas anteriores que indican «sin nuevo APK» describen su estado histórico; estos cambios ahora están incluidos en 0.1.4.

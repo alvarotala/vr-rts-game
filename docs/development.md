@@ -128,6 +128,15 @@ unity run . --log-file TestResults/unity-weapons.log --no-tail -- \
 
 Guarda once vistas en `TestResults/Weapons`, muestreando distintos momentos de destello, vuelo e impacto de ambas facciones, artillería, combate cercano y torres. Comprueba orientación, objetivo destruido, pausa, niebla, caducidad, presupuesto de 192 efectos, reutilización de objetos y limpieza al ocultar/salir/reiniciar. El núcleo comprueba por separado los ataques reales y su proyección segura. Son vistas estáticas del Editor, sin APK ni validación de mandos o rendimiento del visor.
 
+Para revisar las siluetas de edificios, usar **Frontier → Preview building roles**, o:
+
+```sh
+unity run . --log-file TestResults/unity-building-roles.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.BuildingVisualPreview.Render
+```
+
+Guarda diez vistas en `TestResults/BuildingRoles`: galería aliada/enemiga, vista superior/opuesta, comparación entre base central y barraca de ambas facciones, recuerdo bajo niebla, construcción/daño, torre disparando y zoom/giro. Los rótulos son anotaciones de la galería y no se añaden al juego. Comprueba huellas, posición de vida/impactos, restauración de materiales al recuperar visión, orientación de torres y reutilización. También ejecuta las revisiones existentes de daño y armas porque comparten la representación de entidades. No genera ejecutables.
+
 ## Resultados y entregas
 
 Guardar registros, capturas e informes locales en `TestResults/` y los ejecutables en `Builds/`. Ambos directorios están excluidos de Git. Conservar en [validación](validation.md) las conclusiones, las rutas de evidencia y las limitaciones de cada entrega; indicar si los cambios de fuentes aún no están incluidos en el APK disponible.

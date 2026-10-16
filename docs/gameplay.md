@@ -85,3 +85,16 @@ El juego se presenta íntegramente en inglés; la incorporación de otros idioma
 Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores y **tres proyectiles violetas** para artillería. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.
 
 El panel muestra el rol junto al nombre al apuntar sin selección, seleccionar o producir. Las selecciones mixtas muestran cantidades por nombre de unidad o edificio. Las barras de vida sobre las unidades aparecen al seleccionar, apuntar o recibir daño, para despejar la vista del ejército.
+
+Los edificios también se identifican por **silueta, altura y símbolo**, además del nombre al apuntar o seleccionar. El casco conserva el azul aliado o rojo enemigo; los acentos indican el rol y son compartidos entre facciones:
+
+| Rol | Industrial / biológico | Rasgo reconocible | Símbolo |
+|---|---|---|---|
+| Base central | Command Core / Heart | Ciudadela escalonada o núcleo con corona de órganos | Corona dorada |
+| Barraca | Barracks / Brood Nest | Hangar bajo con entrada ancha o nido con tres huevos | Dos chevrones naranjas |
+| Gas | Refinery / Siphon | Dos chimeneas o conductos abiertos | Gota violeta |
+| Suministro | Relay / Node | Depósitos bajos o sacos conectados | Signo más verde |
+| Tecnología | Arsenal / Chrysalis | Reactor vertical o capullo rodeado de anillos | Rombo celeste |
+| Defensa | Sentinel / Stinger | Torre estrecha con cañón o aguijón | Mira clara |
+
+Los símbolos forman parte del modelo y se leen desde arriba, sin añadir carteles flotantes a la partida. Las torres se orientan hacia donde disparan. Los recuerdos bajo niebla conservan la silueta y el símbolo en tonos apagados, sin colores activos ni señales de impacto.
