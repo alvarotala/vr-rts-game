@@ -4,6 +4,19 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Ayuda de acciones, categorías y botón A en la consola — fuentes, sin APK — 15 de octubre de 2026
+
+Hover continuo de 1,5 segundos sobre una acción muestra una descripción en la tarjeta lateral de selección. Incluye los once roles de cada facción, mejoras, órdenes y cancelación; costos, tiempos y requisitos usan el catálogo vigente. La ayuda no tapa acciones, recursos ni colas y se limpia al cambiar de objetivo, pulsar, pausar, abrir la rueda, perder foco o cambiar de selección. Construcción, producción, investigación, órdenes y cancelación se separan por filas, encabezados y colores. La zona de selección/acciones gana 62 unidades de alto para conservar el tamaño de los botones.
+
+A y gatillo comparten la interacción con todos los botones y la barra de movimiento de la consola. El botón que inicia una pulsación conserva su liberación, evitando duplicados al combinar ambos; las pulsaciones y liberaciones capturadas no pasan al terreno. A conserva las órdenes contextuales sobre el mapa y los atajos previos de la rueda.
+
+- `ActionHelpPreview.Render`: **134 comprobaciones y 36 vistas**. Ayuda de ambas facciones, demora, cambio/salida del hover, pausa/selección/foco, colores y secciones sin superposición; A para navegación, producir, investigar, cancelar, grupos, arrastre, combinación con gatillo, liberación fuera del botón y conservación de las órdenes sobre el mapa.
+- Regresiones en la misma ejecución: `ProductionQueuePreview.Render` (**48 comprobaciones, 16 vistas**), `HarvestingPreview.RenderHud` (**18 vistas y verificaciones de acciones/recolección**), `MenuFlowPreview.Render` (**46 comprobaciones, 12 vistas**) y `ActionWheelPreview.Render` (**148 comprobaciones, 18 vistas**).
+- Total: **376 comprobaciones enumeradas y 100 vistas estáticas**; etiquetas verificadas contra el alto disponible. Inspeccionadas ayuda del centro principal, combatiente biológico y tecnología con cola e investigación. Registro: `TestResults/unity-action-help.log`; vistas nuevas: `TestResults/ActionHelp`.
+- Scripts compilados con Unity **6000.3.26f1**, mediante Unity CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones de pruebas. APK, `ProjectSettings` y `Assets/XR` mantienen los **52 hashes** previos. No se cambió la simulación ni se construyó un jugador.
+
+Pendiente en Quest: comprobar legibilidad, comodidad de la demora y pulsaciones físicas de A/gatillo. Las pruebas usan rayos y tiempos controlados en el Editor. El APK existente **0.1.5** todavía no incluye estos cambios ni los atajos del commit anterior.
+
 ## Doble grip y atajos de la rueda — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Dos pulsaciones rápidas del grip derecho abren la rueda, además del joystick. Con la rueda abierta, gatillo/A ejecutan y grip/B retroceden o cierran. El grip sostenido sigue siendo Shift fuera de la rueda. La pulsación de apertura no cierra la rueda, sostener botones no repite acciones y se espera a soltarlos antes de devolver la entrada al mapa.

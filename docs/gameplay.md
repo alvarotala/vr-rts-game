@@ -46,6 +46,12 @@ La ficha de selección muestra el nombre de la unidad o edificio, su rol, facci�
 
 **ACTIONS** contiene únicamente las órdenes de la selección: construcción para trabajadores, órdenes militares para unidades y producción o investigación para edificios compatibles. **Cancel / refund** aparece mientras hay una construcción o cola que cancelar. Los edificios automáticos y las selecciones incompatibles muestran una explicación.
 
+Las acciones se agrupan con encabezados y colores: **BUILD STRUCTURES** en ámbar, **TRAIN UNITS** en verde, **RESEARCH** en violeta, **UNIT ORDERS** en azul y **CANCEL / REFUND** en coral. Construcción y órdenes de unidades ocupan filas separadas.
+
+Mantener el cursor sobre una acción durante **1,5 segundos** muestra su **FIELD GUIDE** en la tarjeta lateral: nombre, función del edificio o unidad, costo, tiempo y requisitos cuando corresponda. También explica órdenes, mejoras y cancelaciones. La ayuda reemplaza temporalmente la ficha de selección, sin tapar botones, recursos ni producción; desaparece al cambiar de acción, retirar el cursor, pulsar, cambiar la selección o salir del panel. Todo el texto del juego permanece en inglés.
+
+En los menús de Quest, **A funciona como el gatillo**: pulsar y soltar sobre un botón lo activa; soltar afuera cancela. Mantener A permite guardar grupos y arrastrar el menú. Si se usan ambos botones juntos, solo se ejecuta una acción. Las pulsaciones iniciadas en el menú se consumen allí, incluso si el cursor termina sobre el mapa.
+
 Al seleccionar un edificio productor terminado, **PRODUCTION QUEUE** muestra una tarjeta grande para la unidad o investigación activa, su barra de progreso, porcentaje y segundos restantes. A su derecha aparecen los cuatro lugares siguientes, numerados en orden de salida y con nombre/rol. El contador incluye el elemento activo; **5 / 5 · FULL** indica que no entran más órdenes. **Queue empty** permanece visible antes de producir para que los botones no cambien de posición al agregar unidades. **Cancel / refund** elimina el último elemento y devuelve su costo.
 
 Una producción terminada que aún no puede salir muestra **WAITING TO DEPLOY**, con **Needs more supply** si faltan lugares para las unidades existentes o **Clear the building exit** si la salida está bloqueada. Las pausas por seguimiento/visor muestran **PAUSED** y conservan el progreso. La sección también distingue investigaciones de unidades y se oculta al seleccionar unidades, varios edificios, construcciones incompletas o edificios sin producción.
@@ -58,7 +64,7 @@ Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden e
 
 En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste, el joystick derecho modifica tamaño/giro; sostener el grip derecho cambia el eje vertical a altura, sin alterar tamaño ni giro. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
 
-El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; mantener el grip derecho y pulsar el joystick derecho también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
+El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo o A y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; mantener el grip derecho y pulsar el joystick derecho también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
 
 En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](https://developers.meta.com/vr/documentation/unity/unity-boundaryless/) mientras el passthrough está activo. Permite caminar alrededor del tablero sin que el círculo estacionario interrumpa la experiencia cuando el sistema lo admite. El mapa permanece unido a su ancla espacial. La confirmación final depende de Horizon OS y debe hacerse con el APK instalado directamente en el visor.
 
@@ -66,7 +72,9 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 |---|---|---|
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
 | Agregar a selección | Mantener grip derecho (botón lateral) | Mantener Shift |
-| Orden contextual | A (con la rueda cerrada) | Clic derecho |
+| Activar botón del menú | Gatillo derecho o A; mantener para acciones largas | Clic izquierdo |
+| Ayuda de acciones | Hover durante 1,5 segundos | Hover durante 1,5 segundos |
+| Orden contextual | A sobre el mapa (con la rueda cerrada) | Clic derecho |
 | Abrir / cerrar rueda de acciones | Pulsar joystick derecho; doble grip también abre | — |
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
 | Ejecutar en la rueda | Gatillo derecho o A | — |
@@ -75,7 +83,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Desplazar mapa (solo escritorio) | — | WASD |
 | Zoom (solo escritorio) | — | Rueda |
 | Ver mapa completo (solo escritorio) | — | F |
-| Mover menú | Mantener gatillo sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
+| Mover menú | Mantener gatillo o A sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
 | Recuperar menú arriba del tablero | Grip derecho + pulsación del joystick derecho | M |
 | Pausa | B o panel | Espacio |
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |

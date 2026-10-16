@@ -24,7 +24,7 @@ namespace Frontier.Runtime
             gasValue=ResourceCard("GAS",356,GasTint,out var gasHint);gasHint.text="CATALYST";
             supplyValue=ResourceCard("SUPPLY / CAPACITY",712,SupplyTint,out supplyHint);
 
-            selectedCard=Section(matchHud,"Selected item",new Vector2(24,-178),new Vector2(320,234));
+            selectedCard=Section(matchHud,"Selected item",new Vector2(24,-178),new Vector2(320,296));
             selectedKind=Label(selectedCard,"SELECTION",new Vector2(16,-10),new Vector2(288,24),15,accent);
             // The large name is the shared selection label; navigation pages reuse it as their description.
             selectionRole=Label(selectedCard,"",new Vector2(16,-78),new Vector2(288,30),16,new Color(.72f,.82f,.87f));
@@ -32,8 +32,9 @@ namespace Frontier.Runtime
             healthFill=Section(bar,"Health",Vector2.zero,new Vector2(288,6),SupplyTint).GetComponent<Image>();
             selectionHealth=Label(selectedCard,"",new Vector2(16,-125),new Vector2(288,26),17,Color.white);
             selectionDetails=Label(selectedCard,"",new Vector2(16,-159),new Vector2(288,66),16,new Color(.72f,.82f,.87f),TextAnchor.UpperLeft);
+            Label(selectedCard,"Hover an action to learn more",new Vector2(16,-262),new Vector2(288,24),14,accent);
 
-            actionCard=Section(matchHud,"Selected item actions",new Vector2(360,-178),new Vector2(716,234));
+            actionCard=Section(matchHud,"Selected item actions",new Vector2(360,-178),new Vector2(716,296));
             actionHeading=Label(actionCard,"ACTIONS",new Vector2(16,-10),new Vector2(684,24),15,accent);
             actionHint=Label(actionCard,"",new Vector2(36,-66),new Vector2(644,122),22,new Color(.65f,.76f,.82f),TextAnchor.MiddleCenter);
             harvestingStrip=Section(matchHud,"Harvesting information",new Vector2(24,-422),new Vector2(1052,36));
@@ -78,8 +79,9 @@ namespace Frontier.Runtime
         {
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls;
             bool production=hud&&SelectedProducer()!=null;
-            float queueSpace=production?180:0;
+            float queueSpace=(production?180:0)+62;
             productionStrip.gameObject.SetActive(production);
+            productionStrip.anchoredPosition=new Vector2(24,-484);
             matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:526);matchHud.sizeDelta=root.sizeDelta;
             harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
             groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
@@ -95,7 +97,7 @@ namespace Frontier.Runtime
             TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425-queueSpace):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
             status.fontSize=hud?18:20;
             TopLeft(status.rectTransform,hud?new Vector2(24,-581-queueSpace):new Vector2(30,-473),hud?new Vector2(1052,40):new Vector2(1040,44));
-            TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,controls?-411:-240),hud?new Vector2(684,178):new Vector2(1040,controls?58:225));
+            TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,controls?-411:-240),hud?new Vector2(684,240):new Vector2(1040,controls?58:225));
         }
         private void UpdateMatchHud()
         {
@@ -169,14 +171,25 @@ namespace Frontier.Runtime
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
             var available=SelectionActions.For(Session);
             actionHint.text=available.Hint;actionHeading.text=available.Heading;
-            foreach(var action in available.Items)
-            {var captured=action;AddMatchAction(action.Title,action.Detail,()=>captured.Execute());}
+            float y=0;
+            foreach(var group in available.Items.GroupBy(a=>a.Category))
+            {
+                var tint=ActionTint(group.Key);
+                Label(actions,CategoryLabel(group.Key),new Vector2(8,-y),new Vector2(660,18),13,tint);
+                y+=18;int column=0;
+                foreach(var action in group)
+                {
+                    var captured=action;
+                    var target=HudButton(actions,action.Title,action.Detail,new Vector2(column*230,-y),new Vector2(218,54),()=>captured.Execute(),null,out _);
+                    target.normal=Color.Lerp(button,tint,.16f);target.image.color=target.normal;target.help=action;
+                    Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,54),tint);
+                    targets.Add(target);actionIndex++;
+                    if(++column==3){column=0;y+=60;}
+                }
+                if(column!=0)y+=60;
+                y+=2;
+            }
             actionHint.gameObject.SetActive(actionIndex==0);
-        }
-        private void AddMatchAction(string title,string detail,Action click)
-        {
-            int n=actionIndex++;
-            targets.Add(HudButton(actions,title,detail,new Vector2((n%3)*230,-(n/3)*62),new Vector2(218,54),click,null,out _));
         }
     }
 }

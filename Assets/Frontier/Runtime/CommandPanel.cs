@@ -36,7 +36,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; public SelectionAction help; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -45,7 +45,7 @@ namespace Frontier.Runtime
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
             root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
             var image=go.AddComponent<Image>();image.color=background;
-            moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold trigger and drag",out moveImage);
+            moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
             headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-84),new Vector2(1040,44),30,accent);
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
@@ -57,6 +57,7 @@ namespace Frontier.Runtime
             // Shared labels and action buttons sit above the HUD section backgrounds.
             foreach(var label in new[]{headline,economy,selection,harvesting,status})label.transform.SetAsLastSibling();
             actions.SetAsLastSibling();
+            CreateActionHelp();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -92,6 +93,7 @@ namespace Frontier.Runtime
             Board.SetVisible(ShowsBoard);
             string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.queue.Length)));
             if(state!=signature){signature=state;Rebuild();}
+            if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
             if(Page!=MenuPage.Actions){UpdateMenuText();return;}
             UpdateMatchHud();
@@ -160,7 +162,7 @@ namespace Frontier.Runtime
                 case MenuPage.Controls:
                     headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
                     selection.text=Quest.Active?
-                        "Right trigger: select / drag to select a group · Hold right grip: add to selection\nRight stick: press for action wheel · tilt to choose · Double-tap grip: open wheel\nIn wheel: Trigger / A executes · Grip / B goes back\nA: move, attack, gather or repair · B: cancel / back / pause\nGrip + right stick press: recall menu · Left controller: unassigned\nMOVE MENU: hold trigger and drag · Right stick: adjust distance\nBoard stays fixed after placement · Settings: reposition board\nDuring placement: right stick adjusts size / rotation · grip + stick adjusts height\nControl groups: press to recall / hold to save":
+                        "Right trigger: select / drag to select a group · Hold right grip: add to selection\nRight stick: press for action wheel · tilt to choose · Double-tap grip: open wheel\nIn menus: Trigger / A executes · In wheel: Grip / B goes back\nA: move, attack, gather or repair · B: cancel / back / pause\nGrip + right stick press: recall menu · Left controller: unassigned\nMOVE MENU: hold Trigger / A and drag · Right stick: adjust distance\nBoard stays fixed after placement · Settings: reposition board\nDuring placement: right stick adjusts size / rotation · grip + stick adjusts height\nControl groups: press to recall / hold to save":
                         "Left-click: select / drag to select a group · Shift: add to selection\nRight-click: move, attack, gather or repair\nEscape: cancel / back / pause · Space: pause / resume\nWASD: pan · Mouse wheel: zoom · F: full map\nM: recall menu · Drag MOVE MENU to reposition it\nWhile dragging the menu: mouse wheel adjusts distance\n1–3: recall group · Ctrl+1–3: save group";
                     status.text="Use Back to return to the previous menu.";break;
                 case MenuPage.Pause:
@@ -199,6 +201,7 @@ namespace Frontier.Runtime
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
+            HideActionHelp();
             LayoutPage();
             if(Page==MenuPage.Main)
             {
@@ -286,12 +289,13 @@ namespace Frontier.Runtime
             positionInitialized=true;
         }
         // Called on a controller shortcut even when the console has been moved out of view.
-        public void Recall(){moving=false;pressed=null;ResetPosition();Session.Announce("Menu reset above the board.");}
+        public void Recall(){moving=false;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset above the board.");}
         public void CancelPointerInteraction()
         {
             pressed=null;
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             hovered=null;
+            HideActionHelp();
         }
         private void FaceViewer()
         {
@@ -311,7 +315,7 @@ namespace Frontier.Runtime
         {
             if(focused)return;
             if(moving){moving=false;SavePosition();}
-            pressed=null;
+            CancelPointerInteraction();
         }
         private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
@@ -337,7 +341,7 @@ namespace Frontier.Runtime
             resetImage.color=onReset?new Color(.12f,.35f,.39f):button;
             if(down&&onMove)
             {
-                moving=true;pressed=null;grabDistance=distance;grabOffset=root.position-ray.GetPoint(distance);
+                CancelPointerInteraction();moving=true;grabDistance=distance;grabOffset=root.position-ray.GetPoint(distance);
                 return true;
             }
             if(down&&onReset){Recall();return true;}
@@ -346,10 +350,11 @@ namespace Frontier.Runtime
             {
                 if(Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;if(hovered!=null)hovered.image.color=new Color(.12f,.35f,.39f);}
-            if(down&&hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}
+            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=Color.Lerp(hovered.normal,Color.white,.2f);}
+            if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
+            UpdateActionHelp();
             if(up&&pressed!=null)
-            {var p=pressed;pressed=null;if(hit==p){if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
+            {var p=pressed;pressed=null;HideActionHelp();if(hit==p){if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
             // Empty areas also consume the ray, preventing orders through the panel.
             return pressed!=null||Hit(root,ray,out _);
         }
