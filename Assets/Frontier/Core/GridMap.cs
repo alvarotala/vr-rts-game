@@ -179,6 +179,34 @@ namespace Frontier.Core
             }
             return null;
         }
+        // One bounded search for a reachable passing place, rather than an A* for every
+        // candidate. The blocked traffic lane can be excluded by returning a negative cost.
+        public List<int> FindNearby(Point from, int distanceLimit, Func<int,bool> acceptable, Func<int,int> extraCost, float radius)
+        {
+            int start=map.Cell(from);if(start<0)return null;
+            search++;heap.Clear();visited[start]=search;cost[start]=0;previous[start]=-1;Push(start,0);
+            var settled=new HashSet<int>();
+            while(heap.Count>0)
+            {
+                int current=Pop();if(!settled.Add(current))continue;
+                if(current!=start&&acceptable(current))
+                {
+                    var route=new List<int>();
+                    while(current!=start){route.Add(current);current=previous[current];}
+                    route.Reverse();return route;
+                }
+                foreach(int next in map.Neighbors(current))
+                {
+                    if(Math.Abs(next%map.Width-start%map.Width)+Math.Abs(next/map.Width-start/map.Width)>distanceLimit
+                        ||!map.CanStand(map.Center(next),radius))continue;
+                    int penalty=extraCost(next);if(penalty<0)continue;
+                    int nextCost=cost[current]+10+penalty;
+                    if(visited[next]==search&&cost[next]<=nextCost)continue;
+                    visited[next]=search;cost[next]=nextCost;previous[next]=current;Push(next,nextCost);
+                }
+            }
+            return null;
+        }
         private void Push(int cell, int priority)
         {
             int i = heap.Count; var item = new HeapEntry(cell, priority); heap.Add(item);

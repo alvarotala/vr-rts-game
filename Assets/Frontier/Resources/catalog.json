@@ -35,7 +35,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 10,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1,
+      "acceleration": 18,
+      "deceleration": 26
     },
     {
       "id": "industrial.scout",
@@ -57,7 +60,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 14,
-      "collisionRadius": 0.34
+      "collisionRadius": 0.34,
+      "collisionMass": 0.8,
+      "acceleration": 30,
+      "deceleration": 40
     },
     {
       "id": "industrial.melee",
@@ -79,7 +85,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 9,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1.6,
+      "acceleration": 14,
+      "deceleration": 22
     },
     {
       "id": "industrial.ranged",
@@ -101,7 +110,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 11,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1.2,
+      "acceleration": 16,
+      "deceleration": 24
     },
     {
       "id": "industrial.siege",
@@ -123,7 +135,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 12,
-      "collisionRadius": 0.49
+      "collisionRadius": 0.49,
+      "collisionMass": 4,
+      "acceleration": 8,
+      "deceleration": 12
     },
     {
       "id": "industrial.hq",
@@ -271,7 +286,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 10,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1,
+      "acceleration": 18,
+      "deceleration": 26
     },
     {
       "id": "biological.scout",
@@ -293,7 +311,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 14,
-      "collisionRadius": 0.34
+      "collisionRadius": 0.34,
+      "collisionMass": 0.8,
+      "acceleration": 30,
+      "deceleration": 40
     },
     {
       "id": "biological.melee",
@@ -315,7 +336,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 9,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1.6,
+      "acceleration": 14,
+      "deceleration": 22
     },
     {
       "id": "biological.ranged",
@@ -337,7 +361,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 11,
-      "collisionRadius": 0.45
+      "collisionRadius": 0.45,
+      "collisionMass": 1.2,
+      "acceleration": 16,
+      "deceleration": 24
     },
     {
       "id": "biological.siege",
@@ -359,7 +386,10 @@
       "supply": 1,
       "capacity": 0,
       "vision": 12,
-      "collisionRadius": 0.49
+      "collisionRadius": 0.49,
+      "collisionMass": 4,
+      "acceleration": 8,
+      "deceleration": 12
     },
     {
       "id": "biological.hq",

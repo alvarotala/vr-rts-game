@@ -21,6 +21,7 @@ namespace Frontier.Runtime
         public event Action NewMatch;
         public event Action MatchClosed;
         public event Action<bool> Feedback;
+        public event Action<int, Point> UnitMoveOrdered;
         public string BuildDefinition { get; private set; }
         public bool AttackMoveMode;
         private Strategist bot;
@@ -136,9 +137,17 @@ namespace Frontier.Runtime
         public bool Send(CommandKind kind, string definition = null, int target = 0, Point position = default, int queueOrderId = 0)
         {
             if (Match == null) return false;
-            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=Selection.OrderBy(id=>id).ToArray() });
+            var selected = Selection.OrderBy(id=>id).ToArray();
+            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected });
             if (!result.accepted) Announce(result.message);
-            Feedback?.Invoke(result.accepted); View = Match.View(0); Changed?.Invoke(); return result.accepted;
+            Feedback?.Invoke(result.accepted); View = Match.View(0);
+            if(result.accepted&&(kind==CommandKind.Move||kind==CommandKind.AttackMove))
+                foreach(int id in selected)
+                    // Only local accepted movement intent is exposed to presentation. Use
+                    // the assigned formation slot; enemy destinations stay private.
+                    if(Match.Entities.TryGetValue(id,out var entity)&&entity.owner==0&&entity.order==kind)
+                        UnitMoveOrdered?.Invoke(id,entity.destination);
+            Changed?.Invoke(); return result.accepted;
         }
         private void OnApplicationFocus(bool focused) { if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
         private void OnApplicationPause(bool paused) { if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }

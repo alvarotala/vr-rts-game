@@ -23,6 +23,7 @@ namespace Frontier.Core
         private readonly int[] lastSequences = new int[2];
         private readonly int[] unitCells;
         private int nextId = 1;
+        private uint nextMovementOrder;
         // Per-player sequences keep gaps from revealing the other player's hidden production.
         private readonly int[] nextProductionOrderIds = { 1, 1 };
 
@@ -86,6 +87,8 @@ namespace Frontier.Core
             {
                 if (!Finite(command.position) || Map.Cell(command.position) < 0) return Reject("Destination outside the map.");
                 int accepted = 0;
+                long trafficPriority=((long)selected.Min(e=>e.id)<<32)|++nextMovementOrder;
+                float trafficMass=selected.Max(e=>Type(e).collisionMass);
                 int formationRadius=Math.Max(12,(int)Math.Ceiling(Math.Sqrt(selected.Count))*2);
                 var reserved = new HashSet<int>();
                 var selectedIds = new HashSet<int>(selected.Select(e=>e.id));
@@ -102,6 +105,8 @@ namespace Frontier.Core
                         var path = paths.Find(entity.position,destination,.1f,null,Type(entity).collisionRadius);
                         if(path==null)continue;
                         ResetTravel(entity);
+                        entity.trafficPriority=trafficPriority;
+                        entity.trafficMass=trafficMass;
                         entity.order=command.kind;entity.destination=destination;entity.target=0;
                         entity.moveGoal=command.kind==CommandKind.Move;
                         SetPath(entity,path,destination,.1f);
@@ -132,6 +137,7 @@ namespace Frontier.Core
             foreach (var entity in selected)
             {
                 ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
+                entity.braking=command.kind==CommandKind.Stop&&entity.velocity.Distance(default)>.01f;
                 if (command.kind == CommandKind.Repair && !Entities[command.target].complete) entity.order = CommandKind.Build;
             }
             return Accept();
@@ -219,13 +225,14 @@ namespace Frontier.Core
                 if (Catalog.Faction(type.faction).regenerates && Tick - e.lastDamageTick > 120) e.health = Math.Min(type.health, e.health + type.health * .00015f);
                 if (type.building) { AdvanceProduction(e); if (type.damage > 0) Fight(e, false); continue; }
                 if(e.yieldUntil>Tick){Travel(e,e.position,0);continue;}
+                if(e.braking){Brake(e);continue;}
                 if(e.order==CommandKind.Move&&Tick<e.resumeMoveTick)continue;
                 switch (e.order)
                 {
                     case CommandKind.Build: Construct(e); break;
                     case CommandKind.Gather: Gather(e); break;
                     case CommandKind.Repair: Repair(e); break;
-                    case CommandKind.Move: if (Travel(e, e.destination, .1f)) e.order = CommandKind.Stop; break;
+                    case CommandKind.Move: if (Travel(e, e.destination, .1f)) {e.order = CommandKind.Stop;e.settled=true;} break;
                     case CommandKind.Attack: Attack(e); break;
                     case CommandKind.AttackMove: if (!Fight(e, true) && Travel(e, e.destination, .1f)) e.order = CommandKind.Stop; break;
                     default: if (type.role != "worker") Fight(e, e.order != CommandKind.Hold); break;

@@ -4,6 +4,29 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Movimiento, masa, inercia y orientación — fuentes, sin APK — 16 de octubre de 2026
+
+MOVE sustituye la ruta y las maniobras automáticas de cesión inmediatamente; la presentación empieza a girar ese mismo cuadro y el cuerpo responde desde el siguiente paso de simulación, conservando inercia. Cada tipo tiene masa, aceleración y desaceleración. STOP frena y HOLD POSITION ancla. El frenado también se aplica al llegar, al dar un MOVE dentro de la celda actual y al entrar en rango de ataque; después de frenar se revalida alcance y visión antes de disparar. Los giros visuales siguen las posiciones de simulación, filtran pequeñas correcciones y no vuelven al rumbo antiguo durante una reversa.
+
+La navegación adelanta los puntos del camino cuando hay paso libre, conserva tramos rectos y desliza la componente libre contra el terreno. Los lotes de órdenes tienen identidades independientes. Los apartaderos se eligen fuera de la ruta que deben liberar; una cesión termina si el flujo dejó de viajar. Los aliados ya apartados aceptan empujes seguros sin rebotar hacia su punto anterior. Los empujes respetan masa, Hold, terreno, cuerpos y presupuesto de velocidad.
+
+- **415 comprobaciones aprobadas** con `bash scripts/check-core.sh --matches --count=4`: 411 de reglas y regresiones más cuatro partidas IA completas. Incluye 52 comprobaciones nuevas de tráfico, 56 de colisión/inercia/micro y 60 de frenado en combate. Registro: `TestResults/pathfinding-core.log`.
+- Las cuatro partidas Normal contra Normal cubren todos los cruces de facciones. Terminan en **1336, 1060, 1048 y 1047 segundos simulados**, sin violar límites de economía o población. Resultados: `TestResults/matches.json`. No se usan como prueba de balance humano.
+- `UnitFacingPreview.Render`: **24 comprobaciones** en Unity **6000.3.26f1**, CLI **1.0.0-beta.13**. Giro antes del primer tick, reversa con inercia, filtrado de zigzag, curvas reales, pausa, reutilización de modelos, combate y órdenes aceptadas/rechazadas. Compilación de scripts correcta; registro: `TestResults/unity-movement.log`.
+- `ProjectSettings`, `Assets/XR` y los APK existentes conservan los **54 hashes** de la línea base `TestResults/movement-baseline.json`. No se generó APK ni ejecutable desktop.
+
+Comparación de escenarios de tráfico, en segundos simulados hasta que todas las unidades llegan:
+
+| Escenario | Industrial antes → después | Biológica antes → después |
+|---|---:|---:|
+| Dos grupos de 15, corredor de una celda | No termina en 120 → 62,85 | No termina en 120 → 55,20 |
+| Dos grupos de 15, corredor de dos celdas | 82,00 → 35,45 | 78,05 → 31,15 |
+| Cruce perpendicular, 40 unidades | 34,95 → 24,60 | 30,95 → 20,95 |
+
+Limitación observada: una reselección de 31 unidades biológicas con flujos opuestos en un corredor de una celda tarda **112,85 segundos** en completar todos los destinos. Hay congestión local en la entrada; finalmente llega todo el grupo sin solapamientos ni pérdida de órdenes. No se afirma ausencia de congestión en cualquier disposición de cuerpos. Los tiempos anteriores comparan la simulación previa con la nueva, que ahora incluye aceleración y frenado.
+
+Pendiente: comprobar sensación de micro, comodidad visual y rendimiento térmico en Quest 3. Las pruebas de Editor y simulación no certifican FPS en el visor. Parámetros y decisiones: [movimiento](movement.md).
+
 ## Cancelación individual de producción con hover rojo — fuentes, sin APK — 15 de octubre de 2026
 
 Cada tarjeta ocupada de la cola, incluida la producción activa, admite cancelación directa con A/gatillo/mouse, sin confirmación. Al apuntarla se vuelve roja y muestra **Cancel + refund**. Devuelve el costo completo, libera suministro reservado y mantiene los demás pedidos en orden. Los pedidos tienen identidad estable por jugador; terminar o sustituir un elemento mientras se pulsa no cancela otra unidad. Los lugares vacíos permanecen inactivos y el botón general **Cancel / refund** conserva su comportamiento de cancelar el último pedido.

@@ -24,6 +24,7 @@ namespace Frontier.Runtime
         private readonly Dictionary<int, Renderer> resourceRenderers = new Dictionary<int, Renderer>();
         private readonly Dictionary<string, Stack<Transform>> pools = new Dictionary<string, Stack<Transform>>();
         private readonly Dictionary<int,string> entityTypes = new Dictionary<int,string>();
+        private readonly Dictionary<int,Point> pendingMoveFacing = new Dictionary<int,Point>();
         private readonly Dictionary<Transform, VisualParts> parts = new Dictionary<Transform, VisualParts>();
         private readonly HashSet<int> alive = new HashSet<int>();
         private readonly List<int> removed = new List<int>();
@@ -35,6 +36,7 @@ namespace Frontier.Runtime
             public Material[] visibleMaterials;
             public bool remembered, hovered, receivingDamage;
             public float damageAmount;
+            public readonly UnitFacing facing = new UnitFacing();
         }
         private Material ground, blue, red, neutral, resourceMaterial, highlight;
         private Material unitStructure, impactMaterial;
@@ -75,11 +77,11 @@ namespace Frontier.Runtime
             foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
             foreach(string role in new[]{"hq","barracks","extractor","supply","tech","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
             memoryMaterials=new[]{neutral,unitStructure,neutral};
-            Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Rebuild();
+            Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Session.UnitMoveOrdered += FaceMoveOrder; Rebuild();
         }
         private void OnDestroy()
         {
-            if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;}
+            if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;Session.UnitMoveOrdered-=FaceMoveOrder;}
             unitVisuals.Dispose();
             buildingVisuals.Dispose();
             resourceVisuals.Dispose();
@@ -102,7 +104,7 @@ namespace Frontier.Runtime
             resourceVisuals.ClearVapor();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
-            entities.Clear();entityTypes.Clear();resources.Clear();resourceRenderers.Clear();pools.Clear();parts.Clear();preview=null;
+            entities.Clear();entityTypes.Clear();pendingMoveFacing.Clear();resources.Clear();resourceRenderers.Clear();pools.Clear();parts.Clear();preview=null;
             Hovered=0;Pointer=null;ground.SetFloat("_HoverWidth",0);
             DrawSelection(default,default,false);
             Release(fog);
@@ -144,6 +146,7 @@ namespace Frontier.Runtime
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
+        private void FaceMoveOrder(int id,Point destination) => pendingMoveFacing[id]=destination;
         public void SetVisible(bool visible)
         {
             if(Content==null)return;
@@ -193,17 +196,32 @@ namespace Frontier.Runtime
                 }
                 var point=e.position;float half=type.building?type.footprint*.5f:0;
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
-                Vector3 direction=target-visual.localPosition;direction.y=0;
-                if(!type.building&&direction.sqrMagnitude>.01f)visual.localRotation=Quaternion.Slerp(visual.localRotation,Quaternion.LookRotation(direction),Time.unscaledDeltaTime*12);
+                var cached=parts[visual];
+                Vector3? aim=null;
                 if((!type.building||type.role=="defense")&&!e.remembered&&firing.TryGetValue(e.id,out var shot))
                 {
-                    var aim=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y);
-                    if(aim.sqrMagnitude>.001f)visual.localRotation=Quaternion.LookRotation(aim);
+                    var direction=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y);
+                    if(direction.sqrMagnitude>.001f)aim=direction;
                 }
+                if(!type.building)
+                {
+                    // A previous shot can remain in the effects history after a new MOVE.
+                    if(e.owner==Session.View.player&&e.order==CommandKind.Move)aim=null;
+                    if(newlyVisible)
+                        cached.facing.Reset(target,aim.HasValue?Quaternion.LookRotation(aim.Value):Quaternion.identity,Session.View.tick);
+                    if(pendingMoveFacing.TryGetValue(e.id,out var moveTarget))
+                    {
+                        if(e.order==CommandKind.Move||e.order==CommandKind.AttackMove)
+                            cached.facing.FaceDestination(target,new Vector3(moveTarget.x,target.y,moveTarget.y));
+                        pendingMoveFacing.Remove(e.id);
+                    }
+                    visual.localRotation=cached.facing.Step(target,Session.View.tick,Time.unscaledDeltaTime,Session.IsPaused,aim);
+                }
+                else if(aim.HasValue)visual.localRotation=Quaternion.LookRotation(aim.Value);
                 visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
                 bool hovered=Hovered==e.id&&!e.remembered;
-                var cached=parts[visual];cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id));
+                cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id));
                 int damageAge=Session.View.tick-e.damageTick;
                 bool receivingDamage=!e.remembered&&e.damageTick>=0&&damageAge>=0&&damageAge<12;
                 float damageAmount=receivingDamage?Mathf.Clamp01(1-damageAge/4f)*.9f:0;
@@ -243,7 +261,7 @@ namespace Frontier.Runtime
                 }
             }
             removed.Clear();foreach(int id in entities.Keys)if(!alive.Contains(id))removed.Add(id);
-            foreach(int id in removed) { var v=entities[id];v.gameObject.SetActive(false);pools[entityTypes[id]].Push(v);entities.Remove(id);entityTypes.Remove(id); }
+            foreach(int id in removed) { var v=entities[id];v.gameObject.SetActive(false);pools[entityTypes[id]].Push(v);entities.Remove(id);entityTypes.Remove(id);pendingMoveFacing.Remove(id); }
             foreach(var resource in Session.View.resources)
             {
                 if(!resources.TryGetValue(resource.id,out var visual))

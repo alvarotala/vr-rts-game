@@ -33,6 +33,17 @@ Las comprobaciones de dificultad cubren reacción, límites con reservas, ritmo 
 
 Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
 
+`PathfindingChecks` añade grupos mixtos por corredores largos, selecciones solapadas, unidades estacionadas junto a una salida y convoyes de distintas velocidades. `CollisionChecks` comprueba masa, empujes, aceleración, frenado, Hold y nuevas órdenes durante una cesión. Parámetros y decisiones: [movimiento](movement.md).
+
+`CombatMotionChecks` verifica frenado en Attack, Attack Move y persecución automática, continuidad durante cooldown, alcance/visión después de frenar y excepciones de Hold y torres.
+
+Para comprobar el giro visual sin generar un ejecutable:
+
+```sh
+unity run . --log-file TestResults/unity-movement.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.UnitFacingPreview.Render
+```
+
 `ProductionChecks` verifica cancelación por identidad del pedido, reembolso de minerales/gas, liberación de suministro, duplicados, avance de la cola, investigación, propiedad, pausa y órdenes obsoletas. Para comprobar además las tarjetas reales, hover rojo y entrada por A/gatillo sin generar un ejecutable:
 
 ```sh

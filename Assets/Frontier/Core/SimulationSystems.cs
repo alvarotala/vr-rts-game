@@ -107,6 +107,15 @@ namespace Frontier.Core
             var type = Type(unit); float range = type.range + (Type(target).building ? Type(target).footprint * .4f : 0);
             if (Center(unit).Distance(Center(target)) > range || !Map.HasLineOfSight(Center(unit), Center(target)))
             { if (pursue && !type.building) Travel(unit, Center(target), range * .85f); return; }
+            // Entering weapon range does not erase the momentum accumulated while
+            // approaching. Brake during the cooldown too; Hold stays anchored.
+            if(!type.building&&unit.order!=CommandKind.Hold&&unit.velocity.Distance(default)>.001f)
+            {
+                Brake(unit);
+                // Residual motion can carry us out of range or behind terrain before
+                // this tick's shot. Do not fire using the pre-braking position.
+                if(Center(unit).Distance(Center(target))>range||!Map.HasLineOfSight(Center(unit),Center(target)))return;
+            }
             if (Tick < unit.attackReadyTick) return;
             float damage = Math.Max(1, type.damage * (1 + Players[unit.owner].attackLevel * .2f) - Players[target.owner].armorLevel * 2);
             target.health -= damage; target.lastDamageTick = Tick; unit.attackReadyTick = Tick + type.attackPeriod;

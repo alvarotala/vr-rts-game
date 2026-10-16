@@ -64,6 +64,8 @@ Una producción terminada que aún no puede salir muestra **WAITING TO DEPLOY**,
 
 Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Hold Position** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
 
+Las unidades pesadas tienen prioridad frente a las livianas. MOVE responde desde el siguiente paso de simulación y empieza a orientar el modelo inmediatamente, conservando inercia: cada tipo acelera, frena y cambia de dirección a su ritmo. **Stop** frena; **Hold Position** ancla la unidad. Una nueva orden reemplaza cualquier maniobra automática para ceder el paso.
+
 En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste, el joystick derecho modifica tamaño/giro; sostener el grip derecho cambia el eje vertical a altura, sin alterar tamaño ni giro. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
 
 El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo o A y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; mantener el grip derecho y pulsar el joystick derecho también lo recupera si quedó fuera de vista (tecla **M** en escritorio).

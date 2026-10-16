@@ -50,6 +50,7 @@ namespace Frontier.Core
         public int minerals, catalyst, duration, footprint = 1, supply, capacity;
         public float health, speed, damage, range, vision = 9;
         public float collisionRadius = .45f;
+        public float collisionMass = 1, acceleration = 16, deceleration = 24;
         public int attackPeriod = 20;
     }
     [Serializable] public sealed class FactionDefinition
@@ -88,7 +89,8 @@ namespace Frontier.Core
             {
                 if (type == null || string.IsNullOrWhiteSpace(type.id) || types.ContainsKey(type.id) || type.faction == null || !factions.ContainsKey(type.faction)
                     || !Positive(type.health) || !Nonnegative(type.speed) || !Nonnegative(type.damage) || !Nonnegative(type.range) || !Positive(type.vision)
-                    || (!type.building && (!Positive(type.collisionRadius) || type.collisionRadius > .49f))
+                    || (!type.building && (!Positive(type.collisionRadius) || type.collisionRadius > .49f
+                        || !Positive(type.collisionMass) || !Positive(type.acceleration) || !Positive(type.deceleration)))
                     || type.duration < 1 || type.attackPeriod < 1 || type.footprint < 1 || type.footprint > 8 || type.minerals < 0 || type.catalyst < 0 || type.capacity < 0)
                     throw new ArgumentException("Invalid definition: " + type?.id);
                 types.Add(type.id, type);
@@ -176,7 +178,11 @@ namespace Frontier.Core
         [NonSerialized] internal float pathRange;
         [NonSerialized] internal float progressDistance = float.MaxValue;
         [NonSerialized] internal int repathAt, yieldUntil, yieldFor;
-        [NonSerialized] internal bool moveGoal;
+        [NonSerialized] internal int yieldSearchAt, yieldDeadline;
+        [NonSerialized] internal long trafficPriority, yieldPriority;
+        [NonSerialized] internal float trafficMass;
+        [NonSerialized] internal Point yieldOrigin, yieldDirection;
+        [NonSerialized] internal bool moveGoal, settled, braking;
         [NonSerialized] internal int resumeMoveTick;
         [NonSerialized] internal bool depositing;
     }

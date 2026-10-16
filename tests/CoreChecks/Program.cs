@@ -167,6 +167,9 @@ for(int i=0;i<1000;i++)s.Step();
 Check(unfinished.complete,"resumed construction completes");
 
 NavigationChecks.Run(catalog,map,Check);
+PathfindingChecks.Run(catalog,Check);
+CollisionChecks.Run(catalog,Check);
+CombatMotionChecks.Run(catalog,Check);
 ProductionChecks.Run(catalog,map,Check);
 HarvestingChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
