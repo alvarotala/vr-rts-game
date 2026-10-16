@@ -158,3 +158,13 @@ Guardar registros, capturas e informes locales en `TestResults/` y los ejecutabl
 ## Próximas etapas
 
 El multijugador por internet y el editor de computadora son etapas posteriores. El núcleo ya separa órdenes, estado autoritativo, información visible y colocación física. No se han conectado servicios de Relay ni creado cuentas de infraestructura. Los criterios de integración están en [arquitectura](architecture.md).
+
+## Rueda contextual Touch
+
+Para comprobar el enrutamiento de entrada y renderizar las ruedas de ambas facciones sin generar un ejecutable:
+
+```sh
+unity run . --log-file TestResults/unity-action-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ActionWheelPreview.Render
+```
+
+La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba la selección del sector, zona neutra, submenú Build, producción, investigación, costos, cancelación, rechazo, cambios de selección/cola, interrupciones y liberación del gatillo. Guarda las vistas en `TestResults/ActionWheel/`. El panel comparte `SelectionActions`; `ProductionQueuePreview.Render` verifica las acciones de la consola y ejecuta las regresiones de HUD y menús. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.

@@ -102,7 +102,7 @@ namespace Frontier.Runtime
             placementParent=Board.transform.parent;placementPosition=Board.transform.position;placementRotation=Board.transform.rotation;
             placementWidth=Board.Width;wasPlaced=Board.Placed;
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
-            Session.Announce("Trigger: place · B/Y: cancel · Off-hand stick: height · Main stick: size/rotate");
+            Session.Announce("Right trigger: place · B: cancel · Right stick: size/rotate · Grip + stick: height");
         }
         public void CancelPlacement()
         {
@@ -111,12 +111,12 @@ namespace Frontier.Runtime
             Board.transform.SetPositionAndRotation(placementPosition,placementRotation);Board.Width=placementWidth;Board.Placed=wasPlaced;
             Session.Pause("placement",false);Session.Announce(wasPlaced?"Previous board placement kept.":"Place the board before starting a match.");
         }
-        public void PlaceRay(Ray ray,Vector2 left,Vector2 right,bool confirm)
+        public void PlaceRay(Ray ray,float height,Vector2 sizeRotate,bool confirm)
         {
             if(!Placing)return;
-            manualHeight=Mathf.Clamp(manualHeight+left.y*Time.unscaledDeltaTime*.3f,0,1.5f);
-            Board.Width=Mathf.Clamp(Board.Width+right.y*Time.unscaledDeltaTime*.5f,.6f,2);
-            Board.transform.Rotate(Vector3.up,right.x*Time.unscaledDeltaTime*45,Space.World);
+            manualHeight=Mathf.Clamp(manualHeight+height*Time.unscaledDeltaTime*.3f,0,1.5f);
+            Board.Width=Mathf.Clamp(Board.Width+sizeRotate.y*Time.unscaledDeltaTime*.5f,.6f,2);
+            Board.transform.Rotate(Vector3.up,sizeRotate.x*Time.unscaledDeltaTime*45,Space.World);
             bool hit=false;Vector3 point=default;
             var room=mruk==null?null:mruk.GetCurrentRoom();
             if(useScene&&room!=null&&room.Raycast(ray,5,new LabelFilter(MRUKAnchor.SceneLabels.TABLE|MRUKAnchor.SceneLabels.FLOOR),out var surface,out _)&&Vector3.Dot(surface.normal,Vector3.up)>.9f){point=surface.point;hit=true;}
@@ -125,9 +125,9 @@ namespace Frontier.Runtime
             Board.transform.position=point+Vector3.up*.005f;
             if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");}
         }
-        public Ray PointerRay(bool left)
+        public Ray PointerRay()
         {
-            var controller=left?OVRInput.Controller.LTouch:OVRInput.Controller.RTouch;
+            const OVRInput.Controller controller=OVRInput.Controller.RTouch;
             return new Ray(TrackingSpace.TransformPoint(OVRInput.GetLocalControllerPosition(controller)),TrackingSpace.TransformDirection(OVRInput.GetLocalControllerRotation(controller)*Vector3.forward));
         }
         private async void SaveAnchor()

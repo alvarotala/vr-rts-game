@@ -14,7 +14,8 @@ namespace Frontier.Runtime
             var board=new GameObject("Physical board").AddComponent<BoardView>();board.Session=session;
             var quest=new GameObject("Platform adapter").AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
             var panel=new GameObject("Interface").AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;
-            var input=new GameObject("Commander input").AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;
+            var wheel=new GameObject("Controller actions").AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;
+            var input=new GameObject("Commander input").AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;input.Wheel=wheel;
             session.gameObject.AddComponent<AudioFeedback>().Session=session;
             session.gameObject.AddComponent<FrameMetrics>().Session=session;
             var light=new GameObject("Light").AddComponent<Light>();light.type=LightType.Directional;light.transform.rotation=Quaternion.Euler(50,-30,0);light.intensity=.8f;light.shadows=LightShadows.None;

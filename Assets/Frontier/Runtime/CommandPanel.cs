@@ -23,6 +23,7 @@ namespace Frontier.Runtime
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
+        public bool IsDragging => moving;
         private MenuPage returnPage=MenuPage.Main;
         private int actionIndex;
         private Target pressed, hovered;
@@ -152,12 +153,11 @@ namespace Frontier.Runtime
                     if(Session.Difficulty=="very-easy")harvesting.text+=" · Small waves after 18 min; defends its base.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
-                    selection.text="Choose your dominant hand and adjust the board's position in your room.";break;
+                    selection.text="Right controller only. Adjust the board's position in your room.";break;
                 case MenuPage.Controls:
                     headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
-                    string order=Session.LeftHanded?"X":"A",cancel=Session.LeftHanded?"Y":"B";
                     selection.text=Quest.Active?
-                        $"Main trigger: select a unit / drag to select a group\nHold right grip: add to selection\n{order}: move, attack, gather or repair · {cancel}: cancel / back / pause\nBoard stays fixed after placement · Settings: reposition board\nPress off-hand stick: recall menu\nMOVE MENU: hold trigger and drag · Main stick: adjust distance\nControl groups: press to recall / hold to save\nMenu button: pause / resume":
+                        "Right trigger: select / drag to select a group · Hold right grip: add to selection\nRight stick: press for action wheel · tilt to choose · A executes · B goes back\nA: move, attack, gather or repair · B: cancel / back / pause\nGrip + right stick press: recall menu · Left controller: unassigned\nMOVE MENU: hold trigger and drag · Right stick: adjust distance\nBoard stays fixed after placement · Settings: reposition board\nDuring placement: right stick adjusts size / rotation · grip + stick adjusts height\nControl groups: press to recall / hold to save":
                         "Left-click: select / drag to select a group · Shift: add to selection\nRight-click: move, attack, gather or repair\nEscape: cancel / back / pause · Space: pause / resume\nWASD: pan · Mouse wheel: zoom · F: full map\nM: recall menu · Drag MOVE MENU to reposition it\nWhile dragging the menu: mouse wheel adjusts distance\n1–3: recall group · Ctrl+1–3: save group";
                     status.text="Use Back to return to the previous menu.";break;
                 case MenuPage.Pause:
@@ -218,7 +218,6 @@ namespace Frontier.Runtime
             }
             if(Page==MenuPage.Settings)
             {
-                Add("Hand: "+(Session.LeftHanded?"Left":"Right"),()=>{Session.SetLeftHanded(!Session.LeftHanded);Rebuild();});
                 Add("Reposition board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
@@ -285,6 +284,12 @@ namespace Frontier.Runtime
         }
         // Called on a controller shortcut even when the console has been moved out of view.
         public void Recall(){moving=false;pressed=null;ResetPosition();Session.Announce("Menu reset above the board.");}
+        public void CancelPointerInteraction()
+        {
+            pressed=null;
+            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
+            hovered=null;
+        }
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -308,7 +313,6 @@ namespace Frontier.Runtime
         private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
-        private static string Cost(int m,int c)=>c>0?$"{m} M / {c} G":$"{m} M";
         private string DifficultyLabel=>Session.Difficulty=="very-easy"?"Very Easy":Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
         public bool Point(Ray ray,bool down,bool up,float depth=0)

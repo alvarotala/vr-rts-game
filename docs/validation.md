@@ -4,6 +4,19 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Rueda contextual en mando derecho — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+La pulsación del joystick derecho abre la rueda junto al mando; sus ejes eligen una acción, **A ejecuta** y **B vuelve/cierra**. Se conservan el gatillo para seleccionar/indicar destinos y el grip para selección aditiva. El mando izquierdo queda sin funciones del juego, incluida la antigua opción de mano dominante. Colocación y recuperación de consola también usan combinaciones del mando derecho. La rueda y el panel comparten las mismas acciones validadas.
+
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.13**; compilación de scripts correcta. `ActionWheelPreview.Render`: **102 comprobaciones y 18 vistas** de ambas facciones, usando cuadros sintéticos de entrada en el enrutador real. Cubre A/B, gatillo sin ejecución, submenús, zona neutra, producción/investigación/costos/reembolso, rechazo con motivo visible, cambios de cola/selección, pausa/seguimiento/foco, colocación, unidad perdida, partida reemplazada y resultado. Registro: `TestResults/unity-action-wheel.log`.
+- Regresión de consola: **48 comprobaciones de producción / 16 vistas**, **45 comprobaciones de menús / 12 vistas**, y HUD de recolección con **18 vistas**. Registro: `TestResults/unity-wheel-regression.log`. Los controles Touch describen el mando derecho y el izquierdo sin asignación; la configuración ya no ofrece invertir la mano.
+- **33 comprobaciones de selección / 6 vistas**, incluidos bordes, áreas, selección aditiva y aislamiento de órdenes: `TestResults/unity-wheel-selection.log`.
+- Inspeccionadas las vistas de trabajador, soldado, construcción y rechazo de acciones de `TestResults/ActionWheel/`, además de `TestResults/Menus/04-controls-touch.png`. El render de sectores incluye `CanvasRenderer`; texto oscuro en la opción resaltada mejora el contraste. La ayuda de la rueda indica A/B en una línea.
+- Verificadas las asignaciones en el SDK local: `PrimaryThumbstick`, `PrimaryIndexTrigger`, `PrimaryHandTrigger`, `One` y `Two` sobre `RTouch` corresponden al joystick, gatillo, grip, A y B derechos. La entrada del juego no consulta `LTouch` ni el botón de menú izquierdo.
+- Sin cambios en el núcleo de simulación. Sin APK ni ejecutable desktop nuevo: los **52 archivos** de la línea base de `ProjectSettings`, `Assets/XR` y APK conservan su hash. El APK disponible sigue siendo **0.1.4** y no contiene estos cambios.
+
+Pendiente en Quest: distancia/tamaño de la rueda junto al mando, legibilidad sobre passthrough, dirección de selección con el joystick físico, uso de A/B con una sola mano, colocación con grip + joystick y comprobación de que el mando izquierdo no dispara acciones. Las pruebas del Editor no sustituyen esa validación.
+
 ## Grip derecho como Shift — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 La selección aditiva cambia del gatillo secundario al **grip físico derecho**, incluso al usar el modo zurdo. Se lee mientras está sostenido y se aplica tanto a clics como a selección por área. Se conserva el comportamiento existente: sumar unidades, quitar una unidad ya seleccionada al pulsarla con el modificador y reemplazar la selección al seleccionar sin él. La ayuda Touch ahora muestra **Hold right grip: add to selection**; desktop conserva Shift.

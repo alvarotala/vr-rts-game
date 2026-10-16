@@ -22,7 +22,6 @@ namespace Frontier.Editor
         public static void Render()
         {
             Directory.CreateDirectory("TestResults/Menus");
-            bool hadHand=PlayerPrefs.HasKey("frontier.leftHanded");int savedHand=PlayerPrefs.GetInt("frontier.leftHanded",0);
             var preview=new PreviewRenderUtility();var fixture=new GameObject("Menu flow fixture");var console=new GameObject("Menu flow console");
             int checks=0,captures=0;
             try
@@ -40,16 +39,16 @@ namespace Frontier.Editor
                 Check(Has("New Match")&&Has("Settings")&&Has("Controls")&&!Has("START MATCH"),"Main menu has dedicated navigation");
                 Capture("01-main");
                 Click("Settings");Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Settings work before a match without creating a pause");
-                bool previousHand=session.LeftHanded;Click("Hand: "+(previousHand?"Left":"Right"));
-                Check(session.LeftHanded!=previousHand,"Settings update the dominant hand");Capture("02-settings");
+                Check(!Has("Hand: Left")&&!Has("Hand: Right")&&Field<Text>(panel,"selection").text.Contains("Right controller only"),"Settings describe right-only input without an obsolete handedness toggle");Capture("02-settings");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Settings return to main menu");
                 Click("Controls");Capture("03-controls-desktop");
                 Check(Field<Text>(panel,"selection").text.Contains("Escape"),"Desktop controls are shown");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
-                Check(Field<Text>(panel,"selection").text.Contains(session.LeftHanded?"X: move":"A: move")&&Field<Text>(panel,"selection").text.Contains("Hold right grip: add to selection"),"Touch controls match the dominant hand and retain the right grip modifier");
+                Check(Field<Text>(panel,"selection").text.Contains("A: move")&&Field<Text>(panel,"selection").text.Contains("Hold right grip: add to selection"),"Touch controls use A and retain the right grip modifier");
                 var touchControls=Field<Text>(panel,"selection").text;
                 Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
-                Check(touchControls.Contains("Main stick: adjust distance")&&touchControls.Contains("recall menu"),"Touch menu movement and recall remain documented");
+                Check(touchControls.Contains("Right stick: adjust distance")&&touchControls.Contains("Grip + right stick press: recall menu"),"Touch menu movement and recall remain documented");
+                Check(touchControls.Contains("Right stick: press for action wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
@@ -124,7 +123,6 @@ namespace Frontier.Editor
             finally
             {
                 Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();
-                if(hadHand)PlayerPrefs.SetInt("frontier.leftHanded",savedHand);else PlayerPrefs.DeleteKey("frontier.leftHanded");PlayerPrefs.Save();
             }
         }
     }

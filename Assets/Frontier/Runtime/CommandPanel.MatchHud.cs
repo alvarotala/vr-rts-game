@@ -167,33 +167,10 @@ namespace Frontier.Runtime
         private void BuildMatchActions()
         {
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
-            actionHint.text="Select your units or a building to view its available actions.";actionHeading.text="ACTIONS";
-            var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            if(selected.Length==1&&Session.Catalog[selected[0].definition].building)
-            {
-                var entity=selected[0];string role=Session.Catalog[entity.definition].role;
-                actionHeading.text=!entity.complete?"CONSTRUCTION":role=="tech"?"TRAIN & RESEARCH":"BUILDING ACTIONS";
-                if(entity.complete)
-                {
-                    foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&!t.building&&t.producer==role))
-                    {var captured=type;AddMatchAction("Train "+type.name,UnitVisuals.RoleName(type.role)+" · "+Cost(type.minerals,type.catalyst),()=>Session.Send(CommandKind.Train,captured.id));}
-                    if(role=="tech")foreach(var upgrade in Session.Catalog.Definition.upgrades)
-                    {var captured=upgrade;AddMatchAction(upgrade.name,"Research · "+Cost(upgrade.minerals,upgrade.catalyst),()=>Session.Send(CommandKind.Research,captured.id));}
-                }
-                if(!entity.complete||entity.queue.Length>0)AddMatchAction("Cancel / refund",entity.complete?"Last queued item":"Cancel construction",()=>Session.Send(CommandKind.Cancel));
-                if(actionIndex==0)actionHint.text="This building operates automatically.";
-            }
-            else if(selected.Length>0&&selected.All(e=>!Session.Catalog[e.definition].building))
-            {
-                bool workers=selected.All(e=>Session.Catalog[e.definition].role=="worker");
-                actionHeading.text=workers?"BUILD & UNIT ORDERS":"UNIT ORDERS";
-                if(workers)foreach(var type in Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction&&t.building))
-                {var captured=type;AddMatchAction("Build "+type.name,Cost(type.minerals,type.catalyst),()=>Session.ChooseBuild(captured.id));}
-                AddMatchAction("Attack Move","Choose a destination",()=>{Session.AttackMoveMode=true;Session.Announce("Confirm the attack destination.");});
-                AddMatchAction("Stop","Cancel current orders",()=>Session.Send(CommandKind.Stop));
-                AddMatchAction("Hold Position","Defend this position",()=>Session.Send(CommandKind.Hold));
-            }
-            else if(selected.Length>0)actionHint.text="Select mobile units or a single building to give orders.";
+            var available=SelectionActions.For(Session);
+            actionHint.text=available.Hint;actionHeading.text=available.Heading;
+            foreach(var action in available.Items)
+            {var captured=action;AddMatchAction(action.Title,action.Detail,()=>captured.Execute());}
             actionHint.gameObject.SetActive(actionIndex==0);
         }
         private void AddMatchAction(string title,string detail,Action click)

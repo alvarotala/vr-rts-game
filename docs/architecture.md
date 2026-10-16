@@ -22,9 +22,9 @@ La selección puede extenderse fuera del tablero mediante `RayToSelectionPlane`,
 
 `CommanderInput` convierte mandos o mouse en selección y órdenes. `CommandPanel` comparte sus acciones entre escritorio y Quest. `QuestBridge` encapsula passthrough, permisos, superficies, colocación, anclas y eventos de seguimiento.
 
-La selección aditiva en Quest lee `OVRInput.Button.PrimaryHandTrigger` sobre `Controller.RTouch`, que el SDK asigna al grip físico derecho. Usa estado sostenido (`Get`), no una pulsación aislada. La mano dominante decide qué mando apunta y selecciona, pero no cambia ese modificador; desktop conserva ambos Shift. La misma bandera llega a `Select` y `SelectRectangle`, manteniendo las reglas existentes de agregar/quitar y de selección por área.
+La selección aditiva en Quest lee `OVRInput.Button.PrimaryHandTrigger` sobre `Controller.RTouch`, que el SDK asigna al grip físico derecho. Usa estado sostenido (`Get`), no una pulsación aislada. Todo el mando Touch activo es el derecho, sin consultar la antigua preferencia de mano dominante; desktop conserva ambos Shift. La misma bandera llega a `Select` y `SelectRectangle`, manteniendo las reglas existentes de agregar/quitar y de selección por área.
 
-En Quest, los sticks se envían al tablero únicamente mientras `QuestBridge.Placing` está activo. Fuera de colocación, el eje principal solo ajusta la distancia de un menú que se está arrastrando y la pulsación secundaria recupera el menú. No se llama a `BoardView.Navigate` ni se restablece la vista con el stick principal; la navegación por WASD/rueda/F permanece exclusiva del modo de prueba desktop. El panel oculta `Full map` en Quest y amplía el botón de pausa. Recolocar sigue siendo una acción explícita en Settings, con confirmación o recuperación de la colocación anterior al cancelar.
+En Quest, los ejes del joystick derecho se envían al tablero únicamente mientras `QuestBridge.Placing` está activo. Fuera de colocación, ese joystick maneja la rueda contextual o ajusta la distancia de un menú que se está arrastrando; grip + pulsación recupera el menú. No se llama a `BoardView.Navigate` ni se restablece la vista con el stick principal; la navegación por WASD/rueda/F permanece exclusiva del modo de prueba desktop. El panel oculta `Full map` en Quest y amplía el botón de pausa. Recolocar sigue siendo una acción explícita en Settings, con confirmación o recuperación de la colocación anterior al cancelar.
 
 ## Menús y ciclo de partida
 
@@ -74,3 +74,11 @@ Replicar exclusivamente `PlayerView` y eventos autorizados. Comparar versión de
 ## Editor, tercera etapa
 
 Construir una aplicación desktop que modifique `MapDefinition` y reutilice `GridMap` para validar. Incorporar pintura, rampas orientadas, recursos, posiciones iniciales, decoración y deshacer/rehacer. Exportar JSON y referencias al catálogo; añadir importación de paquetes desde almacenamiento local al juego. La versión actual carga los mapas incluidos como recursos Unity.
+
+## Rueda de acciones y mando derecho
+
+`SelectionActions.For` define las acciones y sus identificadores estables a partir de `PlayerView` y el catálogo. `CommandPanel` y `ActionWheel` comparten esa lista y envían las mismas órdenes validadas por `GameSession`. La rueda agrupa las construcciones en un submenú; no cambia las reglas de economía, producción ni combate.
+
+`CommanderInput` consulta únicamente `Controller.RTouch`: pulsación de joystick para abrir, ejes para elegir, A para ejecutar y B para volver/cerrar. El grip mantiene la selección aditiva; grip + pulsación de joystick recupera la consola. Durante colocación, el mismo joystick ajusta tamaño/giro o altura si se sostiene el grip. El menú del mando izquierdo deja de controlar la pausa; B y el panel siguen disponibles. El sistema del visor conserva sus propios botones reservados.
+
+La rueda consume la entrada antes de la consola y del tablero. Al cerrarla se drena cualquier gatillo sostenido y su liberación para no continuar un arrastre previo. Guarda la partida y los IDs seleccionados al abrir, verifica su validez antes de ejecutar y vuelve a resolver la acción actual. Si cambia el conjunto de acciones, por ejemplo al vaciarse la cola, borra el resaltado y exige centrar el joystick antes de elegir de nuevo. La zona muerta y la histéresis angular evitan cambios involuntarios. `RadialSector` genera geometría UI; las etiquetas y los sectores se reconstruyen solo cuando cambia el conjunto de acciones. El tablero no recibe navegación desde la rueda.

@@ -4,7 +4,7 @@
 
 Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Controls**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 
-Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el stick secundario modifica la altura y el principal modifica tamaño y orientación.
+Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el joystick derecho modifica tamaño y orientación; sostener el grip derecho permite ajustar altura con ese mismo joystick.
 
 Usar **START MATCH** cuando el tablero esté confirmado. Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
 
@@ -18,9 +18,9 @@ El botón **AI** permite elegir **Very Easy**, **Easy** o **Normal** antes de in
 
 ### Configuración, pausa y regreso al inicio
 
-**Settings** permite elegir la mano principal, recolocar el tablero, elegir mesa o piso y detectar superficies. **Controls** muestra una guía completa adaptada a mandos Touch o mouse y teclado; en modo zurdo indica X/Y. **Back** vuelve al menú desde el que se abrió esa pantalla.
+**Settings** permite recolocar el tablero, elegir mesa o piso y detectar superficies. **Controls** muestra una guía completa adaptada al mando Touch derecho o a mouse y teclado. El mando izquierdo queda sin asignación. **Back** vuelve al menú desde el que se abrió esa pantalla.
 
-Dentro de una partida, **Pause**, el botón de menú del mando o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Controls** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
+Dentro de una partida, **Pause**, **B** con la rueda cerrada y sin una acción pendiente, o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Controls** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
 
 Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la partida, conservando facciones/mapa elegidos y la colocación física del tablero. Las pausas por seguimiento, foco o visor continúan vigentes hasta que el sistema las libere. Mientras hay un menú de partida abierto no se pueden dar órdenes al tablero.
 
@@ -52,9 +52,9 @@ Una producción terminada que aún no puede salir muestra **WAITING TO DEPLOY**,
 
 Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Hold Position** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
 
-En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste siguen disponibles altura con stick secundario y tamaño/giro con el principal. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
+En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste, el joystick derecho modifica tamaño/giro; sostener el grip derecho cambia el eje vertical a altura, sin alterar tamaño ni giro. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
 
-El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; pulsar el stick secundario también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
+El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; mantener el grip derecho y pulsar el joystick derecho también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
 
 En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](https://developers.meta.com/vr/documentation/unity/unity-boundaryless/) mientras el passthrough está activo. Permite caminar alrededor del tablero sin que el círculo estacionario interrumpa la experiencia cuando el sistema lo admite. El mapa permanece unido a su ancla espacial. La confirmación final depende de Horizon OS y debe hacerse con el APK instalado directamente en el visor.
 
@@ -62,19 +62,26 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 |---|---|---|
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
 | Agregar a selección | Mantener grip derecho (botón lateral) | Mantener Shift |
-| Orden contextual | A, o X en modo zurdo | Clic derecho |
-| Cancelar / opciones | B, o Y en modo zurdo | Escape |
+| Orden contextual | A (con la rueda cerrada) | Clic derecho |
+| Abrir / cerrar rueda de acciones | Pulsar joystick derecho | — |
+| Elegir acción de la rueda | Inclinar joystick derecho | — |
+| Ejecutar / volver en la rueda | A / B | — |
+| Cancelar / opciones | B | Escape |
 | Desplazar mapa (solo escritorio) | — | WASD |
 | Zoom (solo escritorio) | — | Rueda |
 | Ver mapa completo (solo escritorio) | — | F |
 | Mover menú | Mantener gatillo sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
-| Recuperar menú arriba del tablero | Pulsar stick secundario | M |
-| Pausa | Menú o panel | Espacio |
+| Recuperar menú arriba del tablero | Grip derecho + pulsación del joystick derecho | M |
+| Pausa | B o panel | Espacio |
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
 
-El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
+El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Todos los controles del juego usan el mando derecho; el izquierdo queda sin asignación por ahora. Se retiró la opción de mano dominante y no se aplica la preferencia antigua guardada.
 
-El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador sigue en el mando derecho incluso en modo zurdo; el gatillo secundario deja de cumplir esa función.
+El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
+
+La **rueda contextual** aparece junto al mando derecho al pulsar su joystick. Inclinarlo elige una opción y **A la ejecuta**; **B vuelve del submenú Build o cierra la rueda principal**. También puede cerrarse pulsando nuevamente el joystick. Al abrir o cambiar de submenú, centrar el joystick antes de elegir; luego puede soltarse, manteniendo resaltada la opción hasta confirmar o cancelar. La rueda muestra el nombre de la selección, la acción y su costo o efecto. Los trabajadores abren seis edificios desde **Build**; las unidades ofrecen Attack Move, Stop y Hold Position; los edificios ofrecen producción, investigación y cancelación según corresponda. Las órdenes rechazadas muestran el motivo en el centro de la rueda.
+
+Mientras está abierta, A y el gatillo no dan órdenes a través de ella. El gatillo tampoco confirma opciones. Build y Attack Move cierran la rueda y esperan un destino nuevo en el mapa. Cambiar la selección, perder una unidad seleccionada, pausar, perder foco/seguimiento o terminar la partida cierra la rueda. La consola permanece disponible para recursos, colas y las mismas acciones.
 
 La selección por área puede **empezar o terminar fuera del tablero**: mantener el gatillo (o clic izquierdo), arrastrar sobre las unidades y soltar, incluso fuera del borde opuesto. El rectángulo y la selección se recortan a la parte visible del mapa; con el zoom de escritorio no se seleccionan unidades recortadas fuera del tablero. Se conserva el modificador para agregar unidades. Un clic o arrastre completamente externo no cambia la selección; apuntar al menú o perder una proyección válida cancela el arrastre. Las órdenes contextuales y la confirmación de construcción siguen requiriendo apuntar al terreno.
 

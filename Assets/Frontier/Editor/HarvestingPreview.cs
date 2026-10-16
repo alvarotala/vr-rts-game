@@ -173,17 +173,21 @@ namespace Frontier.Editor
         }
         internal static void SavePanel(CommandPanel panel,string path,PreviewRenderUtility preview)
         {
-            foreach(var label in panel.GetComponentsInChildren<Text>())
+            SaveCanvas(panel.transform,Field<RectTransform>(panel,"root"),path,preview);
+        }
+        internal static void SaveCanvas(Transform container,RectTransform root,string path,PreviewRenderUtility preview,int width=1600,int height=0)
+        {
+            foreach(var label in container.GetComponentsInChildren<Text>().Where(t=>!t.resizeTextForBestFit))
                 Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
-            var root=Field<RectTransform>(panel,"root");root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
+            root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
             preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,root.rect.height*.0005f+.03f);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
             preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
             preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
             // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
             // meshes with their font textures, preserving hierarchy order and runtime layout.
             var meshes=new List<Mesh>();var materials=new List<Material>();
-            preview.BeginStaticPreview(new Rect(0,0,1600,root.rect.height>526?960:800));Canvas.ForceUpdateCanvases();
-            foreach(var graphic in panel.GetComponentsInChildren<Graphic>())
+            preview.BeginStaticPreview(new Rect(0,0,width,height>0?height:root.rect.height>526?960:800));Canvas.ForceUpdateCanvases();
+            foreach(var graphic in container.GetComponentsInChildren<Graphic>())
             {
                 graphic.Rebuild(CanvasUpdate.PreRender);
                 var source=graphic.canvasRenderer.GetMesh();if(source==null)continue;

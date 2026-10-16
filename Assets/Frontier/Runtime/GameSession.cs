@@ -15,7 +15,6 @@ namespace Frontier.Runtime
         public readonly HashSet<int> Selection = new HashSet<int>();
         public int SelectedResource { get; private set; }
         public bool Running { get; private set; }
-        public bool LeftHanded;
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
         public string Message { get; private set; } = "Choose New Match to begin.";
         public event Action Changed;
@@ -34,7 +33,6 @@ namespace Frontier.Runtime
         private void Awake()
         {
             Catalog = new Catalog(JsonUtility.FromJson<CatalogDefinition>(Resources.Load<TextAsset>("catalog").text));
-            LeftHanded = PlayerPrefs.GetInt("frontier.leftHanded", 0) == 1;
             LoadMap("rift");
         }
         public void LoadMap(string id)
@@ -91,7 +89,6 @@ namespace Frontier.Runtime
         public void Pause(string reason, bool paused)
         { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null) Match.Paused = IsPaused; Changed?.Invoke(); }
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
-        public void SetLeftHanded(bool enabled) { LeftHanded = enabled; PlayerPrefs.SetInt("frontier.leftHanded", enabled ? 1 : 0); }
         public void Announce(string text) { Message = text; messageUntil = Time.unscaledTime + 6; }
         public void Select(int id, bool additive, int resourceId = 0)
         {
