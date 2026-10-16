@@ -170,7 +170,7 @@ namespace Frontier.Editor
                 bool WheelFrame(Vector2 stick = default, bool press = false, bool a = false)
                 {
                     clock += .05f; var ray = RayAt(second);
-                    bool consumed = (bool)Call(input, "RouteWheel", ray, stick, press, a, false, false, false, false, false, clock);
+                    bool consumed = (bool)Call(input, "RouteWheel", ray, stick, press, a, false, false, false, false, false, clock, press, false);
                     if (!consumed) Call(input, "PointBoard", ray, false, false, a, false);
                     return consumed;
                 }

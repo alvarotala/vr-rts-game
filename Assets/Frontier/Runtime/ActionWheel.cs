@@ -34,14 +34,15 @@ namespace Frontier.Runtime
 
         // Called before console/terrain input. Every frame of an open wheel is consumed,
         // including the frame that closes it: A must never also become a contextual map order.
-        public bool Process(Ray pointer, Vector2 stick, bool press, bool confirm, bool cancel, bool saveGroup = false)
+        public bool Process(Ray pointer, Vector2 stick, bool press, bool confirm, bool cancel, bool stickHeld = false, bool stickReleased = false)
         {
             bool wasOpen = IsOpen;
             if (IsOpen && !ValidContext()) { Close(); return true; }
             if (InGroupMenu)
             {
-                if (cancel || press) { Close(); return true; }
-                RefreshGroups(saveGroup); UpdatePose(pointer); Aim(stick);
+                if (cancel || press || (GroupSaveMode && !stickHeld && !stickReleased)) { Close(); return true; }
+                RefreshGroups(GroupSaveMode); UpdatePose(pointer); Aim(stick);
+                if (GroupSaveMode && stickReleased) ConfirmGroup();
                 return true;
             }
             if (cancel && IsOpen) { Back(); return true; }
@@ -77,6 +78,9 @@ namespace Frontier.Runtime
             items.Clear();
             for (int i = 0; i < GameSession.ControlGroupCount; i++)
                 items.Add(new SelectionAction { Id = "group-" + (i + 1), Label = "Group " + (i + 1) });
+            // The router has already observed a neutral-to-direction motion while
+            // the click is held. Save mode can highlight that direction immediately.
+            stickReady = save;
             BuildSectors(); RefreshGroups(save); UpdatePose(pointer); Aim(stick);
             return true;
         }
@@ -147,20 +151,19 @@ namespace Frontier.Runtime
                 sectorLabels[i].text = "Group " + (i + 1) + "\n" + (count == 0 ? "Empty" : count + " assigned");
             }
             UpdateHighlight();
-            title.text = (save ? "SAVE GROUP" : "SELECT GROUP") + (Highlighted >= 0 ? " " + (Highlighted + 1) : "");
-            detail.text = Highlighted < 0 ? "Tilt right stick\nto choose" : save ? Session.Selection.Count + " selected\nCenter stick to save" : Session.GroupSize(Highlighted) + " assigned\nCenter stick to select";
+            title.text = (save ? "REPLACE GROUP" : "SELECT GROUP") + (Highlighted >= 0 ? " " + (Highlighted + 1) : "");
+            detail.text = Highlighted < 0 ? "Tilt right stick\nto choose" : save ? Session.Selection.Count + " selected\nRelease click to save" : Session.GroupSize(Highlighted) + " assigned\nCenter stick to select";
             detail.color = Ink;
-            help.text = "Center stick · " + (save ? "Save selection" : "Select group") + "\nHold grip · Save instead     B · Close";
+            help.text = save ? "Release stick click · Replace group\nB · Cancel" : "Center stick · Select group\nHold stick click + tilt · Replace group     B · Close";
         }
 
         private void Aim(Vector2 stick)
         {
             if (stick.magnitude < .25f)
             {
-                if (InGroupMenu && Highlighted >= 0)
+                if (InGroupMenu && !GroupSaveMode && Highlighted >= 0)
                 {
-                    int group = Highlighted; bool save = GroupSaveMode;
-                    Close(); Session.CancelMode(); Session.Group(group, save);
+                    ConfirmGroup();
                     return;
                 }
                 stickReady = true; return;
@@ -182,6 +185,14 @@ namespace Frontier.Runtime
                 sectors[i].color = i == Highlighted ? (InGroupMenu && GroupSaveMode ? new Color(1, .7f, .3f) : Accent) : Normal;
                 sectorLabels[i].color = i == Highlighted ? new Color(.015f, .05f, .065f) : Color.white;
             }
+        }
+
+        private void ConfirmGroup()
+        {
+            int group = Highlighted; bool save = GroupSaveMode;
+            Close();
+            if (group < 0) return;
+            Session.CancelMode(); Session.Group(group, save);
         }
 
         private void Confirm()

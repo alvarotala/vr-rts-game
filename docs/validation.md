@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Reemplazo de grupos con pulsación mantenida del stick — fuentes, sin APK — 16 de octubre de 2026
+
+Mantener pulsado el joystick derecho desde el centro e inclinarlo abre `REPLACE GROUP`. Soltar la pulsación guarda la selección actual reemplazando todos los miembros del grupo resaltado. Girar cambia el grupo; centrar todavía presionado conserva el último resaltado y no confirma. El gesto empieza al inclinar, sin espera temporal. B cancela. Grip deja de modificar el guardado; doble clic conserva la recuperación de grupos al centrar el eje.
+
+- **168 comprobaciones focales y ocho vistas** para ambas facciones. Incluyen reemplazo completo de los cuatro grupos, liberación con el eje inclinado o centrado, cambio de dirección, ausencia de guardado temprano, pulsación sin dirección, clic sobre eje previamente inclinado, cancelación, pérdida de liberación, tracking, foco, cambio de selección y desactivación. Mantener la segunda pulsación de un doble clic conserva recuperación y no arma un guardado.
+- Regresiones de rueda de acciones (**148 / 18 vistas**), gestos de selección/colas (**64**), rally (**126**), menús (**48 / 12**) y HUD/recolección (**18 vistas**). Total: **554 comprobaciones enumeradas y 56 vistas**. Las entradas de prueba ahora incluyen estado sostenido y liberación del botón del stick.
+- `ControlGroupPreview.RunValidation` terminó correctamente con Unity **6000.3.26f1** / CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones. Registro: `TestResults/unity-group-hold.log`. Se inspeccionaron las ruedas de recuperación/reemplazo y la ayuda Touch en `TestResults/ControlGroups` y `TestResults/Menus`; los textos se muestran completos.
+- Los **54 hashes** de `TestResults/group-hold-baseline.json` confirman que ProjectSettings, Assets/XR y los APK existentes permanecen iguales. No se modificó el núcleo de simulación ni se generó APK o ejecutable desktop.
+
+Pendiente: verificar en Quest la comodidad de mantener presionado el stick al inclinarlo y soltarlo. La evidencia anterior usa entradas sintéticas del Editor.
+
 ## Rueda de cuatro grupos — fuentes, sin APK — 16 de octubre de 2026
 
 Doble pulsación del joystick derecho abre cuatro grupos con posiciones fijas: arriba, derecha, abajo e izquierda. Inclinar/girar resalta y volver al centro recupera el grupo directamente. Mantener grip al volver al centro guarda la selección en el grupo resaltado. B o pulsar el stick cancelan. La pulsación simple conserva la rueda de acciones inmediata, y doble grip sigue abriendo acciones. El HUD y los atajos 1–4/Ctrl+1–4 comparten los cuatro grupos.

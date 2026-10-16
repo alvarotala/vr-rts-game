@@ -84,14 +84,57 @@ namespace Frontier.Editor
                     Frame(b:true);Check(!wheel.IsOpen&&session.Selection.Contains(workers[3].id),"B cancels without recalling another group");Drain();
 
                     session.Select(workers[0].id,false);session.Select(workers[1].id,true);
-                    OpenGroups();Frame(Vector2.left,grip:true,gripDown:true);
-                    Check(wheel.IsOpen&&wheel.InGroupMenu&&wheel.GroupSaveMode,"Grip changes groups to save mode rather than closing the wheel");Capture(faction+"-save");
-                    Frame(grip:true);
-                    Check(!wheel.IsOpen&&session.GroupSize(3)==2&&session.Selection.Count==2,"Grip and stick release save the selection to group four");
-                    Check(Frame(grip:true)&&Frame(),"Saving drains held grip and its release");Drain();
-                    session.Select(hq.id,false);OpenGroups(grip:true);Frame(Vector2.left,grip:true);
-                    Frame(Vector2.left);Check(!wheel.GroupSaveMode,"Releasing grip before centering returns to recall mode");
-                    Frame();Check(session.Selection.SetEquals(new[]{workers[0].id,workers[1].id})&&session.GroupSize(3)==2,"Recall after releasing grip does not overwrite the group");Drain();
+                    Frame(press:true);Frame(Vector2.left,clickHeld:true);
+                    Check(wheel.IsOpen&&wheel.InGroupMenu&&wheel.GroupSaveMode&&wheel.Highlighted==3,"Hold stick and tilt opens save mode immediately in that direction");Capture(faction+"-save");
+                    Check(session.GroupSize(3)==1,"Holding a highlighted group does not save early");
+                    Frame(clickHeld:true);
+                    Check(wheel.IsOpen&&wheel.Highlighted==3&&session.GroupSize(3)==1,"Returning to center while still clicked preserves the preview without saving");
+                    Frame(Vector2.left,clickUp:true);
+                    Check(!wheel.IsOpen&&session.GroupSize(3)==2&&session.Selection.Count==2,"Releasing the click while tilted saves the current selection");
+                    Check(Frame()&&!Frame(),"The saving release is consumed before terrain input resumes");Drain();
+                    session.Select(hq.id,false);OpenGroups(grip:true);Frame(Vector2.left,grip:true,gripDown:true);
+                    Check(!wheel.GroupSaveMode,"Grip no longer changes the group wheel to save mode");
+                    Frame(grip:true);Check(session.Selection.SetEquals(new[]{workers[0].id,workers[1].id})&&session.GroupSize(3)==2,"Centering with grip still recalls without overwriting the group");Drain();
+
+                    // Replacement, not union: every slot previously contains another unit.
+                    for(int i=0;i<4;i++)
+                    {
+                        session.Select(hq.id,false);Frame(press:true);Frame(directions[i],clickHeld:true);
+                        Check(wheel.GroupSaveMode&&wheel.Highlighted==i,"Held click chooses save slot "+(i+1));
+                        Frame(directions[i],clickUp:true);Drain();session.Select(0,false);session.Group(i,false);
+                        Check(session.Selection.SetEquals(new[]{hq.id})&&session.GroupSize(i)==1,"Saving replaces every previous member of group "+(i+1));
+                    }
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(Vector2.right,clickHeld:true);
+                    Frame(Vector2.down,clickHeld:true);Frame(Vector2.left,clickHeld:true);Frame(clickHeld:true);Frame(clickUp:true);Drain();
+                    session.Group(3,false);
+                    Check(session.Selection.SetEquals(new[]{workers[0].id})&&session.GroupSize(1)==1,"Save uses the last direction when releasing at center");
+                    // Restore independent fixtures for the recall and interruption checks.
+                    for(int i=0;i<4;i++){session.Select(workers[i].id,false);session.Group(i,true);}
+                    session.Select(workers[0].id,false);
+                    Frame(press:true);Frame(Vector2.left,clickHeld:true);Frame(Vector2.left,b:true,clickHeld:true);
+                    Frame(Vector2.left,clickHeld:true);Frame(Vector2.left,clickUp:true);Drain();session.Group(3,false);
+                    Check(session.Selection.SetEquals(new[]{workers[3].id})&&!wheel.IsOpen,"B cancels a save and held/released click cannot rearm it");
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(clickHeld:true,elapsed:.6f);Frame(clickUp:true);
+                    Check(wheel.IsOpen&&!wheel.GroupSaveMode&&session.GroupSize(3)==1,"Holding without choosing a direction preserves ordinary action-wheel behavior");Frame(b:true);Drain();
+                    Frame(Vector2.left,press:true);Frame(Vector2.left,clickUp:true);
+                    Check(!wheel.GroupSaveMode,"A click on an already tilted stick does not accidentally replace a group");Frame(b:true);Drain();
+                    Frame(press:true);Frame(Vector2.left,clickHeld:true);Frame(Vector2.left);
+                    Check(!wheel.IsOpen&&session.GroupSize(3)==1,"Missing a click release cancels saving instead of inferring confirmation");Drain();
+
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(Vector2.left,clickHeld:true);
+                    session.Pause("tracking",true);Frame(Vector2.left,clickUp:true);session.Pause("tracking",false);Drain();
+                    Check(!wheel.IsOpen&&session.GroupSize(3)==1,"Tracking loss discards a held-click save before release");
+                    Frame(press:true);Frame(Vector2.left,clickHeld:true);Call(input,"OnApplicationFocus",false);Frame(Vector2.left,clickUp:true);Drain();
+                    Check(!wheel.IsOpen&&session.GroupSize(3)==1,"Focus loss cannot commit a pending group replacement");
+                    Frame(press:true);Frame(Vector2.left,clickHeld:true);session.Select(hq.id,false);Frame(Vector2.left,clickUp:true);Drain();
+                    session.Group(3,false);Check(session.Selection.SetEquals(new[]{workers[3].id}),"Changing selection during a hold cancels rather than saving a different selection");
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(Vector2.left,clickHeld:true);Call(input,"OnDisable");Frame(Vector2.left,clickUp:true);Drain();
+                    session.Group(3,false);Check(session.Selection.SetEquals(new[]{workers[3].id}),"Disabling input cancels a pending save");
+                    // Double-click recall owns its second press even if that press stays held.
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(clickUp:true);Frame(press:true);Frame(Vector2.right,clickHeld:true);
+                    Check(wheel.InGroupMenu&&!wheel.GroupSaveMode,"Holding the second click of a double tap keeps recall mode");
+                    Frame(Vector2.right,clickUp:true);Check(wheel.IsOpen&&!wheel.GroupSaveMode,"Releasing the second click does not select a tilted recall group");
+                    Frame();Check(session.Selection.SetEquals(new[]{workers[1].id})&&session.GroupSize(1)==1,"Double-click recall still confirms on centering");Drain();
 
                     session.Select(hq.id,false);ClickGroup4(true);session.Select(0,false);ClickGroup4(false);
                     Check(session.Selection.SetEquals(new[]{hq.id})&&session.GroupSize(3)==1,"Fourth HUD button saves on hold and recalls on click");
@@ -136,14 +179,14 @@ namespace Frontier.Editor
                 }
                 Debug.Log($"FRONTIER_CONTROL_GROUPS passed: {checks} checks, {captures} views; no player build");
 
-                bool Frame(Vector2 stick=default,bool press=false,bool a=false,bool b=false,bool down=false,bool held=false,bool grip=false,bool gripDown=false,float elapsed=.05f)
+                bool Frame(Vector2 stick=default,bool press=false,bool a=false,bool b=false,bool down=false,bool held=false,bool grip=false,bool gripDown=false,float elapsed=.05f,bool clickHeld=false,bool clickUp=false)
                 {
-                    now+=elapsed;held|=down;grip|=gripDown;
-                    bool used=(bool)Call(input,"RouteWheel",ray,stick,press,a,down,held,b,grip,gripDown,now);
+                    now+=elapsed;held|=down;grip|=gripDown;clickHeld|=press;
+                    bool used=(bool)Call(input,"RouteWheel",ray,stick,press,a,down,held,b,grip,gripDown,now,clickHeld,clickUp);
                     if(!used&&panel.AcceptsGameInput)Call(input,"PointBoard",ray,down,false,a,grip);
                     return used;
                 }
-                void OpenGroups(bool grip=false){Drain();Frame(press:true,grip:grip);Frame(grip:grip);Frame(press:true,grip:grip);Check(wheel.InGroupMenu,"Double stick opens the group wheel");}
+                void OpenGroups(bool grip=false){Drain();Frame(press:true,grip:grip);Frame(grip:grip,clickUp:true);Frame(press:true,grip:grip);Check(wheel.InGroupMenu,"Double stick opens the group wheel");}
                 void Drain(){Frame();Frame();}
                 void Refresh(){typeof(GameSession).GetProperty("View").SetValue(session,session.Match.View(0));typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Call(panel,"LateUpdate");}
                 void Check(bool value,string message){if(!value)throw new Exception(message);checks++;Debug.Log("CONTROL_GROUP_PASS: "+message);}

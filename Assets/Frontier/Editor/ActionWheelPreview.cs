@@ -172,7 +172,7 @@ namespace Frontier.Editor
                 bool Frame(Vector2 stick = default, bool press = false, bool a = false, bool b = false, bool down = false, bool up = false, bool held = false, bool grip = false, bool gripDown = false, float elapsed = .05f)
                 {
                     inputTime += elapsed; grip |= gripDown; held |= down;
-                    bool consumed = (bool)typeof(CommanderInput).GetMethod("RouteWheel", Private).Invoke(input, new object[] { pointer, stick, press, a, down, held, b, grip, gripDown, inputTime });
+                    bool consumed = (bool)typeof(CommanderInput).GetMethod("RouteWheel", Private).Invoke(input, new object[] { pointer, stick, press, a, down, held, b, grip, gripDown, inputTime, press, false });
                     if (!consumed && panel.AcceptsGameInput) typeof(CommanderInput).GetMethod("PointBoard", Private).Invoke(input, new object[] { pointer, down, up, a, grip });
                     return consumed;
                 }

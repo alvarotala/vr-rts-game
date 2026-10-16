@@ -51,7 +51,7 @@ namespace Frontier.Editor
                 Check(touchControls.Contains("Right stick: press for wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
                 Check(touchControls.Contains("Double grip: open wheel")&&touchControls.Contains("Trigger / A executes")&&touchControls.Contains("Grip / B goes back"),"Touch help explains double grip and wheel trigger/grip shortcuts");
                 Check(touchControls.Contains("Double trigger: nearby units of the same type")&&touchControls.Contains("Double A: Attack Move / attack enemy"),"Touch help explains type selection and attack shortcuts");
-                Check(touchControls.Contains("Double press: 4 groups")&&touchControls.Contains("center to select")&&touchControls.Contains("Hold grip to save"),"Touch help explains four control groups and selection on stick return");
+                Check(touchControls.Contains("Double press: 4 groups")&&touchControls.Contains("center to select")&&touchControls.Contains("Hold stick + tilt, release click to replace"),"Touch help distinguishes centering to recall from releasing a held click to replace a group");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");

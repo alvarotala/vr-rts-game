@@ -120,7 +120,7 @@ namespace Frontier.Editor
                     Check(session.Selection.Contains(worker.id)&&session.Selection.Contains(other.id),"Releasing over an unselected unit preserves additive selection");
 
                     Reset();var before=session.Selection.ToArray();
-                    bool consumed=(bool)Call(input,"RouteWheel",ray,Vector2.zero,true,false,false,false,false,true,false,110f);
+                    bool consumed=(bool)Call(input,"RouteWheel",ray,Vector2.zero,true,false,false,false,false,true,false,110f,true,false);
                     Check(consumed&&wheel.IsOpen&&session.Selection.SetEquals(before),"Right stick always opens the wheel, including while Grip is held");
                     wheel.Close();
 
