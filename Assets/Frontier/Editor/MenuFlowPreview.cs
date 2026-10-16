@@ -49,6 +49,7 @@ namespace Frontier.Editor
                 Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
                 Check(touchControls.Contains("Right stick: adjust distance")&&touchControls.Contains("Grip + right stick press: recall menu"),"Touch menu movement and recall remain documented");
                 Check(touchControls.Contains("Right stick: press for action wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
+                Check(touchControls.Contains("Double-tap grip: open wheel")&&touchControls.Contains("Trigger / A executes")&&touchControls.Contains("Grip / B goes back"),"Touch help explains double grip and wheel trigger/grip shortcuts");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");

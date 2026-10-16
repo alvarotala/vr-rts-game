@@ -176,7 +176,7 @@ Para comprobar el enrutamiento de entrada y renderizar las ruedas de ambas facci
 unity run . --log-file TestResults/unity-action-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ActionWheelPreview.Render
 ```
 
-La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba la selección del sector, zona neutra, submenú Build, producción, investigación, costos, cancelación, rechazo, cambios de selección/cola, interrupciones y liberación del gatillo. Guarda las vistas en `TestResults/ActionWheel/`. El panel comparte `SelectionActions`; `ProductionQueuePreview.Render` verifica las acciones de la consola y ejecuta las regresiones de HUD y menús. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba doble grip rápido/lento, grip sostenido como Shift, apertura sin cierre accidental, gatillo/A para ejecutar, grip/B para retroceder, selección del sector, zona neutra, submenú Build, producción, investigación, costos, cancelación, rechazo, cambios de selección/cola, interrupciones y liberación de botones. Guarda las vistas en `TestResults/ActionWheel/`. El panel comparte `SelectionActions`; `ProductionQueuePreview.Render` verifica las acciones de la consola y ejecuta las regresiones de HUD y menús. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
 
 ## Apuntado de minerales
 

@@ -67,9 +67,10 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
 | Agregar a selección | Mantener grip derecho (botón lateral) | Mantener Shift |
 | Orden contextual | A (con la rueda cerrada) | Clic derecho |
-| Abrir / cerrar rueda de acciones | Pulsar joystick derecho | — |
+| Abrir / cerrar rueda de acciones | Pulsar joystick derecho; doble grip también abre | — |
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
-| Ejecutar / volver en la rueda | A / B | — |
+| Ejecutar en la rueda | Gatillo derecho o A | — |
+| Volver / cerrar la rueda | Grip derecho o B | — |
 | Cancelar / opciones | B | Escape |
 | Desplazar mapa (solo escritorio) | — | WASD |
 | Zoom (solo escritorio) | — | Rueda |
@@ -83,9 +84,9 @@ El juego incluye selección ampliada, contorno de selección al ras del terreno,
 
 El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
 
-La **rueda contextual** aparece junto al mando derecho al pulsar su joystick. Inclinarlo elige una opción y **A la ejecuta**; **B vuelve del submenú Build o cierra la rueda principal**. También puede cerrarse pulsando nuevamente el joystick. Al abrir o cambiar de submenú, centrar el joystick antes de elegir; luego puede soltarse, manteniendo resaltada la opción hasta confirmar o cancelar. La rueda muestra el nombre de la selección, la acción y su costo o efecto. Los trabajadores abren seis edificios desde **Build**; las unidades ofrecen Attack Move, Stop y Hold Position; los edificios ofrecen producción, investigación y cancelación según corresponda. Las órdenes rechazadas muestran el motivo en el centro de la rueda.
+La **rueda contextual** aparece junto al mando derecho al pulsar su joystick o hacer **doble pulsación rápida del grip derecho**. Inclinar el joystick elige una opción y **el gatillo derecho o A la ejecutan**; **el grip derecho o B vuelven del submenú Build o cierran la rueda principal**. También puede cerrarse pulsando nuevamente el joystick. Al abrir o cambiar de submenú, centrar el joystick antes de elegir; luego puede soltarse, manteniendo resaltada la opción hasta confirmar o cancelar. La rueda muestra el nombre de la selección, la acción y su costo o efecto. Los trabajadores abren seis edificios desde **Build**; las unidades ofrecen Attack Move, Stop y Hold Position; los edificios ofrecen producción, investigación y cancelación según corresponda. Las órdenes rechazadas muestran el motivo en el centro de la rueda.
 
-Mientras está abierta, A y el gatillo no dan órdenes a través de ella. El gatillo tampoco confirma opciones. Build y Attack Move cierran la rueda y esperan un destino nuevo en el mapa. Cambiar la selección, perder una unidad seleccionada, pausar, perder foco/seguimiento o terminar la partida cierra la rueda. La consola permanece disponible para recursos, colas y las mismas acciones.
+Mientras está abierta, sus pulsaciones se consumen en la rueda. Mantener gatillo o grip no repite acciones; el grip que acaba de abrirla no la cierra. Al elegir una construcción o Attack Move, la rueda se cierra y espera un destino nuevo en el mapa, después de soltar los botones. Fuera de la rueda, el grip sostenido conserva la selección aditiva; usar el gatillo durante ese gesto interrumpe el doble grip para evitar aperturas accidentales. Cambiar la selección, perder una unidad seleccionada, pausar, perder foco/seguimiento o terminar la partida cierra la rueda. La consola permanece disponible para recursos, colas y las mismas acciones.
 
 La selección por área puede **empezar o terminar fuera del tablero**: mantener el gatillo (o clic izquierdo), arrastrar sobre las unidades y soltar, incluso fuera del borde opuesto. El rectángulo y la selección se recortan a la parte visible del mapa; con el zoom de escritorio no se seleccionan unidades recortadas fuera del tablero. Se conserva el modificador para agregar unidades. Un clic o arrastre completamente externo no cambia la selección; apuntar al menú o perder una proyección válida cancela el arrastre. Las órdenes contextuales y la confirmación de construcción siguen requiriendo apuntar al terreno.
 

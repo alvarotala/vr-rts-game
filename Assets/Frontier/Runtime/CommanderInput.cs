@@ -9,6 +9,9 @@ namespace Frontier.Runtime
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
         private bool wheelReleasePending;
+        private float lastGripPress=-1;
+        private Simulation gripTapMatch;
+        private const float DoubleGripWindow=.35f;
         private int pressedResource;
         private float dragThreshold=1.5f;
         private void Start()
@@ -20,7 +23,7 @@ namespace Frontier.Runtime
         {
             if(Board.Content==null)return;
             bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
-            Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,triggerHeld=false;
+            Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,triggerHeld=false,gripDown=false;
             if(Quest.Active)
             {
                 // All gameplay input is on the physical right controller. The left is unassigned.
@@ -28,6 +31,7 @@ namespace Frontier.Runtime
                 ray=Quest.PointerRay();down=OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger,primary);up=OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger,primary);
                 triggerHeld=OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger,primary);
                 add=OVRInput.Get(OVRInput.Button.PrimaryHandTrigger,primary);order=OVRInput.GetDown(OVRInput.Button.One,primary);cancel=OVRInput.GetDown(OVRInput.Button.Two,primary);
+                gripDown=OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger,primary);
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);
                 wheelPressed=OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,primary);
                 menuDepth=primaryStick.y;
@@ -51,8 +55,8 @@ namespace Frontier.Runtime
                 }
             }
             if(Quest.Placing)
-            {Wheel?.Close();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
-            if(Quest.Active&&RouteWheel(ray,primaryStick,wheelPressed,order,triggerHeld,cancel,add))return;
+            {Wheel?.Close();ResetGripTap();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
+            if(Quest.Active&&RouteWheel(ray,primaryStick,wheelPressed,order,down,triggerHeld,cancel,add,gripDown,Time.unscaledTime))return;
             // Back/pause must work even when the pointer is over a menu button.
             if(cancel)
             {if(Panel.AcceptsGameInput&&(Session.BuildDefinition!=null||Session.AttackMoveMode))Session.CancelMode();else Panel.Back();ClearPointer();return;}
@@ -65,21 +69,38 @@ namespace Frontier.Runtime
             if(!Panel.AcceptsGameInput){ClearPointer();return;}
             PointBoard(ray,down,up,order,add);
         }
-        private bool RouteWheel(Ray ray,Vector2 stick,bool press,bool confirm,bool triggerHeld,bool cancel,bool grip)
+        private bool RouteWheel(Ray ray,Vector2 stick,bool press,bool confirm,bool triggerDown,bool triggerHeld,bool cancel,bool grip,bool gripDown,float now)
         {
             if(Wheel==null)return false;
+            if(gripTapMatch!=Session.Match)ResetGripTap();
             if(press&&grip&&!Wheel.IsOpen)
-            {Panel.Recall();ClearPointer();wheelReleasePending=true;return true;}
-            if(Wheel.Process(ray,stick,press,confirm,cancel))
+            {ResetGripTap();Panel.Recall();ClearPointer();wheelReleasePending=true;return true;}
+            bool doubleGrip=false;
+            if(Wheel.IsOpen)
             {
+                // Only fresh presses act inside the wheel: the opening grip stays harmless
+                // when held, and a held trigger cannot repeatedly execute submenu actions.
+                confirm|=triggerDown;cancel|=gripDown;ResetGripTap();
+            }
+            else if(!Wheel.CanOpen||wheelReleasePending||press||confirm||cancel||triggerDown||triggerHeld)
+                ResetGripTap();
+            else if(gripDown)
+            {
+                doubleGrip=lastGripPress>=0&&now>=lastGripPress&&now-lastGripPress<=DoubleGripWindow;
+                lastGripPress=doubleGrip?-1:now;gripTapMatch=Session.Match;
+            }
+            if(Wheel.Process(ray,stick,press||doubleGrip,confirm,cancel))
+            {
+                ResetGripTap();
                 ClearPointer();Panel.CancelPointerInteraction();wheelReleasePending=true;
                 if(laser!=null)laser.enabled=!Wheel.IsOpen;
                 return true;
             }
-            // A consumed trigger drag must not resume after A or B closes the wheel.
-            if(wheelReleasePending){wheelReleasePending=triggerHeld;ClearPointer();return true;}
+            // Drain both controls and their release before resuming map/menu interaction.
+            if(wheelReleasePending){wheelReleasePending=triggerHeld||grip;ClearPointer();return true;}
             return false;
         }
+        private void ResetGripTap(){lastGripPress=-1;gripTapMatch=null;}
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
         {
             bool onMap=Board.RayToMap(ray,out var point,out var worldHit);
@@ -121,8 +142,8 @@ namespace Frontier.Runtime
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
-        {if(!focused){Wheel?.Close();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){Wheel?.Close();ClearPointer();}
+        {if(!focused){Wheel?.Close();ResetGripTap();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){Wheel?.Close();ResetGripTap();wheelReleasePending=true;ClearPointer();}
         private void ClearPointer()
         {dragging=false;pressedResource=0;if(Board!=null){Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

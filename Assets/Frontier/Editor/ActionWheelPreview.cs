@@ -36,7 +36,7 @@ namespace Frontier.Editor
                 var wheel = wheelObject.AddComponent<ActionWheel>(); wheel.Session = session; wheel.Panel = panel; wheel.Quest = quest;
                 var input = fixture.AddComponent<CommanderInput>(); input.Session = session; input.Board = board; input.Panel = panel; input.Quest = quest; input.Wheel = wheel;
                 preview.AddSingleGO(wheelObject);
-                var pointer = new Ray(new Vector3(0, .8f, -.3f), Vector3.forward);
+                var pointer = new Ray(new Vector3(0, .8f, -.3f), Vector3.forward); float inputTime = 10;
 
                 foreach (string faction in new[] { "industrial", "biological" })
                 {
@@ -54,10 +54,45 @@ namespace Frontier.Editor
                     Frame(stick: Vector2.right, a: true);
                     Check(wheel.Highlighted < 0 && !session.AttackMoveMode, "Opening requires a neutral stick before choosing; A cannot execute an implicit default");
                     Choose("hold"); Capture(faction + "-worker");
-                    Frame(down: true, held: true); Frame(up: true);
-                    Check(wheel.IsOpen && worker.order != CommandKind.Hold, "Index trigger does not execute the highlighted action");
-                    Frame(a: true); Check(!wheel.IsOpen && worker.order == CommandKind.Hold, "A executes Hold on the selected unit");
+                    Frame(down: true, held: true);
+                    Check(!wheel.IsOpen && worker.order == CommandKind.Hold, "Index trigger executes the highlighted action like A");
+                    Check(Frame(held: true) && Frame(up: true), "Confirming trigger and release never reach the map after closing the wheel");
                     Check(session.Selection.SetEquals(new[] { worker.id }), "Wheel trigger input never changes selection"); Drain();
+
+                    Check(!Frame(gripDown: true) && !wheel.IsOpen, "A single grip press keeps its outside-wheel modifier behavior");
+                    Frame(); Check(Frame(gripDown: true) && wheel.IsOpen, "Double grip opens the action wheel");
+                    Check(Frame(grip: true) && wheel.IsOpen, "Holding the opening grip does not immediately close the wheel");
+                    Frame(); Choose("build-menu"); Frame(down: true, held: true);
+                    Check(wheel.InBuildMenu && session.BuildDefinition == null, "Trigger opens the Build submenu without placing a building");
+                    Frame(stick: Vector2.up, held: true);
+                    Check(wheel.InBuildMenu && session.BuildDefinition == null, "Holding trigger cannot confirm another submenu action");
+                    Frame(); Choose("build:" + session.Catalog.Role(faction, "supply").id);
+                    int beforeTriggerBuild = session.Match.Buildings(0); Frame(down: true, held: true);
+                    Check(!wheel.IsOpen && session.BuildDefinition != null && session.Match.Buildings(0) == beforeTriggerBuild, "Trigger arms construction without applying that press to terrain");
+                    Check(Frame(held: true) && Frame(up: true), "Construction waits until the confirming trigger has been released"); Drain(); session.CancelMode();
+
+                    Open(); Choose("build-menu"); Frame(a: true); Frame(gripDown: true);
+                    Check(wheel.IsOpen && !wheel.InBuildMenu && !session.IsPaused, "Grip goes back from Build like B");
+                    Frame(grip: true); Check(wheel.IsOpen, "A held grip does not go back twice");
+                    Frame(); Frame(gripDown: true);
+                    Check(!wheel.IsOpen && !session.IsPaused, "A new grip press closes the main wheel without pausing");
+                    Check(Frame(grip: true) && Frame(), "Closing grip and release are consumed");
+                    Check(!Frame(gripDown: true) && !wheel.IsOpen, "Closing grip is not reused as the first tap to reopen");
+                    Frame(held: true); Drain();
+
+                    Frame(gripDown: true); Frame(elapsed: .5f); Frame(gripDown: true);
+                    Check(!wheel.IsOpen, "Two slow grip presses do not open the wheel"); Frame(held: true); Drain();
+                    Frame(gripDown: true); Frame(grip: true, elapsed: .5f); Frame(); Frame(gripDown: true);
+                    Check(!wheel.IsOpen, "A long grip hold is not treated as a double tap"); Frame(held: true); Drain();
+                    Frame(gripDown: true); Frame(down: true, held: true, grip: true); Frame(up: true, grip: true);
+                    Check(!session.Selection.Contains(worker.id), "Grip plus trigger still toggles a selected unit outside the wheel");
+                    Frame(); Frame(gripDown: true);
+                    Check(!wheel.IsOpen, "Using grip for selection interrupts the double-tap gesture"); Frame(held: true); Drain(); session.Select(worker.id, false);
+                    Frame(gripDown: true); session.Pause("tracking", true); Frame(gripDown: true);
+                    Check(!wheel.IsOpen, "Double grip cannot open during tracking pause"); session.Pause("tracking", false); Frame(gripDown: true);
+                    Check(!wheel.IsOpen, "Tracking recovery starts a fresh grip gesture"); Frame(held: true); Drain();
+                    Frame(gripDown: true); typeof(CommanderInput).GetMethod("OnApplicationFocus", Private).Invoke(input, new object[] { false });
+                    Frame(); Frame(gripDown: true); Check(!wheel.IsOpen, "Focus loss clears a pending double grip"); Frame(held: true); Drain();
 
                     Open(); Choose("build-menu"); Frame(a: true);
                     Check(wheel.InBuildMenu && wheel.Items.Count == 6 && wheel.Highlighted == -1, "Build opens six faction buildings without preselecting one");
@@ -124,6 +159,7 @@ namespace Frontier.Editor
                     Check(!wheel.IsOpen, "Match result dismisses the wheel"); Drain(); session.StartMatch();
                     session.Select(worker.id, false); Open(); session.LeaveMatch(); Frame(a: true); Check(!wheel.IsOpen, "Leaving a match dismisses the wheel"); Drain();
                     Check(!Frame(press: true) && !wheel.IsOpen, "Wheel cannot open from the main menu");
+                    Frame(gripDown: true); Frame(); Frame(gripDown: true); Check(!wheel.IsOpen, "Double grip cannot open from the main menu");
 
                     EntityState Add(string role, int id, Point position)
                     {
@@ -133,10 +169,11 @@ namespace Frontier.Editor
                 }
                 Debug.Log($"FRONTIER_ACTION_WHEEL passed: {checks} checks, {captures} wheel views; no player build");
 
-                bool Frame(Vector2 stick = default, bool press = false, bool a = false, bool b = false, bool down = false, bool up = false, bool held = false)
+                bool Frame(Vector2 stick = default, bool press = false, bool a = false, bool b = false, bool down = false, bool up = false, bool held = false, bool grip = false, bool gripDown = false, float elapsed = .05f)
                 {
-                    bool consumed = (bool)typeof(CommanderInput).GetMethod("RouteWheel", Private).Invoke(input, new object[] { pointer, stick, press, a, held, b, false });
-                    if (!consumed && panel.AcceptsGameInput) typeof(CommanderInput).GetMethod("PointBoard", Private).Invoke(input, new object[] { pointer, down, up, a, false });
+                    inputTime += elapsed; grip |= gripDown; held |= down;
+                    bool consumed = (bool)typeof(CommanderInput).GetMethod("RouteWheel", Private).Invoke(input, new object[] { pointer, stick, press, a, down, held, b, grip, gripDown, inputTime });
+                    if (!consumed && panel.AcceptsGameInput) typeof(CommanderInput).GetMethod("PointBoard", Private).Invoke(input, new object[] { pointer, down, up, a, grip });
                     return consumed;
                 }
                 void Drain() { Frame(); Frame(); }

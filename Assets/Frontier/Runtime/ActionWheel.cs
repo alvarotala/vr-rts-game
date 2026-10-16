@@ -28,7 +28,7 @@ namespace Frontier.Runtime
         private PlayerView actionView;
         private bool stickReady;
         private static readonly Color Normal = new Color(.035f, .09f, .14f, .98f), Accent = new Color(.16f, .65f, .68f), Ink = new Color(.68f, .86f, .91f);
-        private bool Allowed => Panel != null && Panel.AcceptsGameInput && !Panel.IsDragging && !Quest.Placing;
+        public bool CanOpen => Panel != null && Panel.AcceptsGameInput && !Panel.IsDragging && !Quest.Placing;
 
         // Called before console/terrain input. Every frame of an open wheel is consumed,
         // including the frame that closes it: A must never also become a contextual map order.
@@ -40,8 +40,8 @@ namespace Frontier.Runtime
             if (press)
             {
                 if (IsOpen) Close();
-                else if (Allowed) { Open(); UpdatePose(pointer); }
-                return wasOpen || Allowed;
+                else if (CanOpen) { Open(); UpdatePose(pointer); }
+                return wasOpen || CanOpen;
             }
             if (!IsOpen) return false;
             RefreshActions(); UpdatePose(pointer); Aim(stick);
@@ -62,7 +62,7 @@ namespace Frontier.Runtime
             if (root != null) root.gameObject.SetActive(false);
         }
 
-        private bool ValidContext() => Allowed && Session.Match == openedMatch &&
+        private bool ValidContext() => CanOpen && Session.Match == openedMatch &&
             selectedIds.SequenceEqual(Session.Selection.OrderBy(id => id)) &&
             selectedIds.All(id => Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player));
 
@@ -110,7 +110,7 @@ namespace Frontier.Runtime
             title.text = InBuildMenu ? "BUILD" : available.Heading;
             detail.text = items.Count == 0 ? available.Hint : "Tilt right stick\nto choose";
             detail.color = Ink;
-            help.text = "A · Execute     " + (InBuildMenu ? "B · Back" : "B · Close");
+            help.text = "Trigger / A · Execute\nGrip / B · " + (InBuildMenu ? "Back" : "Close");
         }
 
         private void Aim(Vector2 stick)

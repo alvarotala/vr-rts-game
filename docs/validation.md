@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Doble grip y atajos de la rueda — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Dos pulsaciones rápidas del grip derecho abren la rueda, además del joystick. Con la rueda abierta, gatillo/A ejecutan y grip/B retroceden o cierran. El grip sostenido sigue siendo Shift fuera de la rueda. La pulsación de apertura no cierra la rueda, sostener botones no repite acciones y se espera a soltarlos antes de devolver la entrada al mapa.
+
+- `ActionWheelPreview.Render`: **148 comprobaciones y 18 vistas** aprobadas para ambas facciones. Incluye doble grip rápido/lento, pulsación larga, selección aditiva, confirmación por gatillo, submenú Build, consumo de la pulsación de construcción, grip para volver/cerrar, foco, pausa y menú principal, además de las regresiones de A/B y comandos. Registro: `TestResults/unity-grip-wheel.log`.
+- `MenuFlowPreview.Render`: **46 comprobaciones y 12 vistas**, con instrucciones Touch actualizadas. Registro: `TestResults/unity-grip-wheel-menus.log`. Inspeccionados el pie de ayuda de la rueda y la pantalla completa de controles, sin recortes de texto.
+- Scripts compilados con Unity **6000.3.26f1** / CLI **1.0.0-beta.13**. Sin cambios de simulación. APK, `ProjectSettings` y `Assets/XR` conservan los 52 hashes de la línea base; el APK **0.1.5** anterior no incluye estos atajos.
+
+Pendiente: comprobar la comodidad del intervalo de doble pulsación (0,35 s) y de los botones físicos en Quest. Las pruebas usan entradas y tiempo sintéticos; no se generó APK.
+
 ## APK integrado — 0.1.5 (6) — 15 de octubre de 2026
 
 Compilación solicitada por el usuario con todos los cambios hasta `1744cb9`: siluetas de edificios, cola de producción visible, dificultad Very Easy, tablero fijo después de colocarlo, grip derecho como Shift, rueda contextual con joystick derecho y A/B, selección de minerales más tolerante, contadores persistentes de trabajadores y nuevos cristales/respiraderos de gas. Las notas históricas de «sin nuevo APK» para estas tareas quedan incluidas en esta entrega.
