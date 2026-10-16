@@ -82,6 +82,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Ayuda de acciones | Hover durante 1,5 segundos | Hover durante 1,5 segundos |
 | Orden contextual | A sobre el mapa (con la rueda cerrada) | Clic derecho |
 | Encolar orden contextual | Grip + A | Shift + clic derecho |
+| Punto de reunión del edificio seleccionado | A sobre el terreno | Clic derecho |
 | Attack Move / ataque directo sobre enemigo | Doble A; mantener grip para encolar | Doble clic derecho; Shift para encolar |
 | Abrir / cerrar rueda de acciones | Pulsar joystick derecho; doble grip también abre | — |
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
@@ -101,6 +102,14 @@ El juego incluye selección ampliada, contorno de selección al ras del terreno,
 El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
 
 Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionada la quita una sola vez; soltar no vuelve a seleccionarla. Si el puntero se arrastra, el gesto sigue siendo selección de área. **Doble gatillo** selecciona unidades propias de la misma definición dentro de doce celdas de la unidad apuntada; con grip conserva el resto de la selección. No incluye edificios ni unidades enemigas.
+
+### Punto de reunión de edificios
+
+Seleccionar un centro principal, barraca o edificio de tecnología terminado y pulsar **A sobre el terreno** establece su **Rally Point** (clic derecho en escritorio). También funciona con varios productores propios seleccionados. Cada edificio conserva un único destino; volver a pulsar A lo cambia, incluso con grip o doble A. El indicador cian con bandera y línea punteada conecta el edificio con ese punto, y la consola muestra el destino en **RALLY POINT**.
+
+Las unidades nuevas reciben una orden Move al desplegarse, usando el destino vigente en ese momento y las reglas normales de separación y movimiento. Cambiar el punto no altera unidades que ya salieron ni la cola de producción. Los trabajadores también van al punto elegido; este ajuste es un destino de movimiento, no una orden automática de recolección.
+
+**Clear Rally Point**, disponible en la consola y la rueda, borra el destino sin cancelar producción. Así se recupera el comportamiento predeterminado: los trabajadores buscan recursos y las unidades militares quedan junto a la salida. Los destinos fuera del mapa, bloqueados o sin camino según la información conocida se rechazan conservando el punto anterior. Si el terreno cambia después y el punto queda inaccesible, la unidad sale en un espacio seguro; se muestra un aviso cuando el bloqueo también es conocido. Si la propia salida está ocupada, la producción espera como antes.
 
 ### Cola de acciones de unidades
 

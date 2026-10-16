@@ -172,6 +172,7 @@ CollisionChecks.Run(catalog,Check);
 CombatMotionChecks.Run(catalog,Check);
 ProductionChecks.Run(catalog,map,Check);
 CommandQueueChecks.Run(catalog,Check);
+RallyPointChecks.Run(catalog,Check);
 HarvestingChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
 if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);

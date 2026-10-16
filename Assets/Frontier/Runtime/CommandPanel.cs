@@ -91,7 +91,7 @@ namespace Frontier.Runtime
             }
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             Board.SetVisible(ShowsBoard);
-            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;

@@ -14,6 +14,8 @@ namespace Frontier.Runtime
         private Image healthBackground, healthFill;
         private RectTransform orderPlanStrip;
         private Text orderPlanCount, orderPlanSteps, orderPlanHint;
+        private RectTransform rallyPointStrip;
+        private Text rallyPointValue, rallyPointHint;
         private readonly Text[] groupCounts=new Text[3];
         private readonly Target[] groupTargets=new Target[3], matchTargets=new Target[2];
         private static readonly Color MineralTint=new Color(.38f,.83f,1),GasTint=new Color(.85f,.62f,1),SupplyTint=new Color(.55f,.94f,.68f),WarningTint=new Color(1,.67f,.3f);
@@ -60,6 +62,10 @@ namespace Frontier.Runtime
             orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAnchor.MiddleRight);
             orderPlanSteps=Label(orderPlanStrip,"",new Vector2(16,-34),new Vector2(1020,28),18,Color.white);
             orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,new Color(.65f,.76f,.82f));
+            rallyPointStrip=Section(matchHud,"Rally point",new Vector2(24,-484),new Vector2(1052,72));
+            Label(rallyPointStrip,"RALLY POINT",new Vector2(16,-7),new Vector2(230,24),16,MineralTint);
+            rallyPointValue=Label(rallyPointStrip,"",new Vector2(260,-7),new Vector2(776,24),18,Color.white,TextAnchor.MiddleRight);
+            rallyPointHint=Label(rallyPointStrip,"",new Vector2(16,-38),new Vector2(1020,24),16,new Color(.65f,.76f,.82f));
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
         {
@@ -87,10 +93,14 @@ namespace Frontier.Runtime
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls;
             bool production=hud&&SelectedProducer()!=null;
             bool orders=hud&&SelectedMobileUnits().Length>0;
-            float queueSpace=(production?180:0)+(orders?108:0)+62;
+            bool rally=hud&&OrderQueueVisuals.RallyProducers(Session).Length>0;
+            float queueSpace=(production?180:0)+(orders?108:0)+(rally?84:0)+62;
             orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
+            rallyPointStrip.gameObject.SetActive(rally);
             productionStrip.anchoredPosition=new Vector2(24,-484);
+            orderPlanStrip.anchoredPosition=new Vector2(24,-484-(production?180:0));
+            rallyPointStrip.anchoredPosition=new Vector2(24,-484-(production?180:0)-(orders?108:0));
             matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:526);matchHud.sizeDelta=root.sizeDelta;
             harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
             groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
@@ -150,10 +160,22 @@ namespace Frontier.Runtime
             UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
             UpdateProductionHud();
             UpdateOrderPlanHud();
+            UpdateRallyPointHud();
             status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
         }
         private VisibleEntity[] SelectedMobileUnits()=>Session.View==null?Array.Empty<VisibleEntity>():Session.View.entities
             .Where(e=>e.owner==Session.View.player&&!e.remembered&&Session.Selection.Contains(e.id)&&!Session.Catalog[e.definition].building).OrderBy(e=>e.id).ToArray();
+        private void UpdateRallyPointHud()
+        {
+            var producers=OrderQueueVisuals.RallyProducers(Session);if(producers.Length==0)return;
+            if(producers.Length==1)
+            {
+                var producer=producers[0];
+                rallyPointValue.text=producer.hasRallyPoint?string.Format(CultureInfo.InvariantCulture,"SET · {0:0.#}, {1:0.#}",producer.rallyPoint.x,producer.rallyPoint.y):"DEFAULT · No rally point";
+            }
+            else rallyPointValue.text=$"{producers.Count(e=>e.hasRallyPoint)} / {producers.Length} rally points set";
+            rallyPointHint.text=Session.CanSetRallyPoint?"A on terrain: set rally point · Newly trained units move to the cyan flag":"Select only production buildings to set rally points · Cyan flag: new-unit destination";
+        }
         private void UpdateOrderPlanHud()
         {
             var units=SelectedMobileUnits();if(units.Length==0)return;

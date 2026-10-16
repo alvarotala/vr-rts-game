@@ -94,6 +94,7 @@ namespace Frontier.Core
             }
             if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, first);
             if (command.kind == CommandKind.Cancel) return Cancel(first, command.queueOrderId);
+            if (command.kind == CommandKind.SetRallyPoint || command.kind == CommandKind.ClearRallyPoint) return ConfigureRallyPoint(command, selected);
             if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {

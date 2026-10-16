@@ -139,16 +139,30 @@ namespace Frontier.Runtime
         {
             var previous=View;View=Match.View(0);
             foreach(var entity in View.entities)
-                if(entity.owner==View.player&&entity.activeOrderSequence>0&&
-                    (entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove)&&
-                    (previous==null||!previous.entities.Any(old=>old.id==entity.id&&old.activeOrderSequence==entity.activeOrderSequence)))
+                if(entity.owner==View.player&&(entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove))
+                {
+                    var old=previous?.entities.FirstOrDefault(e=>e.id==entity.id);
                     // Enqueuing leaves the active sequence unchanged. A new active waypoint
-                    // turns the model now, including when simulation advances the queue.
-                    UnitMoveOrdered?.Invoke(entity.id,entity.destination);
+                    // or a freshly deployed unit with an automatic rally turns now.
+                    if(old==null||(entity.activeOrderSequence>0&&old.activeOrderSequence!=entity.activeOrderSequence))
+                        UnitMoveOrdered?.Invoke(entity.id,entity.destination);
+                }
+        }
+        public bool CanSetRallyPoint => View!=null&&Selection.Count>0&&Selection.All(id=>View.entities.Any(e=>
+            e.id==id&&e.owner==View.player&&!e.remembered&&e.complete&&Catalog.CanProduceUnits(e.definition)));
+        public bool ClearRallyPoint()
+        {
+            if(!Send(CommandKind.ClearRallyPoint))return false;
+            CancelMode();Announce("Rally point cleared. New units use their default behavior.");return true;
         }
         public int Context(Point point,int entityId,int resourceId,bool append=false,bool attack=false,int replaceSequence=0)
         {
             if (View == null) return 0;
+            if(CanSetRallyPoint)
+            {
+                if(!Send(CommandKind.SetRallyPoint,position:point))return 0;
+                CancelMode();Announce("Rally point set. Newly trained units will move there.");return sequence;
+            }
             if (BuildDefinition != null)
             {
                 if(!Send(CommandKind.Build,definition:BuildDefinition,position:point,append:append))return 0;

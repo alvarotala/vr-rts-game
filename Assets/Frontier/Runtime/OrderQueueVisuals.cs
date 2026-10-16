@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 namespace Frontier.Runtime
 {
     // A plan of requested destinations, not a preview of the navigation route.
-    // Only one selected own unit is drawn, using information from PlayerView.
+    // One selected own unit and selected producers are drawn, using PlayerView only.
     public sealed class OrderQueueVisuals : System.IDisposable
     {
         public const int MaximumWaypoints=8;
@@ -21,6 +21,7 @@ namespace Frontier.Runtime
         private readonly List<Vector3> normals=new List<Vector3>();
         private PlayerView lastView;
         private int lastRepresentative;
+        private int[] lastRallyProducers=System.Array.Empty<int>();
         private float lastScale;
         private BoardView board;
 
@@ -36,19 +37,28 @@ namespace Frontier.Runtime
         public static VisibleEntity Representative(GameSession session)=>session.View?.entities
             .Where(e=>e.owner==session.View.player&&!e.remembered&&session.Selection.Contains(e.id)&&!session.Catalog[e.definition].building&&e.pendingOrders.Length>0)
             .OrderBy(e=>e.id).FirstOrDefault();
+        public static VisibleEntity[] RallyProducers(GameSession session)=>session.View==null?System.Array.Empty<VisibleEntity>():session.View.entities
+            .Where(e=>e.owner==session.View.player&&!e.remembered&&e.complete&&session.Selection.Contains(e.id)&&session.Catalog.CanProduceUnits(e.definition))
+            .OrderBy(e=>e.id).ToArray();
 
         public void Update(BoardView value)
         {
             board=value;var session=board.Session;var view=session.View;
-            var unit=session.Running&&board.Content.gameObject.activeInHierarchy?Representative(session):null;
-            if(unit==null){Hide();return;}
+            if(!session.Running||!board.Content.gameObject.activeInHierarchy){Hide();return;}
+            var unit=Representative(session);
+            var producers=RallyProducers(session).Where(e=>e.hasRallyPoint).ToArray();
+            if(unit==null&&producers.Length==0){Hide();return;}
             root.gameObject.SetActive(true);
-            if(ReferenceEquals(lastView,view)&&lastRepresentative==unit.id&&lastScale==board.CellScale)return;
-            lastView=view;lastRepresentative=unit.id;lastScale=board.CellScale;
+            if(ReferenceEquals(lastView,view)&&lastRepresentative==(unit?.id??0)&&lastScale==board.CellScale&&lastRallyProducers.SequenceEqual(producers.Select(e=>e.id)))return;
+            lastView=view;lastRepresentative=unit?.id??0;lastScale=board.CellScale;lastRallyProducers=producers.Select(e=>e.id).ToArray();
             vertices.Clear();triangles.Clear();colors.Clear();normals.Clear();
-            Point origin=unit.position;int number=1;
-            AddOrder(unit.order,unit.target,unit.destination,null,true);
-            foreach(var order in unit.pendingOrders.Take(MaximumWaypoints-1))AddOrder(order.kind,order.target,order.position,order.definition,false);
+            foreach(var producer in producers)AddRallyPoint(producer);
+            Point origin=unit?.position??default;int number=1;
+            if(unit!=null)
+            {
+                AddOrder(unit.order,unit.target,unit.destination,null,true);
+                foreach(var order in unit.pendingOrders.Take(MaximumWaypoints-1))AddOrder(order.kind,order.target,order.position,order.definition,false);
+            }
             mesh.Clear();mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetColors(colors);mesh.SetNormals(normals);mesh.RecalculateBounds();
 
             void AddOrder(CommandKind kind,int target,Point position,string definition,bool active)
@@ -66,13 +76,41 @@ namespace Frontier.Runtime
                 // The solid point is the exact destination. Put its number above the
                 // ring so the marker stays distinct from both the label and the route.
                 Dot(center,radius*.23f,tint);
-                for(int i=0;i<28;i++)
-                {
-                    float a=i*Mathf.PI*2/28,b=(i+1)*Mathf.PI*2/28;
-                    Stroke(center+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius,center+new Vector2(Mathf.Cos(b),Mathf.Sin(b))*radius,width*1.4f,tint);
-                }
+                Ring(center,radius,width*1.4f,tint);
                 Number(number,center+Vector2.up*radius*1.8f,radius*.45f,width*1.25f);
                 origin=destination;number++;
+            }
+        }
+        private void AddRallyPoint(VisibleEntity producer)
+        {
+            var point=producer.rallyPoint;var map=board.Session.Map;
+            if(point.x<0||point.y<0||point.x>=map.width||point.y>=map.height)return;
+            float radius=Mathf.Clamp(.007f/board.CellScale,.55f,1.1f),width=Mathf.Clamp(.00095f/board.CellScale,.05f,.15f);
+            float half=board.Session.Catalog[producer.definition].footprint*.5f;
+            var origin=new Vector2(producer.position.x+half,producer.position.y+half);
+            var destination=new Vector2(point.x,point.y);var delta=destination-origin;float distance=delta.magnitude;
+            if(distance>.001f)
+            {
+                var direction=delta/distance;
+                // Begin outside the building footprint so the connection stays legible.
+                float edge=half/Mathf.Max(Mathf.Abs(direction.x),Mathf.Abs(direction.y))+.15f;
+                if(distance>edge+radius)DashedStroke(origin+direction*edge,destination-direction*radius,width,MoveTint);
+            }
+            Dot(destination,radius*.23f,MoveTint);Ring(destination,radius,width*1.4f,MoveTint);
+            // The flag lies on the terrain, unlike an upright sign or a unit-plan digit.
+            var foot=destination+new Vector2(.55f,.25f)*radius;
+            var top=destination+new Vector2(.55f,2.2f)*radius;
+            var tip=destination+new Vector2(1.8f,1.7f)*radius;
+            var bottom=destination+new Vector2(.55f,1.2f)*radius;
+            Stroke(foot,top,width*1.5f,Color.white);
+            Stroke(top,tip,width*1.7f,MoveTint);Stroke(tip,bottom,width*1.7f,MoveTint);Stroke(bottom,top,width*1.7f,MoveTint);
+        }
+        private void Ring(Vector2 center,float radius,float width,Color tint)
+        {
+            for(int i=0;i<28;i++)
+            {
+                float a=i*Mathf.PI*2/28,b=(i+1)*Mathf.PI*2/28;
+                Stroke(center+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius,center+new Vector2(Mathf.Cos(b),Mathf.Sin(b))*radius,width,tint);
             }
         }
         private void DashedStroke(Vector2 a,Vector2 b,float width,Color color)
@@ -157,7 +195,7 @@ namespace Frontier.Runtime
             }
             return new Vector3(point.x,height+.025f,point.y);
         }
-        public void Hide(){if(root!=null)root.gameObject.SetActive(false);lastView=null;lastRepresentative=0;}
+        public void Hide(){if(root!=null)root.gameObject.SetActive(false);lastView=null;lastRepresentative=0;lastRallyProducers=System.Array.Empty<int>();}
         public void Dispose(){Release(root==null?null:root.gameObject);Release(mesh);Release(material);}
         private static void Release(Object item){if(item==null)return;if(Application.isPlaying)Object.Destroy(item);else Object.DestroyImmediate(item);}
     }

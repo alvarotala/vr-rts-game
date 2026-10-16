@@ -220,7 +220,7 @@ namespace Frontier.Runtime
         {
             ValidateMapGestures(add);
             ResetSelectTap();
-            bool mode=Session.BuildDefinition!=null||Session.AttackMoveMode;
+            bool mode=Session.BuildDefinition!=null||Session.AttackMoveMode||Session.CanSetRallyPoint;
             bool sameTarget=actionEntity==entity&&actionResource==resource&&(entity>0||actionPoint.Distance(point)<=1.5f);
             bool twice=!mode&&lastActionPress>=0&&now>=lastActionPress&&now-lastActionPress<=DoubleTapWindow&&
                 actionSequence>0&&actionAdd==add&&sameTarget&&actionSelection.SetEquals(Session.Selection);

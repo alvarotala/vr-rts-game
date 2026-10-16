@@ -49,7 +49,18 @@ namespace Frontier.Runtime
                 if (!entity.complete || entity.queue.Length > 0)
                     result.Add("cancel", "Cancel / refund", "Cancel / refund", entity.complete ? "Last queued item" : "Cancel construction", () => session.Send(CommandKind.Cancel), ActionCategory.Cancel,
                         entity.complete ? "Removes the last item in this building's production queue and refunds its resource cost." : "Abandons this unfinished building and refunds part of its resource cost.");
+                if(entity.complete&&entity.hasRallyPoint&&session.Catalog.CanProduceUnits(entity.definition))
+                    result.Add("clear-rally-point","Clear Rally Point","Clear Rally","Restore default exit",()=>session.ClearRallyPoint(),ActionCategory.Cancel,
+                        "Clears this building's rally point. Newly trained workers resume automatic gathering; other units stay at the exit. Units already deployed keep their orders.");
                 if (result.Items.Count == 0) result.Hint = "This building operates automatically.";
+            }
+            else if(session.CanSetRallyPoint)
+            {
+                result.Heading="RALLY POINTS";
+                result.Hint="Press A on the terrain to set a rally point for these buildings.";
+                if(selected.Any(e=>e.hasRallyPoint))
+                    result.Add("clear-rally-point","Clear Rally Points","Clear Rallies","Restore default exits",()=>session.ClearRallyPoint(),ActionCategory.Cancel,
+                        "Clears rally points for the selected production buildings. Units already deployed keep their orders; production queues are unchanged.");
             }
             else if (selected.Length > 0 && selected.All(e => !session.Catalog[e.definition].building))
             {

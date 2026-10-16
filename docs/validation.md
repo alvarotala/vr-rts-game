@@ -4,6 +4,20 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Puntos de reunión de edificios — fuentes, sin APK — 16 de octubre de 2026
+
+Seleccionar productores propios terminados y pulsar A sobre terreno define su `Rally Point`. Las nuevas unidades reciben un Move hacia ese destino, con orientación inicial y separación normales. Cada edificio conserva un punto independiente; cambiarlo no altera unidades desplegadas ni colas de producción. `Clear Rally Point`, en consola y rueda, restaura el comportamiento predeterminado. El mapa muestra bandera, punto y línea punteada cian al seleccionar el productor, y el HUD separa el destino de la producción. Los trabajadores con rally explícito se desplazan al punto; no reciben una orden de recolección.
+
+- **591 comprobaciones de núcleo aprobadas**, incluidas 135 de rally para ambas facciones y todos los productores. Cubren destinos vigentes al nacer, borrado, costos y colas intactos, seis despliegues sucesivos sin solapamientos, propiedad, selección múltiple atómica, rutas/salidas bloqueadas y privacidad de edificios ocultos o recordados. Registro: `TestResults/rally-point-core-final.log`. No se repitieron partidas IA en esta tarea.
+- **126 comprobaciones de entrada**: A, grip, doble A, limpieza mediante consola y rueda, consumo de botones, productores inválidos, orientación al aparecer y conservación de gestos de unidades. Registro: `TestResults/unity-rally-point-final.log`.
+- **76 comprobaciones de presentación y 14 vistas**: banderas planas, puntos en centros de celda, trazos con espacios, recorte, ausencia de colliders, destinos múltiples, selección mixta, privacidad y limpieza al ocultar/destruir/salir. Capturas: `TestResults/RallyPoint`; registro final: `TestResults/unity-rally-point-captures.log`.
+- Regresiones de orientación (**32**), gestos de colas (**64**), visualización de colas (**55 / 5 vistas**), cancelación de producción (**168 / 14**), ayuda (**134 / 36**), producción (**48 / 16**), recolección (**18 vistas**), menús (**47 / 12**) y rueda (**148 / 18**). Registro: `TestResults/unity-rally-point-presentation.log`. Total Editor: **898 comprobaciones enumeradas y 133 vistas**, sin contar ejecuciones repetidas.
+- Se corrigieron dos problemas de fixtures durante la validación: un GUID inválido del archivo de pruebas y un muestreo de línea que no contemplaba el ajuste del destino al centro de celda. El registro de entrada conserva ese fallo inicial de presentación; la ejecución posterior de presentación y las capturas terminaron correctamente con Unity **6000.3.26f1** / CLI **1.0.0-beta.13**.
+- Inspeccionados el panel del centro industrial con producción, el panel de tecnología biológica con investigación y los mapas de destinos múltiples/selección mixta. Producción, rally y acciones permanecen separados y legibles.
+- Los **54 hashes** de `TestResults/rally-point-baseline.json` verifican que ProjectSettings, Assets/XR y APK existentes no cambiaron. No se generó APK ni ejecutable desktop.
+
+Pendiente: comprobar comodidad del apuntado y legibilidad física de las banderas en Quest. Las pruebas usan entrada sintética y capturas del Editor; el APK existente no incluye esta función.
+
 ## Destinos con puntos y líneas punteadas — fuentes, sin APK — 16 de octubre de 2026
 
 La cola del mapa usa puntos sólidos con aro y número separado, conectados por trazos punteados. Move es cian, Attack/Attack Move rojo y Gather/Build/Repair verde. Los enlaces conservan el color completo y aumentan su ancho para mejorar la lectura; la geometría sigue terreno/rampas y conserva el recorte y la selección existentes.

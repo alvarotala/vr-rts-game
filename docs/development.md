@@ -37,6 +37,15 @@ Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en 
 
 `CombatMotionChecks` verifica frenado en Attack, Attack Move y persecución automática, continuidad durante cooldown, alcance/visión después de frenar y excepciones de Hold y torres.
 
+`RallyPointChecks` comprueba asignación, actualización y borrado por edificio, validación de productores, privacidad y despliegue de unidades con rutas/salidas bloqueadas. La batería de Editor para puntos de reunión incluye gestos, banderas, HUD y regresiones de producción y colas:
+
+```sh
+unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.RallyPointValidationBatch.Run
+```
+
+Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
+
 `CommandQueueChecks` verifica FIFO, reemplazo inmediato, conversión del doble A, grupos, privacidad, invalidación de destinos, recolección, reparación y construcción. Para comprobar entrada y presentación sin APK:
 
 ```sh

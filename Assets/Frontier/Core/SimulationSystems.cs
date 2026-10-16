@@ -42,9 +42,12 @@ namespace Frontier.Core
                 producer.queue.RemoveAt(0); Notice?.Invoke(producer.owner, "Research complete."); return;
             }
             if (Units(producer.owner) >= Capacity(producer.owner)) return;
-            Point? exit = FreeExit(producer,Catalog[order.definition].collisionRadius); if (!exit.HasValue) return;
+            float radius = Catalog[order.definition].collisionRadius;
+            Point? exit = producer.hasRallyPoint ? FreeRallyExit(producer, radius) : FreeExit(producer, radius);
+            if (!exit.HasValue) return;
             var spawned = Spawn(producer.owner, order.definition, exit.Value); producer.queue.RemoveAt(0);
-            if (Type(spawned).role == "worker") ResumeGather(spawned);
+            if (producer.hasRallyPoint) RallyProducedUnit(producer, spawned);
+            else if (Type(spawned).role == "worker") ResumeGather(spawned);
         }
         private Point? FreeExit(EntityState building,float radius=.45f)
         {
@@ -165,6 +168,7 @@ namespace Frontier.Core
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
                 if (entity.owner == player) { item.target = entity.target; item.destination = entity.destination;
+                    item.hasRallyPoint = entity.hasRallyPoint; item.rallyPoint = entity.rallyPoint;
                     item.activeOrderSequence = entity.activeOrderSequence; item.pendingOrders = entity.pendingOrders.Select(CopyOrder).ToArray(); item.queue = entity.queue.Select(q => new ProductionOrder { id = q.id, definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
                 else item.order = CommandKind.Stop;
                 visible.Add(item);

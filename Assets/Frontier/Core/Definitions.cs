@@ -118,6 +118,14 @@ namespace Frontier.Core
         private static bool Positive(float value) => Nonnegative(value) && value > 0;
         public Archetype this[string id] => types[id];
         public bool Has(string id) => id != null && types.ContainsKey(id);
+        public bool CanProduceUnits(string definition)
+        {
+            if (!Has(definition) || !types[definition].building) return false;
+            var producer = types[definition];
+            foreach (var unit in Definition.archetypes)
+                if (!unit.building && unit.faction == producer.faction && unit.producer == producer.role) return true;
+            return false;
+        }
         public FactionDefinition Faction(string id) => factions[id];
         public Archetype Role(string faction, string role)
         {
@@ -130,7 +138,7 @@ namespace Frontier.Core
             return null;
         }
     }
-    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender }
+    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint }
     [Serializable]
     public sealed class GameCommand
     {
@@ -184,6 +192,8 @@ namespace Frontier.Core
         public int target, resourceId, cargo;
         public string cargoKind;
         public Point destination;
+        public bool hasRallyPoint;
+        public Point rallyPoint;
         public List<ProductionOrder> queue = new List<ProductionOrder>();
         public int activeOrderSequence;
         public List<UnitOrder> pendingOrders = new List<UnitOrder>();
@@ -226,6 +236,8 @@ namespace Frontier.Core
         public ProductionOrder[] queue = Array.Empty<ProductionOrder>();
         public int activeOrderSequence;
         public Point destination;
+        public bool hasRallyPoint;
+        public Point rallyPoint;
         public UnitOrder[] pendingOrders = Array.Empty<UnitOrder>();
     }
     [Serializable]
