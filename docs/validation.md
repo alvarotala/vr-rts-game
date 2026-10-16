@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Tablero fijo tras colocación en Quest — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Se retiran desplazamiento, zoom y restablecimiento de vista mediante sticks en Quest. Los ejes siguen ajustando altura/tamaño/giro durante la colocación explícita; una vez confirmada, el eje principal solo acerca/aleja un menú que se está arrastrando y la pulsación secundaria recupera el menú. `Full map` desaparece del HUD Quest y pausa ocupa su espacio. Las instrucciones Touch explican la colocación fija y el acceso a Settings para recolocar. El modo de prueba desktop conserva WASD/rueda/F.
+
+- Compilación de scripts y **44 comprobaciones de menús aprobadas**, con doce vistas, en Unity **6000.3.26f1** / CLI **1.0.0-beta.13**. Comprueba instrucciones sin navegación de mapa, movimiento/recuperación de menú documentados, HUD Quest sin `Full map`, pausa ampliada accionable mediante rayos y conservación de controles desktop, además del flujo de colocación/cancelación y partida existente.
+- Inspeccionadas `TestResults/Menus/04-controls-touch.png` y `06-actions-touch.png`. Registro: `TestResults/unity-fixed-board.log`.
+- Revisión de la ruta de entrada: `CommanderInput` llama a `Board.Navigate` únicamente cuando `Quest.Active` es falso; la rama Touch no invoca `Board.Fit`. `PlaceRay` continúa recibiendo los sticks solo durante `Placing`. No cambió la simulación ni la implementación del ancla; no se repitieron pruebas del núcleo.
+- No se generó APK ni ejecutable desktop. El APK **0.1.4**, `ProjectSettings` y `Assets/XR` conservan sus hashes previos a esta tarea; el APK disponible todavía no incluye este cambio.
+
+Pendiente: comprobar físicamente que mover y pulsar ambos sticks después de colocar no altere el tablero, incluyendo modo zurdo, y que se pueda recolocar desde Settings y mover el menú. La previsualización del Editor no simula los mandos Touch ni valida el ancla del visor.
+
 ## Dificultad Very Easy — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Se agrega **Very Easy** al selector, con una explicación breve en la preparación de partida. La IA mantiene una economía y ejército pequeños, sin tecnología ni expansión, y oleadas ofensivas de tres soldados desde el minuto 18, separadas por al menos tres minutos. Se defiende si la atacan antes. Easy y Normal conservan sus políticas previas; costos, visión y reglas de combate son los mismos para todas las dificultades.

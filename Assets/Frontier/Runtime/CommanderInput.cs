@@ -16,7 +16,7 @@ namespace Frontier.Runtime
         private void Update()
         {
             if(Board.Content==null)return;
-            bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0;Ray ray;
+            bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
             Vector2 primaryStick=Vector2.zero,secondaryStick=Vector2.zero;
             if(Quest.Active)
             {
@@ -24,8 +24,7 @@ namespace Frontier.Runtime
                 ray=Quest.PointerRay(Session.LeftHanded);down=OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger,primary);up=OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger,primary);
                 add=OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger,secondary);order=OVRInput.GetDown(OVRInput.Button.One,primary);cancel=OVRInput.GetDown(OVRInput.Button.Two,primary);
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);secondaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,secondary);
-                pan=secondaryStick;zoom=primaryStick.y;
-                if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,primary))Board.Fit();
+                menuDepth=primaryStick.y;
                 if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,secondary))Panel.Recall();
                 toggleMenu=OVRInput.GetDown(OVRInput.Button.Start);
                 if(Time.unscaledTime>hapticEnd)OVRInput.SetControllerVibration(0,0,primary);
@@ -35,7 +34,7 @@ namespace Frontier.Runtime
             {
                 if(Mouse.current==null)return;ray=Quest.Camera.ScreenPointToRay(Mouse.current.position.ReadValue());
                 down=Mouse.current.leftButton.wasPressedThisFrame;up=Mouse.current.leftButton.wasReleasedThisFrame;order=Mouse.current.rightButton.wasPressedThisFrame;
-                zoom=Mouse.current.scroll.ReadValue().y*.04f;
+                zoom=Mouse.current.scroll.ReadValue().y*.04f;menuDepth=zoom;
                 if(Keyboard.current!=null)
                 {
                     var k=Keyboard.current;add=k.leftShiftKey.isPressed||k.rightShiftKey.isPressed;cancel=k.escapeKey.wasPressedThisFrame;
@@ -52,10 +51,12 @@ namespace Frontier.Runtime
             if(cancel)
             {if(Panel.AcceptsGameInput&&(Session.BuildDefinition!=null||Session.AttackMoveMode))Session.CancelMode();else Panel.Back();ClearPointer();return;}
             if(toggleMenu){Panel.ToggleMenu();ClearPointer();return;}
-            if(Panel.Point(ray,down,up,zoom)){ClearPointer();return;}
-            if(!Panel.AcceptsGameInput)
-            {if(Panel.Page==CommandPanel.MenuPage.MatchSetup)Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);ClearPointer();return;}
-            Board.Navigate(pan,zoom,Quest.Active?Time.unscaledDeltaTime:zoom!=0?1:Time.unscaledDeltaTime);
+            if(Panel.Point(ray,down,up,menuDepth)){ClearPointer();return;}
+            // Quest keeps the confirmed board view fixed. Navigation remains a desktop
+            // development control; sticks only affect placement or a grabbed menu.
+            if(!Quest.Active&&(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup))
+                Board.Navigate(pan,zoom,zoom!=0?1:Time.unscaledDeltaTime);
+            if(!Panel.AcceptsGameInput){ClearPointer();return;}
             PointBoard(ray,down,up,order,add);
         }
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)

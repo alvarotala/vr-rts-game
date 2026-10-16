@@ -93,7 +93,9 @@ unity run . --log-file TestResults/unity-menus.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
 ```
 
-Ejecuta rayos contra los botones reales y comprueba inicio, configuración, selección de las tres dificultades, creación de la IA elegida, pausa, regreso, limpieza de partida, conservación de colocación y pausas externas, nueva partida y revancha. Guarda once vistas estáticas en `TestResults/Menus`. Restaura la preferencia de mano que usa durante la comprobación y no genera ejecutables. El escenario de prueba desktop también entra ahora por **New Match** antes de **START MATCH**.
+Ejecuta rayos contra los botones reales y comprueba inicio, configuración, selección de las tres dificultades, creación de la IA elegida, pausa, regreso, limpieza de partida, conservación de colocación y pausas externas, nueva partida y revancha. Comprueba además las instrucciones Touch sin navegación del mapa, el HUD Quest sin `Full map` y el botón de pausa ampliado. Guarda doce vistas estáticas en `TestResults/Menus`. Restaura la preferencia de mano que usa durante la comprobación y no genera ejecutables. El escenario de prueba desktop también entra ahora por **New Match** antes de **START MATCH**.
+
+Quest conserva la configuración confirmada del tablero; los sticks solo ajustan el mapa durante su colocación. Los controles WASD/rueda/F y las vistas de prueba con zoom permanecen disponibles en escritorio. Las previsualizaciones del Editor no validan por sí solas la lectura física de los mandos ni el anclaje en Quest.
 
 Para inspeccionar el hover en el tablero real desde el Editor, usar **Frontier → Preview hover**, o:
 

@@ -22,6 +22,8 @@ La selección puede extenderse fuera del tablero mediante `RayToSelectionPlane`,
 
 `CommanderInput` convierte mandos o mouse en selección y órdenes. `CommandPanel` comparte sus acciones entre escritorio y Quest. `QuestBridge` encapsula passthrough, permisos, superficies, colocación, anclas y eventos de seguimiento.
 
+En Quest, los sticks se envían al tablero únicamente mientras `QuestBridge.Placing` está activo. Fuera de colocación, el eje principal solo ajusta la distancia de un menú que se está arrastrando y la pulsación secundaria recupera el menú. No se llama a `BoardView.Navigate` ni se restablece la vista con el stick principal; la navegación por WASD/rueda/F permanece exclusiva del modo de prueba desktop. El panel oculta `Full map` en Quest y amplía el botón de pausa. Recolocar sigue siendo una acción explícita en Settings, con confirmación o recuperación de la colocación anterior al cancelar.
+
 ## Menús y ciclo de partida
 
 `CommandPanel.MenuPage` separa inicio, preparación de partida, configuración, controles, acciones, pausa, confirmación de salida y resultado. Comparten el lienzo movible y la entrada por rayos. Las pantallas de configuración y controles recuerdan el menú de origen; abrirlas en partida mantiene la pausa de menú. `CommanderInput` solo permite selección, órdenes y grupos cuando `AcceptsGameInput` está activo. Retroceder y pausar se procesan antes de interceptar el rayo sobre el panel.

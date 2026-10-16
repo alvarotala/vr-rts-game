@@ -47,6 +47,9 @@ namespace Frontier.Editor
                 Check(Field<Text>(panel,"selection").text.Contains("Escape"),"Desktop controls are shown");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
                 Check(Field<Text>(panel,"selection").text.Contains(session.LeftHanded?"X: move":"A: move"),"Touch controls match the dominant hand");
+                var touchControls=Field<Text>(panel,"selection").text;
+                Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
+                Check(touchControls.Contains("Main stick: adjust distance")&&touchControls.Contains("recall menu"),"Touch menu movement and recall remain documented");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
@@ -67,6 +70,11 @@ namespace Frontier.Editor
                 Check(Field<Strategist>(session,"bot").Difficulty==AiDifficulty.VeryEasy,"Starting instantiates the selected Very Easy AI");
                 session.Pause("tracking",false);Refresh();
                 Check(panel.AcceptsGameInput&&!Has("New Match")&&Has("Pause"),"Match exposes action panel instead of main menu");
+                typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Invoke(panel,"Rebuild");Refresh();
+                Check(!Has("Full map")&&Has("Pause"),"Quest HUD removes the obsolete map reset action");Capture("06-actions-touch");
+                Click("Pause");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Expanded Quest pause button works with the pointer");Click("Resume match");
+                typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);Invoke(panel,"Rebuild");Refresh();
+                Check(Has("Full map")&&Has("Pause"),"Desktop retains its development view controls");
                 var match=session.Match;var worker=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");
                 session.Select(worker.id,false);session.Group(0,true);session.ChooseBuild(session.Catalog.Role(session.Faction,"supply").id);
                 Invoke(board,"LateUpdate");Refresh();Capture("06-actions");

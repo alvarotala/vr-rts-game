@@ -84,6 +84,10 @@ namespace Frontier.Runtime
             harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
             groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
             matchStrip.anchoredPosition=new Vector2(756,-470-queueSpace);
+            matchTargets[0].rect.gameObject.SetActive(!Quest.Active);
+            var pause=matchTargets[1].rect;
+            TopLeft(pause,new Vector2(Quest.Active?14:166,-36),new Vector2(Quest.Active?292:140,54));
+            foreach(RectTransform label in pause)label.sizeDelta=new Vector2(pause.sizeDelta.x-16,label.sizeDelta.y);
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
             selection.fontSize=hud?28:20;selection.color=hud?Color.white:new Color(.65f,.76f,.82f);
             TopLeft(selection.rectTransform,hud?new Vector2(40,-211):new Vector2(30,-169),hud?new Vector2(288,42):new Vector2(1040,controls?225:38));
@@ -162,7 +166,7 @@ namespace Frontier.Runtime
         }
         private void BuildMatchActions()
         {
-            targets.AddRange(groupTargets);targets.AddRange(matchTargets);
+            targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
             actionHint.text="Select your units or a building to view its available actions.";actionHeading.text="ACTIONS";
             var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             if(selected.Length==1&&Session.Catalog[selected[0].definition].building)

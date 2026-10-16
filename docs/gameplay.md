@@ -46,11 +46,13 @@ Al seleccionar un edificio productor terminado, **PRODUCTION QUEUE** muestra una
 
 Una producción terminada que aún no puede salir muestra **WAITING TO DEPLOY**, con **Needs more supply** si faltan lugares para las unidades existentes o **Clear the building exit** si la salida está bloqueada. Las pausas por seguimiento/visor muestran **PAUSED** y conservan el progreso. La sección también distingue investigaciones de unidades y se oculta al seleccionar unidades, varios edificios, construcciones incompletas o edificios sin producción.
 
-**CONTROL GROUPS** tiene su propia franja: cada grupo muestra **Empty** o su cantidad asignada. Pulsar recupera el grupo; mantener guarda la selección. **MATCH** contiene el reloj, **Full map** y **Pause**, separados de las acciones de unidades y edificios. La ocupación de depósitos y el aviso **excess** permanecen en otra franja, sin reemplazar los recursos globales.
+**CONTROL GROUPS** tiene su propia franja: cada grupo muestra **Empty** o su cantidad asignada. Pulsar recupera el grupo; mantener guarda la selección. **MATCH** contiene el reloj y **Pause**, separados de las acciones de unidades y edificios. **Full map** aparece únicamente en el modo de prueba de escritorio. La ocupación de depósitos y el aviso **excess** permanecen en otra franja, sin reemplazar los recursos globales.
 
 ### Movimiento e interacción
 
 Las unidades se distribuyen al llegar a un destino, rodean el tráfico y ceden espacio a aliados que necesitan pasar. Los empujes conservan la orden anterior; **Hold Position** impide que otros aliados desplacen esa unidad. Las construcciones y la producción respetan el tamaño de los cuerpos.
+
+En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste siguen disponibles altura con stick secundario y tamaño/giro con el principal. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
 
 El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; pulsar el stick secundario también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
 
@@ -62,9 +64,9 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Agregar a selección | Gatillo secundario | Shift |
 | Orden contextual | A, o X en modo zurdo | Clic derecho |
 | Cancelar / opciones | B, o Y en modo zurdo | Escape |
-| Desplazar mapa | Stick secundario | WASD |
-| Zoom | Stick principal vertical | Rueda |
-| Ver mapa completo | Pulsar stick principal | F |
+| Desplazar mapa (solo escritorio) | — | WASD |
+| Zoom (solo escritorio) | — | Rueda |
+| Ver mapa completo (solo escritorio) | — | F |
 | Mover menú | Mantener gatillo sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
 | Recuperar menú arriba del tablero | Pulsar stick secundario | M |
 | Pausa | Menú o panel | Espacio |
@@ -72,9 +74,9 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 
 El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
 
-La selección por área puede **empezar o terminar fuera del tablero**: mantener el gatillo (o clic izquierdo), arrastrar sobre las unidades y soltar, incluso fuera del borde opuesto. El rectángulo y la selección se recortan a la parte visible del mapa; con zoom no se seleccionan unidades recortadas fuera del tablero. Se conserva el modificador para agregar unidades. Un clic o arrastre completamente externo no cambia la selección; apuntar al menú o perder una proyección válida cancela el arrastre. Las órdenes contextuales y la confirmación de construcción siguen requiriendo apuntar al terreno.
+La selección por área puede **empezar o terminar fuera del tablero**: mantener el gatillo (o clic izquierdo), arrastrar sobre las unidades y soltar, incluso fuera del borde opuesto. El rectángulo y la selección se recortan a la parte visible del mapa; con el zoom de escritorio no se seleccionan unidades recortadas fuera del tablero. Se conserva el modificador para agregar unidades. Un clic o arrastre completamente externo no cambia la selección; apuntar al menú o perder una proyección válida cancela el arrastre. Las órdenes contextuales y la confirmación de construcción siguen requiriendo apuntar al terreno.
 
-Al apuntar al mapa aparece un **punto blanco con líneas de mira turquesa** en la intersección del láser con el terreno. Está al ras del suelo y las rampas, mantiene su tamaño al hacer zoom y se recorta en el borde del tablero. También funciona con el mouse. Sigue visible sobre niebla como referencia del cursor, sin revelar información; desaparece al salir del tablero, apuntar al panel o pausar.
+Al apuntar al mapa aparece un **punto blanco con líneas de mira turquesa** en la intersección del láser con el terreno. Está al ras del suelo y las rampas, mantiene su tamaño con el zoom de escritorio y se recorta en el borde del tablero. También funciona con el mouse. Sigue visible sobre niebla como referencia del cursor, sin revelar información; desaparece al salir del tablero, apuntar al panel o pausar.
 
 Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno sobre el suelo: circular para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. Se muestra antes de seleccionar y se apaga al retirar el puntero, apuntar al menú o perder el foco. El disco de selección permanece en los objetos seleccionados. El contorno de hover sigue el terreno y las rampas, respeta el borde del tablero y no aparece sobre recuerdos enemigos bajo niebla de guerra.
 

@@ -157,7 +157,7 @@ namespace Frontier.Runtime
                     headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
                     string order=Session.LeftHanded?"X":"A",cancel=Session.LeftHanded?"Y":"B";
                     selection.text=Quest.Active?
-                        $"Main trigger: select a unit / drag to select a group\nOff-hand trigger: add to selection\n{order}: move, attack, gather or repair · {cancel}: cancel / back / pause\nOff-hand stick: pan · Main stick: zoom\nPress main stick: full map · Press off-hand stick: recall menu\nMOVE MENU: hold trigger and drag · Main stick: adjust distance\nControl groups: press to recall / hold to save\nMenu button: pause / resume":
+                        $"Main trigger: select a unit / drag to select a group\nOff-hand trigger: add to selection\n{order}: move, attack, gather or repair · {cancel}: cancel / back / pause\nBoard stays fixed after placement · Settings: reposition board\nPress off-hand stick: recall menu\nMOVE MENU: hold trigger and drag · Main stick: adjust distance\nControl groups: press to recall / hold to save\nMenu button: pause / resume":
                         "Left-click: select / drag to select a group · Shift: add to selection\nRight-click: move, attack, gather or repair\nEscape: cancel / back / pause · Space: pause / resume\nWASD: pan · Mouse wheel: zoom · F: full map\nM: recall menu · Drag MOVE MENU to reposition it\nWhile dragging the menu: mouse wheel adjusts distance\n1–3: recall group · Ctrl+1–3: save group";
                     status.text="Use Back to return to the previous menu.";break;
                 case MenuPage.Pause:
