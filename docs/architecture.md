@@ -59,6 +59,8 @@ En `PlayerView`, cada `ResourceState` incorpora `assignedWorkers`, `optimalWorke
 
 La IA mueve sus refuerzos a un punto de reunión para despejar salidas de producción y rutas de trabajadores. La dificultad fácil reacciona cada tres segundos, usa una composición menos especializada, limita su decisión de producir artillería a dos unidades y omite la investigación de resistencia. La normal reacciona cada segundo, usa ambas mejoras, produce hasta seis unidades de artillería y retira unidades heridas. Son decisiones de la IA; las reglas, los límites máximos y los costos de las facciones son los mismos.
 
+`AiDifficulty` distingue `VeryEasy`, `Easy` y `Normal`; `GameSession` convierte los identificadores del menú (`very-easy`, `easy`, `normal`) al crear el estratega. Very Easy comparte las órdenes y la visión autorizada, con una política más limitada: reacción de seis segundos, ocho trabajadores, seis soldados contando reservas, reclutamiento militar separado por al menos 24 segundos y una barraca. Omite exploración ofensiva, gas/tecnología, mejoras, artillería, torres y expansiones. Reúne las unidades cerca de su base; desde el minuto 18 envía tres soldados que estén cerca de ella, dejando al menos tres minutos entre nuevas oleadas. La defensa de amenazas visibles a menos de diez celdas de la base permanece activa desde el comienzo. No hay multiplicadores de daño, ingresos ni costos por dificultad.
+
 ## Multijugador, siguiente etapa
 
 Conservar la simulación en un anfitrión y reemplazar la entrega local de órdenes por transporte. Usar Netcode for GameObjects, Unity Transport y Multiplayer Services/Relay para sesiones privadas por código. El anfitrión debe asignar el emisor autenticado; nunca confiar en el `player` enviado por el cliente.

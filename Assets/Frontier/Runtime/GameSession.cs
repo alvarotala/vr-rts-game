@@ -46,7 +46,7 @@ namespace Frontier.Runtime
         public void StartMatch()
         {
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
-            bot = new Strategist(1, Difficulty == "easy", Catalog, Map);
+            bot = new Strategist(1, Difficulty == "very-easy" ? AiDifficulty.VeryEasy : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
             BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;

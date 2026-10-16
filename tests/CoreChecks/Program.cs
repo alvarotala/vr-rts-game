@@ -168,6 +168,8 @@ Check(unfinished.complete,"resumed construction completes");
 
 NavigationChecks.Run(catalog,map,Check);
 HarvestingChecks.Run(catalog,map,Check);
+DifficultyChecks.Run(catalog,map,training,Check);
+if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);
 
 if(args.Contains("--matches"))
 {
@@ -178,7 +180,8 @@ if(args.Contains("--matches"))
     {
         string a=(match%4<2)?"industrial":"biological", b=(match%2==0)?"biological":"industrial";
         bool easy=match%8>=4;
-        var sim=New(a,b); var bots=new[]{new Strategist(0,false,catalog,map),new Strategist(1,easy,catalog,map)};
+        var difficulty=args.Contains("--opponent=very-easy")?AiDifficulty.VeryEasy:easy?AiDifficulty.Easy:AiDifficulty.Normal;
+        var sim=New(a,b); var bots=new[]{new Strategist(0,AiDifficulty.Normal,catalog,map),new Strategist(1,difficulty,catalog,map)};
         var watch=Stopwatch.StartNew(); int rejected=0, accepted=0;
         for(int tick=0;tick<36000 && sim.Winner==-1;tick++)
         {
@@ -189,7 +192,7 @@ if(args.Contains("--matches"))
             if(args.Contains("--trace") && tick%1200==0)Console.WriteLine($"t={tick/20}s units={sim.Units(0)}/{sim.Units(1)} buildings={sim.Buildings(0)}/{sim.Buildings(1)} resources={sim.Players[0].minerals}:{sim.Players[0].catalyst}/{sim.Players[1].minerals}:{sim.Players[1].catalyst}");
         }
         watch.Stop();
-        var result=new{match,a,b,easy,winner=sim.Winner,seconds=sim.Tick/20,wallSeconds=watch.Elapsed.TotalSeconds,accepted,rejected,units0=sim.Units(0),units1=sim.Units(1),buildings0=sim.Buildings(0),buildings1=sim.Buildings(1)};
+        var result=new{match,a,b,difficulty=difficulty.ToString(),winner=sim.Winner,seconds=sim.Tick/20,wallSeconds=watch.Elapsed.TotalSeconds,accepted,rejected,units0=sim.Units(0),units1=sim.Units(1),buildings0=sim.Buildings(0),buildings1=sim.Buildings(1)};
         outcomes.Add(result);Console.WriteLine(JsonSerializer.Serialize(result));
         if(args.Contains("--trace"))Console.WriteLine(JsonSerializer.Serialize(sim.Snapshot(),json));
         Check(sim.Winner != -1, "AI match " + match + " completes within 30 simulated minutes");

@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Dificultad Very Easy — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Se agrega **Very Easy** al selector, con una explicación breve en la preparación de partida. La IA mantiene una economía y ejército pequeños, sin tecnología ni expansión, y oleadas ofensivas de tres soldados desde el minuto 18, separadas por al menos tres minutos. Se defiende si la atacan antes. Easy y Normal conservan sus políticas previas; costos, visión y reglas de combate son los mismos para todas las dificultades.
+
+- **207 comprobaciones de núcleo aprobadas**, incluidas 40 nuevas de dificultad, doce comprobaciones sobre cuatro escenarios de práctica y cuatro partidas completas. Registro: `TestResults/very-easy-core.log`.
+- **Práctica en ambos mapas y con ambas facciones:** máximo de ocho trabajadores y seis soldados contando las colas; primera oleada a los **1.080 segundos** en los cuatro escenarios, sin tecnología ni mejoras. Simulaciones de hasta 19 minutos contra un jugador pasivo: dos terminaron antes porque la IA destruyó su base después del período inicial. Evidencia: `TestResults/very-easy-practice.json`.
+- **4/4 partidas Normal contra Very Easy terminadas**, cubriendo todos los cruces de facciones. Normal ganó las cuatro en **841–853 segundos** simulados. Comprueban finalización y que Very Easy puede perder; no son una medida de dificultad percibida por principiantes. Evidencia: `TestResults/matches.json`.
+- **39 comprobaciones de menús y once vistas** en Unity **6000.3.26f1**, CLI **1.0.0-beta.13**: ciclo Very Easy/Easy/Normal, descripción, creación del estratega y conservación de dificultad al volver a jugar o hacer revancha. Inspeccionada la vista `TestResults/Menus/05-very-easy.png`; registro `TestResults/unity-very-easy.log`.
+- No se generó APK ni ejecutable desktop. El APK **0.1.4**, `ProjectSettings` y `Assets/XR` conservan sus hashes previos. El APK existente todavía no contiene este nivel, la cola de producción ampliada ni los últimos modelos de edificios.
+
+Pendiente: confirmar con una partida humana que el ritmo resulte cómodo y ajustar límites/tiempos según esa experiencia. No se probó esta entrega en Quest físico.
+
 ## Cola de producción visible — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 El productor seleccionado muestra una franja propia con cinco lugares: elemento activo destacado, barra, porcentaje, segundos restantes y cuatro tarjetas numeradas con los próximos nombres/roles. Incluye cola vacía/llena, investigación, pausa y espera por salida o suministro. Mantiene el espacio con cola vacía para que agregar unidades no desplace los botones. La cancelación conserva su comportamiento: elimina y devuelve el costo del último elemento.

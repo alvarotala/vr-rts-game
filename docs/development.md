@@ -23,10 +23,13 @@ La escena `Assets/Frontier/Scenes/Frontier.unity` crea sus componentes en ejecuc
 ```sh
 bash scripts/check-core.sh
 bash scripts/check-core.sh --matches --count=20
+bash scripts/check-core.sh --practice --matches --opponent=very-easy --count=4
 bash scripts/unity.sh validate
 ```
 
 El núcleo se prueba con .NET 8 sin dependencias NuGet. El script busca `dotnet` o el SDK incluido en la instalación local de Unity 6.5; se puede indicar otro ejecutable mediante `DOTNET`.
+
+Las comprobaciones de dificultad cubren reacción, límites con reservas, ritmo de producción, defensa y oleadas de Very Easy. `--practice` añade cuatro simulaciones de hasta 19 minutos contra un jugador pasivo, cruzando ambos mapas y facciones de la IA; registra economía, población y primera ofensiva en `TestResults/very-easy-practice.json`. `--matches --opponent=very-easy --count=4` enfrenta Normal contra Very Easy en los cuatro cruces de facciones y registra resultados en `TestResults/matches.json`. Sin ese modificador, las partidas mantienen la alternancia anterior entre rivales Normal y Easy. Estas pruebas no sustituyen el balance con jugadores humanos.
 
 Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
 
@@ -90,7 +93,7 @@ unity run . --log-file TestResults/unity-menus.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
 ```
 
-Ejecuta rayos contra los botones reales y comprueba inicio, configuración, pausa, regreso, limpieza de partida, conservación de colocación y pausas externas, nueva partida y revancha. Guarda diez vistas estáticas en `TestResults/Menus`. Restaura la preferencia de mano que usa durante la comprobación y no genera ejecutables. El escenario de prueba desktop también entra ahora por **New Match** antes de **START MATCH**.
+Ejecuta rayos contra los botones reales y comprueba inicio, configuración, selección de las tres dificultades, creación de la IA elegida, pausa, regreso, limpieza de partida, conservación de colocación y pausas externas, nueva partida y revancha. Guarda once vistas estáticas en `TestResults/Menus`. Restaura la preferencia de mano que usa durante la comprobación y no genera ejecutables. El escenario de prueba desktop también entra ahora por **New Match** antes de **START MATCH**.
 
 Para inspeccionar el hover en el tablero real desde el Editor, usar **Frontier → Preview hover**, o:
 

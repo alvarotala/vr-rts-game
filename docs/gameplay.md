@@ -8,6 +8,14 @@ Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar *
 
 Usar **START MATCH** cuando el tablero esté confirmado. Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
 
+### Dificultad de la IA
+
+El botón **AI** permite elegir **Very Easy**, **Easy** o **Normal** antes de iniciar. La elección se conserva al volver al menú para otra partida y al jugar revancha; no se guarda entre aperturas de la aplicación.
+
+**Very Easy** está pensado para aprender los controles y la economía. Reacciona cada seis segundos, mantiene como máximo ocho trabajadores y seis soldados básicos (incluidas sus colas), construye una sola barraca y recluta soldados cada 24 segundos como mínimo. Omite exploradores, artillería, mejoras, torres y expansiones. Mantiene su ejército cerca de la base y envía oleadas de tres soldados desde el minuto 18, con al menos tres minutos entre oleadas. Si atacás su base antes, se defiende. No modifica tus límites ni otorga recursos gratis a ninguno de los jugadores.
+
+**Easy** y **Normal** conservan sus comportamientos anteriores: economía mayor, exploración, tecnología y expansiones. Normal reacciona más rápido y utiliza más artillería y mejoras.
+
 ### Configuración, pausa y regreso al inicio
 
 **Settings** permite elegir la mano principal, recolocar el tablero, elegir mesa o piso y detectar superficies. **Controls** muestra una guía completa adaptada a mandos Touch o mouse y teclado; en modo zurdo indica X/Y. **Back** vuelve al menú desde el que se abrió esa pantalla.
@@ -84,7 +92,7 @@ El juego se presenta íntegramente en inglés; la incorporación de otros idioma
 - Hasta 50 unidades móviles y 20 edificios por jugador.
 - **The Rift**, mapa simétrico de 128 × 128, con dos bases, cuatro expansiones, alturas y rampas.
 - **Training Grounds**, mapa de 48 × 48 con instrucciones contextuales.
-- IA fácil y normal; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.
+- IA **Very Easy**, **Easy** y **Normal**; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.
 
 Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores y **tres proyectiles violetas** para artillería. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.
 

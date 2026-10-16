@@ -50,6 +50,9 @@ namespace Frontier.Editor
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
+                Click("AI: Normal");Check(session.Difficulty=="very-easy"&&Has("AI: Very Easy")&&Field<Text>(panel,"harvesting").text.Contains("18 min"),"Setup offers Very Easy with a practice description");Capture("05-very-easy");
+                Click("AI: Very Easy");Check(session.Difficulty=="easy"&&Has("AI: Easy"),"Very Easy cycles to Easy");
+                Click("AI: Easy");Check(session.Difficulty=="normal"&&Has("AI: Normal"),"Easy cycles to Normal");Click("AI: Normal");
                 Click("START MATCH");Check(!session.Running&&session.Message.Contains("placement"),"Starting requires confirmed board placement");
                 board.Placed=true;var placedPosition=new Vector3(.2f,.75f,.1f);board.transform.position=placedPosition;
                 var placedRotation=Quaternion.Euler(0,25,0);board.transform.rotation=placedRotation;float placedWidth=board.Width;
@@ -61,6 +64,7 @@ namespace Frontier.Editor
                 Capture("05-setup");
                 session.Pause("tracking",true);Click("START MATCH");
                 Check(session.Running&&panel.Page==CommandPanel.MenuPage.Actions&&session.IsPaused&&!panel.AcceptsGameInput,"Starting preserves tracking pause");
+                Check(Field<Strategist>(session,"bot").Difficulty==AiDifficulty.VeryEasy,"Starting instantiates the selected Very Easy AI");
                 session.Pause("tracking",false);Refresh();
                 Check(panel.AcceptsGameInput&&!Has("New Match")&&Has("Pause"),"Match exposes action panel instead of main menu");
                 var match=session.Match;var worker=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");
@@ -84,10 +88,12 @@ namespace Frontier.Editor
                 Check(session.Faction=="biological"&&session.MapId=="training","A new setup can change faction and map");Click("START MATCH");
                 Check(session.Running&&session.Match!=match&&session.Match.Tick==0&&session.Match.Winner==-1&&session.Selection.Count==0&&!session.IsPaused,"Next match starts clean");
                 Check(session.View.entities.Any(e=>e.owner==0&&e.definition=="biological.hq"),"Next match uses the new faction");
+                Check(Field<Strategist>(session,"bot").Difficulty==AiDifficulty.VeryEasy,"Next match retains selected difficulty");
                 session.Send(CommandKind.Surrender);Refresh();
                 Check(panel.Page==CommandPanel.MenuPage.Result&&Has("Rematch")&&Has("Main menu")&&!Has("Resume match"),"Finished match offers rematch or main menu only");Capture("10-result");
                 var finished=session.Match;Click("Rematch");
                 Check(session.Match!=finished&&session.Match.Winner==-1&&panel.Page==CommandPanel.MenuPage.Actions&&!session.IsPaused,"Rematch resets result and menu state");
+                Check(Field<Strategist>(session,"bot").Difficulty==AiDifficulty.VeryEasy,"Rematch retains selected difficulty");
                 session.Send(CommandKind.Surrender);Refresh();Click("Main menu");
                 Check(panel.Page==CommandPanel.MenuPage.Main&&session.Match==null,"Result returns directly to main menu");
                 // The same shortcut can enter and leave pause; pre-match shortcuts are harmless.

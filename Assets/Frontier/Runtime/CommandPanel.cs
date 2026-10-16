@@ -148,7 +148,8 @@ namespace Frontier.Runtime
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
-                    harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";break;
+                    harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";
+                    if(Session.Difficulty=="very-easy")harvesting.text+=" · Small waves after 18 min; defends its base.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
                     selection.text="Choose your dominant hand and adjust the board's position in your room.";break;
@@ -206,7 +207,7 @@ namespace Frontier.Runtime
             {
                 Add("Faction: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                 Add("Opponent: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
-                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":"easy";Rebuild();});
+                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="very-easy"?"easy":Session.Difficulty=="easy"?"normal":"very-easy";Rebuild();});
                 Add("Map: "+Session.Map.title,()=>{Session.LoadMap(Session.MapId=="rift"?"training":"rift");Board.Rebuild();Rebuild();});
                 Add("Place board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
@@ -308,7 +309,7 @@ namespace Frontier.Runtime
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
         private static string Cost(int m,int c)=>c>0?$"{m} M / {c} G":$"{m} M";
-        private string DifficultyLabel=>Session.Difficulty=="easy"?"Easy":"Normal";
+        private string DifficultyLabel=>Session.Difficulty=="very-easy"?"Very Easy":Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
         public bool Point(Ray ray,bool down,bool up,float depth=0)
         {

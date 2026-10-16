@@ -4,5 +4,5 @@
     <ImplicitUsings>enable</ImplicitUsings><Nullable>disable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-  <ItemGroup><Compile Include="../../Assets/Frontier/Core/*.cs"/><Compile Include="Program.cs"/><Compile Include="NavigationChecks.cs"/><Compile Include="HarvestingChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="../../Assets/Frontier/Core/*.cs"/><Compile Include="Program.cs"/><Compile Include="NavigationChecks.cs"/><Compile Include="HarvestingChecks.cs"/><Compile Include="DifficultyChecks.cs"/></ItemGroup>
 </Project>

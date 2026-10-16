@@ -4,21 +4,24 @@ using System.Linq;
 
 namespace Frontier.Core
 {
+    public enum AiDifficulty { VeryEasy, Easy, Normal }
+
     // The bot receives exactly the player's information projection. It has no Simulation reference.
     public sealed class Strategist
     {
         private readonly int player;
-        private readonly bool easy;
+        private readonly bool easy, veryEasy;
+        public AiDifficulty Difficulty { get; }
         private readonly Catalog catalog;
         private readonly GridMap terrain;
-        private int sequence, lastAttack = -10000, patrol;
+        private int sequence, lastAttack = -10000, lastRecruit = -480, patrol;
         private readonly HashSet<int> recovering = new HashSet<int>();
-        public Strategist(int player, bool easy, Catalog catalog, MapDefinition map)
-        { this.player = player; this.easy = easy; this.catalog = catalog; terrain = new GridMap(map); }
+        public Strategist(int player, AiDifficulty difficulty, Catalog catalog, MapDefinition map)
+        { this.player = player; Difficulty = difficulty; easy = difficulty != AiDifficulty.Normal; veryEasy = difficulty == AiDifficulty.VeryEasy; this.catalog = catalog; terrain = new GridMap(map); }
         private Archetype Type(VisibleEntity e) => catalog[e.definition];
         public IEnumerable<GameCommand> Decide(PlayerView view)
         {
-            if (view.winner != -1 || view.tick % (easy ? 60 : 20) != 0) yield break;
+            if (view.winner != -1 || view.tick % (veryEasy ? 120 : easy ? 60 : 20) != 0) yield break;
             var own = view.entities.Where(e => e.owner == player).ToArray();
             var workers = own.Where(e => Type(e).role == "worker").ToArray();
             var army = own.Where(e => !Type(e).building && Type(e).role != "worker").ToArray();
@@ -59,10 +62,10 @@ namespace Frontier.Core
             int Count(string role) => own.Count(e => Type(e).role == role);
             if (view.capacity < 50 && view.supply >= view.capacity - 2 && !own.Any(e => Type(e).role == "supply" && !e.complete)) buildRole = "supply";
             else if (!Has("barracks")) buildRole = "barracks";
-            else if (!Has("extractor") && view.tick > 600) buildRole = "extractor";
-            else if (!Has("tech") && own.Any(e => Type(e).role == "barracks" && e.complete) && view.tick > 1400) buildRole = "tech";
-            else if (Count("barracks") < (easy ? 2 : 3) && view.minerals > 240) buildRole = "barracks";
-            else if (!Has("defense") && view.minerals > 200 && view.tick > 1600) buildRole = "defense";
+            else if (!veryEasy && !Has("extractor") && view.tick > 600) buildRole = "extractor";
+            else if (!veryEasy && !Has("tech") && own.Any(e => Type(e).role == "barracks" && e.complete) && view.tick > 1400) buildRole = "tech";
+            else if (Count("barracks") < (veryEasy ? 1 : easy ? 2 : 3) && view.minerals > 240) buildRole = "barracks";
+            else if (!veryEasy && !Has("defense") && view.minerals > 200 && view.tick > 1600) buildRole = "defense";
 
             bool saving = false;
             if (buildRole != null && available.Length > 0)
@@ -78,7 +81,7 @@ namespace Frontier.Core
                 }
             }
             // Expansion sites are public map data; a worker must scout the area before construction is accepted.
-            if (available.Length > 0 && bases.Length < 3 && view.tick > 4800 && view.minerals >= 450)
+            if (!veryEasy && available.Length > 0 && bases.Length < 3 && view.tick > 4800 && view.minerals >= 450)
             {
                 var expansion = terrain.Definition.resources.Where(r => r.kind == "mineral" && bases.All(b => b.position.Distance(new Point(r.x, r.y)) > 20))
                     .OrderBy(r => home.Distance(new Point(r.x, r.y))).FirstOrDefault();
@@ -92,24 +95,28 @@ namespace Frontier.Core
                 }
             }
             int siegeLimit = easy ? 2 : 6;
-            bool techSaving = !saving && own.Any(e => e.complete && Type(e).role == "tech" && e.queue.Length == 0) && view.catalyst >= 65 &&
+            bool techSaving = !veryEasy && !saving && own.Any(e => e.complete && Type(e).role == "tech" && e.queue.Length == 0) && view.catalyst >= 65 &&
                 ((!view.researched.Contains("attack") || !easy && !view.researched.Contains("armor")) || army.Count(e => Type(e).role == "siege") < Math.Min(siegeLimit, Math.Max(1, army.Length / 6)));
             foreach (var hq in bases.Where(b => b.complete && b.queue.Length < 1))
-                if (((!saving && !techSaving) || workers.Length < 8) && workers.Length + own.Sum(e => e.queue.Count(q => !q.research && catalog[q.definition].role == "worker")) < (easy ? 12 : 18))
+                if (((!saving && !techSaving) || workers.Length < 8) && workers.Length + own.Sum(e => e.queue.Count(q => !q.research && catalog[q.definition].role == "worker")) < (veryEasy ? 8 : easy ? 12 : 18))
                     yield return Command(CommandKind.Train, hq.id, definition: catalog.Role(view.faction, "worker").id);
 
+            int militaryCount = army.Length + own.Sum(e => e.queue.Count(q => !q.research && catalog[q.definition].role != "worker"));
             foreach (var producer in own.Where(b => !saving && !techSaving && b.complete && b.queue.Length < 2 && Type(b).role == "barracks"))
             {
-                string role = !army.Any(e => Type(e).role == "scout") ? "scout" : army.Count(e => Type(e).role == "melee") * (easy ? 1 : 2) < army.Count(e => Type(e).role == "ranged") ? "melee" : "ranged";
+                // Count reservations as well as live soldiers, including orders issued this turn.
+                if (veryEasy && (militaryCount >= 6 || view.tick - lastRecruit < 480)) continue;
+                string role = !veryEasy && !army.Any(e => Type(e).role == "scout") ? "scout" : army.Count(e => Type(e).role == "melee") * (easy ? 1 : 2) < army.Count(e => Type(e).role == "ranged") ? "melee" : "ranged";
                 yield return Command(CommandKind.Train, producer.id, definition: catalog.Role(view.faction, role).id);
+                if (veryEasy) { lastRecruit = view.tick; militaryCount++; }
             }
-            foreach (var tech in own.Where(b => !saving && b.complete && Type(b).role == "tech" && b.queue.Length == 0))
+            foreach (var tech in own.Where(b => !veryEasy && !saving && b.complete && Type(b).role == "tech" && b.queue.Length == 0))
             {
                 if (view.catalyst >= 100 && !view.researched.Contains("attack")) yield return Command(CommandKind.Research, tech.id, definition: "attack");
                 else if (!easy && view.catalyst >= 100 && !view.researched.Contains("armor")) yield return Command(CommandKind.Research, tech.id, definition: "armor");
                 else if (army.Count(e => Type(e).role == "siege") < siegeLimit) yield return Command(CommandKind.Train, tech.id, definition: catalog.Role(view.faction, "siege").id);
             }
-            var threat = enemy.FirstOrDefault(e => bases.Any(b => b.position.Distance(e.position) < 18));
+            var threat = enemy.FirstOrDefault(e => bases.Any(b => b.position.Distance(e.position) < (veryEasy ? 10 : 18)));
             if (threat != null && army.Length > 0)
             { yield return Group(CommandKind.AttackMove, army, threat.position); yield break; }
             if (!easy)
@@ -118,7 +125,9 @@ namespace Frontier.Core
                 if (hurt.Length > 0) yield return Group(CommandKind.Move, hurt, new Point(home.x + 6, home.y + 6));
                 army = army.Where(e => !recovering.Contains(e.id)).ToArray();
             }
-            if (army.Length >= (easy ? 16 : 12) && view.tick > (easy ? 16800 : 15600) && view.tick - lastAttack >= 300)
+            var attackers = veryEasy ? army.Where(e => e.position.Distance(home) < 12).OrderBy(e => e.id).Take(3).ToArray() : army;
+            bool attackTime = veryEasy ? view.tick >= 18 * 60 * Simulation.TickRate : view.tick > (easy ? 16800 : 15600);
+            if (attackers.Length >= (veryEasy ? 3 : easy ? 16 : 12) && attackTime && view.tick - lastAttack >= (veryEasy ? 3600 : 300))
             {
                 var knownBuilding = view.entities.Where(e => e.owner != player && Type(e).building).OrderBy(e => e.position.Distance(home)).FirstOrDefault();
                 Point destination;
@@ -134,18 +143,18 @@ namespace Frontier.Core
                         destination = new Point(8 + patrol % 4 * (terrain.Width - 16) / 4f, 8 + patrol / 4 * (terrain.Height - 16) / 4f);
                     }
                 }
-                yield return Group(CommandKind.AttackMove, army, destination); lastAttack = view.tick;
+                yield return Group(CommandKind.AttackMove, attackers, destination); lastAttack = view.tick;
             }
             else
             {
                 // Move reinforcements away from production exits and worker lanes.
                 // Leaving an army at its spawn cells can stall its own economy.
                 var center=new Point(terrain.Width*.5f,terrain.Height*.5f);
-                var rally=Point.Towards(new Point(home.x+2,home.y+2),center,16);
-                var reserves=army.Where(e=>Type(e).role!="scout"&&e.order==CommandKind.Stop&&e.position.Distance(rally)>7).ToArray();
+                var rally=Point.Towards(new Point(home.x+2,home.y+2),center,veryEasy?6:16);
+                var reserves=army.Where(e=>Type(e).role!="scout"&&e.order==CommandKind.Stop&&e.position.Distance(rally)>(veryEasy?2.5f:7)).ToArray();
                 if(reserves.Length>0)yield return Group(CommandKind.Move,reserves,rally);
                 var scout = army.FirstOrDefault(e => Type(e).role == "scout" && e.order == CommandKind.Stop);
-                if (scout != null)
+                if (!veryEasy && scout != null)
                 { var spawn = terrain.Definition.spawns.First(s => s.player != player); yield return Command(CommandKind.Move, scout.id, position: new Point(spawn.x + 6, spawn.y + 6)); }
             }
         }
