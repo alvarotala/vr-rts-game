@@ -28,7 +28,8 @@ namespace Frontier.Runtime
         private float accumulator;
         private int sequence;
         private readonly HashSet<string> pauseReasons = new HashSet<string>();
-        private readonly List<int>[] groups = { new List<int>(), new List<int>(), new List<int>() };
+        public const int ControlGroupCount = 4;
+        private readonly List<int>[] groups = Enumerable.Range(0,ControlGroupCount).Select(_=>new List<int>()).ToArray();
         private float messageUntil;
 
         private void Awake()
@@ -128,11 +129,13 @@ namespace Frontier.Runtime
         public void Group(int index, bool save)
         {
             if(View==null||index<0||index>=groups.Length)return;
-            if (save) { groups[index].Clear(); groups[index].AddRange(Selection); Announce("Group " + (index + 1) + " saved."); }
-            else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (View.entities.Any(e=>e.id==id && e.owner==0)) Selection.Add(id); }
-            Changed?.Invoke();
+            if (save) { groups[index].Clear(); groups[index].AddRange(Selection.Where(OwnGroupMember)); Announce("Group " + (index + 1) + " saved."); }
+            else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (OwnGroupMember(id)) Selection.Add(id);
+                Announce("Group " + (index + 1) + (Selection.Count>0?" selected.":" is empty.")); }
+            Feedback?.Invoke(save||Selection.Count>0);Changed?.Invoke();
         }
-        public int GroupSize(int index) => groups[index].Count(id=>View != null && View.entities.Any(e=>e.id==id));
+        private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
+        public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
         public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void CancelMode() { BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke(); }
         private void RefreshView()

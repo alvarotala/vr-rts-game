@@ -88,6 +88,9 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
 | Ejecutar en la rueda | Gatillo derecho o A | — |
 | Volver / cerrar la rueda | Grip derecho o B | — |
+| Abrir rueda de grupos | Doble pulsación del joystick derecho | — |
+| Elegir grupo en la rueda | Inclinar/girar y soltar al centro | — |
+| Guardar selección en la rueda de grupos | Mantener grip al soltar el stick al centro | — |
 | Cancelar / opciones | B | Escape |
 | Desplazar mapa (solo escritorio) | — | WASD |
 | Zoom (solo escritorio) | — | Rueda |
@@ -95,13 +98,21 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Mover menú | Mantener gatillo o A sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
 | Recuperar menú arriba del tablero | Reset position en el panel | M |
 | Pausa | B o panel | Espacio |
-| Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
+| Grupo de control | Cuatro botones del panel; mantener para guardar | 1–4; Ctrl+1–4 para guardar |
 
 El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Todos los controles del juego usan el mando derecho; el izquierdo queda sin asignación por ahora. Se retiró la opción de mano dominante y no se aplica la preferencia antigua guardada.
 
 El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
 
 Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionada la quita una sola vez; soltar no vuelve a seleccionarla. Si el puntero se arrastra, el gesto sigue siendo selección de área. **Doble gatillo** selecciona unidades propias de la misma definición dentro de doce celdas de la unidad apuntada; con grip conserva el resto de la selección. No incluye edificios ni unidades enemigas.
+
+### Rueda de grupos
+
+**Doble pulsación del joystick derecho** abre cuatro grupos: 1 arriba, 2 a la derecha, 3 abajo y 4 a la izquierda. Inclinar y girar el stick cambia el resaltado; **soltarlo para que vuelva al centro** selecciona directamente el grupo resaltado y cierra la rueda. A/gatillo no son necesarios. Abrir sin inclinar no elige un grupo por defecto. **B** o una nueva pulsación del stick cierran sin seleccionar.
+
+Mantener **grip al volver al centro** guarda la selección actual en ese grupo, reemplazando sus miembros. El modo de guardar se muestra en amarillo; seleccionar usa cian. Los contadores excluyen unidades destruidas. Se pueden guardar unidades y edificios propios; los grupos se reinician al comenzar otra partida. Los cuatro botones del panel conservan clic para recuperar y pulsación larga para guardar.
+
+La pulsación simple sigue alternando inmediatamente la rueda de acciones. Una segunda pulsación dentro de 0,35 segundos abre grupos, incluso si la primera había cerrado una rueda de acciones abierta; si ya se eligió una dirección o se usó otra acción, el gesto doble se interrumpe. El doble grip sigue abriendo acciones, y grip/B siguen retrocediendo dentro de esa rueda. En la rueda de grupos, grip funciona como modificador para guardar.
 
 ### Punto de reunión de edificios
 

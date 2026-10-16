@@ -46,6 +46,15 @@ unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
 
 Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
 
+`ControlGroupPreview.RunValidation` prueba los cuatro grupos, doble stick, selección al volver al centro, guardado con grip y cancelaciones, además de las regresiones de rueda de acciones, gestos de colas, rally, menús y HUD:
+
+```sh
+unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ControlGroupPreview.RunValidation
+```
+
+`ControlGroupPreview.Render` ejecuta solo el escenario focal y guarda sus capturas en `TestResults/ControlGroups`. Las entradas son sintéticas; no genera APK.
+
 `CommandQueueChecks` verifica FIFO, reemplazo inmediato, conversión del doble A, grupos, privacidad, invalidación de destinos, recolección, reparación y construcción. Para comprobar entrada y presentación sin APK:
 
 ```sh

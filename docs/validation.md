@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Rueda de cuatro grupos — fuentes, sin APK — 16 de octubre de 2026
+
+Doble pulsación del joystick derecho abre cuatro grupos con posiciones fijas: arriba, derecha, abajo e izquierda. Inclinar/girar resalta y volver al centro recupera el grupo directamente. Mantener grip al volver al centro guarda la selección en el grupo resaltado. B o pulsar el stick cancelan. La pulsación simple conserva la rueda de acciones inmediata, y doble grip sigue abriendo acciones. El HUD y los atajos 1–4/Ctrl+1–4 comparten los cuatro grupos.
+
+- **126 comprobaciones focales y ocho vistas** para ambas facciones: cuatro direcciones, giro, zona muerta e histéresis, ausencia de elección por defecto, regreso al centro, grip para guardar, cambio de modo, botón 4 del HUD, selección vacía, miembros destruidos, propiedad y reinicio de grupos. Incluyen doble stick desde una rueda de acciones ya abierta y cancelación por pausa, foco, selección o partida.
+- Regresiones: rueda de acciones (**148 comprobaciones / 18 vistas**), gestos de selección/colas (**64**), rally (**126**), menús (**48 / 12**) y HUD/recolección (**18 vistas**). Total: **512 comprobaciones enumeradas y 56 vistas**, sin contar la ejecución previa.
+- `ControlGroupPreview.RunValidation` terminó correctamente con Unity **6000.3.26f1** / CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones. Registro final: `TestResults/unity-control-groups-final.log`.
+- Se inspeccionaron las ruedas de selección y guardado, los cuatro botones del HUD y la pantalla Touch de controles. Las capturas están en `TestResults/ControlGroups` y `TestResults/Menus`; los textos no se recortan.
+- Los **54 hashes** de `TestResults/group-wheel-baseline.json` confirman que ProjectSettings, Assets/XR y APK existentes permanecen iguales. No se modificó el núcleo de simulación ni se generó APK o ejecutable desktop.
+
+Pendiente: comprobar en Quest la comodidad del doble clic de 0,35 segundos y la confirmación al centrar el stick. Las pruebas usan botones, ejes y tiempos sintéticos; no certifican el mando físico.
+
 ## Puntos de reunión de edificios — fuentes, sin APK — 16 de octubre de 2026
 
 Seleccionar productores propios terminados y pulsar A sobre terreno define su `Rally Point`. Las nuevas unidades reciben un Move hacia ese destino, con orientación inicial y separación normales. Cada edificio conserva un punto independiente; cambiarlo no altera unidades desplegadas ni colas de producción. `Clear Rally Point`, en consola y rueda, restaura el comportamiento predeterminado. El mapa muestra bandera, punto y línea punteada cian al seleccionar el productor, y el HUD separa el destino de la producción. Los trabajadores con rally explícito se desplazan al punto; no reciben una orden de recolección.

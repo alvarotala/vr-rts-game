@@ -13,6 +13,8 @@ namespace Frontier.Runtime
         public QuestBridge Quest;
         public bool IsOpen { get; private set; }
         public bool InBuildMenu { get; private set; }
+        public bool InGroupMenu { get; private set; }
+        public bool GroupSaveMode { get; private set; }
         public int Highlighted { get; private set; } = -1;
         public string HighlightedId => Highlighted < 0 ? null : items[Highlighted].Id;
         public IReadOnlyList<SelectionAction> Items => items;
@@ -32,10 +34,16 @@ namespace Frontier.Runtime
 
         // Called before console/terrain input. Every frame of an open wheel is consumed,
         // including the frame that closes it: A must never also become a contextual map order.
-        public bool Process(Ray pointer, Vector2 stick, bool press, bool confirm, bool cancel)
+        public bool Process(Ray pointer, Vector2 stick, bool press, bool confirm, bool cancel, bool saveGroup = false)
         {
             bool wasOpen = IsOpen;
             if (IsOpen && !ValidContext()) { Close(); return true; }
+            if (InGroupMenu)
+            {
+                if (cancel || press) { Close(); return true; }
+                RefreshGroups(saveGroup); UpdatePose(pointer); Aim(stick);
+                return true;
+            }
             if (cancel && IsOpen) { Back(); return true; }
             if (press)
             {
@@ -51,15 +59,26 @@ namespace Frontier.Runtime
 
         private void Open()
         {
-            EnsureView(); IsOpen = true; InBuildMenu = false; Highlighted = -1; stickReady = false;
+            EnsureView(); IsOpen = true; InBuildMenu = InGroupMenu = GroupSaveMode = false; Highlighted = -1; stickReady = false;
             selectedIds = Session.Selection.OrderBy(id => id).ToArray(); openedMatch = Session.Match;
             actionSignature = null; root.gameObject.SetActive(true); RefreshActions();
         }
 
         public void Close()
         {
-            IsOpen = false; InBuildMenu = false; Highlighted = -1; openedMatch = null;
+            IsOpen = false; InBuildMenu = InGroupMenu = GroupSaveMode = false; Highlighted = -1; openedMatch = null;
             if (root != null) root.gameObject.SetActive(false);
+        }
+
+        public bool OpenGroups(Ray pointer, Vector2 stick, bool save)
+        {
+            if (!CanOpen) return false;
+            Open(); InGroupMenu = true;
+            items.Clear();
+            for (int i = 0; i < GameSession.ControlGroupCount; i++)
+                items.Add(new SelectionAction { Id = "group-" + (i + 1), Label = "Group " + (i + 1) });
+            BuildSectors(); RefreshGroups(save); UpdatePose(pointer); Aim(stick);
+            return true;
         }
 
         private bool ValidContext() => CanOpen && Session.Match == openedMatch &&
@@ -90,6 +109,17 @@ namespace Frontier.Runtime
             // A queue changing can add/remove Cancel. Never remap an old direction to a
             // different command until the player centers the stick and chooses again.
             Highlighted = -1; stickReady = false;
+            BuildSectors();
+            var selection = Session.View.entities.Where(e => Session.Selection.Contains(e.id)).ToArray();
+            heading.text = selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "NO SELECTION";
+            title.text = InBuildMenu ? "BUILD" : available.Heading;
+            detail.text = items.Count == 0 ? available.Hint : "Tilt right stick\nto choose";
+            detail.color = Ink;
+            help.text = "Trigger / A · Execute\nGrip / B · " + (InBuildMenu ? "Back" : "Close");
+        }
+
+        private void BuildSectors()
+        {
             for (int i = slices.childCount - 1; i >= 0; i--)
             {
                 var child = slices.GetChild(i).gameObject; child.SetActive(false);
@@ -105,28 +135,53 @@ namespace Frontier.Runtime
                 var direction = new Vector2(Mathf.Sin(i * step * Mathf.Deg2Rad), Mathf.Cos(i * step * Mathf.Deg2Rad));
                 sectorLabels.Add(Label(slice, items[i].Label, direction * 217, new Vector2(146, 78), 23, Color.white));
             }
-            var selection = Session.View.entities.Where(e => Session.Selection.Contains(e.id)).ToArray();
-            heading.text = selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "NO SELECTION";
-            title.text = InBuildMenu ? "BUILD" : available.Heading;
-            detail.text = items.Count == 0 ? available.Hint : "Tilt right stick\nto choose";
+        }
+
+        private void RefreshGroups(bool save)
+        {
+            GroupSaveMode = save;
+            heading.text = "CONTROL GROUPS";
+            for (int i = 0; i < items.Count; i++)
+            {
+                int count = Session.GroupSize(i);
+                sectorLabels[i].text = "Group " + (i + 1) + "\n" + (count == 0 ? "Empty" : count + " assigned");
+            }
+            UpdateHighlight();
+            title.text = (save ? "SAVE GROUP" : "SELECT GROUP") + (Highlighted >= 0 ? " " + (Highlighted + 1) : "");
+            detail.text = Highlighted < 0 ? "Tilt right stick\nto choose" : save ? Session.Selection.Count + " selected\nCenter stick to save" : Session.GroupSize(Highlighted) + " assigned\nCenter stick to select";
             detail.color = Ink;
-            help.text = "Trigger / A · Execute\nGrip / B · " + (InBuildMenu ? "Back" : "Close");
+            help.text = "Center stick · " + (save ? "Save selection" : "Select group") + "\nHold grip · Save instead     B · Close";
         }
 
         private void Aim(Vector2 stick)
         {
-            if (stick.magnitude < .25f) { stickReady = true; return; }
+            if (stick.magnitude < .25f)
+            {
+                if (InGroupMenu && Highlighted >= 0)
+                {
+                    int group = Highlighted; bool save = GroupSaveMode;
+                    Close(); Session.CancelMode(); Session.Group(group, save);
+                    return;
+                }
+                stickReady = true; return;
+            }
             if (!stickReady || stick.magnitude < .45f || items.Count == 0) return;
             float angle = Mathf.Repeat(Mathf.Atan2(stick.x, stick.y) * Mathf.Rad2Deg, 360);
             float step = 360f / items.Count;
             if (Highlighted >= 0 && Mathf.Abs(Mathf.DeltaAngle(Highlighted * step, angle)) < step * .5f + 7) return;
             Highlighted = Mathf.FloorToInt((angle + step * .5f) / step) % items.Count;
+            if (InGroupMenu) { RefreshGroups(GroupSaveMode); return; }
+            UpdateHighlight();
+            title.text = items[Highlighted].Title; detail.text = items[Highlighted].Detail; detail.color = Ink;
+        }
+
+        private void UpdateHighlight()
+        {
             for (int i = 0; i < sectors.Count; i++)
             {
-                sectors[i].color = i == Highlighted ? Accent : Normal;
+                sectors[i].color = i == Highlighted ? (InGroupMenu && GroupSaveMode ? new Color(1, .7f, .3f) : Accent) : Normal;
                 sectorLabels[i].color = i == Highlighted ? new Color(.015f, .05f, .065f) : Color.white;
             }
-            title.text = items[Highlighted].Title; detail.text = items[Highlighted].Detail; detail.color = Ink;
         }
 
         private void Confirm()

@@ -16,8 +16,8 @@ namespace Frontier.Runtime
         private Text orderPlanCount, orderPlanSteps, orderPlanHint;
         private RectTransform rallyPointStrip;
         private Text rallyPointValue, rallyPointHint;
-        private readonly Text[] groupCounts=new Text[3];
-        private readonly Target[] groupTargets=new Target[3], matchTargets=new Target[2];
+        private readonly Text[] groupCounts=new Text[GameSession.ControlGroupCount];
+        private readonly Target[] groupTargets=new Target[GameSession.ControlGroupCount], matchTargets=new Target[2];
         private static readonly Color MineralTint=new Color(.38f,.83f,1),GasTint=new Color(.85f,.62f,1),SupplyTint=new Color(.55f,.94f,.68f),WarningTint=new Color(1,.67f,.3f);
 
         private void CreateMatchHud()
@@ -46,10 +46,10 @@ namespace Frontier.Runtime
             groupStrip=Section(matchHud,"Control groups",new Vector2(24,-470),new Vector2(716,100));
             Label(groupStrip,"CONTROL GROUPS",new Vector2(14,-7),new Vector2(200,24),15,accent);
             Label(groupStrip,"Tap to recall · Hold to save selection",new Vector2(222,-7),new Vector2(480,24),14,new Color(.65f,.76f,.82f),TextAnchor.MiddleRight);
-            for(int g=0;g<3;g++)
+            for(int g=0;g<GameSession.ControlGroupCount;g++)
             {
                 int index=g;
-                groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(14+g*230,-36),new Vector2(218,54),()=>Session.Group(index,false),()=>Session.Group(index,true),out groupCounts[g]);
+                groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(14+g*174,-36),new Vector2(166,54),()=>Session.Group(index,false),()=>Session.Group(index,true),out groupCounts[g]);
             }
             matchStrip=Section(matchHud,"Match controls",new Vector2(756,-470),new Vector2(320,100));
             Label(matchStrip,"MATCH",new Vector2(14,-7),new Vector2(140,24),15,accent);
@@ -127,7 +127,7 @@ namespace Frontier.Runtime
             supplyValue.color=full?WarningTint:Color.white;supplyHint.color=full?WarningTint:SupplyTint;
             supplyHint.text=full?"FULL":$"{view.capacity-view.supply} available";
             matchClock.text=$"{view.tick/1200:00}:{view.tick/20%60:00}";
-            for(int g=0;g<3;g++){int count=Session.GroupSize(g);groupCounts[g].text=count==0?"Empty":count+" assigned";}
+            for(int g=0;g<GameSession.ControlGroupCount;g++){int count=Session.GroupSize(g);groupCounts[g].text=count==0?"Empty":count+" assigned";}
 
             var selected=view.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             selectedKind.text="SELECTION";selectionRole.text="";selectionHealth.text="";selectionDetails.text="";

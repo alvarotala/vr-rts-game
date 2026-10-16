@@ -16,6 +16,8 @@ namespace Frontier.Runtime
         private float lastGripPress=-1;
         private Simulation gripTapMatch;
         private const float DoubleGripWindow=.35f;
+        private float lastStickPress=-1;
+        private Simulation stickTapMatch;
         private int pressedResource;
         private int pressedEntity;
         private float selectPressedAt;
@@ -68,12 +70,12 @@ namespace Frontier.Runtime
                     toggleMenu=k.spaceKey.wasPressedThisFrame;if(k.fKey.wasPressedThisFrame)Board.Fit();
                     if(k.mKey.wasPressedThisFrame)Panel.Recall();
                     if(Panel.AcceptsGameInput)
-                    {if(k.digit1Key.wasPressedThisFrame)Session.Group(0,k.leftCtrlKey.isPressed);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,k.leftCtrlKey.isPressed);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,k.leftCtrlKey.isPressed);}
+                    {bool save=k.leftCtrlKey.isPressed||k.rightCtrlKey.isPressed;if(k.digit1Key.wasPressedThisFrame)Session.Group(0,save);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,save);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,save);if(k.digit4Key.wasPressedThisFrame)Session.Group(3,save);}
                 }
             }
             ValidateMapGestures(add);
             if(Quest.Placing)
-            {Wheel?.Close();ResetGripTap();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
+            {Wheel?.Close();ResetGripTap();ResetStickTap();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
             if(Quest.Active&&RouteWheel(ray,primaryStick,wheelPressed,order,down,triggerHeld,cancel,add,gripDown,Time.unscaledTime))return;
             // Back/pause must work even when the pointer is over a menu button.
             if(cancel)
@@ -118,12 +120,24 @@ namespace Frontier.Runtime
         {
             if(Wheel==null)return false;
             if(gripTapMatch!=Session.Match)ResetGripTap();
+            if(stickTapMatch!=Session.Match||!Wheel.CanOpen||confirm||cancel||triggerDown||triggerHeld||gripDown||stick.magnitude>=.45f)
+                ResetStickTap();
+            // A single click stays immediate. Its second click opens groups, whether
+            // the first click opened or closed the action wheel.
+            if(press&&Wheel.CanOpen&&lastStickPress>=0&&now>=lastStickPress&&now-lastStickPress<=DoubleTapWindow)
+            {
+                ResetStickTap();ResetGripTap();
+                Wheel.OpenGroups(ray,stick,grip);
+                ClearPointer();CancelPanelInput();wheelReleasePending=true;
+                if(laser!=null)laser.enabled=false;
+                return true;
+            }
             bool doubleGrip=false;
             if(Wheel.IsOpen)
             {
                 // Only fresh presses act inside the wheel: the opening grip stays harmless
                 // when held, and a held trigger cannot repeatedly execute submenu actions.
-                confirm|=triggerDown;cancel|=gripDown;ResetGripTap();
+                confirm|=triggerDown;if(!Wheel.InGroupMenu)cancel|=gripDown;ResetGripTap();
             }
             else if(!Wheel.CanOpen||wheelReleasePending||press||confirm||cancel||triggerDown||triggerHeld)
                 ResetGripTap();
@@ -132,8 +146,10 @@ namespace Frontier.Runtime
                 doubleGrip=lastGripPress>=0&&now>=lastGripPress&&now-lastGripPress<=DoubleGripWindow;
                 lastGripPress=doubleGrip?-1:now;gripTapMatch=Session.Match;
             }
-            if(Wheel.Process(ray,stick,press||doubleGrip,confirm,cancel))
+            if(Wheel.Process(ray,stick,press||doubleGrip,confirm,cancel,grip))
             {
+                if(press&&Wheel.CanOpen&&!confirm&&!cancel&&!triggerHeld){lastStickPress=now;stickTapMatch=Session.Match;}
+                else if(press||!Wheel.IsOpen)ResetStickTap();
                 ResetGripTap();
                 ClearPointer();CancelPanelInput();wheelReleasePending=true;
                 if(laser!=null)laser.enabled=!Wheel.IsOpen;
@@ -144,6 +160,7 @@ namespace Frontier.Runtime
             return false;
         }
         private void ResetGripTap(){lastGripPress=-1;gripTapMatch=null;}
+        private void ResetStickTap(){lastStickPress=-1;stickTapMatch=null;}
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
         {
             ValidateMapGestures(add);
@@ -246,8 +263,8 @@ namespace Frontier.Runtime
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
-        {if(!focused){Wheel?.Close();ResetGripTap();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){Wheel?.Close();ResetGripTap();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {if(!focused){Wheel?.Close();ResetGripTap();ResetStickTap();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){Wheel?.Close();ResetGripTap();ResetStickTap();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }
