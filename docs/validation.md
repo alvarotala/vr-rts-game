@@ -4,6 +4,16 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Cristales minerales y respiraderos de gas — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+Los bloques minerales se sustituyen por grupos de cinco cristales facetados sobre roca. El gas cambia de esfera a una cavidad rocosa con vapor ascendente. Hay tres variantes de cada recurso y rotación estable por depósito; las mallas y los materiales se comparten.
+
+- `ResourceVisualPreview.Render`: **12 comprobaciones y diez vistas**, incluyendo minerales, gas, vistas cenitales, hover, tablero compacto y extractor. Comprueba pausa/avance del vapor, niebla, construcción, agotamiento, ocultación y salida de partida. Los modelos usan un material cada uno, sin colliders añadidos, y quedan por debajo de 1300 vértices cada uno. Registro: `TestResults/unity-resource-models.log`; vistas inspeccionadas en `TestResults/ResourceModels/`.
+- `ResourcePickingPreview.Render`: **80 comprobaciones y seis vistas** aprobadas con las nuevas mallas en Rift y Training: apuntado oblicuo, distintos tamaños, hover, trabajadores próximos, clic con temblor y órdenes de recolección. Registro: `TestResults/unity-resource-model-picking.log`.
+- Compilación de scripts en Unity **6000.3.26f1** / CLI **1.0.0-beta.13**. El APK y los ajustes Unity/XR conservan los hashes de la línea base de 52 archivos. Sin modificaciones de simulación, mapas o catálogos; sin nuevo ejecutable.
+
+Pendiente: comprobar la legibilidad y el costo del vapor en Quest real. Las vistas y rayos del Editor no certifican rendimiento ni percepción estereoscópica en el visor.
+
 ## Contadores de trabajadores sobre el tablero — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Cada base propia terminada muestra el total de trabajadores de sus minerales y cada extractor muestra su gas, sin necesidad de selección. Los números usan asignados/óptimo; `5/8` y `3/3` son blancos, mientras `9/8` y `4/3` se vuelven rojos. El panel de recolección también marca el exceso en rojo.

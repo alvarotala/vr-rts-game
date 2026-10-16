@@ -180,4 +180,6 @@ La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joysti
 
 ## Apuntado de minerales
 
+Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resource models** o `unity run . --log-file TestResults/unity-resource-models.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourceVisualPreview.Render`. Guarda diez vistas en `TestResults/ResourceModels/`, incluyendo cristales, gas desde arriba, vapor en dos momentos, hover, tablero compacto y extractor. Comprueba el ciclo visual del vapor y usa una vista preparada para mostrar los modelos; no genera un ejecutable. Después de cambiar las siluetas, `ResourcePickingPreview.Render` verifica el apuntado con rayos y órdenes reales.
+
 `Frontier.Editor.ResourcePickingPreview.Render` comprueba la resolución de cristal/suelo, interacción con trabajadores cercanos, clic con temblor y órdenes de recolección; renderiza los dos mapas a distintos tamaños. Ejecutar con `unity run . --log-file TestResults/unity-mineral-picking.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourcePickingPreview.Render`. Las imágenes quedan en `TestResults/ResourcePicking/`. `EdgeSelectionPreview.Render` y `HarvestingPreview.RenderHud` cubren las regresiones de selección y panel. Ninguno genera APK ni ejecutable desktop.

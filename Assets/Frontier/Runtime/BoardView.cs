@@ -36,12 +36,13 @@ namespace Frontier.Runtime
             public bool remembered, hovered, receivingDamage;
             public float damageAmount;
         }
-        private Material ground, blue, red, neutral, crystal, catalyst, highlight;
+        private Material ground, blue, red, neutral, resourceMaterial, highlight;
         private Material unitStructure, impactMaterial;
         private MaterialPropertyBlock hoverProperties, impactProperties;
         private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
         private readonly BuildingVisuals buildingVisuals=new BuildingVisuals();
+        private readonly ResourceVisuals resourceVisuals=new ResourceVisuals();
         private readonly Dictionary<string,Material> buildingMaterials=new Dictionary<string,Material>();
         private Material[] memoryMaterials;
         private WeaponEffects weapons;
@@ -69,7 +70,7 @@ namespace Frontier.Runtime
             Content = new GameObject("Map coordinates").transform; Content.SetParent(transform,false);
             ground=Material(new Color(.16f,.31f,.31f));ground.SetFloat("_UseFog",1);ground.SetFloat("_Grid",1);
             blue=Material(new Color(.2f,.8f,1));red=Material(new Color(1,.36f,.23f));
-            neutral=Material(new Color(.2f,.28f,.35f));crystal=Material(new Color(.35f,.85f,1));catalyst=Material(new Color(.8f,.46f,1));highlight=Material(new Color(.9f,1,.6f));
+            neutral=Material(new Color(.2f,.28f,.35f));resourceMaterial=Material(Color.white);highlight=Material(new Color(.9f,1,.6f));
             unitStructure=Material(new Color(.12f,.17f,.22f));
             foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
             foreach(string role in new[]{"hq","barracks","extractor","supply","tech","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
@@ -81,11 +82,12 @@ namespace Frontier.Runtime
             if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;}
             unitVisuals.Dispose();
             buildingVisuals.Dispose();
+            resourceVisuals.Dispose();
             weapons?.Dispose();
             harvestingMarkers?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
-            foreach(var material in new[]{ground,blue,red,neutral,crystal,catalyst,highlight,unitStructure,impactMaterial})Release(material);
+            foreach(var material in new[]{ground,blue,red,neutral,resourceMaterial,highlight,unitStructure,impactMaterial})Release(material);
             Release(fog);
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
         }
@@ -97,6 +99,7 @@ namespace Frontier.Runtime
             if(Content==null)return;
             weapons?.Dispose();weapons=null;firing.Clear();
             harvestingMarkers?.Dispose();harvestingMarkers=null;
+            resourceVisuals.ClearVapor();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
             entities.Clear();entityTypes.Clear();resources.Clear();resourceRenderers.Clear();pools.Clear();parts.Clear();preview=null;
@@ -107,6 +110,7 @@ namespace Frontier.Runtime
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
             harvestingMarkers=new HarvestingMarkers(Content);
+            resourceVisuals.BindVapor(Content,fog,Session.Map.width,Session.Map.height);
             var grid=new GridMap(Session.Map);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
@@ -243,8 +247,13 @@ namespace Frontier.Runtime
             foreach(var resource in Session.View.resources)
             {
                 if(!resources.TryGetValue(resource.id,out var visual))
-                {visual=Primitive(resource.kind=="mineral"?PrimitiveType.Cube:PrimitiveType.Sphere,Content,resource.kind=="mineral"?crystal:catalyst);resources[resource.id]=visual;resourceRenderers[resource.id]=visual.GetComponent<Renderer>();visual.localScale=new Vector3(1.1f,1.7f,1.1f);visual.localRotation=Quaternion.Euler(0,45,resource.kind=="mineral"?20:0);}
-                visual.localPosition=new Vector3(resource.position.x,HeightAt(resource.position)+.85f,resource.position.y);visual.gameObject.SetActive(resource.remaining!=0);
+                {
+                    var model=new GameObject(resource.kind=="mineral"?"Mineral crystals":"Gas vent",typeof(MeshFilter),typeof(MeshRenderer));
+                    visual=model.transform;visual.SetParent(Content,false);model.GetComponent<MeshFilter>().sharedMesh=resourceVisuals.Get(resource.kind,resource.id);
+                    var renderer=model.GetComponent<Renderer>();renderer.sharedMaterial=resourceMaterial;
+                    resources[resource.id]=visual;resourceRenderers[resource.id]=renderer;visual.localRotation=Quaternion.Euler(0,resource.id*137.5f%360,0);
+                }
+                visual.localPosition=new Vector3(resource.position.x,HeightAt(resource.position),resource.position.y);visual.gameObject.SetActive(resource.remaining!=0);
                 bool hovered=Hovered==0&&HoveredResource==resource.id&&Pointer.HasValue&&!Session.IsPaused&&ResourceVisible(resource,2);
                 hoverProperties.SetFloat("_HoverAmount",hovered?1:0);hoverProperties.SetFloat("_DamageAmount",0);hoverProperties.SetColor("_HoverColor",AllyHover);
                 resourceRenderers[resource.id].SetPropertyBlock(hoverProperties);
@@ -264,7 +273,9 @@ namespace Frontier.Runtime
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
             weapons?.Update(this);
-            harvestingMarkers?.Update(this,Viewer!=null?Viewer:Camera.main);
+            var viewer=Viewer!=null?Viewer:Camera.main;
+            resourceVisuals.UpdateVapor(this,viewer);
+            harvestingMarkers?.Update(this,viewer);
         }
         public bool TryEntityTop(int id,out Vector3 top)
         {

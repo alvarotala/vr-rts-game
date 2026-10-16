@@ -30,6 +30,8 @@ Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la p
 
 El reparto automático usa un objetivo de **2 trabajadores por depósito de mineral** y **3 por depósito de gas/catalizador con extractor terminado**. Al dar una orden a un grupo, cada trabajador reserva su puesto antes de asignar el siguiente. Si el depósito indicado ya está al nivel óptimo, buscan otro cercano del mismo recurso, explorado y accesible. Los trabajadores que viajan o entregan carga conservan su puesto.
 
+Los minerales se reconocen por grupos de cristales azules facetados de distintas alturas sobre una base rocosa. El gas aparece como una abertura irregular con interior violeta y vapor ascendente; el extractor se construye encima. El vapor natural desaparece mientras el extractor ocupa el depósito y se detiene al pausar la partida.
+
 Si todos los depósitos cercanos están al nivel óptimo, los trabajadores adicionales siguen recolectando y el indicador muestra **excess**; estos valores son objetivos de reparto, no un límite rígido de asignación ni un cambio de la velocidad de extracción. Al terminar una entrega, los excedentes aprovechan los puestos que se hayan liberado. Los depósitos agotados y los extractores destruidos provocan una nueva búsqueda; se conserva el tipo de cualquier carga pendiente de entrega.
 
 Apuntar o seleccionar un depósito muestra **Workers asignados/óptimo** y la cantidad restante en el panel. Seleccionar el centro principal muestra los totales de minerales y gas de su zona; seleccionar un extractor muestra su ocupación de gas. Se puede dar la orden de gas sobre toda la superficie del extractor. Los indicadores cuentan tus trabajadores, no los del rival.
