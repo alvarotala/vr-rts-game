@@ -9,6 +9,8 @@ namespace Frontier.Runtime
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
         private bool wheelReleasePending;
+        private int pressedResource;
+        private float dragThreshold=1.5f;
         private void Start()
         {
             Panel.PlaceRequested=Quest.BeginPlacement;Session.Feedback+=Haptic;
@@ -81,27 +83,40 @@ namespace Frontier.Runtime
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
         {
             bool onMap=Board.RayToMap(ray,out var point,out var worldHit);
-            Board.Pointer=onMap?point:(Point?)null;Board.Hovered=onMap?Board.EntityAt(point):0;
+            Board.Pointer=onMap?point:(Point?)null;
+            if(onMap){Board.ResolvePointerTarget(ray,point,worldHit,out int entity,out int resource);Board.Hovered=entity;Board.HoveredResource=resource;}
+            else{Board.Hovered=0;Board.HoveredResource=0;}
             // The board plane extends beyond its edges for selection only.
             if(!onMap&&!Board.RayToSelectionPlane(ray,out point)){ClearPointer();return;}
             if(down)
             {
                 if(Session.BuildDefinition!=null||Session.AttackMoveMode)
-                {if(onMap)Session.Context(point,Board.Hovered,Board.ResourceAt(point));}
-                else{start=point;startedOnMap=onMap;dragging=true;}
+                {if(onMap)Session.Context(point,Board.Hovered,Board.HoveredResource);}
+                else
+                {
+                    start=point;startedOnMap=onMap;dragging=true;pressedResource=Board.HoveredResource;
+                    dragThreshold=pressedResource>0?Mathf.Max(1.5f,.015f/Board.CellScale):1.5f;
+                }
             }
             if(Quest.Active&&laser!=null&&(onMap||dragging))
                 laser.SetPosition(1,onMap?worldHit:Board.Content.TransformPoint(new Vector3(point.x,0,point.y)));
-            bool area=start.Distance(point)>1.5f||!startedOnMap||!onMap;
+            bool area=start.Distance(point)>dragThreshold||!startedOnMap||!onMap;
             if(dragging)Board.DrawSelection(start,point,area);
             if(up&&dragging)
             {
                 if(area)
                 {if(Board.TrySelectionBounds(start,point,out var min,out var max))Session.SelectRectangle(min,max,add);}
-                else if(onMap&&startedOnMap)Session.Select(Board.Hovered,add,Board.ResourceAt(point));
+                else if(onMap&&startedOnMap)
+                {
+                    // Keep the deposit pressed through small hand tremors; a real drag
+                    // still selects an area. Do not select a patch depleted meanwhile.
+                    if(pressedResource>0)
+                    {if(System.Array.Exists(Session.View.resources,r=>r.id==pressedResource&&r.remaining!=0))Session.Select(0,add,pressedResource);}
+                    else Session.Select(Board.Hovered,add,Board.HoveredResource);
+                }
                 dragging=false;Board.DrawSelection(start,point,false);
             }
-            if(order&&onMap)Session.Context(point,Board.Hovered,Board.ResourceAt(point));
+            if(order&&onMap)Session.Context(point,Board.Hovered,Board.HoveredResource);
         }
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
@@ -109,6 +124,6 @@ namespace Frontier.Runtime
         {if(!focused){Wheel?.Close();wheelReleasePending=true;ClearPointer();}}
         private void OnDisable(){Wheel?.Close();ClearPointer();}
         private void ClearPointer()
-        {dragging=false;if(Board!=null){Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
+        {dragging=false;pressedResource=0;if(Board!=null){Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }
 }

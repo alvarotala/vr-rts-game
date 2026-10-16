@@ -101,7 +101,8 @@ namespace Frontier.Runtime
             harvesting.text="";harvesting.color=accent;
             if(Session.View==null)return;
             var view=Session.View;
-            int pointedResource=Board.Pointer.HasValue?Board.ResourceAt(Board.Pointer.Value):0;
+            int pointedResource=Session.SelectedResource>0&&Session.Selection.Count==0?Session.SelectedResource:
+                Board.HoveredResource>0?Board.HoveredResource:Board.Hovered==0&&Board.Pointer.HasValue?Board.ResourceAt(Board.Pointer.Value):0;
             var resource=view.resources.FirstOrDefault(r=>r.id==pointedResource);
             var building=view.entities.FirstOrDefault(e=>e.id==Board.Hovered&&e.owner==view.player);
             if(resource==null&&building==null)

@@ -168,3 +168,7 @@ unity run . --log-file TestResults/unity-action-wheel.log --no-tail -- -buildTar
 ```
 
 La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba la selección del sector, zona neutra, submenú Build, producción, investigación, costos, cancelación, rechazo, cambios de selección/cola, interrupciones y liberación del gatillo. Guarda las vistas en `TestResults/ActionWheel/`. El panel comparte `SelectionActions`; `ProductionQueuePreview.Render` verifica las acciones de la consola y ejecuta las regresiones de HUD y menús. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+
+## Apuntado de minerales
+
+`Frontier.Editor.ResourcePickingPreview.Render` comprueba la resolución de cristal/suelo, interacción con trabajadores cercanos, clic con temblor y órdenes de recolección; renderiza los dos mapas a distintos tamaños. Ejecutar con `unity run . --log-file TestResults/unity-mineral-picking.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourcePickingPreview.Render`. Las imágenes quedan en `TestResults/ResourcePicking/`. `EdgeSelectionPreview.Render` y `HarvestingPreview.RenderHud` cubren las regresiones de selección y panel. Ninguno genera APK ni ejecutable desktop.

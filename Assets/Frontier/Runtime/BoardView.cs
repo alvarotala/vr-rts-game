@@ -14,11 +14,13 @@ namespace Frontier.Runtime
         public Vector2 Pan;
         public bool Placed;
         public int Hovered;
+        public int HoveredResource;
         private Transform terrainRoot;
         private MeshCollider terrainCollider;
         private Matrix4x4 raycastTransform;
         private readonly Dictionary<int, Transform> entities = new Dictionary<int, Transform>();
         private readonly Dictionary<int, Transform> resources = new Dictionary<int, Transform>();
+        private readonly Dictionary<int, Renderer> resourceRenderers = new Dictionary<int, Renderer>();
         private readonly Dictionary<string, Stack<Transform>> pools = new Dictionary<string, Stack<Transform>>();
         private readonly Dictionary<int,string> entityTypes = new Dictionary<int,string>();
         private readonly Dictionary<Transform, VisualParts> parts = new Dictionary<Transform, VisualParts>();
@@ -52,7 +54,7 @@ namespace Frontier.Runtime
         public Point? Pointer
         {
             get=>pointer;
-            set{pointer=value;UpdatePointer();}
+            set{pointer=value;if(!value.HasValue)HoveredResource=0;UpdatePointer();}
         }
         public float CellScale => Width / Session.Map.width * Zoom;
         public float Depth => Width * Session.Map.height / Session.Map.width;
@@ -93,7 +95,7 @@ namespace Frontier.Runtime
             weapons?.Dispose();weapons=null;firing.Clear();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
-            entities.Clear();entityTypes.Clear();resources.Clear();pools.Clear();parts.Clear();preview=null;
+            entities.Clear();entityTypes.Clear();resources.Clear();resourceRenderers.Clear();pools.Clear();parts.Clear();preview=null;
             Hovered=0;Pointer=null;ground.SetFloat("_HoverWidth",0);
             DrawSelection(default,default,false);
             Release(fog);
@@ -235,8 +237,16 @@ namespace Frontier.Runtime
             foreach(var resource in Session.View.resources)
             {
                 if(!resources.TryGetValue(resource.id,out var visual))
-                {visual=Primitive(resource.kind=="mineral"?PrimitiveType.Cube:PrimitiveType.Sphere,Content,resource.kind=="mineral"?crystal:catalyst);resources[resource.id]=visual;visual.localScale=new Vector3(1.1f,1.7f,1.1f);visual.localRotation=Quaternion.Euler(0,45,resource.kind=="mineral"?20:0);}
+                {visual=Primitive(resource.kind=="mineral"?PrimitiveType.Cube:PrimitiveType.Sphere,Content,resource.kind=="mineral"?crystal:catalyst);resources[resource.id]=visual;resourceRenderers[resource.id]=visual.GetComponent<Renderer>();visual.localScale=new Vector3(1.1f,1.7f,1.1f);visual.localRotation=Quaternion.Euler(0,45,resource.kind=="mineral"?20:0);}
                 visual.localPosition=new Vector3(resource.position.x,HeightAt(resource.position)+.85f,resource.position.y);visual.gameObject.SetActive(resource.remaining!=0);
+                bool hovered=Hovered==0&&HoveredResource==resource.id&&Pointer.HasValue&&!Session.IsPaused&&ResourceVisible(resource,2);
+                hoverProperties.SetFloat("_HoverAmount",hovered?1:0);hoverProperties.SetFloat("_DamageAmount",0);hoverProperties.SetColor("_HoverColor",AllyHover);
+                resourceRenderers[resource.id].SetPropertyBlock(hoverProperties);
+                if(hovered)
+                {
+                    ground.SetVector("_HoverArea",new Vector4(resource.position.x,resource.position.y,Mathf.Clamp(.012f/CellScale,1.2f,1.5f),0));
+                    ground.SetFloat("_HoverWidth",Mathf.Clamp(.0018f/CellScale,.035f,.2f));ground.SetColor("_HoverColor",AllyHover);
+                }
             }
             if(Session.BuildDefinition!=null&&Pointer.HasValue)
             {
@@ -325,7 +335,68 @@ namespace Frontier.Runtime
                 .Where(a=>new Point(a.e.position.x+(a.t.building?a.t.footprint*.5f:0),a.e.position.y+(a.t.building?a.t.footprint*.5f:0)).Distance(point)<(a.t.building?a.t.footprint*.8f:1.6f))
                 .OrderBy(a=>a.e.position.Distance(point)).FirstOrDefault();return found?.e.id??0;
         }
-        public int ResourceAt(Point point) => Session.View?.resources.Where(r=>r.remaining!=0&&r.position.Distance(point)<2).OrderBy(r=>r.position.Distance(point)).FirstOrDefault()?.id??0;
+        // Mineral patches remain usable on a small board. Overlapping assistance zones
+        // choose the nearest deposit rather than treating the whole mineral line as one.
+        public int ResourceAt(Point point) => Session.View?.resources.Where(r=>ResourceVisible(r)&&r.position.Distance(point)<(r.kind=="mineral"?Mathf.Clamp(.03f/CellScale,2.5f,4):2))
+            .OrderBy(r=>r.position.Distance(point)).ThenBy(r=>r.id).FirstOrDefault()?.id??0;
+        private bool ResourceVisible(ResourceState resource,byte minimumVision=1)
+        {
+            if(resource.remaining==0||Session.View==null)return false;
+            int x=Mathf.FloorToInt(resource.position.x),y=Mathf.FloorToInt(resource.position.y);
+            if(x<0||y<0||x>=Session.Map.width||y>=Session.Map.height||Session.View.visibility[y*Session.Map.width+x]<minimumVision)return false;
+            float halfX=Session.Map.width*.5f/Zoom,halfY=Session.Map.height*.5f/Zoom;
+            return Mathf.Abs(resource.position.x-Session.Map.width*.5f-Pan.x)<=halfX&&Mathf.Abs(resource.position.y-Session.Map.height*.5f-Pan.y)<=halfY;
+        }
+        public void ResolvePointerTarget(Ray ray,Point point,Vector3 terrainHit,out int entityId,out int resourceId)
+        {
+            entityId=EntityAt(point);resourceId=ResourceAt(point);
+            if(Session.View==null)return;
+            // The terrain intersection can be well behind a crystal when viewed from
+            // the side. Test the visible model too, stopping at the terrain in front.
+            float closest=Vector3.Distance(ray.origin,terrainHit)+.001f;
+            bool hitResource=false;
+            foreach(var resource in Session.View.resources)
+            {
+                if(!ResourceVisible(resource)||!resourceRenderers.TryGetValue(resource.id,out var renderer))continue;
+                if(!HitBody(renderer,Mathf.Min(.004f,CellScale*.4f),ray,closest,out float distance))continue;
+                closest=distance;resourceId=resource.id;hitResource=true;
+            }
+            if(resourceId==0)return;
+            int directEntity=0;
+            foreach(var entity in Session.View.entities)
+            {
+                if(entity.remembered||!entities.TryGetValue(entity.id,out var visual))continue;
+                foreach(var renderer in parts[visual].body)
+                {
+                    if(!HitBody(renderer,0,ray,closest,out float distance))continue;
+                    closest=distance;directEntity=entity.id;
+                }
+            }
+            // A direct hit on a unit/building retains priority over nearby resource
+            // assistance. Its oversized ground selection halo does not hide minerals.
+            if(directEntity!=0){entityId=directEntity;resourceId=0;return;}
+            if(hitResource){entityId=0;return;}
+            int groundEntity=entityId;var candidate=Session.View.entities.FirstOrDefault(e=>e.id==groundEntity);
+            if(candidate==null)return;
+            var type=Session.Catalog[candidate.definition];
+            bool inside=type.building?point.x>=candidate.position.x&&point.y>=candidate.position.y&&point.x<=candidate.position.x+type.footprint&&point.y<=candidate.position.y+type.footprint
+                :candidate.position.Distance(point)<=type.collisionRadius+.15f;
+            if(inside)resourceId=0;else entityId=0;
+        }
+        private bool HitBody(Renderer renderer,float padding,Ray ray,float maximum,out float distance)
+        {
+            distance=0;if(!renderer.gameObject.activeInHierarchy)return false;
+            // Test in model space so rotating the board does not enlarge its hit box.
+            var model=renderer.transform;var scale=model.lossyScale;
+            var bounds=renderer.localBounds;
+            bounds.Expand(new Vector3(padding/Mathf.Max(.000001f,Mathf.Abs(scale.x)),padding/Mathf.Max(.000001f,Mathf.Abs(scale.y)),padding/Mathf.Max(.000001f,Mathf.Abs(scale.z)))*2);
+            var localRay=new Ray(model.InverseTransformPoint(ray.origin),model.InverseTransformVector(ray.direction).normalized);
+            if(!bounds.IntersectRay(localRay,out float localDistance))return false;
+            var hit=model.TransformPoint(localRay.GetPoint(localDistance));distance=Vector3.Distance(ray.origin,hit);
+            if(distance>maximum)return false;
+            var local=transform.InverseTransformPoint(hit);
+            return Mathf.Abs(local.x)<=Width*.5f&&Mathf.Abs(local.z)<=Depth*.5f;
+        }
         public void DrawSelection(Point a,Point b,bool visible)
         {
             if(ground==null)return;

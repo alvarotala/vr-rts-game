@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Selección de minerales más tolerante — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+El cursor ahora considera el volumen del cristal, además de su proximidad en el suelo. Un margen adaptado al tamaño del tablero facilita apuntar cerca de la base y el depósito se ilumina con un aro amarillo antes de pulsar. Los márgenes ampliados de trabajadores cercanos no ocultan el depósito; los impactos directos sobre el cuerpo de una unidad o edificio conservan prioridad. La pulsación de un recurso tolera pequeños movimientos al soltar sin convertirse en arrastre ni cambiar al depósito vecino. Hover, órdenes y datos del panel usan el mismo objetivo resuelto; una selección de recurso ya confirmada mantiene sus propios datos en el panel.
+
+- `ResourcePickingPreview.Render`: **80 comprobaciones y seis vistas** de Rift y Training, con tableros de 0,6 / 1,2 / 2 m, rotación y rayos oblicuos desde cuatro lados. Comprueba conflicto con trabajadores, selección por gatillo con temblor, A para recolectar cerca del depósito, prioridad del trabajador apuntado directamente, eliminación del hover, pausa, niebla, agotamiento, recorte y salida de partida. Registro: `TestResults/unity-mineral-picking.log`; imágenes: `TestResults/ResourcePicking/`.
+- Regresión de selección: **33 comprobaciones y seis vistas**, incluidos bordes, selección aditiva, arrastre externo y aislamiento de órdenes. Registro: `TestResults/unity-mineral-selection.log`.
+- HUD y recolección: **18 vistas** con comprobaciones de asignación contextual, recurso seleccionado, saturación/exceso, totales de base y superficie del extractor. Registro: `TestResults/unity-mineral-hud.log`.
+- Compilación y comprobaciones en Unity **6000.3.26f1** / CLI **1.0.0-beta.13**. Sin cambios en simulación, mapas o catálogos. El APK existente, `ProjectSettings` y `Assets/XR` conservan los hashes de la línea base (52 archivos); no se generó ningún ejecutable.
+
+Pendiente: confirmar la facilidad de apuntado con el mando real en Quest, especialmente en mesa pequeña y desde un ángulo bajo. Los rayos y pulsaciones de esta prueba son sintéticos.
+
 ## Rueda contextual en mando derecho — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 La pulsación del joystick derecho abre la rueda junto al mando; sus ejes eligen una acción, **A ejecuta** y **B vuelve/cierra**. Se conservan el gatillo para seleccionar/indicar destinos y el grip para selección aditiva. El mando izquierdo queda sin funciones del juego, incluida la antigua opción de mano dominante. Colocación y recuperación de consola también usan combinaciones del mando derecho. La rueda y el panel comparten las mismas acciones validadas.

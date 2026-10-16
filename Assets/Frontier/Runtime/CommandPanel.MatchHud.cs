@@ -125,11 +125,11 @@ namespace Frontier.Runtime
             }
             else
             {
-                var deposit=view.resources.FirstOrDefault(r=>r.id==Session.SelectedResource);
+                var deposit=view.resources.FirstOrDefault(r=>r.id==(Session.SelectedResource>0?Session.SelectedResource:Board.HoveredResource));
                 var pointed=view.entities.FirstOrDefault(e=>e.id==Board.Hovered&&!e.remembered);
                 if(deposit!=null)
                 {
-                    selectedKind.text="RESOURCE DEPOSIT";selection.text=deposit.kind=="mineral"?"Minerals":"Gas";
+                    selectedKind.text=Session.SelectedResource>0?"RESOURCE DEPOSIT":"POINTING AT · RESOURCE";selection.text=deposit.kind=="mineral"?"Minerals":"Gas";
                     selectionRole.text=deposit.kind=="mineral"?"MINERAL PATCH":"CATALYST DEPOSIT";
                     selectionDetails.text=deposit.remaining<0?"Remaining amount unknown":$"{deposit.remaining:N0} remaining";
                 }
