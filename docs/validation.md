@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## APK integrado — 0.1.5 (6) — 15 de octubre de 2026
+
+Compilación solicitada por el usuario con todos los cambios hasta `1744cb9`: siluetas de edificios, cola de producción visible, dificultad Very Easy, tablero fijo después de colocarlo, grip derecho como Shift, rueda contextual con joystick derecho y A/B, selección de minerales más tolerante, contadores persistentes de trabajadores y nuevos cristales/respiraderos de gas. Las notas históricas de «sin nuevo APK» para estas tareas quedan incluidas en esta entrega.
+
+- **APK:** `Builds/Quest/FrontierCommand.apk`, **58.932.901 bytes**, paquete `com.alvaro.frontiercommand`, versión **0.1.5**, código **6**, Android ARM64/IL2CPP, mínimo 32 y objetivo 36.
+- **SHA-256:** `a1fe9f485991a8e5d595afc5ad43f9870267d0423eeddda2e87bc2d924adfbb8`.
+- Unity **6000.3.26f1** / CLI **1.0.0-beta.13**: compilación correcta, `editorErrors` vacío. Integridad ZIP y firma APK v2 verificadas; el certificado coincide con 0.1.4. El manifiesto conserva Quest 3, passthrough, escena, anclas y control de visibilidad del límite.
+- Registro y comprobaciones: `TestResults/unity-apk-0.1.5.log`, `apk-0.1.5-build.json`, `apk-0.1.5-signature.txt`, `apk-0.1.5-badging.txt`, `apk-0.1.5-manifest.txt`, `delivery-0.1.5.json` y `Builds/Quest/FrontierCommand.provenance.json`.
+- Copia anterior conservada en `Builds/Quest/Archive/FrontierCommand-0.1.4.apk`, junto a su procedencia. Solo se actualizan las versiones de la configuración y este registro; no se cambia la jugabilidad para compilar.
+
+Para actualizar la instalación existente: `adb install -r Builds/Quest/FrontierCommand.apk`. No se generó un ejecutable desktop ni se repitieron las pruebas de cada tarea. Esta entrega confirma compilación, firma y empaquetado; la prueba en Quest físico queda a cargo del usuario.
+
 ## Cristales minerales y respiraderos de gas — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Los bloques minerales se sustituyen por grupos de cinco cristales facetados sobre roca. El gas cambia de esfera a una cavidad rocosa con vapor ascendente. Hay tres variantes de cada recurso y rotación estable por depósito; las mallas y los materiales se comparten.

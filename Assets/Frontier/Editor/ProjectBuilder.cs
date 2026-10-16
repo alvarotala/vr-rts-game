@@ -25,7 +25,7 @@ namespace Frontier.Editor
             Directory.CreateDirectory("Assets/Frontier/Settings");Directory.CreateDirectory("Assets/Frontier/Scenes");
             PlayerSettings.companyName="Frontier";PlayerSettings.productName="Frontier Command";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android,"com.alvaro.frontiercommand");
-            PlayerSettings.bundleVersion="0.1.4";PlayerSettings.Android.bundleVersionCode=5;
+            PlayerSettings.bundleVersion="0.1.5";PlayerSettings.Android.bundleVersionCode=6;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android,ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures=AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion=AndroidSdkVersions.AndroidApiLevel32;
