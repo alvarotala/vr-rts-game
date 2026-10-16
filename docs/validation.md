@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## APK integrado — 0.1.6 (7) — 16 de octubre de 2026
+
+Compilación solicitada por el usuario desde el commit limpio `cb23cda`, con todas las tareas hasta `c17e3cf`: doble grip y atajos de rueda, ayuda de acciones y A en menús, cancelación individual de producción, movimiento con masa e inercia, colas de órdenes y gestos de selección, trayectorias punteadas, puntos de reunión, cuatro grupos con guardado por pulsación mantenida del stick y guía de controles en pausa. Las notas históricas de «sin APK» para estas tareas quedan incluidas en esta entrega.
+
+- **APK:** `Builds/Quest/FrontierCommand.apk`, **59.048.849 bytes**, paquete `com.alvaro.frontiercommand`, versión **0.1.6**, código **7**, Android ARM64/IL2CPP, mínimo 32 y objetivo 36.
+- **SHA-256:** `ebe553b743b54678df078329426e18ff6d2ee2f76d6d5cae77beb321acbff8e3`.
+- Unity **6000.3.26f1** / CLI **1.0.0-beta.13**: compilación correcta, `editorErrors` vacío. Integridad ZIP y firma APK v2 verificadas; certificado idéntico al de 0.1.5. El manifiesto conserva Quest 3, passthrough, escena, anclas y control de visibilidad del límite.
+- Evidencias: `TestResults/unity-apk-0.1.6.log`, `apk-0.1.6-build.json`, `apk-0.1.6-signature.txt`, `apk-0.1.6-badging.txt`, `apk-0.1.6-manifest.txt`, `delivery-0.1.6.json` y `Builds/Quest/FrontierCommand.provenance.json`.
+- APK anterior y procedencia conservados en `Builds/Quest/Archive/FrontierCommand-0.1.5.apk` y `FrontierCommand-0.1.5.provenance.json`; hash del APK anterior verificado. La compilación no dejó cambios adicionales en los archivos versionados.
+
+Para actualizar: `adb install -r Builds/Quest/FrontierCommand.apk`. Esta entrega cambia únicamente la versión y registra el empaquetado; conserva las comprobaciones por tarea documentadas abajo, sin repetirlas ni generar un ejecutable desktop. La prueba de controles, comodidad, legibilidad y rendimiento en Quest físico sigue pendiente del usuario.
+
 ## Guía de controles visible en pausa — fuentes, sin APK — 16 de octubre de 2026
 
 La pausa incorpora `CONTROL GUIDE` con seis categorías y tarjetas de comando, gesto y descripción. Cubre selección, órdenes, menús/ruedas, cuatro grupos, producción y tablero, incluidos los gestos recientes de colas y reemplazo con stick, cancelación de producción y Rally Points. Controls comparte el contenido y cambia entre Touch y mouse/teclado; la guía se oculta al reanudar.
