@@ -44,12 +44,13 @@ namespace Frontier.Editor
                 Click("Controls");Capture("03-controls-desktop");
                 Check(Field<Text>(panel,"selection").text.Contains("Escape"),"Desktop controls are shown");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
-                Check(Field<Text>(panel,"selection").text.Contains("A: move")&&Field<Text>(panel,"selection").text.Contains("Hold right grip: add to selection"),"Touch controls use A and retain the right grip modifier");
+                Check(Field<Text>(panel,"selection").text.Contains("A: contextual order")&&Field<Text>(panel,"selection").text.Contains("Grip: add selection")&&Field<Text>(panel,"selection").text.Contains("Hold grip + A: append order"),"Touch help distinguishes immediate contextual orders from grip-queued orders");
                 var touchControls=Field<Text>(panel,"selection").text;
                 Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
-                Check(touchControls.Contains("Right stick: adjust distance")&&touchControls.Contains("Grip + right stick press: recall menu"),"Touch menu movement and recall remain documented");
-                Check(touchControls.Contains("Right stick: press for action wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
-                Check(touchControls.Contains("Double-tap grip: open wheel")&&touchControls.Contains("Trigger / A executes")&&touchControls.Contains("Grip / B goes back"),"Touch help explains double grip and wheel trigger/grip shortcuts");
+                Check(touchControls.Contains("Right stick: adjust distance")&&touchControls.Contains("Grip + hold Trigger still (0.5s): deselect pointed unit")&&!touchControls.Contains("Grip + right stick press"),"Touch help describes menu movement and hold-trigger removal without an obsolete stick shortcut");
+                Check(touchControls.Contains("Right stick: press for wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
+                Check(touchControls.Contains("Double grip: open wheel")&&touchControls.Contains("Trigger / A executes")&&touchControls.Contains("Grip / B goes back"),"Touch help explains double grip and wheel trigger/grip shortcuts");
+                Check(touchControls.Contains("Double trigger: nearby units of the same type")&&touchControls.Contains("Double A: Attack Move / attack enemy"),"Touch help explains type selection and attack shortcuts");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");

@@ -37,6 +37,19 @@ Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en 
 
 `CombatMotionChecks` verifica frenado en Attack, Attack Move y persecución automática, continuidad durante cooldown, alcance/visión después de frenar y excepciones de Hold y torres.
 
+`CommandQueueChecks` verifica FIFO, reemplazo inmediato, conversión del doble A, grupos, privacidad, invalidación de destinos, recolección, reparación y construcción. Para comprobar entrada y presentación sin APK:
+
+```sh
+unity run . --log-file TestResults/unity-queued-input.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.QueuedInputChecks.Run
+unity run . --log-file TestResults/unity-order-plan.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.OrderQueuePreview.Render
+```
+
+La batería completa de esta entrega se reproduce con `Frontier.Editor.OrderQueueValidationBatch.Run`: reúne estos fixtures y las regresiones de orientación, selección externa, recursos, producción, ayuda, menús y rueda en una ejecución del Editor.
+
+El primer fixture usa rayos y flancos sintéticos para los gestos y el segundo guarda capturas en `TestResults/OrderQueue`, comprueba la separación de producción y la limpieza de los destinos. No certifican ergonomía ni seguimiento en Quest. Contratos: [colas de acciones](order-queues.md).
+
 Para comprobar el giro visual sin generar un ejecutable:
 
 ```sh

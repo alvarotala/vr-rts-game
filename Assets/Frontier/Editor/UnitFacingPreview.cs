@@ -113,6 +113,17 @@ namespace Frontier.Editor
                 Invoke(board,"LateUpdate");Check(!pending.ContainsKey(worker.id),"BoardView never consumes facing intent");
                 Check(!session.Send(CommandKind.Move,position:new Point(-5,-5))&&events==1,"Rejected MOVE changes unit facing");
                 Check(session.Send(CommandKind.AttackMove,position:new Point(24.5f,20.5f))&&events==2,"Attack Move does not publish local facing intent");
+                Check(session.Send(CommandKind.Move,position:new Point(25.5f,20.5f)),"Queued facing setup rejected");
+                int beforeQueue=events;
+                Check(session.Send(CommandKind.Move,position:worker.position,append:true)&&events==beforeQueue,"Future waypoint turns the unit before activation");
+                int nextSequence=session.Match.Entities[worker.id].pendingOrders[0].sourceSequence;
+                Invoke(board,"LateUpdate");
+                for(int i=0;i<800&&session.Match.Entities[worker.id].activeOrderSequence!=nextSequence;i++)
+                {typeof(GameSession).GetField("accumulator",flags).SetValue(session,.05f);Invoke(session,"Update");}
+                Check(session.Match.Entities[worker.id].activeOrderSequence==nextSequence,"Queued reverse waypoint never activates");
+                Check(events==beforeQueue+1&&pending.ContainsKey(worker.id),"Queued waypoint activation waits for displacement before publishing heading");
+                Check(destination.Distance(session.Match.Entities[worker.id].destination)<.001f,"Queued heading ignores its formation destination");
+                Invoke(session,"RefreshView");Check(events==beforeQueue+1,"Refreshing the same active waypoint repeats heading intent");
                 session.LeaveMatch();Check(pending.Count==0,"Facing intent survives leaving the match");
                 Debug.Log($"FRONTIER_FACING_CHECKS passed: {checks} checks; immediate MOVE intent, bounded turns, avoidance filtering, real corners, idle/pause/pool reset, combat aim, frame rate, accepted/rejected commands, exit; no player build");
             }

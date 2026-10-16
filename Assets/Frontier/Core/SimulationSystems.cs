@@ -69,6 +69,7 @@ namespace Frontier.Core
                 {
                     if (worker.cargoKind == "catalyst") Players[worker.owner].catalyst += worker.cargo; else Players[worker.owner].minerals += worker.cargo;
                     worker.cargo = 0; worker.depositing = false; worker.path = null;
+                    if (worker.pendingOrders.Count > 0 && AdvanceUnitOrders(worker)) return;
                     if (resource != null) RebalanceGather(worker, resource);
                 }
                 return;
@@ -163,7 +164,8 @@ namespace Frontier.Core
             {
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
-                if (entity.owner == player) { item.target = entity.target; item.queue = entity.queue.Select(q => new ProductionOrder { id = q.id, definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
+                if (entity.owner == player) { item.target = entity.target; item.destination = entity.destination;
+                    item.activeOrderSequence = entity.activeOrderSequence; item.pendingOrders = entity.pendingOrders.Select(CopyOrder).ToArray(); item.queue = entity.queue.Select(q => new ProductionOrder { id = q.id, definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
                 else item.order = CommandKind.Stop;
                 visible.Add(item);
             }

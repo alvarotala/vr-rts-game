@@ -67,6 +67,7 @@ namespace Frontier.Core
         public CommandResult Submit(GameCommand command)
         {
             if (command == null || command.player < 0 || command.player > 1) return Reject("Invalid player.");
+            if (command.replacePendingSequence < 0) return Reject("Invalid action sequence.");
             if (Winner != -1 || Paused) return Reject("The match is not active.");
             if (command.sequence > 0 && command.sequence <= lastSequences[command.player]) return Reject("Duplicate command.");
             if (command.sequence > 0) lastSequences[command.player] = command.sequence;
@@ -78,46 +79,28 @@ namespace Frontier.Core
                 if (!Entities.TryGetValue(id, out var entity) || entity.owner != command.player) return Reject("You do not own the selected units or buildings.");
                 selected.Add(entity);
             }
+            if (IsUnitAction(command.kind) && (command.append || command.replacePendingSequence > 0))
+                return QueueCommand(command, selected);
+            return ExecuteCommand(command, selected, false);
+        }
+        private CommandResult ExecuteCommand(GameCommand command, List<EntityState> selected, bool preserveQueue)
+        {
             EntityState first = selected[0];
-            if (command.kind == CommandKind.Build) return Build(command, first);
+            if (command.kind == CommandKind.Build)
+            {
+                var result = Build(command, first);
+                if (result.accepted) MarkUnitOrder(first, command.sequence, preserveQueue);
+                return result;
+            }
             if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, first);
             if (command.kind == CommandKind.Cancel) return Cancel(first, command.queueOrderId);
             if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {
-                if (!Finite(command.position) || Map.Cell(command.position) < 0) return Reject("Destination outside the map.");
+                var plan = PlanMovement(command, selected, false);
+                if (plan == null) return Reject("Destination outside the map.");
                 int accepted = 0;
-                long trafficPriority=((long)selected.Min(e=>e.id)<<32)|++nextMovementOrder;
-                float trafficMass=selected.Max(e=>Type(e).collisionMass);
-                int formationRadius=Math.Max(12,(int)Math.Ceiling(Math.Sqrt(selected.Count))*2);
-                var reserved = new HashSet<int>();
-                var selectedIds = new HashSet<int>(selected.Select(e=>e.id));
-                foreach(var other in Entities.Values)
-                    if(!Type(other).building && !selectedIds.Contains(other.id) && (other.owner==command.player || Visible(command.player,other.position)))
-                    {
-                        reserved.Add(Map.Cell(other.position));
-                        if(other.owner==command.player&&(other.order==CommandKind.Move||other.order==CommandKind.AttackMove))reserved.Add(Map.Cell(other.destination));
-                    }
-                foreach (var entity in selected.OrderBy(e=>e.position.Distance(command.position)).ThenBy(e=>e.id))
-                {
-                    foreach(var destination in DestinationSlots(command.position,formationRadius,reserved,Type(entity).collisionRadius))
-                    {
-                        var path = paths.Find(entity.position,destination,.1f,null,Type(entity).collisionRadius);
-                        if(path==null)continue;
-                        ResetTravel(entity);
-                        entity.trafficPriority=trafficPriority;
-                        entity.trafficMass=trafficMass;
-                        entity.order=command.kind;entity.destination=destination;entity.target=0;
-                        entity.moveGoal=command.kind==CommandKind.Move;
-                        SetPath(entity,path,destination,.1f);
-                        // Leave a lane between formation slots so later arrivals can pass settled units.
-                        int gap=selected.Count>1?1:0;
-                        for(int y=(int)destination.y-gap;y<=(int)destination.y+gap;y++)
-                            for(int x=(int)destination.x-gap;x<=(int)destination.x+gap;x++)
-                                if(Map.Inside(x,y))reserved.Add(Map.Index(x,y));
-                        accepted++;break;
-                    }
-                }
+                foreach (var item in plan) if (ActivateMovement(item.unit, item.order, preserveQueue, item.path).accepted) accepted++;
                 return accepted > 0 ? Accept() : Reject("No path to that destination.");
             }
             if (command.kind == CommandKind.Attack || command.kind == CommandKind.Repair)
@@ -131,11 +114,14 @@ namespace Frontier.Core
                 var resource = Resources.FirstOrDefault(r => r.id == command.target);
                 if (resource == null || !Explored(command.player, resource.position) || selected.Any(e => Type(e).role != "worker")) return Reject("Select workers and an explored resource deposit.");
                 if (resource.kind == "catalyst" && !Extractor(command.player, resource)) return Reject("Build an extractor over the catalyst deposit.");
-                return AssignGather(selected, resource);
+                var result = AssignGather(selected, resource);
+                if (result.accepted) foreach (var entity in selected) MarkUnitOrder(entity, command.sequence, preserveQueue);
+                return result;
             }
             else if (command.kind != CommandKind.Stop && command.kind != CommandKind.Hold) return Reject("Unknown command.");
             foreach (var entity in selected)
             {
+                MarkUnitOrder(entity, command.sequence, preserveQueue);
                 ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
                 entity.braking=command.kind==CommandKind.Stop&&entity.velocity.Distance(default)>.01f;
                 if (command.kind == CommandKind.Repair && !Entities[command.target].complete) entity.order = CommandKind.Build;
@@ -145,13 +131,25 @@ namespace Frontier.Core
         private CommandResult Build(GameCommand command, EntityState worker)
         {
             if (!worker.complete || Type(worker).role != "worker" || !Catalog.Has(command.definition)) return Reject("Select a worker.");
+            var validation = ValidateBuildingOrder(command, worker, false);
+            if (!validation.accepted) return validation;
+            var type = Catalog[command.definition]; int player = worker.owner;
+            Point position = new Point((float)Math.Floor(command.position.x), (float)Math.Floor(command.position.y));
+            Pay(player, type.minerals, type.catalyst);
+            var building = Spawn(player, type.id, position); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
+            ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
+            return Accept();
+        }
+        private CommandResult ValidateBuildingOrder(GameCommand command, EntityState worker, bool deferred)
+        {
+            if (!worker.complete || Type(worker).role != "worker" || !Catalog.Has(command.definition)) return Reject("Select a worker.");
             var type = Catalog[command.definition]; int player = worker.owner;
             if (!type.building || type.faction != Players[player].faction) return Reject("Invalid building.");
             if (!Finite(command.position)) return Reject("Invalid position.");
             Point position = new Point((float)Math.Floor(command.position.x), (float)Math.Floor(command.position.y));
             if (Buildings(player) >= BuildingLimit) return Reject("Building limit reached (20).");
-            if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Required building missing.");
-            if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
+            if (!deferred && !string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Required building missing.");
+            if (!deferred && !CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
             if (!Map.CanPlace(position, type.footprint)) return Reject("Cannot build on this terrain.");
             for (int y = (int)position.y; y < position.y + type.footprint; y++) for (int x = (int)position.x; x < position.x + type.footprint; x++)
                 if (!Visible(player, new Point(x + .5f, y + .5f))) return Reject("You need vision of the construction area.");
@@ -159,12 +157,9 @@ namespace Frontier.Core
             if (type.role == "extractor")
             { if (covered.Length != 1 || covered[0].kind != "catalyst") return Reject("The extractor must cover a catalyst deposit."); }
             else if (covered.Length > 0) return Reject("Resources block that location.");
-            if (Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Units block that location.");
+            if (!deferred && Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Units block that location.");
             var center = new Point(position.x + type.footprint / 2f, position.y + type.footprint / 2f);
             if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("The worker cannot reach that location.");
-            Pay(player, type.minerals, type.catalyst);
-            var building = Spawn(player, type.id, position); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
-            ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
             return Accept();
         }
         private CommandResult Produce(GameCommand command, EntityState producer)
@@ -237,6 +232,7 @@ namespace Frontier.Core
                     case CommandKind.AttackMove: if (!Fight(e, true) && Travel(e, e.destination, .1f)) e.order = CommandKind.Stop; break;
                     default: if (type.role != "worker") Fight(e, e.order != CommandKind.Hold); break;
                 }
+                if (e.order == CommandKind.Stop) AdvanceUnitOrders(e);
             }
             EndMovementStep();
             foreach (var e in active) if (e.health <= 0 && Entities.ContainsKey(e.id)) Remove(e);

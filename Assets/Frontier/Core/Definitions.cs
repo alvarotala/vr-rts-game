@@ -137,6 +137,9 @@ namespace Frontier.Core
         public CommandKind kind;
         public int player;
         public int sequence;
+        public bool append;
+        // A second tap upgrades this earlier action in place instead of adding a waypoint.
+        public int replacePendingSequence;
         public int[] entities = Array.Empty<int>();
         public int target;
         // Zero preserves Cancel's legacy behavior (last queued item / unfinished building).
@@ -159,6 +162,16 @@ namespace Frontier.Core
         public int remaining, total;
     }
     [Serializable]
+    public sealed class UnitOrder
+    {
+        public int sourceSequence, target;
+        public CommandKind kind;
+        public Point position;
+        public string definition;
+        [NonSerialized] internal long trafficPriority;
+        [NonSerialized] internal float trafficMass;
+    }
+    [Serializable]
     public sealed class EntityState
     {
         public int id, owner;
@@ -172,6 +185,8 @@ namespace Frontier.Core
         public string cargoKind;
         public Point destination;
         public List<ProductionOrder> queue = new List<ProductionOrder>();
+        public int activeOrderSequence;
+        public List<UnitOrder> pendingOrders = new List<UnitOrder>();
         [NonSerialized] internal List<int> path;
         [NonSerialized] internal int pathIndex, pathVersion = -1, blockedTicks;
         [NonSerialized] internal Point pathGoal, stepOrigin, velocity, yieldGoal;
@@ -209,6 +224,9 @@ namespace Frontier.Core
         public bool complete, remembered;
         public CommandKind order;
         public ProductionOrder[] queue = Array.Empty<ProductionOrder>();
+        public int activeOrderSequence;
+        public Point destination;
+        public UnitOrder[] pendingOrders = Array.Empty<UnitOrder>();
     }
     [Serializable]
     public struct AttackEvent

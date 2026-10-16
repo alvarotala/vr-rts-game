@@ -71,6 +71,7 @@ namespace Frontier.Core
 
         private void ResumeGather(EntityState worker)
         {
+            if (AdvanceUnitOrders(worker)) return;
             var assigned = GatherAssignments(worker.owner, new[] { worker.id });
             var previous = Resources.FirstOrDefault(r => r.id == worker.resourceId);
             var resource = previous == null ? null : FindGatherResource(worker, previous.kind, previous.position, 0, assigned);
@@ -82,6 +83,7 @@ namespace Frontier.Core
 
         private void RebalanceGather(EntityState worker, ResourceState resource)
         {
+            if (worker.pendingOrders.Count > 0) return;
             var assigned = GatherAssignments(worker.owner, new[] { worker.id });
             if (assigned[resource.id] < Harvesting.OptimalWorkers(resource.kind)) return;
             var replacement = FindGatherResource(worker, resource.kind, resource.position, 0, assigned, onlyFree: true);

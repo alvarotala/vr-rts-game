@@ -49,6 +49,7 @@ namespace Frontier.Runtime
         private Material[] memoryMaterials;
         private WeaponEffects weapons;
         private HarvestingMarkers harvestingMarkers;
+        private OrderQueueVisuals orderQueueVisuals;
         private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
@@ -87,6 +88,7 @@ namespace Frontier.Runtime
             resourceVisuals.Dispose();
             weapons?.Dispose();
             harvestingMarkers?.Dispose();
+            orderQueueVisuals?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
             foreach(var material in new[]{ground,blue,red,neutral,resourceMaterial,highlight,unitStructure,impactMaterial})Release(material);
@@ -101,6 +103,7 @@ namespace Frontier.Runtime
             if(Content==null)return;
             weapons?.Dispose();weapons=null;firing.Clear();
             harvestingMarkers?.Dispose();harvestingMarkers=null;
+            orderQueueVisuals?.Dispose();orderQueueVisuals=null;
             resourceVisuals.ClearVapor();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
@@ -112,6 +115,7 @@ namespace Frontier.Runtime
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
             harvestingMarkers=new HarvestingMarkers(Content);
+            orderQueueVisuals=new OrderQueueVisuals(Content);
             resourceVisuals.BindVapor(Content,fog,Session.Map.width,Session.Map.height);
             var grid=new GridMap(Session.Map);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
@@ -155,6 +159,7 @@ namespace Frontier.Runtime
             {
                 weapons?.Clear();
                 harvestingMarkers?.Hide();
+                orderQueueVisuals?.Hide();
                 Hovered=0;Pointer=null;DrawSelection(default,default,false);
                 if(ground!=null)ground.SetFloat("_HoverWidth",0);
                 if(preview!=null)preview.gameObject.SetActive(false);
@@ -179,7 +184,7 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();return;}
+            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();orderQueueVisuals?.Hide();return;}
             firing.Clear();
             foreach(var shot in Session.View.attacks)
                 if(Session.View.tick-shot.tick<6)firing[shot.attacker]=shot;
@@ -294,6 +299,7 @@ namespace Frontier.Runtime
             var viewer=Viewer!=null?Viewer:Camera.main;
             resourceVisuals.UpdateVapor(this,viewer);
             harvestingMarkers?.Update(this,viewer);
+            orderQueueVisuals?.Update(this);
         }
         public bool TryEntityTop(int id,out Vector3 top)
         {

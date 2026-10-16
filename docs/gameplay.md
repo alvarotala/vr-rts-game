@@ -68,7 +68,7 @@ Las unidades pesadas tienen prioridad frente a las livianas. MOVE responde desde
 
 En Quest, el tablero queda fijo al confirmar su colocación: los joysticks ya no desplazan ni amplían el mapa, y pulsar el stick principal tampoco cambia su vista. Para cambiar posición, tamaño u orientación, abrir **Settings → Reposition board** y confirmar una nueva colocación. Durante ese ajuste, el joystick derecho modifica tamaño/giro; sostener el grip derecho cambia el eje vertical a altura, sin alterar tamaño ni giro. El modo de prueba de escritorio conserva sus controles de navegación para desarrollo.
 
-El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo o A y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; mantener el grip derecho y pulsar el joystick derecho también lo recupera si quedó fuera de vista (tecla **M** en escritorio).
+El menú comienza elevado detrás del tablero. Para moverlo, apuntar a **MOVE MENU**, mantener el gatillo o A y arrastrar; mientras se sostiene, el stick principal acerca o aleja el panel. Al soltar, queda fijo respecto del tablero y guarda esa posición para la próxima apertura. El panel gira para poder leerse al caminar alrededor. **Reset position** lo devuelve arriba del mapa; la tecla **M** también lo recupera en escritorio. La pulsación del joystick derecho queda reservada para la rueda, incluso con grip sostenido.
 
 En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](https://developers.meta.com/vr/documentation/unity/unity-boundaryless/) mientras el passthrough está activo. Permite caminar alrededor del tablero sin que el círculo estacionario interrumpa la experiencia cuando el sistema lo admite. El mapa permanece unido a su ancla espacial. La confirmación final depende de Horizon OS y debe hacerse con el APK instalado directamente en el visor.
 
@@ -76,9 +76,13 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 |---|---|---|
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
 | Agregar a selección | Mantener grip derecho (botón lateral) | Mantener Shift |
+| Seleccionar unidades cercanas del mismo tipo | Doble gatillo sobre una unidad propia | Doble clic izquierdo |
+| Quitar la unidad apuntada | Grip + mantener gatillo quieto durante 0,5 s | Shift + mantener clic izquierdo durante 0,5 s |
 | Activar botón del menú | Gatillo derecho o A; mantener para acciones largas | Clic izquierdo |
 | Ayuda de acciones | Hover durante 1,5 segundos | Hover durante 1,5 segundos |
 | Orden contextual | A sobre el mapa (con la rueda cerrada) | Clic derecho |
+| Encolar orden contextual | Grip + A | Shift + clic derecho |
+| Attack Move / ataque directo sobre enemigo | Doble A; mantener grip para encolar | Doble clic derecho; Shift para encolar |
 | Abrir / cerrar rueda de acciones | Pulsar joystick derecho; doble grip también abre | — |
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
 | Ejecutar en la rueda | Gatillo derecho o A | — |
@@ -88,13 +92,25 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Zoom (solo escritorio) | — | Rueda |
 | Ver mapa completo (solo escritorio) | — | F |
 | Mover menú | Mantener gatillo o A sobre MOVE MENU; stick principal para distancia | Arrastrar MOVE MENU; rueda para distancia |
-| Recuperar menú arriba del tablero | Grip derecho + pulsación del joystick derecho | M |
+| Recuperar menú arriba del tablero | Reset position en el panel | M |
 | Pausa | B o panel | Espacio |
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
 
 El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Todos los controles del juego usan el mando derecho; el izquierdo queda sin asignación por ahora. Se retiró la opción de mano dominante y no se aplica la preferencia antigua guardada.
 
 El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
+
+Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionada la quita una sola vez; soltar no vuelve a seleccionarla. Si el puntero se arrastra, el gesto sigue siendo selección de área. **Doble gatillo** selecciona unidades propias de la misma definición dentro de doce celdas de la unidad apuntada; con grip conserva el resto de la selección. No incluye edificios ni unidades enemigas.
+
+### Cola de acciones de unidades
+
+**Grip + A** agrega una orden al final del plan de cada unidad seleccionada. Si está quieta, empieza de inmediato; si está ocupada, conserva su trabajo actual. Repetir A en otro lugar agrega otro destino. Una orden válida sin grip reemplaza el plan; **Stop** y **Hold Position** lo limpian inmediatamente.
+
+**Doble A** hace Attack Move sobre terreno o ataque directo sobre un enemigo visible. Con grip también se encola. El primer A responde inmediatamente; el segundo convierte esa misma orden en ataque, sin dejar un Move extra. Las pulsaciones deben estar separadas por un máximo de 0,35 segundos y apuntar al mismo objetivo o a un punto cercano (hasta 1,5 celdas). Dos ubicaciones diferentes siguen siendo dos órdenes. Cambiar selección, soltar grip, entrar al menú/rueda o pausar descarta el doble clic pendiente.
+
+La sección **UNIT ORDER PLAN** distingue estas acciones de la producción de edificios. Muestra cuántas quedan y los próximos pasos. En el mapa aparecen hasta ocho destinos numerados: 1 es la acción actual; cian indica movimiento, naranja ataque y verde trabajo. Para grupos se muestra el plan de una unidad representativa identificada en el panel. Las líneas conectan objetivos; la ruta real se adapta a obstáculos y unidades.
+
+Cada unidad admite hasta **32 órdenes pendientes**. Move/Attack Move avanzan al llegar; Attack al desaparecer el objetivo o perderlo de vista; Gather después de entregar una carga; Repair al terminar la reparación. La construcción industrial espera a terminar el edificio; la biológica avanza después de iniciar el crecimiento. Las órdenes se revalidan al comenzar y se omiten con aviso si ya no se pueden ejecutar. Las construcciones encoladas se pagan al activarse, no al agregarlas. Detalles técnicos y pruebas: [colas de acciones](order-queues.md).
 
 La **rueda contextual** aparece junto al mando derecho al pulsar su joystick o hacer **doble pulsación rápida del grip derecho**. Inclinar el joystick elige una opción y **el gatillo derecho o A la ejecutan**; **el grip derecho o B vuelven del submenú Build o cierran la rueda principal**. También puede cerrarse pulsando nuevamente el joystick. Al abrir o cambiar de submenú, centrar el joystick antes de elegir; luego puede soltarse, manteniendo resaltada la opción hasta confirmar o cancelar. La rueda muestra el nombre de la selección, la acción y su costo o efecto. Los trabajadores abren seis edificios desde **Build**; las unidades ofrecen Attack Move, Stop y Hold Position; los edificios ofrecen producción, investigación y cancelación según corresponda. Las órdenes rechazadas muestran el motivo en el centro de la rueda.
 

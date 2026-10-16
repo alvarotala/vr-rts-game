@@ -12,6 +12,8 @@ namespace Frontier.Runtime
         private RectTransform matchHud, resourceStrip, selectedCard, actionCard, groupStrip, matchStrip, harvestingStrip;
         private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, actionHeading, actionHint, matchClock;
         private Image healthBackground, healthFill;
+        private RectTransform orderPlanStrip;
+        private Text orderPlanCount, orderPlanSteps, orderPlanHint;
         private readonly Text[] groupCounts=new Text[3];
         private readonly Target[] groupTargets=new Target[3], matchTargets=new Target[2];
         private static readonly Color MineralTint=new Color(.38f,.83f,1),GasTint=new Color(.85f,.62f,1),SupplyTint=new Color(.55f,.94f,.68f),WarningTint=new Color(1,.67f,.3f);
@@ -53,6 +55,11 @@ namespace Frontier.Runtime
             matchTargets[0]=HudButton(matchStrip,"Full map","Reset view",new Vector2(14,-36),new Vector2(140,54),()=>Board.Fit(),null,out _);
             matchTargets[1]=HudButton(matchStrip,"Pause","Menu",new Vector2(166,-36),new Vector2(140,54),()=>Show(MenuPage.Pause),null,out _);
             CreateProductionHud();
+            orderPlanStrip=Section(matchHud,"Unit order plan",new Vector2(24,-484),new Vector2(1052,96));
+            Label(orderPlanStrip,"UNIT ORDER PLAN",new Vector2(16,-7),new Vector2(320,24),16,accent);
+            orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAnchor.MiddleRight);
+            orderPlanSteps=Label(orderPlanStrip,"",new Vector2(16,-34),new Vector2(1020,28),18,Color.white);
+            orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,new Color(.65f,.76f,.82f));
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
         {
@@ -79,7 +86,9 @@ namespace Frontier.Runtime
         {
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls;
             bool production=hud&&SelectedProducer()!=null;
-            float queueSpace=(production?180:0)+62;
+            bool orders=hud&&SelectedMobileUnits().Length>0;
+            float queueSpace=(production?180:0)+(orders?108:0)+62;
+            orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
             productionStrip.anchoredPosition=new Vector2(24,-484);
             matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:526);matchHud.sizeDelta=root.sizeDelta;
@@ -140,7 +149,31 @@ namespace Frontier.Runtime
             }
             UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
             UpdateProductionHud();
+            UpdateOrderPlanHud();
             status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
+        }
+        private VisibleEntity[] SelectedMobileUnits()=>Session.View==null?Array.Empty<VisibleEntity>():Session.View.entities
+            .Where(e=>e.owner==Session.View.player&&!e.remembered&&Session.Selection.Contains(e.id)&&!Session.Catalog[e.definition].building).OrderBy(e=>e.id).ToArray();
+        private void UpdateOrderPlanHud()
+        {
+            var units=SelectedMobileUnits();if(units.Length==0)return;
+            int count=units.Sum(e=>e.pendingOrders.Length),withOrders=units.Count(e=>e.pendingOrders.Length>0);
+            orderPlanCount.text=units.Length==1?$"{count} queued order{(count==1?"":"s")}":$"{count} queued orders across {withOrders} / {units.Length} units";
+            var representative=OrderQueueVisuals.Representative(Session);
+            if(representative==null)
+            {
+                orderPlanSteps.text="No queued orders";
+                orderPlanHint.text="Hold right grip + A to append orders · Double A: Attack Move / attack target";
+                return;
+            }
+            orderPlanSteps.text="1. "+PlanOrderLabel(representative.order)+"  →  "+string.Join("  →  ",representative.pendingOrders.Take(3).Select((order,index)=>(index+2)+". "+PlanOrderLabel(order.kind)));
+            if(representative.pendingOrders.Length>3)orderPlanSteps.text+=$"  →  +{representative.pendingOrders.Length-3} more";
+            orderPlanHint.text=$"Waypoints: {Session.Catalog[representative.definition].name} #{representative.id} · Cyan: Move · Orange: Attack · Routes adapt to terrain";
+            if(representative.pendingOrders.Length>=OrderQueueVisuals.MaximumWaypoints)orderPlanHint.text+=$" · First {OrderQueueVisuals.MaximumWaypoints} shown";
+        }
+        private static string PlanOrderLabel(CommandKind order)
+        {
+            switch(order){case CommandKind.Move:return "Move";case CommandKind.Attack:return "Attack";case CommandKind.AttackMove:return "Attack Move";case CommandKind.Gather:return "Gather";case CommandKind.Build:return "Build";case CommandKind.Repair:return "Repair";case CommandKind.Hold:return "Hold Position";default:return "Stop";}
         }
         private void DescribeEntity(VisibleEntity entity,bool pointing)
         {

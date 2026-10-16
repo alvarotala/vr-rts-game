@@ -79,7 +79,7 @@ namespace Frontier.Runtime
             }
             if (steps > 0)
             {
-                View = Match.View(0); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == 0));
+                RefreshView(); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == 0));
                 if (Match.Winner != -1) Announce(Match.Winner == 0 ? "VICTORY · The territory is yours." : Match.Winner == 2 ? "DRAW" : "DEFEAT · Your colony has fallen.");
                 else if (MapId == "training" && Time.unscaledTime > messageUntil)
                     Message = !Match.HasRole(0, "barracks") ? $"1 · Use a worker to build: {Catalog.Role(Faction, "barracks").name}." : Match.Units(0) < 10 ? $"2 · Select {Catalog.Role(Faction, "barracks").name} and train an army." : "3 · Use Attack Move to explore and destroy enemy buildings.";
@@ -108,6 +108,23 @@ namespace Frontier.Runtime
                 if (e.owner == 0 && !Catalog[e.definition].building && e.position.x >= Math.Min(a.x,b.x) && e.position.x <= Math.Max(a.x,b.x) && e.position.y >= Math.Min(a.y,b.y) && e.position.y <= Math.Max(a.y,b.y)) Selection.Add(e.id);
             Feedback?.Invoke(true); Changed?.Invoke();
         }
+        public void Deselect(int id)
+        {
+            bool removed=Selection.Remove(id);
+            if(removed)SelectedResource=0;
+            Feedback?.Invoke(removed);Changed?.Invoke();
+        }
+        public void SelectNearbySameType(int id,bool additive)
+        {
+            var source=View?.entities.FirstOrDefault(e=>e.id==id&&e.owner==0&&!e.remembered);
+            if(source==null||Catalog[source.definition].building)return;
+            if(!additive)Selection.Clear();
+            SelectedResource=0;
+            foreach(var entity in View.entities)
+                if(entity.owner==0&&!entity.remembered&&entity.definition==source.definition
+                    &&entity.position.Distance(source.position)<=12)Selection.Add(entity.id);
+            Feedback?.Invoke(true);Changed?.Invoke();
+        }
         public void Group(int index, bool save)
         {
             if(View==null||index<0||index>=groups.Length)return;
@@ -118,35 +135,56 @@ namespace Frontier.Runtime
         public int GroupSize(int index) => groups[index].Count(id=>View != null && View.entities.Any(e=>e.id==id));
         public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void CancelMode() { BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke(); }
-        public void Context(Point point, int entityId, int resourceId)
+        private void RefreshView()
         {
-            if (View == null) return;
+            var previous=View;View=Match.View(0);
+            foreach(var entity in View.entities)
+                if(entity.owner==View.player&&entity.activeOrderSequence>0&&
+                    (entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove)&&
+                    (previous==null||!previous.entities.Any(old=>old.id==entity.id&&old.activeOrderSequence==entity.activeOrderSequence)))
+                    // Enqueuing leaves the active sequence unchanged. A new active waypoint
+                    // turns the model now, including when simulation advances the queue.
+                    UnitMoveOrdered?.Invoke(entity.id,entity.destination);
+        }
+        public int Context(Point point,int entityId,int resourceId,bool append=false,bool attack=false,int replaceSequence=0)
+        {
+            if (View == null) return 0;
             if (BuildDefinition != null)
-            { if (Send(CommandKind.Build, definition: BuildDefinition, position: point)) BuildDefinition = null; return; }
-            if (AttackMoveMode) { Send(CommandKind.AttackMove, position: point); AttackMoveMode = false; return; }
+            {
+                if(!Send(CommandKind.Build,definition:BuildDefinition,position:point,append:append))return 0;
+                BuildDefinition=null;return sequence;
+            }
+            if (AttackMoveMode)
+            {
+                bool accepted=Send(CommandKind.AttackMove,position:point,append:append,replaceSequence:replaceSequence);
+                AttackMoveMode=false;return accepted?sequence:0;
+            }
             var entity = View.entities.FirstOrDefault(e=>e.id==entityId && !e.remembered);
             var selected = View.entities.Where(e=>Selection.Contains(e.id)).ToArray();
+            if(attack)
+            {
+                bool accepted=entity!=null&&entity.owner!=0
+                    ?Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence)
+                    :Send(CommandKind.AttackMove,position:point,append:append,replaceSequence:replaceSequence);
+                return accepted?sequence:0;
+            }
             // The whole extractor footprint is a gas-order target, not only the deposit's center.
             if (entity != null && entity.owner == 0 && Catalog[entity.definition].role == "extractor" && entity.complete)
                 resourceId = View.resources.FirstOrDefault(r => r.extractorId == entity.id)?.id ?? resourceId;
-            if (entity != null && entity.owner != 0) Send(CommandKind.Attack, target: entity.id);
-            else if (resourceId > 0 && selected.All(e=>Catalog[e.definition].role=="worker")) Send(CommandKind.Gather,target:resourceId);
-            else if (entity != null && entity.owner==0 && entity.health < Catalog[entity.definition].health && Faction=="industrial" && selected.All(e=>Catalog[e.definition].role=="worker")) Send(CommandKind.Repair,target:entity.id);
-            else Send(CommandKind.Move,position:point);
+            bool sent;
+            if (entity != null && entity.owner != 0) sent=Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence);
+            else if (resourceId > 0 && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Gather,target:resourceId,append:append,replaceSequence:replaceSequence);
+            else if (entity != null && entity.owner==0 && entity.health < Catalog[entity.definition].health && Faction=="industrial" && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Repair,target:entity.id,append:append,replaceSequence:replaceSequence);
+            else sent=Send(CommandKind.Move,position:point,append:append,replaceSequence:replaceSequence);
+            return sent?sequence:0;
         }
-        public bool Send(CommandKind kind, string definition = null, int target = 0, Point position = default, int queueOrderId = 0)
+        public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0)
         {
             if (Match == null) return false;
             var selected = Selection.OrderBy(id=>id).ToArray();
-            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected });
+            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence });
             if (!result.accepted) Announce(result.message);
-            Feedback?.Invoke(result.accepted); View = Match.View(0);
-            if(result.accepted&&(kind==CommandKind.Move||kind==CommandKind.AttackMove))
-                foreach(int id in selected)
-                    // Only local accepted movement intent is exposed to presentation. Use
-                    // the assigned formation slot; enemy destinations stay private.
-                    if(Match.Entities.TryGetValue(id,out var entity)&&entity.owner==0&&entity.order==kind)
-                        UnitMoveOrdered?.Invoke(id,entity.destination);
+            Feedback?.Invoke(result.accepted); RefreshView();
             Changed?.Invoke(); return result.accepted;
         }
         private void OnApplicationFocus(bool focused) { if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }

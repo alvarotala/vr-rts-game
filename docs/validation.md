@@ -4,6 +4,21 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Colas de acciones y gestos del mando derecho — fuentes, sin APK — 16 de octubre de 2026
+
+Grip + A encola acciones por unidad; doble A convierte su primer toque en Attack Move o ataque directo sobre enemigo visible, sin duplicar un Move ni demorar el primer toque. Doble trigger selecciona unidades cercanas del mismo tipo. Grip + mantener trigger quieto durante 0,5 segundos quita la unidad apuntada y consume su liberación; el arrastre conserva selección de área. La pulsación del stick queda siempre para la rueda, incluso sosteniendo grip; doble grip sigue abriéndola.
+
+La consola separa `UNIT ORDER PLAN` de producción, muestra conteo y próximos pasos. El mapa dibuja hasta ocho destinos numerados para un representante del grupo. Los destinos futuros no cambian la orientación visual; al activarse el siguiente waypoint se emite el nuevo rumbo inmediatamente. Las colas contienen hasta 32 pendientes por unidad, se revalidan al ejecutarse y se limpian mediante una nueva orden sin modificador, Stop o Hold. Contratos y criterios de finalización: [colas de acciones](order-queues.md).
+
+- **460 comprobaciones de núcleo aprobadas**: 411 regresiones anteriores, 45 nuevas de colas y cuatro partidas IA completas. FIFO, conversión del primer toque activo/pendiente/ya terminado, límite, propiedad, privacidad/copia de vista, destinos bloqueados, construcción/costos, recolección, reparación y grupo de ocho sin solapamientos. Registro: `TestResults/order-queue-core-final.log`.
+- Las cuatro partidas conservan los resultados y duraciones anteriores: 1336, 1060, 1048 y 1047 segundos simulados, cubriendo todos los cruces de facciones. No constituyen una prueba de balance humano.
+- **809 comprobaciones enumeradas del Editor y 131 vistas estáticas**: `QueuedInputChecks` (64), `OrderQueuePreview` (55 / 5 vistas), `UnitFacingPreview` (32), selección externa (33 / 6), apuntado de recursos (80 / 6), cancelación de producción (168 / 14), ayuda (134 / 36), producción (48 / 16), HUD/recolección (18 vistas), menús (47 / 12) y rueda (148 / 18).
+- Ejecutadas juntas mediante `OrderQueueValidationBatch.Run`, Unity **6000.3.26f1**, CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones de pruebas. Registro: `TestResults/unity-order-queue.log`.
+- Inspeccionadas `TestResults/OrderQueue/industrial-orders.png`, `industrial-waypoints.png` y `controls.png`: plan separado, números sobre terreno y ayuda sin desbordamiento. La selección mixta de edificio/unidad no superpone producción y órdenes.
+- `ProjectSettings`, `Assets/XR` y APK existentes mantienen los **54 hashes** de `TestResults/order-queue-baseline.json`. No se generó APK ni ejecutable desktop; el APK existente no incluye estos cambios.
+
+Pendiente: verificar en Quest la comodidad del hold de 0,5 segundos, la tolerancia del doble toque y la legibilidad de los destinos. Las pruebas usan rayos, tiempos y botones sintéticos; no certifican controles físicos ni rendimiento en el visor.
+
 ## Movimiento, masa, inercia y orientación — fuentes, sin APK — 16 de octubre de 2026
 
 MOVE sustituye la ruta y las maniobras automáticas de cesión inmediatamente; la presentación empieza a girar ese mismo cuadro y el cuerpo responde desde el siguiente paso de simulación, conservando inercia. Cada tipo tiene masa, aceleración y desaceleración. STOP frena y HOLD POSITION ancla. El frenado también se aplica al llegar, al dar un MOVE dentro de la celda actual y al entrar en rango de ataque; después de frenar se revalida alcance y visión antes de disparar. Los giros visuales siguen las posiciones de simulación, filtran pequeñas correcciones y no vuelven al rumbo antiguo durante una reversa.
