@@ -58,6 +58,7 @@ namespace Frontier.Runtime
             foreach(var label in new[]{headline,economy,selection,harvesting,status})label.transform.SetAsLastSibling();
             actions.SetAsLastSibling();
             CreateActionHelp();
+            CreateControlGuide();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -91,7 +92,7 @@ namespace Frontier.Runtime
             }
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             Board.SetVisible(ShowsBoard);
-            string state=Page+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Page+":"+Quest.Active+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
@@ -161,13 +162,11 @@ namespace Frontier.Runtime
                     selection.text="Right controller only. Adjust the board's position in your room.";break;
                 case MenuPage.Controls:
                     headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
-                    selection.text=Quest.Active?
-                        "Trigger: select / drag group · Double trigger: nearby units of the same type\nGrip: add selection · Grip + hold Trigger still (0.5s): deselect pointed unit\nA: contextual order · Hold grip + A: append order\nDouble A: Attack Move / attack enemy · Hold grip to append it\nRight stick: press for wheel · Double press: 4 groups · Double grip: open wheel\nMenus: Trigger / A executes · Wheel: Grip / B goes back · B: cancel / pause\nMOVE MENU: hold Trigger / A and drag · Right stick: adjust distance\nBoard stays fixed · Settings: reposition · Placement: stick size / rotation, grip + stick height\nGroups: tilt, center to select · Hold stick + tilt, release click to replace · Left controller: unassigned":
-                        "Left-click: select / drag to select a group · Shift: add to selection\nRight-click: move, attack, gather or repair\nEscape: cancel / back / pause · Space: pause / resume\nWASD: pan · Mouse wheel: zoom · F: full map\nM: recall menu · Drag MOVE MENU to reposition it\nWhile dragging the menu: mouse wheel adjusts distance\n1–4: recall group · Ctrl+1–4: save group";
+                    selection.text="Choose a category to see each command, its input and what it does.";
                     status.text="Use Back to return to the previous menu.";break;
                 case MenuPage.Pause:
                     headline.text="MATCH PAUSED";economy.text=Session.Map.title;
-                    selection.text="Your match is paused. Resume when you are ready.";
+                    selection.text="Your match is paused. Browse the control guide below or resume when ready.";
                     status.text="Returning to the main menu ends the current match.";break;
                 case MenuPage.LeaveConfirmation:
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
@@ -204,6 +203,7 @@ namespace Frontier.Runtime
             ClearProductionTargets();
             HideActionHelp();
             LayoutPage();
+            BuildControlGuide();
             if(Page==MenuPage.Main)
             {
                 Add("New Match",()=>Show(MenuPage.MatchSetup),primary:true);

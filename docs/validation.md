@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Guía de controles visible en pausa — fuentes, sin APK — 16 de octubre de 2026
+
+La pausa incorpora `CONTROL GUIDE` con seis categorías y tarjetas de comando, gesto y descripción. Cubre selección, órdenes, menús/ruedas, cuatro grupos, producción y tablero, incluidos los gestos recientes de colas y reemplazo con stick, cancelación de producción y Rally Points. Controls comparte el contenido y cambia entre Touch y mouse/teclado; la guía se oculta al reanudar.
+
+- `MenuFlowPreview.Render`: **58 comprobaciones y 28 vistas** en Unity **6000.3.26f1** / CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones. Registro: `TestResults/unity-pause-help.log`.
+- Se recorrieron ambas variantes de las seis categorías desde Controls, y las seis categorías Touch dentro de pausa. Se verificó que consultar ayuda mantiene el tick detenido, bloquea entrada de juego y conserva selección/recursos. También pasan inicio, configuración, regreso desde submenús, pausa por visor, salida y revancha.
+- Las capturas comprueban alto de todos los textos y ausencia de superposición con navegación o pie. Se inspeccionaron las vistas de grupos, órdenes y producción en `TestResults/Menus/07-pause-touch-*.png`.
+- Los **54 hashes** de `TestResults/pause-help-baseline.json` confirman que ProjectSettings, Assets/XR y los APK existentes permanecen iguales. No se modificó la simulación ni se generó APK o ejecutable desktop.
+
+Pendiente: validar tamaño y lectura del panel ampliado en Quest físico. La evidencia usa rayos sintéticos y capturas del Editor.
+
 ## Reemplazo de grupos con pulsación mantenida del stick — fuentes, sin APK — 16 de octubre de 2026
 
 Mantener pulsado el joystick derecho desde el centro e inclinarlo abre `REPLACE GROUP`. Soltar la pulsación guarda la selección actual reemplazando todos los miembros del grupo resaltado. Girar cambia el grupo; centrar todavía presionado conserva el último resaltado y no confirma. El gesto empieza al inclinar, sin espera temporal. B cancela. Grip deja de modificar el guardado; doble clic conserva la recuperación de grupos al centrar el eje.

@@ -42,16 +42,17 @@ namespace Frontier.Editor
                 Check(!Has("Hand: Left")&&!Has("Hand: Right")&&Field<Text>(panel,"selection").text.Contains("Right controller only"),"Settings describe right-only input without an obsolete handedness toggle");Capture("02-settings");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Settings return to main menu");
                 Click("Controls");Capture("03-controls-desktop");
-                Check(Field<Text>(panel,"selection").text.Contains("Escape"),"Desktop controls are shown");
+                Check(GuideText().Contains("Left-click")&&GuideText().Contains("Shift"),"Desktop selection controls are shown");
+                foreach(string topic in new[]{"Orders","Menus","Groups","Production","Board"}){Click("Help: "+topic);Capture("03-desktop-"+topic.ToLowerInvariant());}
+                Check(GuideText().Contains("WASD")&&GuideText().Contains("Mouse wheel")&&GuideText().Contains("Escape"),"Desktop guide includes view navigation and placement cancellation");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
-                Check(Field<Text>(panel,"selection").text.Contains("A: contextual order")&&Field<Text>(panel,"selection").text.Contains("Grip: add selection")&&Field<Text>(panel,"selection").text.Contains("Hold grip + A: append order"),"Touch help distinguishes immediate contextual orders from grip-queued orders");
-                var touchControls=Field<Text>(panel,"selection").text;
-                Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
-                Check(touchControls.Contains("Right stick: adjust distance")&&touchControls.Contains("Grip + hold Trigger still (0.5s): deselect pointed unit")&&!touchControls.Contains("Grip + right stick press"),"Touch help describes menu movement and hold-trigger removal without an obsolete stick shortcut");
-                Check(touchControls.Contains("Right stick: press for wheel")&&touchControls.Contains("Left controller: unassigned"),"Help describes the right-hand wheel and unused left controller");
-                Check(touchControls.Contains("Double grip: open wheel")&&touchControls.Contains("Trigger / A executes")&&touchControls.Contains("Grip / B goes back"),"Touch help explains double grip and wheel trigger/grip shortcuts");
-                Check(touchControls.Contains("Double trigger: nearby units of the same type")&&touchControls.Contains("Double A: Attack Move / attack enemy"),"Touch help explains type selection and attack shortcuts");
-                Check(touchControls.Contains("Double press: 4 groups")&&touchControls.Contains("center to select")&&touchControls.Contains("Hold stick + tilt, release click to replace"),"Touch help distinguishes centering to recall from releasing a held click to replace a group");
+                Check(GuideText().Contains("stays fixed")&&GuideText().Contains("Grip + right stick")&&GuideText().Contains("B while placing")&&!GuideText().Contains("WASD"),"Touch guide replaces desktop navigation with placement-only controls");
+                Click("Help: Selection");Check(GuideText().Contains("Double Trigger")&&GuideText().Contains("Grip + hold Trigger still (0.5 s)")&&GuideText().Contains("outside the map"),"Selection help covers type selection, removal and edge drags");Capture("04-touch-selection");
+                Click("Help: Orders");Check(GuideText().Contains("Grip + A / double A")&&GuideText().Contains("Double A on terrain")&&GuideText().Contains("Repair")&&GuideText().Contains("Hold Position"),"Order help covers queues, attacks, work, Stop and Hold");Capture("04-touch-orders");
+                Click("Help: Menus");Check(GuideText().Contains("Press right stick / double Grip")&&GuideText().Contains("Trigger / A in the wheel")&&GuideText().Contains("Grip / B"),"Menu help explains the action wheel and confirmation controls");Capture("04-touch-menus");
+                Click("Help: Groups");Check(GuideText().Contains("Double press right stick")&&GuideText().Contains("return to center")&&GuideText().Contains("release click")&&GuideText().Contains("ALL previous members"),"Group help distinguishes recall from held-click replacement");Capture("04-touch-groups");
+                Click("Help: Production");Check(GuideText().Contains("Set a Rally Point")&&GuideText().Contains("Clear a Rally Point")&&GuideText().Contains("Cancel one queued item")&&GuideText().Contains("1.5 s"),"Production help includes rallies, cancellation and descriptions");Capture("04-touch-production");
+                Check(!session.Running&&!session.IsPaused,"Browsing the shared guide from main menu never starts or pauses a match");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
@@ -74,7 +75,17 @@ namespace Frontier.Editor
                 Check(panel.AcceptsGameInput&&!Has("New Match")&&Has("Pause"),"Match exposes action panel instead of main menu");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Invoke(panel,"Rebuild");Refresh();
                 Check(!Has("Full map")&&Has("Pause"),"Quest HUD removes the obsolete map reset action");Capture("06-actions-touch");
-                Click("Pause");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Expanded Quest pause button works with the pointer");Click("Resume match");
+                Click("Pause");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Expanded Quest pause button works with the pointer");
+                Check(Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy&&Has("Help: Selection")&&Has("Resume match"),"Pause shows a control-help section alongside match navigation");
+                int pausedTick=session.Match.Tick;var beforeSelection=session.Selection.ToArray();int minerals=session.View.minerals;
+                foreach(string topic in new[]{"Selection","Orders","Menus","Groups","Production","Board"})
+                {
+                    Click("Help: "+topic);for(int i=0;i<3;i++)session.Match.Step();
+                    Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused&&session.Match.Tick==pausedTick&&!panel.AcceptsGameInput,"Browsing "+topic+" keeps simulation paused and gameplay input blocked");
+                    Capture("07-pause-touch-"+topic.ToLowerInvariant());
+                }
+                Check(session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Guide cards never change selection or resources");
+                Click("Resume match");Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy,"Resuming hides the guide and removes its targets");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);Invoke(panel,"Rebuild");Refresh();
                 Check(Has("Full map")&&Has("Pause"),"Desktop retains its development view controls");
                 var match=session.Match;var worker=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");
@@ -113,6 +124,7 @@ namespace Frontier.Editor
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;Debug.Log("MENU_PASS: "+message);}
                 void Refresh(){typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Invoke(panel,"LateUpdate");}
                 bool Has(string name)=>panel.GetComponentsInChildren<RectTransform>().Any(t=>t.gameObject.activeInHierarchy&&t.name==name);
+                string GuideText()=>string.Join("\n",Field<RectTransform>(panel,"controlGuide").GetComponentsInChildren<Text>().Where(t=>t.gameObject.activeInHierarchy).Select(t=>t.text));
                 void Click(string name)
                 {
                     Refresh();var button=panel.GetComponentsInChildren<RectTransform>().FirstOrDefault(t=>t.gameObject.activeInHierarchy&&t.name==name);
@@ -121,7 +133,22 @@ namespace Frontier.Editor
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Menu ray did not hit: "+name);
                     Refresh();
                 }
-                void Capture(string name){Refresh();HarvestingPreview.SavePanel(panel,"TestResults/Menus/"+name+".png",preview);captures++;}
+                void Capture(string name)
+                {
+                    Refresh();var guide=Field<RectTransform>(panel,"controlGuide");
+                    if(guide.gameObject.activeInHierarchy)
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        foreach(var text in guide.GetComponentsInChildren<Text>())
+                            if(text.preferredHeight>text.rectTransform.rect.height+.5f)throw new Exception("Clipped guide text: "+text.text);
+                        var actions=Field<RectTransform>(panel,"actions");
+                        float guideTop=-guide.anchoredPosition.y,guideBottom=guideTop+guide.sizeDelta.y;
+                        float actionsTop=-actions.anchoredPosition.y,actionsBottom=actionsTop+actions.sizeDelta.y;
+                        if(!(actionsBottom<=guideTop||guideBottom<=actionsTop))throw new Exception("Control guide overlaps navigation buttons");
+                        if(guideBottom>-Field<Text>(panel,"status").rectTransform.anchoredPosition.y)throw new Exception("Control guide overlaps footer");
+                    }
+                    HarvestingPreview.SavePanel(panel,"TestResults/Menus/"+name+".png",preview);captures++;
+                }
             }
             finally
             {

@@ -55,6 +55,13 @@ unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
 
 `ControlGroupPreview.Render` ejecuta solo el escenario focal y guarda sus capturas en `TestResults/ControlGroups`. Las entradas son sintéticas; no genera APK.
 
+`MenuFlowPreview.Render` verifica la guía de controles visible en pausa y compartida con Controls: categorías Touch/escritorio, textos sin recortes, navegación sin superposición, simulación congelada al consultar ayuda y regreso al HUD. Genera vistas en `TestResults/Menus` sin construir un jugador:
+
+```sh
+unity run . --log-file TestResults/unity-pause-help.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
+```
+
 `CommandQueueChecks` verifica FIFO, reemplazo inmediato, conversión del doble A, grupos, privacidad, invalidación de destinos, recolección, reparación y construcción. Para comprobar entrada y presentación sin APK:
 
 ```sh

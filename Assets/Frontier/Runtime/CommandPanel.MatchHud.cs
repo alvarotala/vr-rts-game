@@ -90,7 +90,7 @@ namespace Frontier.Runtime
         }
         private void LayoutPage()
         {
-            bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls;
+            bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Controls,paused=Page==MenuPage.Pause;
             bool production=hud&&SelectedProducer()!=null;
             bool orders=hud&&SelectedMobileUnits().Length>0;
             bool rally=hud&&OrderQueueVisuals.RallyProducers(Session).Length>0;
@@ -101,7 +101,8 @@ namespace Frontier.Runtime
             productionStrip.anchoredPosition=new Vector2(24,-484);
             orderPlanStrip.anchoredPosition=new Vector2(24,-484-(production?180:0));
             rallyPointStrip.anchoredPosition=new Vector2(24,-484-(production?180:0)-(orders?108:0));
-            matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:526);matchHud.sizeDelta=root.sizeDelta;
+            matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:paused?1026:controls?924:526);matchHud.sizeDelta=root.sizeDelta;
+            controlGuide.anchoredPosition=new Vector2(30,paused?-390:-216);
             harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
             groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
             matchStrip.anchoredPosition=new Vector2(756,-470-queueSpace);
@@ -111,12 +112,12 @@ namespace Frontier.Runtime
             foreach(RectTransform label in pause)label.sizeDelta=new Vector2(pause.sizeDelta.x-16,label.sizeDelta.y);
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
             selection.fontSize=hud?28:20;selection.color=hud?Color.white:new Color(.65f,.76f,.82f);
-            TopLeft(selection.rectTransform,hud?new Vector2(40,-211):new Vector2(30,-169),hud?new Vector2(288,42):new Vector2(1040,controls?225:38));
+            TopLeft(selection.rectTransform,hud?new Vector2(40,-211):new Vector2(30,-169),hud?new Vector2(288,42):new Vector2(1040,38));
             harvesting.fontSize=hud?17:18;
             TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425-queueSpace):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
             status.fontSize=hud?18:20;
-            TopLeft(status.rectTransform,hud?new Vector2(24,-581-queueSpace):new Vector2(30,-473),hud?new Vector2(1052,40):new Vector2(1040,44));
-            TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,controls?-411:-240),hud?new Vector2(684,240):new Vector2(1040,controls?58:225));
+            TopLeft(status.rectTransform,hud?new Vector2(24,-581-queueSpace):new Vector2(30,paused?-960:controls?-858:-473),hud?new Vector2(1052,40):new Vector2(1040,44));
+            TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,controls?-786:-240),hud?new Vector2(684,240):new Vector2(1040,controls?58:paused?134:225));
         }
         private void UpdateMatchHud()
         {
