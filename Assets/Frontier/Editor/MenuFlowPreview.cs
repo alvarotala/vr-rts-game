@@ -46,7 +46,7 @@ namespace Frontier.Editor
                 Click("Controls");Capture("03-controls-desktop");
                 Check(Field<Text>(panel,"selection").text.Contains("Escape"),"Desktop controls are shown");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
-                Check(Field<Text>(panel,"selection").text.Contains(session.LeftHanded?"X: move":"A: move"),"Touch controls match the dominant hand");
+                Check(Field<Text>(panel,"selection").text.Contains(session.LeftHanded?"X: move":"A: move")&&Field<Text>(panel,"selection").text.Contains("Hold right grip: add to selection"),"Touch controls match the dominant hand and retain the right grip modifier");
                 var touchControls=Field<Text>(panel,"selection").text;
                 Check(touchControls.Contains("Board stays fixed")&&!touchControls.Contains("zoom")&&!touchControls.Contains("full map")&&!touchControls.Contains("stick: pan"),"Touch help explains fixed placement without obsolete navigation controls");
                 Check(touchControls.Contains("Main stick: adjust distance")&&touchControls.Contains("recall menu"),"Touch menu movement and recall remain documented");

@@ -61,7 +61,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Acción | Mandos Quest | Prueba de escritorio |
 |---|---|---|
 | Seleccionar / seleccionar área | Gatillo principal / arrastrar | Clic izquierdo / arrastrar |
-| Agregar a selección | Gatillo secundario | Shift |
+| Agregar a selección | Mantener grip derecho (botón lateral) | Mantener Shift |
 | Orden contextual | A, o X en modo zurdo | Clic derecho |
 | Cancelar / opciones | B, o Y en modo zurdo | Escape |
 | Desplazar mapa (solo escritorio) | — | WASD |
@@ -73,6 +73,8 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Grupo de control | Botón del panel; mantener para guardar | 1–3; Ctrl+1–3 para guardar |
 
 El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Los controles de la mano principal se invierten desde el panel.
+
+El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador sigue en el mando derecho incluso en modo zurdo; el gatillo secundario deja de cumplir esa función.
 
 La selección por área puede **empezar o terminar fuera del tablero**: mantener el gatillo (o clic izquierdo), arrastrar sobre las unidades y soltar, incluso fuera del borde opuesto. El rectángulo y la selección se recortan a la parte visible del mapa; con el zoom de escritorio no se seleccionan unidades recortadas fuera del tablero. Se conserva el modificador para agregar unidades. Un clic o arrastre completamente externo no cambia la selección; apuntar al menú o perder una proyección válida cancela el arrastre. Las órdenes contextuales y la confirmación de construcción siguen requiriendo apuntar al terreno.
 

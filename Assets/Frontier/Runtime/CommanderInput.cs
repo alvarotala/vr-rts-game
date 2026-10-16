@@ -22,7 +22,8 @@ namespace Frontier.Runtime
             {
                 var primary=Session.LeftHanded?OVRInput.Controller.LTouch:OVRInput.Controller.RTouch;var secondary=Session.LeftHanded?OVRInput.Controller.RTouch:OVRInput.Controller.LTouch;
                 ray=Quest.PointerRay(Session.LeftHanded);down=OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger,primary);up=OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger,primary);
-                add=OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger,secondary);order=OVRInput.GetDown(OVRInput.Button.One,primary);cancel=OVRInput.GetDown(OVRInput.Button.Two,primary);
+                // The right grip is the selection modifier, regardless of the pointing hand.
+                add=OVRInput.Get(OVRInput.Button.PrimaryHandTrigger,OVRInput.Controller.RTouch);order=OVRInput.GetDown(OVRInput.Button.One,primary);cancel=OVRInput.GetDown(OVRInput.Button.Two,primary);
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);secondaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,secondary);
                 menuDepth=primaryStick.y;
                 if(OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,secondary))Panel.Recall();

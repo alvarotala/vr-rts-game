@@ -4,6 +4,17 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Grip derecho como Shift — fuentes, sin nuevo APK — 15 de octubre de 2026
+
+La selección aditiva cambia del gatillo secundario al **grip físico derecho**, incluso al usar el modo zurdo. Se lee mientras está sostenido y se aplica tanto a clics como a selección por área. Se conserva el comportamiento existente: sumar unidades, quitar una unidad ya seleccionada al pulsarla con el modificador y reemplazar la selección al seleccionar sin él. La ayuda Touch ahora muestra **Hold right grip: add to selection**; desktop conserva Shift.
+
+- Compilación correcta y **44 comprobaciones de menús** con doce vistas. Inspeccionada `TestResults/Menus/04-controls-touch.png`; registro `TestResults/unity-right-grip-menus.log`.
+- **33 comprobaciones de selección** con seis vistas: selección individual, área aditiva desde fuera del tablero, bordes, cancelación y aislamiento de órdenes. Registro `TestResults/unity-right-grip-selection.log`. Esta regresión usa rayos y la bandera de selección aditiva; no emula el hardware del grip.
+- Verificada la asignación en el SDK instalado: `PrimaryHandTrigger` sobre `RTouch` corresponde a `RHandTrigger`. Se utiliza `Get`, no `GetDown`, sin depender de la mano dominante. Unity **6000.3.26f1** / CLI **1.0.0-beta.13**.
+- Sin cambios en las reglas de simulación y sin APK ni ejecutable desktop nuevo. El APK **0.1.4**, `ProjectSettings` y `Assets/XR` conservan sus hashes anteriores.
+
+Pendiente: probar la combinación física de grip derecho y gatillo en Quest, tanto selección individual como por área y en modo zurdo. El APK disponible todavía no incluye este cambio.
+
 ## Tablero fijo tras colocación en Quest — fuentes, sin nuevo APK — 15 de octubre de 2026
 
 Se retiran desplazamiento, zoom y restablecimiento de vista mediante sticks en Quest. Los ejes siguen ajustando altura/tamaño/giro durante la colocación explícita; una vez confirmada, el eje principal solo acerca/aleja un menú que se está arrastrando y la pulsación secundaria recupera el menú. `Full map` desaparece del HUD Quest y pausa ocupa su espacio. Las instrucciones Touch explican la colocación fija y el acceso a Settings para recolocar. El modo de prueba desktop conserva WASD/rueda/F.
