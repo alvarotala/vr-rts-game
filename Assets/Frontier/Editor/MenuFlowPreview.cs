@@ -36,24 +36,20 @@ namespace Frontier.Editor
                 Invoke(panel,"Start");preview.AddSingleGO(console);Refresh();
                 Check(panel.Page==CommandPanel.MenuPage.Main&&!session.Running&&session.Match==null,"Startup opens main menu without a match");
                 Check(!board.Content.gameObject.activeSelf&&!panel.AcceptsGameInput,"Main menu hides board and blocks game input");
-                Check(Has("New Match")&&Has("Settings")&&Has("Controls")&&!Has("START MATCH"),"Main menu has dedicated navigation");
+                Check(Has("New Match")&&Has("Settings")&&Has("Hotkeys")&&!Has("START MATCH"),"Main menu has dedicated navigation");
                 Capture("01-main");
                 Click("Settings");Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Settings work before a match without creating a pause");
                 Check(!Has("Hand: Left")&&!Has("Hand: Right")&&Field<Text>(panel,"selection").text.Contains("Right controller only"),"Settings describe right-only input without an obsolete handedness toggle");Capture("02-settings");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Settings return to main menu");
-                Click("Controls");Capture("03-controls-desktop");
-                Check(GuideText().Contains("Left-click")&&GuideText().Contains("Shift"),"Desktop selection controls are shown");
-                foreach(string topic in new[]{"Orders","Menus","Groups","Production","Board"}){Click("Help: "+topic);Capture("03-desktop-"+topic.ToLowerInvariant());}
-                Check(GuideText().Contains("WASD")&&GuideText().Contains("Mouse wheel")&&GuideText().Contains("Escape"),"Desktop guide includes view navigation and placement cancellation");
-                typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Refresh();Capture("04-controls-touch");
-                Check(GuideText().Contains("stays fixed")&&GuideText().Contains("Grip + right stick")&&GuideText().Contains("B while placing")&&!GuideText().Contains("WASD"),"Touch guide replaces desktop navigation with placement-only controls");
-                Click("Help: Selection");Check(GuideText().Contains("Double Trigger")&&GuideText().Contains("Grip + hold Trigger still (0.5 s)")&&GuideText().Contains("outside the map"),"Selection help covers type selection, removal and edge drags");Capture("04-touch-selection");
-                Click("Help: Orders");Check(GuideText().Contains("Grip + A / double A")&&GuideText().Contains("Double A on terrain")&&GuideText().Contains("Repair")&&GuideText().Contains("Hold Position"),"Order help covers queues, attacks, work, Stop and Hold");Capture("04-touch-orders");
-                Click("Help: Menus");Check(GuideText().Contains("Press right stick / double Grip")&&GuideText().Contains("Trigger / A in the wheel")&&GuideText().Contains("Grip / B"),"Menu help explains the action wheel and confirmation controls");Capture("04-touch-menus");
-                Click("Help: Groups");Check(GuideText().Contains("Double press right stick")&&GuideText().Contains("return to center")&&GuideText().Contains("release click")&&GuideText().Contains("ALL previous members"),"Group help distinguishes recall from held-click replacement");Capture("04-touch-groups");
-                Click("Help: Production");Check(GuideText().Contains("Set a Rally Point")&&GuideText().Contains("Clear a Rally Point")&&GuideText().Contains("Cancel one queued item")&&GuideText().Contains("1.5 s"),"Production help includes rallies, cancellation and descriptions");Capture("04-touch-production");
-                Check(!session.Running&&!session.IsPaused,"Browsing the shared guide from main menu never starts or pauses a match");
-                typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
+                Click("Hotkeys");
+                Check(panel.Page==CommandPanel.MenuPage.Hotkeys&&!Field<bool>(panel,"hotkeysTouch"),"Dedicated Hotkeys page defaults to the connected desktop input");
+                Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy,"Hotkeys is a separate reference, not the pause tutorial cards");
+                BrowseHotkeys(false);Click("Quest Touch");BrowseHotkeys(true);
+                Check(!quest.Active&&Field<bool>(panel,"hotkeysTouch"),"Previewing Touch bindings does not change actual input devices");
+                Click("Hotkeys: Groups");Click("Next");Click("Mouse / Keyboard");
+                Check(Field<int>(panel,"hotkeysPage")==0,"Switching device resets pagination");
+                Check(!session.Running&&!session.IsPaused&&!panel.AcceptsGameInput,"Browsing Hotkeys before a match never starts a match or enables game input");
+                ExportDefaults();
                 panel.Back();Refresh();Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
                 Click("AI: Normal");Check(session.Difficulty=="very-easy"&&Has("AI: Very Easy")&&Field<Text>(panel,"harvesting").text.Contains("18 min"),"Setup offers Very Easy with a practice description");Capture("05-very-easy");
@@ -94,7 +90,17 @@ namespace Frontier.Editor
                 Click("Pause");int tick=match.Tick;for(int i=0;i<30;i++)match.Step();
                 Check(session.IsPaused&&match.Tick==tick&&!panel.AcceptsGameInput,"Pause stops simulation and blocks game input");Capture("07-pause");
                 Click("Settings");Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"In-match settings return to pause");
-                Click("Controls");panel.Back();Refresh();Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"In-match controls return to pause");
+                typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);
+                Click("Hotkeys");Check(Field<bool>(panel,"hotkeysTouch"),"Opening from Quest pause defaults to Touch even after desktop preview");
+                int hotkeysTick=match.Tick;var hotkeysSelection=session.Selection.ToArray();int hotkeysMinerals=session.View.minerals;string buildMode=session.BuildDefinition;
+                Click("Hotkeys: Groups");Click("Next");Click("Previous");Click("Mouse / Keyboard");
+                for(int i=0;i<30;i++)match.Step();
+                var row=Field<RectTransform[]>(panel,"hotkeyRows")[0];var rowCenter=row.TransformPoint(row.rect.center);var rowRay=new Ray(rowCenter-row.forward,row.forward);
+                panel.Point(rowRay,true,false);panel.Point(rowRay,false,true);Refresh();
+                Check(match.Tick==hotkeysTick&&session.IsPaused&&!panel.AcceptsGameInput&&session.Selection.SetEquals(hotkeysSelection)&&session.View.minerals==hotkeysMinerals&&session.BuildDefinition==buildMode&&session.GroupSize(0)==1,"Hotkey browsing and clicking read-only rows preserve pause, selection, resources, build mode and groups");
+                Capture("07-paused-hotkeys");panel.Back();Refresh();
+                Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused&&!Field<RectTransform>(panel,"hotkeys").gameObject.activeInHierarchy,"B / Back returns Hotkeys to pause and hides all reference targets");
+                typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 Click("Return to main menu");Check(panel.Page==CommandPanel.MenuPage.LeaveConfirmation&&session.Running,"Leaving an active match asks before losing progress");Capture("08-leave-confirmation");
                 Click("Keep playing");Check(session.Match==match&&!session.IsPaused&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Cancel leaving resumes the same match and selection");
                 session.Pause("headset",true);panel.ToggleMenu();Refresh();Click("Resume match");
@@ -133,6 +139,48 @@ namespace Frontier.Editor
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Menu ray did not hit: "+name);
                     Refresh();
                 }
+                void BrowseHotkeys(bool touch)
+                {
+                    var ids=new System.Collections.Generic.HashSet<string>();
+                    var topics=DefaultControlCatalog.For(touch);
+                    foreach(var topic in topics)
+                    {
+                        Click("Hotkeys: "+topic.Name);int offset=0;
+                        do
+                        {
+                            var rows=Field<RectTransform[]>(panel,"hotkeyRows").Where(r=>r.gameObject.activeInHierarchy).ToArray();
+                            Check(rows.Length==Mathf.Min(5,topic.Commands.Count-offset),"Hotkeys paginates "+topic.Name+" without missing rows");
+                            for(int i=0;i<rows.Length;i++)
+                            {
+                                var command=topic.Commands[offset+i];
+                                Check(rows[i].name=="Hotkey: "+command.Id&&ids.Add(command.Id),"Unique stable command visible: "+command.Id);
+                                string text=string.Join("\n",rows[i].GetComponentsInChildren<Text>().Select(t=>t.text));
+                                Check(text.Contains(command.Name)&&text.Contains(command.Gesture)&&text.Contains(command.Description),"Binding and context are visible: "+command.Id);
+                            }
+                            Capture("hotkeys-"+(touch?"touch":"desktop")+"-"+topic.Name.ToLowerInvariant()+"-"+(offset/5+1));
+                            offset+=rows.Length;
+                            if(!Has("Next"))break;
+                            Click("Next");
+                        }while(true);
+                        Check(offset==topic.Commands.Count,"Every "+topic.Name+" command is reachable by pagination");
+                        Click("Previous");Check(!Has("Previous")&&Has("Next"),"Previous returns to the first page of "+topic.Name);
+                    }
+                    Check(ids.Count==topics.Sum(t=>t.Commands.Count),"No duplicate command identifiers within the device catalog");
+                }
+                void ExportDefaults()
+                {
+                    var text=new System.Text.StringBuilder("# Default controls\n\nRead-only reference shared by Hotkeys and the pause guide. Catalog schema: "+DefaultControlCatalog.SchemaVersion+".\n");
+                    foreach(bool touch in new[]{true,false})
+                    {
+                        text.Append("\n## "+(touch?"Quest 3 - right Touch controller":"Desktop - mouse and keyboard")+"\n");
+                        foreach(var topic in DefaultControlCatalog.For(touch))
+                        {
+                            text.Append("\n### "+topic.Name+"\n\n| Command | Default input / menu action | Context |\n|---|---|---|\n");
+                            foreach(var command in topic.Commands)text.Append("| "+command.Name+" | "+command.Gesture+" | "+command.Description+" |\n");
+                        }
+                    }
+                    File.WriteAllText("TestResults/Menus/default-controls.md",text.ToString());
+                }
                 void Capture(string name)
                 {
                     Refresh();var guide=Field<RectTransform>(panel,"controlGuide");
@@ -146,6 +194,16 @@ namespace Frontier.Editor
                         float actionsTop=-actions.anchoredPosition.y,actionsBottom=actionsTop+actions.sizeDelta.y;
                         if(!(actionsBottom<=guideTop||guideBottom<=actionsTop))throw new Exception("Control guide overlaps navigation buttons");
                         if(guideBottom>-Field<Text>(panel,"status").rectTransform.anchoredPosition.y)throw new Exception("Control guide overlaps footer");
+                    }
+                    var reference=Field<RectTransform>(panel,"hotkeys");
+                    if(reference.gameObject.activeInHierarchy)
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        foreach(var text in reference.GetComponentsInChildren<Text>())
+                            if(text.preferredHeight>text.rectTransform.rect.height+.5f)throw new Exception("Clipped hotkey text: "+text.text);
+                        var actions=Field<RectTransform>(panel,"actions");
+                        if(-reference.anchoredPosition.y+reference.sizeDelta.y>-actions.anchoredPosition.y)throw new Exception("Hotkeys overlaps navigation");
+                        if(-actions.anchoredPosition.y+actions.sizeDelta.y>-Field<Text>(panel,"status").rectTransform.anchoredPosition.y)throw new Exception("Hotkey navigation overlaps footer");
                     }
                     HarvestingPreview.SavePanel(panel,"TestResults/Menus/"+name+".png",preview);captures++;
                 }

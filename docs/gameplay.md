@@ -2,7 +2,7 @@
 
 ## Empezar una partida
 
-Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Controls**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
+Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Hotkeys**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 
 Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el joystick derecho modifica tamaño y orientación; sostener el grip derecho permite ajustar altura con ese mismo joystick.
 
@@ -18,11 +18,11 @@ El botón **AI** permite elegir **Very Easy**, **Easy** o **Normal** antes de in
 
 ### Configuración, pausa y regreso al inicio
 
-**Settings** permite recolocar el tablero, elegir mesa o piso y detectar superficies. **Controls** muestra una guía completa adaptada al mando Touch derecho o a mouse y teclado. El mando izquierdo queda sin asignación. **Back** vuelve al menú desde el que se abrió esa pantalla.
+**Settings** permite recolocar el tablero, elegir mesa o piso y detectar superficies. **Hotkeys** abre una pantalla separada de consulta con los controles predeterminados. Permite elegir **Quest Touch** o **Mouse / Keyboard**, recorrer seis categorías y usar **Previous / Next** para ver todos los comandos. Cada fila muestra comando, gesto o acción de menú y contexto. Es de solo lectura; cambiar el dispositivo de consulta no cambia los controles reales. El mando izquierdo queda sin asignación. **Back** vuelve al menú desde el que se abrió esa pantalla.
 
-Dentro de una partida, **Pause**, **B** con la rueda cerrada y sin una acción pendiente, o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Controls** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
+Dentro de una partida, **Pause**, **B** con la rueda cerrada y sin una acción pendiente, o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Hotkeys** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
 
-La pausa muestra directamente **CONTROL GUIDE**, con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. Cada tarjeta explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, ruedas, reemplazo de grupos al soltar el stick, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida. **Controls** usa la misma guía desde el menú principal y adapta los atajos a Touch o mouse/teclado.
+La pausa muestra directamente **CONTROL GUIDE**, con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. Cada tarjeta explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, ruedas, reemplazo de grupos al soltar el stick, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida. **Hotkeys** comparte el catálogo de esta guía, en formato de tabla. Abre mostrando el dispositivo activo y **Back/B** regresa al menú de origen, conservando la pausa. La lista completa para revisión está en [hotkeys predeterminados](hotkeys.md). La asignación personalizada queda para una etapa posterior.
 
 Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la partida, conservando facciones/mapa elegidos y la colocación física del tablero. Las pausas por seguimiento, foco o visor continúan vigentes hasta que el sistema las libere. Mientras hay un menú de partida abierto no se pueden dar órdenes al tablero.
 

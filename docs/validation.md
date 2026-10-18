@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Pantalla separada de Hotkeys y catálogo de defaults — fuentes, sin APK — 18 de octubre de 2026
+
+Hotkeys reemplaza la entrada Controls del menú principal y de pausa con una referencia dedicada: selector Quest Touch / Mouse-Keyboard, seis categorías, cinco filas por página y navegación Previous/Next. Cada fila identifica comando, entrada o acción de menú y contexto. La guía de tarjetas sigue visible dentro de pausa. Ambas pantallas usan `DefaultControlCatalog`, con esquema 1, datos inmutables e IDs estables; la personalización de bindings queda pendiente y no cambió el enrutador de entrada. La revisión incorpora los gestos existentes de alternar con clic modificado, limpiar selección y cerrar ruedas, además de los atajos de colocación de escritorio.
+
+- `MenuFlowPreview.Render`: **294 comprobaciones y 41 vistas**, Unity **6000.3.26f1** / CLI **1.0.0-beta.13**, sin errores de compilación ni excepciones. Registro final: `TestResults/unity-hotkeys-final.log`.
+- Se recorrieron las **47 entradas de cada dispositivo**, con IDs únicos, correspondencia entre tabla y catálogo, paginación completa y regreso a la primera página al cambiar de dispositivo. Consultar Touch en escritorio no activa Quest; reabrir usa el dispositivo real.
+- Desde una partida pausada, cambiar categoría/dispositivo y pulsar una fila conserva tick, selección, recursos, grupos y modo de construcción. Back/B regresa a pausa; se conservan las regresiones de inicio, configuración, ayuda, interrupciones del visor, salida y revancha.
+- Todas las capturas comprueban altura de texto y ausencia de superposición con navegación/pie. Se inspeccionaron las vistas Touch de grupos y producción en `TestResults/Menus/hotkeys-touch-*.png`. Referencia exportada: `TestResults/Menus/default-controls.md`; copia de consulta y acciones de contenido en [hotkeys](hotkeys.md).
+- Los **55 hashes** de `TestResults/hotkeys-baseline.json` confirman que ProjectSettings, Assets/XR y APK existentes permanecen iguales. No se modificó la simulación ni se construyó APK o ejecutable desktop.
+
+Pendiente: comprobar legibilidad, tamaño y comodidad con mandos en Quest real. El APK 0.1.6 existente todavía no contiene esta pantalla.
+
 ## APK integrado — 0.1.6 (7) — 16 de octubre de 2026
 
 Compilación solicitada por el usuario desde el commit limpio `cb23cda`, con todas las tareas hasta `c17e3cf`: doble grip y atajos de rueda, ayuda de acciones y A en menús, cancelación individual de producción, movimiento con masa e inercia, colas de órdenes y gestos de selección, trayectorias punteadas, puntos de reunión, cuatro grupos con guardado por pulsación mantenida del stick y guía de controles en pausa. Las notas históricas de «sin APK» para estas tareas quedan incluidas en esta entrega.

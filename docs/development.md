@@ -55,10 +55,10 @@ unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
 
 `ControlGroupPreview.Render` ejecuta solo el escenario focal y guarda sus capturas en `TestResults/ControlGroups`. Las entradas son sintéticas; no genera APK.
 
-`MenuFlowPreview.Render` verifica la guía de controles visible en pausa y compartida con Controls: categorías Touch/escritorio, textos sin recortes, navegación sin superposición, simulación congelada al consultar ayuda y regreso al HUD. Genera vistas en `TestResults/Menus` sin construir un jugador:
+`MenuFlowPreview.Render` verifica la pantalla Hotkeys y la guía de pausa: ambos dispositivos, todas las categorías y páginas, IDs únicos, texto sin recortes, navegación sin superposición, simulación congelada y conservación de selección, recursos, grupos y modo de construcción. El selector de dispositivo solo previsualiza asignaciones. Genera vistas y la referencia `TestResults/Menus/default-controls.md` desde `DefaultControlCatalog`, sin construir un jugador:
 
 ```sh
-unity run . --log-file TestResults/unity-pause-help.log --no-tail -- \
+unity run . --log-file TestResults/unity-hotkeys-final.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
 ```
 

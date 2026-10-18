@@ -75,7 +75,7 @@ namespace Frontier.Editor
                     session.Match.Entities.Remove(workers[0].id);Refresh();Check(!Plan().gameObject.activeInHierarchy,"Destroyed selected unit leaves no stale plan");
                     session.LeaveMatch();Refresh();Check(!Plan().gameObject.activeInHierarchy,"Leaving the match clears order overlays");
                 }
-                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Controls});Refresh();
+                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Hotkeys});Refresh();
                 Check(Text("selection").Contains("Double trigger")&&Text("selection").Contains("Double A")&&Text("selection").Contains("Grip + hold Trigger still (0.5s): deselect pointed unit")&&!Text("selection").Contains("recall menu"),"Controller help describes double clicks and stationary grip-trigger deselection");
                 CapturePanel("controls");
                 Debug.Log($"FRONTIER_ORDER_QUEUE_PREVIEW passed: {checks} checks, {captures} views; no player build");

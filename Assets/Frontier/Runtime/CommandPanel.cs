@@ -19,7 +19,7 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Controls, Actions, Pause, LeaveConfirmation, Result }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result }
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
@@ -59,6 +59,7 @@ namespace Frontier.Runtime
             actions.SetAsLastSibling();
             CreateActionHelp();
             CreateControlGuide();
+            CreateHotkeys();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -160,10 +161,10 @@ namespace Frontier.Runtime
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
                     selection.text="Right controller only. Adjust the board's position in your room.";break;
-                case MenuPage.Controls:
-                    headline.text="CONTROLS";economy.text=Quest.Active?"TOUCH CONTROLLERS":"MOUSE / KEYBOARD";
-                    selection.text="Choose a category to see each command, its input and what it does.";
-                    status.text="Use Back to return to the previous menu.";break;
+                case MenuPage.Hotkeys:
+                    headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · RIGHT TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
+                    selection.text=hotkeysTouch?"Default bindings and menu actions. The left controller is unassigned.":"Default bindings and menu actions for the desktop playtest.";
+                    status.text="View only. Choose a category; use Next to see more commands.";break;
                 case MenuPage.Pause:
                     headline.text="MATCH PAUSED";economy.text=Session.Map.title;
                     selection.text="Your match is paused. Browse the control guide below or resume when ready.";
@@ -204,11 +205,12 @@ namespace Frontier.Runtime
             HideActionHelp();
             LayoutPage();
             BuildControlGuide();
+            BuildHotkeys();
             if(Page==MenuPage.Main)
             {
                 Add("New Match",()=>Show(MenuPage.MatchSetup),primary:true);
                 Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
-                Add("Controls",()=>OpenSubmenu(MenuPage.Controls));return;
+                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));return;
             }
             if(Page==MenuPage.MatchSetup)
             {
@@ -230,12 +232,12 @@ namespace Frontier.Runtime
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
                 Add("Detect surfaces",()=>Quest.LoadRoom());Add("Back",Back);return;
             }
-            if(Page==MenuPage.Controls){Add("Back",Back);return;}
+            if(Page==MenuPage.Hotkeys){Add("Back",Back);return;}
             if(Page==MenuPage.Pause)
             {
                 Add("Resume match",()=>Show(MenuPage.Actions),primary:true);
                 Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
-                Add("Controls",()=>OpenSubmenu(MenuPage.Controls));
+                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));
                 Add("Return to main menu",()=>Show(MenuPage.LeaveConfirmation));return;
             }
             if(Page==MenuPage.LeaveConfirmation)
@@ -252,6 +254,7 @@ namespace Frontier.Runtime
         }
         private void Show(MenuPage page)
         {
+            if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys){hotkeysTouch=Quest.Active;hotkeysPage=0;}
             Page=page;signature=null;moving=false;
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
             Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result);
@@ -265,7 +268,7 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.MatchSetup:Show(MenuPage.Main);break;
-                case MenuPage.Settings:case MenuPage.Controls:Show(returnPage);break;
+                case MenuPage.Settings:case MenuPage.Hotkeys:Show(returnPage);break;
                 case MenuPage.Actions:Show(MenuPage.Pause);break;
                 case MenuPage.Pause:Show(MenuPage.Actions);break;
                 case MenuPage.LeaveConfirmation:Show(MenuPage.Pause);break;
