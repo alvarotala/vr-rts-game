@@ -210,7 +210,8 @@ namespace Frontier.Runtime
             float ratio=Mathf.Clamp01(entity.health/type.health);healthBackground.gameObject.SetActive(true);
             healthFill.rectTransform.sizeDelta=new Vector2(288*ratio,6);healthFill.color=ratio<.3f?WarningTint:SupplyTint;
             selectionHealth.text=$"{Mathf.CeilToInt(entity.health)} / {Mathf.CeilToInt(type.health)} HP";
-            if(!entity.complete)selectionDetails.text=$"Construction {entity.progress*100:0}%";
+            if(!entity.complete)selectionDetails.text=$"UNDER CONSTRUCTION · {Mathf.Min(99,Mathf.FloorToInt(entity.progress*100))}%\n"+
+                (type.role=="hq"?"Cannot receive resources yet": "Not operational yet");
             else if(entity.queue.Length>0)
             {
                 selectionDetails.text=pointing?$"{entity.queue.Length} queued\nSelect to view production":$"1 active · {entity.queue.Length-1} waiting\nSee production queue below";
@@ -232,6 +233,7 @@ namespace Frontier.Runtime
             BindSelectionTargets();
             var available=SelectionActions.For(Session);
             actionHint.text=available.Hint;actionHeading.text=available.Heading;
+            if(Session.BuildDefinition!=null)actionHeading.text="PLACING · "+Session.Catalog[Session.BuildDefinition].name;
             float y=0;
             foreach(var group in available.Items.GroupBy(a=>a.Category))
             {
@@ -241,8 +243,16 @@ namespace Frontier.Runtime
                 foreach(var action in group)
                 {
                     var captured=action;
-                    var target=HudButton(actions,action.Title,action.Detail,new Vector2(column*230,-y),new Vector2(218,54),()=>captured.Execute(),null,out _);
-                    target.normal=Color.Lerp(button,tint,.16f);target.image.color=target.normal;target.help=action;
+                    bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
+                    var target=HudButton(actions,action.Title,(active?"SELECTED · ":"")+action.Detail,new Vector2(column*230,-y),new Vector2(218,54),()=>captured.Execute(),null,out var detail);
+                    target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;
+                    if(active)
+                    {
+                        detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
+                        Section(target.rect,"Selected top",Vector2.zero,new Vector2(218,3),tint);
+                        Section(target.rect,"Selected bottom",new Vector2(0,-51),new Vector2(218,3),tint);
+                        Section(target.rect,"Selected right",new Vector2(215,0),new Vector2(3,54),tint);
+                    }
                     Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,54),tint);
                     targets.Add(target);actionIndex++;
                     if(++column==3){column=0;y+=60;}

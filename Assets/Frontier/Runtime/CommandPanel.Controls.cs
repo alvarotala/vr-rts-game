@@ -39,8 +39,8 @@ namespace Frontier.Runtime
         {
             bool visible=Page==MenuPage.Pause;
             controlGuide.gameObject.SetActive(visible);if(!visible)return;
-            var topics=DefaultControlCatalog.For(Quest.Active);controlGuideTopic=Mathf.Clamp(controlGuideTopic,0,topics.Count-1);
-            controlGuideDevice.text=Quest.Active?"RIGHT TOUCH CONTROLLER · Left unassigned":"MOUSE / KEYBOARD";
+            var topics=DefaultControlCatalog.For(Quest.Active,Bindings);controlGuideTopic=Mathf.Clamp(controlGuideTopic,0,topics.Count-1);
+            controlGuideDevice.text=Quest.Active?Bindings.HandName.ToUpperInvariant()+" TOUCH · "+Bindings.OtherHandName+" unused":"MOUSE / KEYBOARD";
             for(int i=0;i<topics.Count;i++)
             {
                 var tab=controlGuideTabs[i];tab.rect.name="Help: "+topics[i].Name;

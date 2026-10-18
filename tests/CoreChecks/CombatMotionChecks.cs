@@ -6,6 +6,26 @@ static class CombatMotionChecks
     {
         foreach(string faction in new[]{"industrial","biological"})
         {
+            foreach(string victimRole in new[]{"worker","supply"})
+            {
+                var sim=Fixture(catalog,faction);
+                var attacker=Unit(sim,0,"melee",new Point(20.5f,20.5f));
+                var target=Unit(sim,1,victimRole,new Point(27,20));
+                if(sim.Type(target).building)sim.Map.Occupy(target.position,sim.Type(target).footprint,target.id);
+                WarmHeld(sim,attacker,target);Attack(sim,attacker,target);
+                var start=attacker.position;float health=target.health;int ticks=0;
+                while(target.health>=health&&ticks++<180)sim.Step();
+                var attacks=sim.View(0).attacks.Where(a=>a.attacker==attacker.id).ToArray();
+                check(attacker.position.Distance(start)>3&&target.health<health&&attacks.Length==1,
+                    faction+": melee closes distance before striking "+victimRole);
+                float reach=sim.Type(attacker).range+(sim.Type(target).building?sim.Type(target).footprint*.4f:0);
+                check(attacks[0].origin.Distance(attacks[0].destination)<=reach+.001f&&attacks[0].target==target.id,
+                    faction+": melee hit records its actual in-range victim "+victimRole);
+                int hit=attacks[0].tick;health=target.health;
+                for(int tick=0;tick<sim.Type(attacker).attackPeriod-1;tick++)sim.Step();
+                check(target.health==health&&attacker.attackReadyTick==hit+sim.Type(attacker).attackPeriod,
+                    faction+": melee recovery preserves the attack cooldown "+victimRole);
+            }
             foreach(string role in new[]{"ranged","siege"})
             foreach(CommandKind order in new[]{CommandKind.Attack,CommandKind.AttackMove,CommandKind.Stop})
             {

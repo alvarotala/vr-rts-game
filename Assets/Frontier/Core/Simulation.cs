@@ -6,7 +6,7 @@ namespace Frontier.Core
 {
     public sealed partial class Simulation
     {
-        public const int TickRate = 20, UnitLimit = 50, BuildingLimit = 20;
+        public const int TickRate = 20, UnitLimit = 60, BuildingLimit = 20;
         public readonly GridMap Map;
         public readonly Catalog Catalog;
         public readonly PlayerState[] Players = new PlayerState[2];
@@ -42,7 +42,9 @@ namespace Frontier.Core
                 var hq = Spawn(player, Catalog.Role(Players[player].faction, "hq").id, new Point(spawn.x, spawn.y));
                 for (int i = 0; i < 6; i++)
                 {
-                    Point? position = FreeExit(hq);
+                    // Authored starting camps are rotated 180 degrees. Mirror the
+                    // initial workers too, so neither side starts closer to its minerals.
+                    Point? position = FreeExit(hq, reverse: player == 1);
                     if (!position.HasValue) throw new ArgumentException("No space for starting workers.");
                     Spawn(player, Catalog.Role(Players[player].faction, "worker").id, position.Value);
                 }

@@ -30,9 +30,9 @@ bash scripts/unity.sh validate
 
 El núcleo se prueba con .NET 8 sin dependencias NuGet. El script busca `dotnet` o el SDK incluido en la instalación local de Unity 6.5; se puede indicar otro ejecutable mediante `DOTNET`.
 
-Las comprobaciones de dificultad cubren reacción, límites con reservas, ritmo de producción, defensa y oleadas de Very Easy. `--practice` añade cuatro simulaciones de hasta 19 minutos contra un jugador pasivo, cruzando ambos mapas y facciones de la IA; registra economía, población y primera ofensiva en `TestResults/very-easy-practice.json`. `--matches --opponent=very-easy --count=4` enfrenta Normal contra Very Easy en los cuatro cruces de facciones y registra resultados en `TestResults/matches.json`. Sin ese modificador, las partidas mantienen la alternancia anterior entre rivales Normal y Easy. Estas pruebas no sustituyen el balance con jugadores humanos.
+Las comprobaciones de dificultad cubren igualdad inicial de recursos, posiciones y asignaciones de trabajadores en ambos mapas y los cuatro cruces de facciones, acceso a todos los tipos de unidad y mejoras, reservas, presupuesto, defensa, preparación, oleadas limitadas y descanso después de pérdidas o retirada. `--practice` añade doce simulaciones de hasta 24 minutos contra un jugador pasivo, cruzando ambos mapas, ambas facciones de IA y las tres dificultades. Verifica producción efectiva de todos los tipos, ausencia de daño durante la preparación, primera ofensiva, tamaños máximos y capacidad de ganar; guarda muestras económicas y órdenes rechazadas en `TestResults/difficulty-practice.json`. `--matches --opponent=very-easy --count=4` enfrenta Normal contra Very Easy en los cuatro cruces de facciones y registra resultados en `TestResults/matches.json`. Sin ese modificador, las partidas alternan rivales Normal y Easy. Estas pruebas no sustituyen el balance con jugadores humanos.
 
-Incluye regresiones de navegación: 50 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
+Incluye regresiones de navegación: 60 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
 
 `PathfindingChecks` añade grupos mixtos por corredores largos, selecciones solapadas, unidades estacionadas junto a una salida y convoyes de distintas velocidades. `CollisionChecks` comprueba masa, empujes, aceleración, frenado, Hold y nuevas órdenes durante una cesión. Parámetros y decisiones: [movimiento](movement.md).
 
@@ -56,12 +56,21 @@ unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
 
 `ControlGroupPreview.Render` ejecuta solo el escenario focal y guarda sus capturas en `TestResults/ControlGroups`. Las entradas son sintéticas; no genera APK.
 
-`MenuFlowPreview.Render` verifica la pantalla Hotkeys y la guía de pausa: ambos dispositivos, todas las categorías y páginas, IDs únicos, texto sin recortes, navegación sin superposición, simulación congelada y conservación de selección, recursos, grupos y modo de construcción. El selector de dispositivo solo previsualiza asignaciones. Genera vistas y la referencia `TestResults/Menus/default-controls.md` desde `DefaultControlCatalog`, sin construir un jugador:
+`MenuFlowPreview.Render` verifica la pantalla Hotkeys y la guía de pausa: ambos dispositivos, todas las categorías y páginas, IDs únicos, texto sin recortes, navegación sin superposición, simulación congelada y conservación de selección, recursos, grupos y modo de construcción. Las categorías consultan las asignaciones del perfil seleccionado. Genera vistas y la referencia `TestResults/Menus/default-controls.md` desde `DefaultControlCatalog`, sin construir un jugador:
 
 ```sh
 unity run . --log-file TestResults/unity-hotkeys-final.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.MenuFlowPreview.Render
 ```
+
+`HotkeyValidationBatch.Run` comprueba persistencia, perfiles corruptos, conflictos e intercambio confirmado, captura y cancelación, restauración por dispositivo, acceso desde preparación/pausa y entrada desktop sintética contra el enrutador real. Comprueba también selección de mano persistente, nombres A/B y X/Y y filtrado del mando inactivo mediante estados sintéticos del SDK de Meta. También ejecuta las regresiones de menús, colas y grupos. Guarda vistas en `TestResults/Hotkeys` y conserva las preferencias previas del usuario:
+
+```sh
+unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-hotkeys.log --no-tail -- \
+  -executeMethod Frontier.Editor.HotkeyValidationBatch.Run
+```
+
+Estas comprobaciones no certifican los botones físicos ni la ergonomía en Quest; requieren una prueba en el visor.
 
 `CommandQueueChecks` verifica FIFO, reemplazo inmediato, conversión del doble A, grupos, privacidad, invalidación de destinos, recolección, reparación y construcción. Para comprobar entrada y presentación sin APK:
 
@@ -126,6 +135,15 @@ unity run . --log-file TestResults/unity-workforce-markers.log --no-tail -- \
 ```
 
 Usa órdenes reales de recolección para comprobar los totales de minerales y gas, color de exceso, viajes y entrega, agotamiento, pausa, destrucción y salida de partida. Renderiza ambas facciones desde varios lados y en tablero compacto en `TestResults/Workforce/`. Comprueba orientación, separación de etiquetas y tamaño físico; no genera ejecutables ni sustituye la prueba de legibilidad en Quest.
+
+Para comprobar el estado de construcción y la selección persistente del edificio a colocar, usar **Frontier → Check construction feedback**, o:
+
+```sh
+unity run . --log-file TestResults/unity-construction.log --no-tail -- \
+  -executeMethod Frontier.Editor.ConstructionPreview.Run
+```
+
+Verifica ambas facciones: materiales grises, porcentaje y disponibilidad, transición a edificio terminado, niebla y limpieza de etiquetas; también selección de barraca/relay, cambio, colocación y cancelación desde las acciones compartidas con la rueda. Genera capturas en `TestResults/Construction/` y ejecuta las regresiones de contadores y rueda. `HarvestingChecks` comprueba además que el constructor recoge minerales en la nueva zona y entrega tres cargas en la expansión terminada.
 
 Para revisar los textos en inglés, usar **Frontier → Preview full command panel**, o:
 
@@ -245,7 +263,7 @@ Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resou
 
 ### Cuadrícula de selección
 
-`SelectionGridPreview.Render` verifica rayos y gestos del panel para ambas facciones: selección individual, doble clic limitado al conjunto y a la definición, selección en otras páginas, eliminación mantenida, cancelación y alias A. Incluye el máximo de 50 unidades y 20 edificios, recorrido de las cuatro páginas y capturas y ausencia de superposición con producción. `SelectionGridPreview.RunValidation` añade las regresiones de grupos, rueda, entrada de órdenes/rally, menús y producción. No construye un jugador:
+`SelectionGridPreview.Render` verifica rayos y gestos del panel para ambas facciones: selección individual, doble clic limitado al conjunto y a la definición, selección en otras páginas, eliminación mantenida, cancelación y alias A. Incluye el máximo de 60 unidades y 20 edificios, recorrido de las cuatro páginas y capturas y ausencia de superposición con producción. `SelectionGridPreview.RunValidation` añade las regresiones de grupos, rueda, entrada de órdenes/rally, menús y producción. No construye un jugador:
 
 ```sh
 unity run . --log-file TestResults/unity-selection-grid.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.SelectionGridPreview.RunValidation

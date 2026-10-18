@@ -23,6 +23,12 @@ namespace Frontier.Runtime
         public Mesh Get(Archetype type)
         {
             if(meshes.TryGetValue(type.id,out var mesh))return mesh;
+            if(type.faction=="biological")
+            {
+                var badge=new Builder();badge.Badge(type.role,.13f);
+                mesh=BiologicalVisuals.WithBadge(BiologicalVisuals.Building(type),badge.Finish(type.id+"/badge",1),type.footprint);
+                meshes.Add(type.id,mesh);return mesh;
+            }
             var b=new Builder();bool bio=type.faction=="biological";
             void Part(float x,float y,float z,float sx,float sy,float sz,int material=0)
             {if(bio)b.Lobe(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);else b.Box(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);}

@@ -10,6 +10,8 @@ namespace Frontier.Runtime
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
         private bool wheelReleasePending;
+        private OVRInput.Controller inputController=OVRInput.Controller.None;
+        private bool controllerReleasePending;
         private enum PanelButton { None, Trigger, Action }
         private PanelButton panelButton;
         private bool panelReleasePending;
@@ -43,20 +45,23 @@ namespace Frontier.Runtime
         {
             if(Board.Content==null){ResetMapGestures();return;}
             bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
-            Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,wheelHeld=false,wheelReleased=false,triggerHeld=false,gripDown=false,actionUp=false,actionHeld=false;
+            Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,wheelHeld=false,wheelReleased=false,triggerHeld=false,gripDown=false;
+            bool gameplay=Panel.AcceptsGameInput||Quest.Placing;
+            var bindings=Panel.Bindings;
             if(Quest.Active)
             {
-                // All gameplay input is on the physical right controller. The left is unassigned.
-                const OVRInput.Controller primary=OVRInput.Controller.RTouch;
-                ray=Quest.PointerRay();down=OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger,primary);up=OVRInput.GetUp(OVRInput.Button.PrimaryIndexTrigger,primary);
-                triggerHeld=OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger,primary);
-                add=OVRInput.Get(OVRInput.Button.PrimaryHandTrigger,primary);order=OVRInput.GetDown(OVRInput.Button.One,primary);cancel=OVRInput.GetDown(OVRInput.Button.Two,primary);
-                actionUp=OVRInput.GetUp(OVRInput.Button.One,primary);actionHeld=OVRInput.Get(OVRInput.Button.One,primary);
-                gripDown=OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger,primary);
+                // Buttons, axes and the pointer always come from the chosen hand.
+                var primary=Quest.ActiveController;
+                if(inputController!=primary)ChangeInputController(primary);
+                ray=Quest.PointerRay();
+                var select=HotkeyInput.Read(gameplay?bindings.Get(true,"select"):"touch:trigger",primary);
+                var action=HotkeyInput.Read(gameplay?bindings.Get(true,"order"):"touch:a",primary);
+                var modifier=HotkeyInput.Read(bindings,true,"add");var wheel=HotkeyInput.Read(bindings,true,"wheel");
+                down=select.Down;up=select.Up;triggerHeld=select.Held;
+                add=modifier.Held;gripDown=modifier.Down;order=action.Down;
+                cancel=HotkeyInput.Read(gameplay?bindings.Get(true,"back"):"touch:b",primary).Down;
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);
-                wheelPressed=OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick,primary);
-                wheelHeld=OVRInput.Get(OVRInput.Button.PrimaryThumbstick,primary);
-                wheelReleased=OVRInput.GetUp(OVRInput.Button.PrimaryThumbstick,primary);
+                wheelPressed=wheel.Down;wheelHeld=wheel.Held;wheelReleased=wheel.Up;
                 menuDepth=primaryStick.y;
                 if(Time.unscaledTime>hapticEnd)OVRInput.SetControllerVibration(0,0,primary);
                 laser.enabled=true;
@@ -65,30 +70,62 @@ namespace Frontier.Runtime
             else
             {
                 if(Mouse.current==null)return;ray=Quest.Camera.ScreenPointToRay(Mouse.current.position.ReadValue());
-                down=Mouse.current.leftButton.wasPressedThisFrame;up=Mouse.current.leftButton.wasReleasedThisFrame;order=Mouse.current.rightButton.wasPressedThisFrame;
-                triggerHeld=Mouse.current.leftButton.isPressed;
+                var select=HotkeyInput.Read(gameplay?bindings.Get(false,"select"):"mouse:left");
+                down=select.Down;up=select.Up;triggerHeld=select.Held;order=gameplay&&HotkeyInput.Read(bindings,false,"order").Down;
+                add=HotkeyInput.Read(bindings,false,"add").Held;
+                cancel=HotkeyInput.Read(gameplay?bindings.Get(false,"back"):"key:Escape").Down;
+                toggleMenu=(gameplay||Panel.Page==CommandPanel.MenuPage.Pause)&&HotkeyInput.Read(bindings,false,"pause").Down;
                 zoom=Mouse.current.scroll.ReadValue().y*.04f;menuDepth=zoom;
-                if(Keyboard.current!=null)
-                {
-                    var k=Keyboard.current;add=k.leftShiftKey.isPressed||k.rightShiftKey.isPressed;cancel=k.escapeKey.wasPressedThisFrame;
-                    pan=new Vector2((k.dKey.isPressed?1:0)-(k.aKey.isPressed?1:0),(k.wKey.isPressed?1:0)-(k.sKey.isPressed?1:0));
-                    toggleMenu=k.spaceKey.wasPressedThisFrame;if(k.fKey.wasPressedThisFrame)Board.Fit();
-                    if(k.mKey.wasPressedThisFrame)Panel.Recall();
-                    if(Panel.AcceptsGameInput)
-                    {bool save=k.leftCtrlKey.isPressed||k.rightCtrlKey.isPressed;if(k.digit1Key.wasPressedThisFrame)Session.Group(0,save);if(k.digit2Key.wasPressedThisFrame)Session.Group(1,save);if(k.digit3Key.wasPressedThisFrame)Session.Group(2,save);if(k.digit4Key.wasPressedThisFrame)Session.Group(3,save);}
-                }
+                pan=new Vector2((HotkeyInput.Read(bindings,false,"pan-right").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-left").Held?1:0),
+                    (HotkeyInput.Read(bindings,false,"pan-up").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-down").Held?1:0));
             }
+            if(Quest.Active&&controllerReleasePending)
+            {
+                controllerReleasePending=HotkeyInput.AnyHeld(true,Quest.ActiveController)||primaryStick.magnitude>=.25f;
+                ClearPointer();return;
+            }
+            if(Panel.CaptureHotkeyInput(ray))
+            {Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();ClearPointer();return;}
             ValidateMapGestures(add);
             if(Quest.Placing)
             {Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
+            var menuSelect=HotkeyInput.Read(Quest.Active?"touch:trigger":"mouse:left",Quest.ActiveController);
+            var menuAction=Quest.Active?HotkeyInput.Read("touch:a",Quest.ActiveController):default;
+            bool uiPointerInput=menuSelect.Down||menuSelect.Up||menuSelect.Held||menuAction.Down||menuAction.Up||menuAction.Held||panelButton!=PanelButton.None||Panel.IsDragging;
+            bool interactingWithPanel=panelButton!=PanelButton.None||Panel.IsDragging||(uiPointerInput&&Panel.ContainsPointer(ray));
+            if(!Quest.Active&&Panel.Page!=CommandPanel.MenuPage.Hotkeys&&!interactingWithPanel&&!panelReleasePending)
+            {
+                if(HotkeyInput.Read(bindings,false,"menu").Down)Panel.Recall();
+                if(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup)
+                {if(HotkeyInput.Read(bindings,false,"fit").Down)Board.Fit();}
+                if(Panel.AcceptsGameInput)
+                {
+                    bool save=HotkeyInput.Read(bindings,false,"save").Held;
+                    for(int i=0;i<GameSession.ControlGroupCount;i++)if(HotkeyInput.Read(bindings,false,"group"+(i+1)).Down)Session.Group(i,save);
+                }
+            }
+            // A remapped wheel, order or pause button cannot steal a fixed UI click.
+            if((Wheel==null||!Wheel.IsOpen)&&uiPointerInput&&Panel.ContainsPointer(ray))
+            {
+                bool uiClick=menuSelect.Down||menuSelect.Held||menuAction.Down||menuAction.Held||panelButton!=PanelButton.None;
+                if(HotkeyInput.Read(Quest.Active?"touch:b":"key:Escape",Quest.ActiveController).Down||(!uiClick&&(cancel||toggleMenu)))
+                {
+                    if(toggleMenu)Panel.ToggleMenu();
+                    else if(Panel.AcceptsGameInput&&(Session.BuildDefinition!=null||Session.AttackMoveMode))Session.CancelMode();else Panel.Back();
+                    CancelPanelInput();ClearPointer();return;
+                }
+                RoutePanel(ray,menuSelect.Down,menuSelect.Up,menuSelect.Held,menuAction.Down,menuAction.Up,menuAction.Held,menuDepth);
+                ResetGripTap();ResetGroupRecall();ResetStickHold();ClearPointer();return;
+            }
             if(Quest.Active&&RouteWheel(ray,primaryStick,wheelPressed,order,down,triggerHeld,cancel,add,gripDown,Time.unscaledTime,wheelHeld,wheelReleased))return;
             // Back/pause must work even when the pointer is over a menu button.
             if(cancel)
             {if(Panel.AcceptsGameInput&&(Session.BuildDefinition!=null||Session.AttackMoveMode))Session.CancelMode();else Panel.Back();CancelPanelInput();ClearPointer();return;}
             if(toggleMenu){Panel.ToggleMenu();CancelPanelInput();ClearPointer();return;}
-            if(RoutePanel(ray,down,up,triggerHeld,Quest.Active&&order,actionUp,actionHeld,menuDepth)){ClearPointer();return;}
+            // Pointer UI uses stable controls even after gameplay selection is rebound.
+            if(RoutePanel(ray,menuSelect.Down,menuSelect.Up,menuSelect.Held,menuAction.Down,menuAction.Up,menuAction.Held,menuDepth)){ClearPointer();return;}
             // Quest keeps the confirmed board view fixed. Navigation remains a desktop
-            // development control; the right stick operates the wheel, placement or a grabbed menu.
+            // development control; the active stick operates the wheel, placement or a grabbed menu.
             if(!Quest.Active&&(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup))
                 Board.Navigate(pan,zoom,zoom!=0?1:Time.unscaledDeltaTime);
             if(!Panel.AcceptsGameInput){ClearPointer();return;}
@@ -286,8 +323,15 @@ namespace Frontier.Runtime
         private void ResetActionTap(){lastActionPress=-1;actionSequence=0;actionSelection.Clear();}
         private void ResetSelectTap(){lastSelectPress=-1;selectEntity=0;selectSelection.Clear();}
         private void ResetMapGestures(){ResetActionTap();ResetSelectTap();gestureMatch=null;}
+        private void ChangeInputController(OVRInput.Controller controller)
+        {
+            if(inputController!=OVRInput.Controller.None)OVRInput.SetControllerVibration(0,0,inputController);
+            inputController=controller;hapticEnd=0;controllerReleasePending=true;
+            Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();
+            CancelPanelInput();wheelReleasePending=true;ClearPointer();
+        }
         private void Haptic(bool success)
-        {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
+        {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Quest.ActiveController);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
         {if(!focused){Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
         private void OnDisable(){Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}

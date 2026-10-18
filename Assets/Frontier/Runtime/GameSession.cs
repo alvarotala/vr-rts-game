@@ -143,8 +143,12 @@ namespace Frontier.Runtime
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Point at the terrain and confirm construction."); Changed?.Invoke(); }
-        public void CancelMode() { BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke(); }
+        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void CancelMode()
+        {
+            if (BuildDefinition != null) Announce("Construction placement cancelled.");
+            BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke();
+        }
         private void RefreshView()
         {
             var previous=View;View=Match.View(0);
@@ -176,6 +180,7 @@ namespace Frontier.Runtime
             if (BuildDefinition != null)
             {
                 if(!Send(CommandKind.Build,definition:BuildDefinition,position:point,append:append))return 0;
+                Announce(Catalog[BuildDefinition].name + (append ? " construction queued." : " construction ordered."));
                 BuildDefinition=null;return sequence;
             }
             if (AttackMoveMode)

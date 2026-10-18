@@ -512,3 +512,15 @@ No había un visor conectado en la consulta inicial de ADB. Requiere comprobaci�
 - Sin guardado/restauración de partidas; el ancla se guarda localmente.
 - Sin servicios multijugador ni editor visual todavía.
 - No se puede declarar el MVP validado para Quest hasta completar la prueba física y de rendimiento anterior.
+
+## Curva de dificultad y apertura simétrica — fuentes, sin nuevo APK — 18 de octubre de 2026
+
+Very Easy, Easy y Normal comparten todos los tipos de unidad, la composición objetivo y ambas mejoras. Las diferencias se concentran en ritmo económico, tecnología, reacción y destacamentos: primeras oleadas desde 12 / 10 / 8 minutos, de 3 / 4 / 6 unidades, creciendo hasta 5 / 7 / 16. Una sola oleada permanece activa, sin refuerzos continuos; al perderla o retirarla empieza un descanso completo. El mismo grupo cambia de objetivo si destruye un edificio y conoce otros. Las reservas mantienen posición detrás de la base, con producción y defensas del lado propio, evitando ataques automáticos tempranos en Training Grounds.
+
+Ambos lados mantienen 400 minerales, cero gas, una base, seis trabajadores y capacidad diez, con salud y reglas propias de su facción. Se reflejaron también las posiciones de los trabajadores iniciales: antes ambos lados salían por el borde superior de la base aunque los recursos estuvieran rotados, con distintas distancias de salida. Las pruebas comprueban posiciones y asignaciones iniciales reflejadas en ambos mapas, los cuatro cruces de facciones y cada dificultad.
+
+- **995 comprobaciones aprobadas**, incluyendo límites con colas, acceso a todos los roles y mejoras, apertura, defensa local, recuperación tras perder una oleada, límite de diez oleadas sucesivas y continuidad hacia edificios conocidos. Registro: `TestResults/difficulty-balance-core.log`.
+- **12/12 escenarios de práctica aprobados**, cruzando ambos mapas, las dos facciones de IA y las tres dificultades. Todos produjeron los cinco roles de unidad con recursos ordinarios; no hubo órdenes rechazadas. Primer ataque exactamente a 720 / 600 / 480 segundos, sin daño al oponente pasivo antes del período inicial. Todos ganaron contra un jugador completamente inactivo. Evidencia: `TestResults/difficulty-practice.json`.
+- **4/4 partidas Normal contra Very Easy completadas**, cubriendo los cuatro cruces de facciones. Normal ganó en 989–1.582 segundos simulados. Esto comprueba progresión y cierre de partidas, no una tasa de victoria humana. Evidencia: `TestResults/matches.json`.
+- **Compilación y validación de ambos mapas aprobadas** en Unity 6000.3.26f1, CLI 1.0.0-beta.13, mediante `ProjectBuilder.ValidateContent`. Registro: `TestResults/unity-difficulty-validation.log`. El texto de preparación y la expectativa de `MenuFlowPreview` reflejan los nuevos tiempos; no se volvió a ejecutar la previsualización gráfica de menús.
+- No se generó APK ni ejecutable desktop. Falta comprobar la dificultad percibida y los controles durante partidas humanas en Quest.

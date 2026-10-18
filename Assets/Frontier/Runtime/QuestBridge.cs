@@ -12,6 +12,8 @@ namespace Frontier.Runtime
     {
         public GameSession Session;
         public BoardView Board;
+        public HotkeyBindings Bindings { get; set; }
+        public OVRInput.Controller ActiveController=>Bindings?.TouchController??OVRInput.Controller.RTouch;
         public Camera Camera { get; private set; }
         public bool Active { get; private set; }
         public bool Placing { get; private set; }
@@ -102,7 +104,9 @@ namespace Frontier.Runtime
             placementParent=Board.transform.parent;placementPosition=Board.transform.position;placementRotation=Board.transform.rotation;
             placementWidth=Board.Width;wasPlaced=Board.Placed;
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
-            Session.Announce("Right trigger: place · B: cancel · Right stick: size/rotate · Grip + stick: height");
+            var bindings=Bindings??new HotkeyBindings();
+            Session.Announce(bindings.Name(Active,"select")+": place · "+bindings.Name(Active,"back")+": cancel"+
+                (Active?" · "+bindings.HandName+" stick: size/rotate · "+bindings.Name(true,"add")+" + stick: height":""));
         }
         public void CancelPlacement()
         {
@@ -127,7 +131,7 @@ namespace Frontier.Runtime
         }
         public Ray PointerRay()
         {
-            const OVRInput.Controller controller=OVRInput.Controller.RTouch;
+            var controller=ActiveController;
             return new Ray(TrackingSpace.TransformPoint(OVRInput.GetLocalControllerPosition(controller)),TrackingSpace.TransformDirection(OVRInput.GetLocalControllerRotation(controller)*Vector3.forward));
         }
         private async void SaveAnchor()

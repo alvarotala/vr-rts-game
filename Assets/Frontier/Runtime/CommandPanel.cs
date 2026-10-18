@@ -13,6 +13,7 @@ namespace Frontier.Runtime
         public BoardView Board;
         public QuestBridge Quest;
         public Action PlaceRequested;
+        public HotkeyBindings Bindings { get; private set; }
         private Canvas canvas;
         private RectTransform root, actions;
         private Text headline, economy, selection, harvesting, status;
@@ -40,6 +41,8 @@ namespace Frontier.Runtime
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
+            Bindings=HotkeyBindings.Load();
+            Quest.Bindings=Bindings;
             font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
@@ -94,7 +97,7 @@ namespace Frontier.Runtime
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             TickSelectionClick(Time.unscaledTime);
             Board.SetVisible(ShowsBoard);
-            string state=Page+":"+Quest.Active+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Page+":"+Quest.Active+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
@@ -158,14 +161,14 @@ namespace Frontier.Runtime
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
                     harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";
-                    if(Session.Difficulty=="very-easy")harvesting.text+=" · Small waves after 18 min; defends its base.";break;
+                    harvesting.text+=Session.Difficulty=="very-easy"?" · All units · Small waves from 12 min.":Session.Difficulty=="easy"?" · All units · Gentle waves from 10 min.":" · All units · Mixed waves from 8 min.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
-                    selection.text="Right controller only. Adjust the board's position in your room.";break;
+                    selection.text=Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.";break;
                 case MenuPage.Hotkeys:
-                    headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · RIGHT TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
-                    selection.text=hotkeysTouch?"Default bindings and menu actions. The left controller is unassigned.":"Default bindings and menu actions for the desktop playtest.";
-                    status.text="View only. Choose a category; use Next to see more commands.";break;
+                    headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
+                    selection.text=hotkeysTouch?"Active hand only. Menus: Trigger / "+Bindings.MenuConfirmName+" · "+Bindings.MenuBackName+" to go back.":"Edit gameplay inputs. Menus always use left-click and Escape to go back.";
+                    status.text=hotkeyMessage;break;
                 case MenuPage.Pause:
                     headline.text="MATCH PAUSED";economy.text=Session.Map.title;
                     selection.text="Your match is paused. Browse the control guide below or resume when ready.";
@@ -204,6 +207,7 @@ namespace Frontier.Runtime
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
             ClearProductionTargets();
             HideActionHelp();
+            moveHandle.GetComponentInChildren<Text>().text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
             LayoutPage();
             BuildControlGuide();
             BuildHotkeys();
@@ -224,16 +228,22 @@ namespace Frontier.Runtime
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
                 Add("Detect surfaces",()=>Quest.LoadRoom());
                 Add("START MATCH",()=>{if(Board.Placed&&!Quest.Placing)Session.StartMatch();else Session.Announce("Confirm the board placement first.");},primary:true);
-                Add("Back",Back);return;
+                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));Add("Back",Back);return;
             }
             if(Page==MenuPage.Settings)
             {
+                Add("Hand: "+Bindings.HandName,ToggleControllerHand);
                 Add("Reposition board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
                 Add("Detect surfaces",()=>Quest.LoadRoom());Add("Back",Back);return;
             }
-            if(Page==MenuPage.Hotkeys){Add("Back",Back);return;}
+            if(Page==MenuPage.Hotkeys)
+            {
+                Add("Back",Back);
+                if(!HotkeyModalOpen)Add("Restore device defaults",RequestHotkeyReset);
+                return;
+            }
             if(Page==MenuPage.Pause)
             {
                 Add("Resume match",()=>Show(MenuPage.Actions),primary:true);
@@ -255,7 +265,9 @@ namespace Frontier.Runtime
         }
         private void Show(MenuPage page)
         {
-            if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys){hotkeysTouch=Quest.Active;hotkeysPage=0;}
+            if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
+            {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
+            if(page!=MenuPage.Hotkeys)DismissHotkeyModal();
             Page=page;signature=null;moving=false;
             ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
@@ -264,8 +276,14 @@ namespace Frontier.Runtime
             Board.SetVisible(ShowsBoard);Rebuild();
         }
         private void OpenSubmenu(MenuPage page){returnPage=Page;Show(page);}
+        private void ToggleControllerHand()
+        {
+            Bindings.SelectHand(!Bindings.LeftHand);Bindings.Save();CancelPointerInteraction();
+            Rebuild();UpdateMenuText();
+        }
         public void Back()
         {
+            if(HotkeyModalOpen){CancelHotkeyChange();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             switch(Page)
             {
@@ -279,6 +297,8 @@ namespace Frontier.Runtime
         }
         public void ToggleMenu()
         {
+            if(HotkeyModalOpen){CancelHotkeyChange();return;}
+            if(Page==MenuPage.Hotkeys){Back();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             if(!Session.Running){Back();return;}
             if(Session.Match.Winner!=-1)return;
@@ -305,6 +325,7 @@ namespace Frontier.Runtime
             UpdateProductionHover();
             HideActionHelp();
         }
+        public bool ContainsPointer(Ray ray)=>moving||Hit(root,ray,out _);
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -322,6 +343,7 @@ namespace Frontier.Runtime
         private void OnApplicationFocus(bool focused)
         {
             if(focused)return;
+            if(HotkeyModalOpen)CancelHotkeyChange();
             if(moving){moving=false;SavePosition();}
             CancelPointerInteraction();
         }

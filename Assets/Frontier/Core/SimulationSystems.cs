@@ -13,7 +13,7 @@ namespace Frontier.Core
             Point origin=Center(source),destination=Center(target);int observers=0;
             for(int player=0;player<2;player++)
                 if(Visible(player,origin)&&Visible(player,destination))observers|=1<<player;
-            recentAttacks.Add((new AttackEvent {id=++nextAttackId,tick=Tick,attacker=source.id,owner=source.owner,
+            recentAttacks.Add((new AttackEvent {id=++nextAttackId,tick=Tick,attacker=source.id,target=target.id,owner=source.owner,
                 definition=source.definition,targetDefinition=target.definition,origin=origin,destination=destination},observers));
         }
         private void AdvanceConstruction(EntityState building)
@@ -49,11 +49,12 @@ namespace Frontier.Core
             if (producer.hasRallyPoint) RallyProducedUnit(producer, spawned);
             else if (Type(spawned).role == "worker") ResumeGather(spawned);
         }
-        private Point? FreeExit(EntityState building,float radius=.45f)
+        private Point? FreeExit(EntityState building,float radius=.45f,bool reverse=false)
         {
             var t = Type(building); int size = t.footprint, x0 = (int)building.position.x, y0 = (int)building.position.y;
-            for (int y = y0 - 1; y <= y0 + size; y++) for (int x = x0 - 1; x <= x0 + size; x++)
+            for (int dy = -1; dy <= size; dy++) for (int dx = -1; dx <= size; dx++)
             {
+                int x = x0 + (reverse ? size - 1 - dx : dx), y = y0 + (reverse ? size - 1 - dy : dy);
                 if (x != x0 - 1 && x != x0 + size && y != y0 - 1 && y != y0 + size) continue;
                 if (!Map.Inside(x, y)) continue; int cell = Map.Index(x, y);
                 if (Map.Traversable(Map.Cell(Center(building)), cell) && ClearForSpawn(Map.Center(cell),radius)) return Map.Center(cell);
@@ -168,6 +169,12 @@ namespace Frontier.Core
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
                 if (entity.owner == player) { item.target = entity.target; item.destination = entity.destination;
+                    if (Type(entity).role == "worker")
+                    {
+                        item.cargo = entity.cargo; item.cargoKind = entity.cargoKind;
+                        item.depositing = entity.order == CommandKind.Gather && (entity.depositing || entity.cargo >= 8);
+                        item.working = WorkerIsWorking(entity);
+                    }
                     item.hasRallyPoint = entity.hasRallyPoint; item.rallyPoint = entity.rallyPoint;
                     item.activeOrderSequence = entity.activeOrderSequence; item.pendingOrders = entity.pendingOrders.Select(CopyOrder).ToArray(); item.queue = entity.queue.Select(q => new ProductionOrder { id = q.id, definition = q.definition, research = q.research, remaining = q.remaining, total = q.total }).ToArray(); }
                 else item.order = CommandKind.Stop;

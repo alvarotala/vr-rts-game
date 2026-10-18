@@ -12,6 +12,23 @@ namespace Frontier.Core
 
     public sealed partial class Simulation
     {
+        private bool WorkerIsWorking(EntityState worker)
+        {
+            // Match Travel's arrival/braking gate; waiting in traffic is not working.
+            if (Tick < worker.yieldUntil || worker.velocity.Distance(default) > Type(worker).deceleration / TickRate + .001f) return false;
+            if (worker.order == CommandKind.Gather)
+            {
+                if (worker.depositing || worker.cargo >= 8) return false;
+                var resource = Resources.FirstOrDefault(r => r.id == worker.resourceId);
+                return resource != null && resource.remaining > 0 && worker.position.Distance(resource.position) <= GatherRange(resource)
+                    && (resource.kind != "catalyst" || Extractor(worker.owner, resource));
+            }
+            if (worker.order != CommandKind.Build && worker.order != CommandKind.Repair) return false;
+            if (!Entities.TryGetValue(worker.target, out var target) || target.health <= 0) return false;
+            if (worker.position.Distance(Center(target)) > Type(target).footprint * .75f + 1.2f) return false;
+            return worker.order == CommandKind.Build ? !target.complete : target.complete && target.health < Type(target).health && Players[worker.owner].minerals > 0;
+        }
+
         private int KnownRemaining(int player, ResourceState resource) => Visible(player, resource.position) ? resource.remaining :
             resourceMemories[player].TryGetValue(resource.id, out var remembered) ? remembered : -1;
 
@@ -74,7 +91,10 @@ namespace Frontier.Core
             if (AdvanceUnitOrders(worker)) return;
             var assigned = GatherAssignments(worker.owner, new[] { worker.id });
             var previous = Resources.FirstOrDefault(r => r.id == worker.resourceId);
-            var resource = previous == null ? null : FindGatherResource(worker, previous.kind, previous.position, 0, assigned);
+            // Resume the old mineral line only while still nearby. A worker sent to
+            // construct an expansion should start harvesting at the new camp.
+            var resource = previous == null || previous.position.Distance(worker.position) > Harvesting.SearchRadius ? null :
+                FindGatherResource(worker, previous.kind, previous.position, 0, assigned);
             if (resource == null) resource = FindGatherResource(worker, "mineral", worker.position, 0, assigned);
             if (resource == null) resource = FindGatherResource(worker, "mineral", worker.position, 0, assigned, local: false);
             if (resource != null) { SetGather(worker, resource); return; }

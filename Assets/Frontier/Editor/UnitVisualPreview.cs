@@ -23,6 +23,7 @@ namespace Frontier.Editor
                 Shader.SetGlobalVector("_FrontierBounds",new Vector4(100,100,128,128));Shader.SetGlobalMatrix("_FrontierWorldToBoard",Matrix4x4.identity);
                 var friendly=ColorMaterial(new Color(.2f,.8f,1));var enemy=ColorMaterial(new Color(1,.36f,.23f));
                 var dark=ColorMaterial(new Color(.12f,.17f,.22f));
+                var tissue=ColorMaterial(Color.white);
                 string[] roles={"worker","scout","melee","ranged","siege"};
                 var accents=new Material[5];for(int i=0;i<5;i++)accents[i]=ColorMaterial(UnitVisuals.Accent(roles[i]));
                 preview.camera.orthographic=true;preview.camera.orthographicSize=3.1f;preview.camera.nearClipPlane=.1f;preview.camera.farClipPlane=100;
@@ -39,7 +40,7 @@ namespace Frontier.Editor
                         var type=catalog.Role(faction==0?"industrial":"biological",roles[role]);var mesh=models.Get(type);vertices+=mesh.vertexCount;
                         var matrix=Matrix4x4.TRS(new Vector3((role-2)*2.2f,0,(faction-.5f)*3),Quaternion.Euler(0,210,0),Vector3.one);
                         preview.DrawMesh(mesh,matrix,view==1?enemy:friendly,0);
-                        preview.DrawMesh(mesh,matrix,dark,1);preview.DrawMesh(mesh,matrix,accents[role],2);
+                        preview.DrawMesh(mesh,matrix,faction==1?tissue:dark,1);preview.DrawMesh(mesh,matrix,accents[role],2);
                     }
                     preview.Render(true);
                     var image=preview.EndStaticPreview();string name=view==0?"friendly":view==1?"enemy":"top";

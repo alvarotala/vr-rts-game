@@ -32,7 +32,7 @@ namespace Frontier.Editor
                 {
                     Point from=new Point(17+faction*19,18+row*9),to=new Point(from.x+(row==2?1.6f:row==1?9:6),from.y);
                     var shooter=Add(faction,roles[row],from);var target=Add(1-faction,"melee",to);
-                    shots.Add(new AttackEvent{id=shots.Count+1,tick=100,attacker=shooter.id,owner=faction,definition=shooter.definition,targetDefinition=target.definition,origin=from,destination=to});
+                    shots.Add(new AttackEvent{id=shots.Count+1,tick=100,attacker=shooter.id,target=target.id,owner=faction,definition=shooter.definition,targetDefinition=target.definition,origin=from,destination=to});
                 }
                 session.View.entities=actors.ToArray();session.View.attacks=shots.ToArray();Array.Fill(session.View.visibility,(byte)2);session.View.tick=100;
                 preview.camera.orthographic=true;preview.camera.nearClipPlane=.001f;preview.camera.farClipPlane=10;
@@ -84,7 +84,9 @@ namespace Frontier.Editor
                 VisibleEntity Add(int owner,string role,Point center)
                 {
                     var type=session.Catalog.Role(owner==0?"industrial":"biological",role);float half=type.building?type.footprint*.5f:0;
-                    var actor=new VisibleEntity{id=1000+actors.Count,owner=owner,definition=type.id,position=new Point(center.x-half,center.y-half),health=type.health,complete=true};actors.Add(actor);return actor;
+                    // Automatic fire is a Stop/Hold action; enum default Move
+                    // correctly cancels an old shot's facing and firing pose.
+                    var actor=new VisibleEntity{id=1000+actors.Count,owner=owner,definition=type.id,position=new Point(center.x-half,center.y-half),health=type.health,complete=true,order=CommandKind.Stop};actors.Add(actor);return actor;
                 }
                 void Capture(string name,Point center,float size,float seconds)
                 {

@@ -34,7 +34,7 @@ La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/u
 
 ## Uso básico
 
-Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y confirmar con el gatillo; si no hay datos de la habitación, usar **Mesa** o **Piso** para colocarlo manualmente. Iniciar la partida, seleccionar unidades con el gatillo y dar órdenes contextuales con A (X en modo zurdo).
+Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y confirmar con el gatillo; si no hay datos de la habitación, usar **Mesa** o **Piso** para colocarlo manualmente. Iniciar la partida, seleccionar unidades con el gatillo y dar órdenes contextuales con A. **Hotkeys** permite personalizar los controles antes de jugar o desde pausa, con guardado local y restauración de valores predeterminados.
 
 Los trabajadores recolectan y construyen; los edificios producen unidades e investigan mejoras. Se gana destruyendo todos los edificios enemigos. Consultar la [guía de juego](docs/gameplay.md) para los controles completos, el movimiento del menú y la identificación de unidades.
 

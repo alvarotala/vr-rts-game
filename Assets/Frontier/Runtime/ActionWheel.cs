@@ -117,9 +117,9 @@ namespace Frontier.Runtime
             var selection = Session.View.entities.Where(e => Session.Selection.Contains(e.id)).ToArray();
             heading.text = selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "NO SELECTION";
             title.text = InBuildMenu ? "BUILD" : available.Heading;
-            detail.text = items.Count == 0 ? available.Hint : "Tilt right stick\nto choose";
+            detail.text = items.Count == 0 ? available.Hint : "Tilt "+Panel.Bindings.HandName.ToLowerInvariant()+" stick\nto choose";
             detail.color = Ink;
-            help.text = "Trigger / A · Execute\nGrip / B · " + (InBuildMenu ? "Back" : "Close");
+            help.text = Panel.Bindings.Name(true,"select")+" / "+Panel.Bindings.Name(true,"order")+" · Execute\n"+Panel.Bindings.Name(true,"add")+" / "+Panel.Bindings.Name(true,"back")+" · " + (InBuildMenu ? "Back" : "Close");
         }
 
         private void BuildSectors()
@@ -152,9 +152,9 @@ namespace Frontier.Runtime
             }
             UpdateHighlight();
             title.text = (save ? "REPLACE GROUP" : "SELECT GROUP") + (Highlighted >= 0 ? " " + (Highlighted + 1) : "");
-            detail.text = Highlighted < 0 ? "Tilt right stick\nto choose" : save ? Session.Selection.Count + " selected\nRelease click to save" : Session.GroupSize(Highlighted) + " assigned\nCenter stick to select";
+            detail.text = Highlighted < 0 ? "Tilt "+Panel.Bindings.HandName.ToLowerInvariant()+" stick\nto choose" : save ? Session.Selection.Count + " selected\nRelease click to save" : Session.GroupSize(Highlighted) + " assigned\nCenter stick to select";
             detail.color = Ink;
-            help.text = save ? "Release stick click · Replace group\nB · Cancel" : "Center stick · Select group\nHold stick click + tilt · Replace group     B · Close";
+            help.text = save ? "Release "+Panel.Bindings.Name(true,"wheel")+" · Replace group\n"+Panel.Bindings.Name(true,"back")+" · Cancel" : "Center stick · Select group\nHold "+Panel.Bindings.Name(true,"wheel")+" + tilt · Save     "+Panel.Bindings.Name(true,"back")+" · Close";
         }
 
         private void Aim(Vector2 stick)

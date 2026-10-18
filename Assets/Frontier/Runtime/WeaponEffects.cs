@@ -31,12 +31,16 @@ namespace Frontier.Runtime
         }
         public void Update(BoardView board)
         {
+            Render(board,AdvanceClock(board),board.Viewer!=null?board.Viewer:Camera.main);
+        }
+        public float AdvanceClock(BoardView board)
+        {
             var session=board.Session;
-            if(session.View==null||!board.Content.gameObject.activeInHierarchy){Clear();return;}
+            if(session.View==null||!board.Content.gameObject.activeInHierarchy){Clear();return 0;}
             if(lastTick!=session.View.tick){lastTick=session.View.tick;clock=lastTick;}
             else if(!session.IsPaused)
                 clock=Mathf.Min(clock+Time.unscaledDeltaTime*Simulation.TickRate,lastTick+(session.View.winner>=0?Simulation.TickRate:1));
-            Render(board,clock,Camera.main);
+            return clock;
         }
         public void Render(BoardView board,float visualTick,Camera camera)
         {
@@ -62,15 +66,26 @@ namespace Frontier.Runtime
                 float muzzleForward=type.building?type.footprint*.46f:(type.role=="ranged"||siege?.7f:.4f)*scale;
                 Vector3 origin=new Vector3(shot.origin.x,board.HeightAt(shot.origin)+muzzleHeight,shot.origin.y)+direction*muzzleForward;
                 if(type.role=="ranged")origin+=side*(.17f*scale);
-                Vector3 end=new Vector3(shot.destination.x,board.HeightAt(shot.destination)+(targetType.building?1.2f:.7f*targetType.collisionRadius/.45f),shot.destination.y);
+                if(!melee&&board.TryWeaponMuzzle(shot.attacker,shot.id,out var muzzle)&&new Vector2(muzzle.x-shot.origin.x,muzzle.z-shot.origin.y).magnitude<2*scale)
+                    origin=muzzle;
+                Vector3 targetCenter=new Vector3(shot.destination.x,board.HeightAt(shot.destination),shot.destination.y);
+                if(!melee&&board.TryCombatCenter(shot.target,out var liveTarget))targetCenter=liveTarget;
+                float targetRadius=targetType.building?targetType.footprint*.4f:targetType.collisionRadius*.7f;
+                Vector3 end=targetCenter+Vector3.up*(targetType.building?1.2f:.7f*targetType.collisionRadius/.45f)-direction*targetRadius;
                 // Keep traces legible on a full table, without growing excessively when zoomed in.
                 float width=Mathf.Clamp(.0015f/board.CellScale,.06f,.18f)*(siege?1.6f:1);
-                Color tint=bio?new Color(.55f,1,.12f):new Color(1,.68f,.18f);
+                Color team=shot.owner==view.player?new Color(.25f,.85f,1):new Color(1,.32f,.22f);
+                Color tint=Color.Lerp(bio?new Color(.55f,1,.12f):new Color(1,.68f,.18f),team,.55f);
                 Color core=bio?new Color(.9f,1,.65f):new Color(1,.97f,.8f);
                 float arc=siege?Mathf.Min(3,Vector3.Distance(origin,end)*.28f):bio&&!melee?.45f:0;
                 Vector3 Path(float t)=>Vector3.Lerp(origin,end,t)+Vector3.up*(4*t*(1-t)*arc);
 
-                if(age<.12f)
+                bool inspected=board.Session.Selection.Contains(shot.attacker)||board.Hovered==shot.attacker;
+                float markerFade=Mathf.Clamp01((lifetime-age)/.15f);
+                if(age<.2f)Ring(new Vector3(shot.origin.x,board.HeightAt(shot.origin)+.07f,shot.origin.y),type.building?type.footprint*.55f:type.collisionRadius+.12f,width*.6f,Tint(team,(1-age/.2f)*.65f));
+                Ring(targetCenter+Vector3.up*.09f,targetType.building?targetType.footprint*.6f:targetType.collisionRadius+.3f,width*(inspected?1.1f:.65f),Tint(team,markerFade*(inspected?.95f:.65f)));
+
+                if(!melee&&age<.12f)
                 {
                     float burst=1-age/.12f;
                     Particle(origin,width*(melee?5:7)*(.5f+burst*.5f),Tint(tint,burst*.8f));
@@ -79,9 +94,18 @@ namespace Frontier.Runtime
                 }
                 if(melee)
                 {
-                    float t=Mathf.Clamp01(age/lifetime),fade=1-t;
-                    var swing=origin+side*Mathf.Lerp(-.7f,.7f,t);
-                    Beam(swing,end,width*2,Tint(core,fade),Tint(tint,fade*.65f));
+                    // A short crescent at arm's reach, never a ranged beam. Body
+                    // lunge and weapon sweep share this strike's authoritative tick.
+                    float t=Mathf.Clamp01(age/.14f),fade=1-Mathf.Clamp01(age/lifetime);
+                    var pivot=new Vector3(shot.origin.x,board.HeightAt(shot.origin)+.8f*scale,shot.origin.y);
+                    float reach=Mathf.Min(1.35f*scale,Vector3.Distance(pivot,end));
+                    float head=Mathf.Lerp(-65,65,t)*Mathf.Deg2Rad;
+                    for(int segment=0;segment<8;segment++)
+                    {
+                        float a=head-.85f+segment*.85f/8,b=head-.85f+(segment+1)*.85f/8;
+                        Vector3 Swing(float angle)=>pivot+(direction*Mathf.Cos(angle)+side*Mathf.Sin(angle))*reach;
+                        Beam(Swing(a),Swing(b),width*1.3f,Tint(tint,fade*segment/8),Tint(core,fade*(segment+1)/8));
+                    }
                 }
                 else
                 {
@@ -91,8 +115,8 @@ namespace Frontier.Runtime
                     float head=Mathf.Clamp01(age/flight);
                     for(int segment=0;segment<segments;segment++)
                     {
-                        float a=segment/(float)segments*head,b=(segment+1f)/segments*head;
-                        Beam(Path(a),Path(b),width*.5f,Tint(tint,.28f*fade),Tint(tint,.28f*fade));
+                        float a=segment/(float)segments,b=(segment+1f)/segments;
+                        Beam(Path(a),Path(b),width*(inspected?.8f:.5f),Tint(team,(inspected?.5f:.2f)*fade),Tint(team,(inspected?.5f:.2f)*fade));
                     }
                     if(age<flight)
                     {
@@ -125,6 +149,15 @@ namespace Frontier.Runtime
         private static bool Visible(PlayerView view,MapDefinition map,Point p)
         {int x=Mathf.FloorToInt(p.x),y=Mathf.FloorToInt(p.y);return x>=0&&y>=0&&x<map.width&&y<map.height&&view.visibility[y*map.width+x]==2;}
         private static Color Tint(Color color,float alpha){color.a=alpha;return color;}
+        private void Ring(Vector3 center,float radius,float width,Color color)
+        {
+            // Four separated brackets stay readable around the victim's feet.
+            for(int quadrant=0;quadrant<4;quadrant++)for(int segment=0;segment<4;segment++)
+            {
+                float a=(quadrant*90+segment*12)*Mathf.Deg2Rad,b=a+12*Mathf.Deg2Rad;
+                Beam(center+new Vector3(Mathf.Cos(a),0,Mathf.Sin(a))*radius,center+new Vector3(Mathf.Cos(b),0,Mathf.Sin(b))*radius,width,color,color);
+            }
+        }
         private void Particle(Vector3 center,float size,Color color)
         {Quad(center-right*size*.5f-up*size*.5f,center-right*size*.5f+up*size*.5f,center+right*size*.5f+up*size*.5f,center+right*size*.5f-up*size*.5f,color,color,1);}
         private void Beam(Vector3 start,Vector3 end,float width,Color from,Color to)

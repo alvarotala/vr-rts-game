@@ -14,6 +14,9 @@ Shader "Frontier/Board"
         _HoverColor("Hover color", Color) = (1,.92,.32,1)
         _PointerArea("Pointer center, dot radius, guide length", Vector) = (0,0,0,0)
         _DamageAmount("Received damage flash", Float) = 0
+        _Desaturate("Desaturate tissue", Float) = 0
+        _CreepTex("Observed creep", 2D) = "black" {}
+        _CreepTime("Creep animation time", Float) = 0
     }
     SubShader
     {
@@ -34,9 +37,17 @@ Shader "Frontier/Board"
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea;
             float _DamageAmount;
+            float _Desaturate; float _CreepTime;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
+            TEXTURE2D(_CreepTex); SAMPLER(sampler_CreepTex);
+            float TissueNoise(float2 p)
+            {
+                float2 cell=floor(p),f=frac(p);f=f*f*(3-2*f);
+                float4 h=frac(sin(float4(dot(cell,float2(127.1,311.7)),dot(cell+float2(1,0),float2(127.1,311.7)),dot(cell+float2(0,1),float2(127.1,311.7)),dot(cell+1,float2(127.1,311.7))))*43758.5453);
+                return lerp(lerp(h.x,h.y,f.x),lerp(h.z,h.w,f.x),f.y);
+            }
             Varyings vert(Attributes input)
             {
                 Varyings o; UNITY_SETUP_INSTANCE_ID(input); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
@@ -51,6 +62,7 @@ Shader "Frontier/Board"
                 clip(_FrontierBounds.x-abs(p.x)); clip(_FrontierBounds.y-abs(p.z));
                 half light=.63+.37*saturate(dot(normalize(input.normal),normalize(float3(-.3,.9,-.5))));
                 half3 color=_BaseColor.rgb*input.color.rgb*light;
+                color=lerp(color,dot(color,half3(.299,.587,.114)).xxx,_Desaturate);
                 if(_HoverAmount>0)
                 {
                     half rim=1-saturate(abs(dot(normalize(input.normal),GetWorldSpaceNormalizeViewDir(input.world))));
@@ -59,6 +71,20 @@ Shader "Frontier/Board"
                 color=lerp(color,half3(1,.82,.52),saturate(_DamageAmount));
                 if(_UseFog>.5)
                 {
+                    half creep=SAMPLE_TEXTURE2D(_CreepTex,sampler_CreepTex,input.uv).r;
+                    if(creep>.01 && input.topSurface>.5)
+                    {
+                        float2 tissue=input.uv*_FrontierBounds.zw;
+                        float noise=TissueNoise(tissue*1.8),fine=TissueNoise(tissue*5.4);
+                        float coverage=smoothstep(.3,.58,creep+(noise-.5)*.42);
+                        float veins=1-smoothstep(.025,.09,abs(noise-.49));
+                        float pulse=.5+.5*sin(_CreepTime*1.8+tissue.x*.7+tissue.y*.45);
+                        half3 flesh=lerp(half3(.16,.065,.19),half3(.32,.13,.29),fine);
+                        flesh=lerp(flesh,half3(.46,.22,.38),veins*(.4+pulse*.22));
+                        float spores=smoothstep(.8,.94,fine)*smoothstep(.6,.8,noise);
+                        flesh=lerp(flesh,half3(.56,.66,.26),spores*.75);
+                        color=lerp(color,flesh*light,coverage);
+                    }
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
                     color=lerp(half3(.018,.035,.05),color,visibility);
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);

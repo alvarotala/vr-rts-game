@@ -233,6 +233,10 @@ namespace Frontier.Core
         public float health, progress;
         public bool complete, remembered;
         public CommandKind order;
+        // Own workers only. Presentation must not inspect the authoritative match.
+        public int cargo;
+        public string cargoKind;
+        public bool depositing, working;
         public ProductionOrder[] queue = Array.Empty<ProductionOrder>();
         public int activeOrderSequence;
         public Point destination;
@@ -243,7 +247,7 @@ namespace Frontier.Core
     [Serializable]
     public struct AttackEvent
     {
-        public int id, tick, attacker, owner;
+        public int id, tick, attacker, target, owner;
         public string definition, targetDefinition;
         // Centers at the instant of firing, retained even when the target dies.
         public Point origin, destination;

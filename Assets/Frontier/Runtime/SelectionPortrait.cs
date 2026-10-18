@@ -29,7 +29,8 @@ namespace Frontier.Runtime
                     var min=new Vector2(vertices.Min(v=>v.x),vertices.Min(v=>v.y));
                     var max=new Vector2(vertices.Max(v=>v.x),vertices.Max(v=>v.y));
                     float scale=1/Mathf.Max(max.x-min.x,max.y-min.y);var center=(min+max)*.5f;
-                    var colors=new[]{type.faction=="biological"?new Color(.34f,.77f,.46f):new Color(.24f,.65f,.82f),new Color(.2f,.28f,.34f),type.building?BuildingVisuals.Accent(type.role):UnitVisuals.Accent(type.role)};
+                    var colors=new[]{type.faction=="biological"?new Color(.34f,.77f,.46f):new Color(.24f,.65f,.82f),type.faction=="biological"?Color.white:new Color(.2f,.28f,.34f),type.building?BuildingVisuals.Accent(type.role):UnitVisuals.Accent(type.role)};
+                    var tissue=mesh.colors;
                     var result=new List<Face>();
                     for(int sub=0;sub<mesh.subMeshCount;sub++)
                     {
@@ -39,7 +40,9 @@ namespace Frontier.Runtime
                             Vector3 a=vertices[triangles[i]],b=vertices[triangles[i+1]],c=vertices[triangles[i+2]];
                             var normal=Vector3.Cross(b-a,c-a).normalized;
                             float shade=.65f+.35f*Mathf.Abs(Vector3.Dot(normal,new Vector3(-.4f,.7f,.6f).normalized));
-                            var tint=colors[Mathf.Min(sub,2)]*shade;tint.a=1;
+                            var tint=colors[Mathf.Min(sub,2)]*shade;
+                            if(tissue.Length==vertices.Length)tint*=(tissue[triangles[i]]+tissue[triangles[i+1]]+tissue[triangles[i+2]])/3;
+                            tint.a=1;
                             result.Add(new Face{a=Normalize(a),b=Normalize(b),c=Normalize(c),depth=(a.z+b.z+c.z)/3,tint=tint});
                         }
                     }

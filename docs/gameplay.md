@@ -1,6 +1,6 @@
 # Guía de juego
 
-La experiencia de juego está orientada a Quest 3. Las ruedas de acciones y grupos se usan únicamente en VR. La versión desktop queda por ahora para desarrollo y prueba de mecánicas: mouse y teclado, acciones desde el panel, teclas **1–4** para recuperar grupos y **Ctrl+1–4** para guardarlos. Comparte las reglas del juego y conserva WASD, rueda del mouse y F para navegar cómodamente durante las pruebas.
+Los controles indicados a continuación son los predeterminados y se pueden personalizar desde **Hotkeys**. **Settings → Hand: Left/Right** elige un único mando activo (derecho inicialmente); con el izquierdo, X/Y reemplazan A/B y el puntero, gatillo, grip y stick pasan a esa mano. La experiencia de juego está orientada a Quest 3. Las ruedas de acciones y grupos se usan únicamente en VR. La versión desktop queda por ahora para desarrollo y prueba de mecánicas: mouse y teclado, acciones desde el panel, teclas **1–4** para recuperar grupos y **Ctrl+1–4** para guardarlos. Comparte las reglas del juego y conserva WASD, rueda del mouse y F para navegar cómodamente durante las pruebas.
 
 ## Empezar una partida
 
@@ -14,17 +14,31 @@ Usar **START MATCH** cuando el tablero esté confirmado. Al comenzar se muestra 
 
 El botón **AI** permite elegir **Very Easy**, **Easy** o **Normal** antes de iniciar. La elección se conserva al volver al menú para otra partida y al jugar revancha; no se guarda entre aperturas de la aplicación.
 
-**Very Easy** está pensado para aprender los controles y la economía. Reacciona cada seis segundos, mantiene como máximo ocho trabajadores y seis soldados básicos (incluidas sus colas), construye una sola barraca y recluta soldados cada 24 segundos como mínimo. Omite exploradores, artillería, mejoras, torres y expansiones. Mantiene su ejército cerca de la base y envía oleadas de tres soldados desde el minuto 18, con al menos tres minutos entre oleadas. Si atacás su base antes, se defiende. No modifica tus límites ni otorga recursos gratis a ninguno de los jugadores.
+Todas las dificultades usan **el catálogo completo** de su facción: trabajadores, exploradores, infantería cuerpo a cuerpo, infantería a distancia y artillería; también construyen tecnología, defensas y pueden investigar ataque y resistencia. Comparten la composición objetivo (dos unidades a distancia y dos cuerpo a cuerpo por cada explorador y artillería). Cambian el ritmo y las decisiones, sin bonificaciones ocultas.
 
-**Easy** y **Normal** conservan sus comportamientos anteriores: economía mayor, exploración, tecnología y expansiones. Normal reacciona más rápido y utiliza más artillería y mejoras.
+| Modalidad | Reacción | Primera oleada, como mínimo | Tamaño de oleada | Descanso tras terminar la oleada | Objetivo de trabajadores / ejército |
+| --- | --- | --- | --- | --- | --- |
+| **Very Easy** | 6 s | 12 min | 3, aumentando de a uno hasta 5 | 3 min | 11 / 12 |
+| **Easy** | 4 s | 10 min | 4, aumentando de a uno hasta 7 | 2 min 30 s | 12 / 18 |
+| **Normal** | 2 s | 8 min | 6, aumentando de a dos hasta 16 | 1 min 30 s | 16 / 28 |
+
+Very Easy permite practicar con todas las unidades y un rival que se desarrolla despacio. Easy introduce ataques algo mayores, pero sigue dejando tiempo para manejar los controles y reconstruir. Normal desarrolla antes su tecnología y aplica más presión, siempre por destacamentos.
+
+La IA deja al menos dos soldados en casa al lanzar un ataque y mantiene una sola oleada activa. No la refuerza durante el combate: si sus atacantes sobreviven, los retira después de 90 / 105 / 120 segundos (en su siguiente decisión) y recién entonces empieza el descanso. Solo usa su visión y edificios recordados. Los exploradores esperan junto al ejército y participan en las oleadas; no hostigan durante el tiempo inicial. Si invadís su base, se defiende desde el comienzo y deja de perseguir cuando la amenaza sale de su zona.
+
+**Todas las partidas empiezan con las mismas condiciones para ambos jugadores:** 400 minerales, cero gas, una base terminada, seis trabajadores, capacidad inicial de diez y ninguna mejora. La dificultad no cambia ingresos, costos, daño, salud ni los límites de las reglas. En ambos mapas, las posiciones de los trabajadores y sus depósitos iniciales también están reflejadas, para igualar la distancia de salida. Se conservan las características propias de cada facción; los objetivos de población de la tabla son decisiones de la IA, no límites impuestos al jugador.
 
 ### Configuración, pausa y regreso al inicio
 
-**Settings** permite recolocar el tablero, elegir mesa o piso y detectar superficies. **Hotkeys** abre una pantalla separada de consulta con los controles predeterminados. Permite elegir **Quest Touch** o **Mouse / Keyboard**, recorrer seis categorías y usar **Previous / Next** para ver todos los comandos. Cada fila muestra comando, gesto o acción de menú y contexto. Es de solo lectura; cambiar el dispositivo de consulta no cambia los controles reales. El mando izquierdo queda sin asignación. **Back** vuelve al menú desde el que se abrió esa pantalla.
+**Settings** permite recolocar el tablero, elegir mesa o piso y detectar superficies. **Hotkeys** está disponible desde el menú principal, la preparación de partida y la pausa. Abre **Edit bindings** únicamente para el dispositivo activo: el mando Touch elegido en Quest o mouse/teclado en desktop. Elegí **Change**, soltá los controles y pulsá la nueva tecla o botón. Se guarda automáticamente en este dispositivo y se conserva al reiniciar el juego. Si la entrada ya está asignada, **Swap bindings** intercambia ambas funciones después de confirmar.
+
+**Cancel change**, Escape durante la captura o esperar 12 segundos cancelan el cambio. **Restore device defaults** pide confirmación y restaura solamente el dispositivo seleccionado. Los modificadores de teclado aceptan Shift, Ctrl o Alt, de cualquiera de los dos lados. Los gestos de arrastrar, mantener y doble pulsación siguen al botón de su función; el joystick y la rueda del mouse conservan sus ejes. El mando que no está elegido queda sin asignación.
+
+La navegación de los menús conserva **gatillo/A y B** con el mando derecho, **gatillo/X y Y** con el izquierdo, y **clic izquierdo y Escape** en desktop, incluso después de editar los controles de juego. Esto permite recuperar la configuración. Durante la captura no se ejecutan órdenes ni se reanuda la partida. **Back** vuelve al menú de origen; si se abrió desde pausa, la partida sigue pausada.
 
 Dentro de una partida, **Pause**, **B** con la rueda cerrada y sin una acción pendiente, o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Hotkeys** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
 
-La pausa muestra directamente **CONTROL GUIDE**, con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. Cada tarjeta explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, ruedas, reemplazo de grupos al soltar el stick, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida. **Hotkeys** comparte el catálogo de esta guía, en formato de tabla. Abre mostrando el dispositivo activo y **Back/B** regresa al menú de origen, conservando la pausa. La lista completa para revisión está en [hotkeys predeterminados](hotkeys.md). La asignación personalizada queda para una etapa posterior.
+La pausa muestra directamente **CONTROL GUIDE**, con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. Cada tarjeta explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, ruedas, reemplazo de grupos al soltar el stick, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida. **Hotkeys** comparte el catálogo de esta guía en sus seis categorías de consulta. Abre mostrando el dispositivo activo y **Back/B** regresa al menú de origen, conservando la pausa. La lista completa para revisión está en [hotkeys predeterminados](hotkeys.md). La guía y las categorías de referencia muestran las asignaciones actuales; **Edit bindings** vuelve al editor.
 
 Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la partida, conservando facciones/mapa elegidos y la colocación física del tablero. Las pausas por seguimiento, foco o visor continúan vigentes hasta que el sistema las libere. Mientras hay un menú de partida abierto no se pueden dar órdenes al tablero.
 
@@ -37,6 +51,10 @@ El reparto automático usa un objetivo de **2 trabajadores por depósito de mine
 Los minerales se reconocen por grupos de cristales azules facetados de distintas alturas sobre una base rocosa. El gas aparece como una abertura irregular con interior violeta y vapor ascendente; el extractor se construye encima. El vapor natural desaparece mientras el extractor ocupa el depósito y se detiene al pausar la partida.
 
 Si todos los depósitos cercanos están al nivel óptimo, los trabajadores adicionales siguen recolectando y el indicador muestra **excess**; estos valores son objetivos de reparto, no un límite rígido de asignación ni un cambio de la velocidad de extracción. Al terminar una entrega, los excedentes aprovechan los puestos que se hayan liberado. Los depósitos agotados y los extractores destruidos provocan una nueva búsqueda; se conserva el tipo de cualquier carga pendiente de entrega.
+
+Las entregas usan el centro principal terminado más cercano al trabajador. Una expansión en construcción todavía no recibe recursos. Al quedar libre después de construir en otra zona, el constructor busca minerales locales y deja de priorizar el depósito lejano donde trabajaba antes.
+
+Las estructuras en construcción se muestran **en gris**, con **UNDER CONSTRUCTION**, porcentaje y barra de progreso sobre el edificio, sin necesidad de seleccionarlo. Las bases también muestran **NO RESOURCE DELIVERY YET**. Al terminar recuperan sus colores normales y desaparece el aviso; los centros y extractores operativos pasan a mostrar sus contadores de trabajadores. Los indicadores no muestran progreso actualizado de edificios recordados bajo niebla.
 
 Apuntar o seleccionar un depósito muestra **Workers asignados/óptimo** y la cantidad restante en el panel. Seleccionar el centro principal muestra los totales de minerales y gas de su zona; seleccionar un extractor muestra su ocupación de gas. Se puede dar la orden de gas sobre toda la superficie del extractor. Los indicadores cuentan tus trabajadores, no los del rival.
 
@@ -53,6 +71,8 @@ La ficha de selección muestra el nombre de la unidad o edificio, su rol, facci�
 **ACTIONS** contiene únicamente las órdenes de la selección: construcción para trabajadores, órdenes militares para unidades y producción o investigación para edificios compatibles. **Cancel / refund** aparece mientras hay una construcción o cola que cancelar. Los edificios automáticos y las selecciones incompatibles muestran una explicación.
 
 Las acciones se agrupan con encabezados y colores: **BUILD STRUCTURES** en ámbar, **TRAIN UNITS** en verde, **RESEARCH** en violeta, **UNIT ORDERS** en azul y **CANCEL / REFUND** en coral. Construcción y órdenes de unidades ocupan filas separadas.
+
+Al elegir una estructura, su botón conserva un borde ámbar y **SELECTED** aunque se retire el puntero. **PLACING · nombre** indica si se está colocando una barraca, relay u otro edificio. El resaltado cambia al elegir otra estructura y se limpia al colocarla o cancelar, tanto desde el panel como desde la rueda.
 
 Mantener el cursor sobre una acción durante **1,5 segundos** muestra su **FIELD GUIDE** en la tarjeta lateral: nombre, función del edificio o unidad, costo, tiempo y requisitos cuando corresponda. También explica órdenes, mejoras y cancelaciones. La ayuda reemplaza temporalmente la ficha de selección, sin tapar botones, recursos ni producción; desaparece al cambiar de acción, retirar el cursor, pulsar, cambiar la selección o salir del panel. Todo el texto del juego permanece en inglés.
 
@@ -106,7 +126,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Pausa | B o panel | Espacio |
 | Grupo de control | Cuatro botones del panel; mantener para guardar | 1–4; Ctrl+1–4 para guardar |
 
-El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Todos los controles del juego usan el mando derecho; el izquierdo queda sin asignación por ahora. Se retiró la opción de mano dominante y no se aplica la preferencia antigua guardada.
+El juego incluye selección ampliada, contorno de selección al ras del terreno, previsualización de construcción, panel contextual, avisos, sonidos de confirmación y vibración. El rectángulo sigue el suelo y las rampas sin flotar ni dibujar paredes en los desniveles. Todos los controles del juego usan el único mando elegido en **Settings → Hand: Left/Right**. El otro no controla el juego ni participa en la captura de hotkeys. La elección se guarda junto con las asignaciones; cambiar de mano conserva las funciones configuradas y actualiza sus nombres. Al cambiar de mano se descartan los gestos pendientes y se espera que el nuevo mando quede libre y centrado antes de aceptar entrada.
 
 El **grip derecho** funciona como Shift: mantenerlo mientras se selecciona con el gatillo principal suma unidades a la selección actual, también al arrastrar un área. Al pulsar una unidad ya seleccionada con el grip sostenido, se quita de la selección. Sin el grip, una nueva selección reemplaza la anterior. El modificador está en el mando derecho, junto con el gatillo de selección.
 
@@ -163,7 +183,7 @@ El juego se presenta íntegramente en inglés; la incorporación de otros idioma
 - **The Consortium**: unidades resistentes, construcción atendida por trabajadores y reparación con recursos.
 - **Symbiosis**: unidades más móviles, edificios que crecen y regeneración fuera del combate.
 - Cada facción: trabajador, explorador, combate cercano, tirador y asedio; seis edificios; dos mejoras.
-- Hasta 50 unidades móviles y 20 edificios por jugador.
+- Hasta 60 unidades móviles y 20 edificios por jugador.
 - **The Rift**, mapa simétrico de 128 × 128, con dos bases, cuatro expansiones, alturas y rampas.
 - **Training Grounds**, mapa de 48 × 48 con instrucciones contextuales.
 - IA **Very Easy**, **Easy** y **Normal**; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.

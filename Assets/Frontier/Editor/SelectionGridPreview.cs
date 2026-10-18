@@ -36,14 +36,15 @@ namespace Frontier.Editor
                 {
                     session.Faction=faction;session.StartMatch();
                     int id=1000;
+                    int extraWorkers=Simulation.UnitLimit-session.Match.Units(0)-3*session.Catalog.Definition.archetypes.Count(t=>t.faction==faction&&!t.building&&t.role!="worker");
                     foreach(var type in session.Catalog.Definition.archetypes.Where(t=>t.faction==faction))
                     {
-                        int count=type.building?(type.role=="barracks"?4:3):type.role=="worker"?32:3;
+                        int count=type.building?(type.role=="barracks"?4:3):type.role=="worker"?extraWorkers:3;
                         for(int i=0;i<count;i++)session.Match.Entities.Add(id,new EntityState{id=id++,owner=0,definition=type.id,position=new Point(20,20),health=type.health});
                     }
                     Call(session,"RefreshView");
                     var all=session.View.entities.Where(e=>e.owner==0).Select(e=>e.id).ToArray();
-                    Check(all.Length==70,"Maximum roster has 50 units and 20 buildings");
+                    Check(all.Length==Simulation.UnitLimit+Simulation.BuildingLimit,$"Maximum roster has {Simulation.UnitLimit} units and {Simulation.BuildingLimit} buildings");
                     var workers=session.View.entities.Where(e=>e.owner==0&&session.Catalog[e.definition].role=="worker").Select(e=>e.id).ToArray();
                     var hqs=session.View.entities.Where(e=>e.owner==0&&session.Catalog[e.definition].role=="hq").Select(e=>e.id).ToArray();
                     Select(all);Capture(faction+"-mixed");

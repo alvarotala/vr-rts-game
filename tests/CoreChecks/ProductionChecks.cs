@@ -50,6 +50,25 @@ static class ProductionChecks
             supply.complete=false;int buildings=sim.Buildings(0);minerals=sim.Players[0].minerals;
             check(!Cancel(supply,mixed[2].id)&&sim.Buildings(0)==buildings&&sim.Players[0].minerals==minerals,"queue command cannot accidentally cancel a foundation "+faction);
 
+            // Exercise the actual cap, including reservations and deployment.
+            sim=new Simulation(map,catalog,faction);sim.Players[0].minerals=5000;
+            hq=sim.Entities.Values.First(e=>e.owner==0&&sim.Type(e).role=="hq");
+            var supplyType=catalog.Role(faction,"supply");
+            for(int i=0;i<6;i++)sim.Entities.Add(1000+i,new EntityState{id=1000+i,owner=0,definition=supplyType.id,health=supplyType.health,position=new Point(25+i*3,12)});
+            for(int i=sim.Units(0);i<Simulation.UnitLimit-2;i++)
+                sim.Entities.Add(2000+i,new EntityState{id=2000+i,owner=0,definition=worker,health=catalog[worker].health,position=new Point(24.5f+i%10,22.5f+i/10)});
+            check(sim.Capacity(0)==Simulation.UnitLimit&&sim.View(0).capacity==Simulation.UnitLimit,"excess supply buildings and HUD projection respect unit limit "+faction);
+            check(Train(hq,worker)&&Train(hq,worker)&&sim.Units(0)+sim.Reserved(0)==Simulation.UnitLimit,"production reserves the final two population slots "+faction);
+            minerals=sim.Players[0].minerals;
+            check(!Train(hq,worker)&&sim.Players[0].minerals==minerals&&sim.Reserved(0)==2,"queued production cannot exceed the cap or spend resources "+faction);
+            check(Cancel(hq,hq.queue[0].id)&&Train(hq,worker),"cancelling at the cap releases one slot "+faction);
+            foreach(var order in hq.queue)order.remaining=1;
+            sim.Step();sim.Step();
+            check(sim.Units(0)==Simulation.UnitLimit&&sim.Reserved(0)==0&&!Train(hq,worker),"last units deploy and the next unit is rejected "+faction);
+            var army=sim.Entities.Values.Where(e=>e.owner==0&&!sim.Type(e).building).Select(e=>e.id).ToArray();
+            check(sim.Submit(new GameCommand{kind=CommandKind.Hold,player=0,entities=army}).accepted,"one command accepts the entire maximum army "+faction);
+            check(sim.Capacity(1)==10&&sim.Units(1)==6,"population limit applies independently to each player "+faction);
+
             EntityState Add(string role,int id)
             {
                 var type=catalog.Role(faction,role);var e=new EntityState{id=id,owner=0,definition=type.id,health=type.health,position=new Point(25,id==1000?12:18)};

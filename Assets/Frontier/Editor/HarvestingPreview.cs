@@ -68,12 +68,12 @@ namespace Frontier.Editor
                 var gas=session.Match.Resources.First(r=>r.kind=="catalyst"&&r.position.x<30);
                 session.Select(0,false,gas.id);Capture("gas-unbuilt","Workers 0/3");
                 var type=session.Catalog.Role(session.Faction,"extractor");
-                var extractor=new EntityState{id=1000,owner=0,definition=type.id,position=new Point(11,24),health=type.health};
+                var extractor=new EntityState{id=1000,owner=0,definition=type.id,position=new Point(gas.position.x-type.footprint*.5f,gas.position.y-type.footprint*.5f),health=type.health};
                 session.Match.Entities.Add(extractor.id,extractor);session.Match.Map.Occupy(extractor.position,type.footprint,extractor.id);
                 // Stop refreshes PlayerView, then select three workers and click the extractor's edge.
                 session.Selection.Clear();foreach(var w in workers)session.Selection.Add(w.id);session.Send(CommandKind.Stop);
                 session.Selection.Clear();foreach(var w in workers.Take(3))session.Selection.Add(w.id);
-                session.Context(new Point(11,24),extractor.id,0);
+                session.Context(extractor.position,extractor.id,0);
                 Check(session.View.resources.First(r=>r.id==gas.id).assignedWorkers==3,"Extractor footprint context did not gather gas");
                 session.Select(extractor.id,false);Capture("gas","Workers 3/3");
                 if(fullPanel)
@@ -110,7 +110,7 @@ namespace Frontier.Editor
                     var supply=session.Catalog.Role(session.Faction,"supply");
                     session.Match.Entities.Add(2100,new EntityState{id=2100,owner=0,definition=supply.id,position=new Point(22,24),health=10,complete=false,remaining=supply.duration/2});
                     session.Send(CommandKind.Stop);session.Select(2100,false);
-                    Capture("construction","Construction 50%","selectionDetails");
+                    Capture("construction","UNDER CONSTRUCTION · 50%","selectionDetails");
                     session.Pause("menu",true);Capture("paused","MATCH PAUSED","headline",true);
                     session.Pause("menu",false);session.Send(CommandKind.Surrender);Capture("finished","DEFEAT","headline");
                 }

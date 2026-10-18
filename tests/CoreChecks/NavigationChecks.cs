@@ -72,14 +72,14 @@ static class NavigationChecks
         foreach(string faction in new[]{"industrial","biological"})
         {
             sim=Fixture(faction);var group=new List<EntityState>();string[] roles={"worker","scout","melee","ranged","siege"};
-            for(int n=0;n<50;n++)group.Add(Unit(sim,10.5f+n%10,15.5f+n/10,roles[n%5]));
-            check(Move(sim,group,new Point(43.5f,25.5f)),"50-unit move accepted "+faction);
-            check(group.Select(e=>sim.Map.Cell(e.destination)).Distinct().Count()==50,"group receives 50 unique destinations "+faction);
-            Run(sim,1400,"large group "+faction);Arrived(sim,group,"all 50 mixed units arrive without overlap "+faction);
+            for(int n=0;n<Simulation.UnitLimit;n++)group.Add(Unit(sim,10.5f+n%10,15.5f+n/10,roles[n%5]));
+            check(Move(sim,group,new Point(43.5f,25.5f)),Simulation.UnitLimit+"-unit move accepted "+faction);
+            check(group.Select(e=>sim.Map.Cell(e.destination)).Distinct().Count()==Simulation.UnitLimit,"maximum group receives unique destinations "+faction);
+            Run(sim,1400,"large group "+faction);Arrived(sim,group,"all "+Simulation.UnitLimit+" mixed units arrive without overlap "+faction);
             if(faction=="industrial")
             {
                 Move(sim,group,new Point(79.5f,.5f));
-                check(group.All(e=>e.order==CommandKind.Move)&&group.Select(e=>sim.Map.Cell(e.destination)).Distinct().Count()==50,"all 50 units receive slots at the map corner");
+                check(group.All(e=>e.order==CommandKind.Move)&&group.Select(e=>sim.Map.Cell(e.destination)).Distinct().Count()==Simulation.UnitLimit,"all units at the population limit receive slots at the map corner");
                 Run(sim,1400,"corner group");Arrived(sim,group,"formation fits at the map edge without stranding units");
             }
         }

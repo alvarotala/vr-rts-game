@@ -30,27 +30,31 @@ namespace Frontier.Runtime
         private readonly List<int> removed = new List<int>();
         private sealed class VisualParts
         {
-            public Transform selection, health, impact;
+            public Transform selection, health, impact, model;
             public Renderer healthRenderer, impactRenderer;
             public Renderer[] body;
             public Material[] visibleMaterials;
-            public bool remembered, hovered, receivingDamage;
+            public bool remembered, hovered, receivingDamage, complete;
             public float damageAmount;
             public readonly UnitFacing facing = new UnitFacing();
+            public SoldierAnimation soldier;
         }
         private Material ground, blue, red, neutral, resourceMaterial, highlight;
-        private Material unitStructure, impactMaterial;
+        private Material unitStructure, organicTissue, impactMaterial;
         private MaterialPropertyBlock hoverProperties, impactProperties;
         private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
         private readonly BuildingVisuals buildingVisuals=new BuildingVisuals();
         private readonly ResourceVisuals resourceVisuals=new ResourceVisuals();
         private readonly Dictionary<string,Material> buildingMaterials=new Dictionary<string,Material>();
-        private Material[] memoryMaterials;
+        private Material[] memoryMaterials, constructionMaterials;
         private WeaponEffects weapons;
         private HarvestingMarkers harvestingMarkers;
+        private WorkerVisuals workerVisuals;
+        private CreepVisuals creepVisuals;
         private OrderQueueVisuals orderQueueVisuals;
         private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
+        private readonly Dictionary<int,VisibleEntity> observedEntities=new Dictionary<int,VisibleEntity>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
         private Texture2D fog;
         private Color32[] fogColors;
@@ -75,23 +79,33 @@ namespace Frontier.Runtime
             blue=Material(new Color(.2f,.8f,1));red=Material(new Color(1,.36f,.23f));
             neutral=Material(new Color(.2f,.28f,.35f));resourceMaterial=Material(Color.white);highlight=Material(new Color(.9f,1,.6f));
             unitStructure=Material(new Color(.12f,.17f,.22f));
+            organicTissue=Material(Color.white);
             foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
             foreach(string role in new[]{"hq","barracks","extractor","supply","tech","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
-            memoryMaterials=new[]{neutral,unitStructure,neutral};
+            var memoryStructure=Material(new Color(.12f,.17f,.22f));memoryStructure.SetFloat("_Desaturate",1);
+            memoryMaterials=new[]{neutral,memoryStructure,neutral};
+            constructionMaterials=new[]{Material(new Color(.52f,.52f,.52f)),Material(new Color(.19f,.19f,.19f)),Material(new Color(.78f,.78f,.78f))};
+            foreach(var material in constructionMaterials)material.SetFloat("_Desaturate",1);
+            neutral.SetFloat("_Desaturate",1);
             Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Session.UnitMoveOrdered += FaceMoveOrder; Rebuild();
         }
         private void OnDestroy()
         {
+            foreach(var visual in parts.Values)visual.soldier?.Dispose();
             if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;Session.UnitMoveOrdered-=FaceMoveOrder;}
             unitVisuals.Dispose();
             buildingVisuals.Dispose();
             resourceVisuals.Dispose();
             weapons?.Dispose();
             harvestingMarkers?.Dispose();
+            workerVisuals?.Dispose();
+            creepVisuals?.Dispose();
             orderQueueVisuals?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
-            foreach(var material in new[]{ground,blue,red,neutral,resourceMaterial,highlight,unitStructure,impactMaterial})Release(material);
+            if(constructionMaterials!=null)foreach(var material in constructionMaterials)Release(material);
+            if(memoryMaterials!=null)Release(memoryMaterials[1]);
+            foreach(var material in new[]{ground,blue,red,neutral,resourceMaterial,highlight,unitStructure,organicTissue,impactMaterial})Release(material);
             Release(fog);
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
         }
@@ -101,8 +115,11 @@ namespace Frontier.Runtime
         public void Rebuild()
         {
             if(Content==null)return;
+            foreach(var visual in parts.Values)visual.soldier?.Dispose();
             weapons?.Dispose();weapons=null;firing.Clear();
             harvestingMarkers?.Dispose();harvestingMarkers=null;
+            workerVisuals?.Dispose();workerVisuals=null;
+            creepVisuals?.Dispose();creepVisuals=null;
             orderQueueVisuals?.Dispose();orderQueueVisuals=null;
             resourceVisuals.ClearVapor();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
@@ -115,6 +132,8 @@ namespace Frontier.Runtime
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
             harvestingMarkers=new HarvestingMarkers(Content);
+            workerVisuals=new WorkerVisuals(Content);
+            creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
             orderQueueVisuals=new OrderQueueVisuals(Content);
             resourceVisuals.BindVapor(Content,fog,Session.Map.width,Session.Map.height);
             var grid=new GridMap(Session.Map);
@@ -159,6 +178,7 @@ namespace Frontier.Runtime
             {
                 weapons?.Clear();
                 harvestingMarkers?.Hide();
+                workerVisuals?.Hide();
                 orderQueueVisuals?.Hide();
                 Hovered=0;Pointer=null;DrawSelection(default,default,false);
                 if(ground!=null)ground.SetFloat("_HoverWidth",0);
@@ -184,10 +204,14 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();orderQueueVisuals?.Hide();return;}
+            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
+            workerVisuals.Begin(this,Time.unscaledDeltaTime);
+            float combatTick=weapons.AdvanceClock(this);
+            creepVisuals.Update(Session.View,Session.Catalog);ground.SetFloat("_CreepTime",combatTick/Simulation.TickRate);
+            observedEntities.Clear();foreach(var entity in Session.View.entities)observedEntities[entity.id]=entity;
             firing.Clear();
             foreach(var shot in Session.View.attacks)
-                if(Session.View.tick-shot.tick<6)firing[shot.attacker]=shot;
+                if(Session.View.tick>=shot.tick&&Session.View.tick-shot.tick<Simulation.TickRate)firing[shot.attacker]=shot;
             alive.Clear();
             foreach(var e in Session.View.entities)
             {
@@ -202,18 +226,32 @@ namespace Frontier.Runtime
                 var point=e.position;float half=type.building?type.footprint*.5f:0;
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
                 var cached=parts[visual];
+                bool ownWorker=type.role=="worker"&&e.owner==Session.View.player&&!e.remembered;
+                var work=ownWorker?WorkerVisuals.Describe(e,Session.View,Session.Catalog):default;
+                AttackEvent? attack=null;
                 Vector3? aim=null;
                 if((!type.building||type.role=="defense")&&!e.remembered&&firing.TryGetValue(e.id,out var shot))
                 {
+                    attack=shot;
                     var direction=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y);
+                    if(observedEntities.TryGetValue(shot.target,out var victim)&&!victim.remembered)
+                    {
+                        var victimType=Session.Catalog[victim.definition];float offset=victimType.building?victimType.footprint*.5f:0;
+                        direction=new Vector3(victim.position.x+offset-target.x,0,victim.position.y+offset-target.z);
+                    }
                     if(direction.sqrMagnitude>.001f)aim=direction;
                 }
                 if(!type.building)
                 {
+                    if(ownWorker&&work.active)
+                        aim=new Vector3(work.target.x-point.x,0,work.target.y-point.y);
                     // A previous shot can remain in the effects history after a new MOVE.
-                    if(e.owner==Session.View.player&&e.order==CommandKind.Move)aim=null;
+                    if(e.owner==Session.View.player&&e.order==CommandKind.Move){aim=null;attack=null;}
                     if(newlyVisible)
+                    {
                         cached.facing.Reset(target,aim.HasValue?Quaternion.LookRotation(aim.Value):Quaternion.identity,Session.View.tick);
+                        cached.soldier?.Reset(e.position,Session.View.tick);
+                    }
                     if(pendingMoveFacing.TryGetValue(e.id,out var moveTarget))
                     {
                         if(e.order==CommandKind.Move||e.order==CommandKind.AttackMove)
@@ -225,6 +263,10 @@ namespace Frontier.Runtime
                 else if(aim.HasValue)visual.localRotation=Quaternion.LookRotation(aim.Value);
                 visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
+                if(ownWorker)workerVisuals.Add(e,work,visual,cached.model,type);
+                cached.soldier?.Apply(e,Session.View.tick,combatTick,attack,aim);
+                if(type.building&&type.faction=="biological")
+                    cached.model.localScale=new Vector3(1,e.complete&&!e.remembered?1+.018f*Mathf.Sin(combatTick/Simulation.TickRate*2+e.id):1,1);
                 bool hovered=Hovered==e.id&&!e.remembered;
                 cached.selection.gameObject.SetActive(Session.Selection.Contains(e.id));
                 int damageAge=Session.View.tick-e.damageTick;
@@ -259,12 +301,13 @@ namespace Frontier.Runtime
                     impactProperties.SetFloat("_Progress",damageAge/12f);cached.impactRenderer.SetPropertyBlock(impactProperties);
                 }
                 // Mobile units retain their role accents; only buildings become fog memories.
-                if(type.building&&(newlyVisible||cached.remembered!=e.remembered))
+                if(type.building&&(newlyVisible||cached.remembered!=e.remembered||cached.complete!=e.complete))
                 {
-                    foreach(var renderer in cached.body)renderer.sharedMaterials=e.remembered?memoryMaterials:cached.visibleMaterials;
-                    cached.remembered=e.remembered;
+                    foreach(var renderer in cached.body)renderer.sharedMaterials=e.remembered?memoryMaterials:e.complete?cached.visibleMaterials:constructionMaterials;
+                    cached.remembered=e.remembered;cached.complete=e.complete;
                 }
             }
+            workerVisuals.End();
             removed.Clear();foreach(int id in entities.Keys)if(!alive.Contains(id))removed.Add(id);
             foreach(int id in removed) { var v=entities[id];v.gameObject.SetActive(false);pools[entityTypes[id]].Push(v);entities.Remove(id);entityTypes.Remove(id);pendingMoveFacing.Remove(id); }
             foreach(var resource in Session.View.resources)
@@ -295,7 +338,7 @@ namespace Frontier.Runtime
                 preview.GetComponent<Renderer>().sharedMaterial=valid?highlight:red;
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
-            weapons?.Update(this);
+            weapons?.Render(this,combatTick,Viewer!=null?Viewer:Camera.main);
             var viewer=Viewer!=null?Viewer:Camera.main;
             resourceVisuals.UpdateVapor(this,viewer);
             harvestingMarkers?.Update(this,viewer);
@@ -308,20 +351,34 @@ namespace Frontier.Runtime
             var bounds=body[0].bounds;for(int i=1;i<body.Length;i++)bounds.Encapsulate(body[i].bounds);
             top=new Vector3(bounds.center.x,bounds.max.y,bounds.center.z);return true;
         }
+        public bool TryCombatCenter(int id,out Vector3 center)
+        {
+            center=default;
+            if(!entities.TryGetValue(id,out var visual)||!visual.gameObject.activeInHierarchy||!observedEntities.TryGetValue(id,out var entity)||entity.remembered)return false;
+            center=visual.localPosition;return true;
+        }
+        public bool TryWeaponMuzzle(int id,int shotId,out Vector3 muzzle)
+        {
+            muzzle=default;
+            if(!entities.TryGetValue(id,out var visual)||!visual.gameObject.activeInHierarchy||parts[visual].soldier==null)return false;
+            muzzle=Content.InverseTransformPoint(parts[visual].soldier.Muzzle(shotId));return true;
+        }
         private Transform MakeEntity(Archetype type,int owner)
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
             Material color=owner==0?blue:red;
             float size=type.building?type.footprint*.85f:type.collisionRadius*2;
             var model=new GameObject(type.building?"Building silhouette":"Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
-            var mesh=type.building?buildingVisuals.Get(type):unitVisuals.Get(type);model.GetComponent<MeshFilter>().sharedMesh=mesh;
-            var visibleMaterials=new[]{color,unitStructure,type.building?buildingMaterials[type.role]:roleMaterials[type.role]};
+            bool soldier=!type.building&&type.role!="worker";
+            var mesh=type.building?buildingVisuals.Get(type):unitVisuals.Get(type,type.role=="worker"&&owner==(Session.View?.player??0),soldier);model.GetComponent<MeshFilter>().sharedMesh=mesh;
+            var visibleMaterials=new[]{color,type.faction=="biological"?organicTissue:unitStructure,type.building?buildingMaterials[type.role]:roleMaterials[type.role]};
             model.GetComponent<MeshRenderer>().sharedMaterials=visibleMaterials;
             float height=mesh.bounds.max.y;
             var ring=Primitive(PrimitiveType.Cylinder,root,highlight);ring.name="Selection";ring.localPosition=Vector3.up*.04f;ring.localScale=new Vector3(size*1.3f,.035f,size*1.3f);ring.gameObject.SetActive(false);
             var hp=Primitive(PrimitiveType.Cube,root,highlight);hp.name="Health";hp.localPosition=new Vector3(0,height+1,0);
             var impact=Primitive(PrimitiveType.Quad,root,impactMaterial);impact.name="Damage impact";impact.localPosition=Vector3.up*(height+1.15f);impact.localRotation=Quaternion.Euler(90,0,0);impact.gameObject.SetActive(false);
-            parts[root]=new VisualParts{selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=new[]{model.GetComponent<Renderer>()},visibleMaterials=visibleMaterials};
+            var animation=soldier?new SoldierAnimation(root,model.transform,type,unitVisuals,visibleMaterials):null;
+            parts[root]=new VisualParts{soldier=animation,model=model.transform,selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=animation?.Renderers??new[]{model.GetComponent<Renderer>()},visibleMaterials=visibleMaterials};
             return root;
         }
         private static Transform Primitive(PrimitiveType type,Transform parent,Material material)

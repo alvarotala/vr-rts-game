@@ -31,9 +31,16 @@ namespace Frontier.Runtime
                 default:return new Color(.84f,.55f,1);
             }
         }
-        public Mesh Get(Archetype type)
+        public Mesh Get(Archetype type, bool animatedWorker = false, bool animatedCombat = false)
         {
-            if(meshes.TryGetValue(type.id,out var mesh))return mesh;
+            string key=type.id+(animatedWorker?"/animated":animatedCombat?"/combat":"");
+            if(meshes.TryGetValue(key,out var mesh))return mesh;
+            if(type.faction=="biological")
+            {
+                var badge=new Builder();if(!animatedWorker)badge.Badge(type.role,BiologicalVisuals.BadgeHeight(type.role));
+                mesh=BiologicalVisuals.WithBadge(BiologicalVisuals.Unit(type,animatedWorker,animatedCombat),badge.Finish(key+"/badge",1),type.collisionRadius/.45f);
+                meshes.Add(key,mesh);return mesh;
+            }
             var b=new Builder();bool bio=type.faction=="biological";
             void Part(float x,float y,float z,float sx,float sy,float sz,int material=0)
             {if(bio)b.Lobe(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);else b.Box(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);}
@@ -43,8 +50,8 @@ namespace Frontier.Runtime
                 case "worker": // Low cargo carrier with two gathering claws; no gun.
                     Part(0,.3f,-.04f,.56f,.4f,.52f);
                     Part(0,.62f,-.07f,.44f,.3f,.38f,2);
-                    Part(-.2f,.16f,.25f,.1f,.14f,.26f,1);
-                    Part(.2f,.16f,.25f,.1f,.14f,.26f,1);
+                    if(!animatedWorker)
+                    {Part(-.2f,.16f,.25f,.1f,.14f,.26f,1);Part(.2f,.16f,.25f,.1f,.14f,.26f,1);}
                     height=.85f;break;
                 case "scout": // Narrow, low silhouette with lateral fins and a sensor mast.
                     Part(0,.25f,0,.26f,.28f,.62f);
@@ -53,29 +60,61 @@ namespace Frontier.Runtime
                     Part(0,.65f,-.18f,.16f,.12f,.16f,2);
                     height=.78f;break;
                 case "melee": // Tall shield bearer, broad shoulders and two separate legs.
-                    Part(-.15f,.24f,0,.18f,.48f,.25f,1);Part(.15f,.24f,0,.18f,.48f,.25f,1);
+                    if(!animatedCombat){Part(-.15f,.24f,0,.18f,.48f,.25f,1);Part(.15f,.24f,0,.18f,.48f,.25f,1);}
                     Part(0,.82f,0,.5f,.66f,.34f);
                     Part(0,1.04f,0,.7f,.22f,.28f);
                     Part(0,1.32f,0,.26f,.26f,.26f);
                     Part(0,.8f,.24f,.44f,.6f,.12f,2);
                     height=1.5f;break;
                 case "ranged": // Slim infantry with a single long rifle/spitter.
-                    Part(-.12f,.22f,0,.14f,.44f,.2f,1);Part(.12f,.22f,0,.14f,.44f,.2f,1);
+                    if(!animatedCombat){Part(-.12f,.22f,0,.14f,.44f,.2f,1);Part(.12f,.22f,0,.14f,.44f,.2f,1);}
                     Part(0,.7f,0,.32f,.56f,.28f);
                     Part(0,1.12f,-.04f,.25f,.26f,.25f);
-                    Part(.17f,.74f,.27f,.13f,.15f,.8f,1);
-                    Part(.17f,.74f,.65f,.16f,.17f,.14f,2);
+                    if(!animatedCombat){Part(.17f,.74f,.27f,.13f,.15f,.8f,1);Part(.17f,.74f,.65f,.16f,.17f,.14f,2);}
                     height=1.32f;break;
                 default: // Low artillery platform with paired barrels/spines.
                     Part(0,.22f,-.04f,.64f,.3f,.58f);
                     Part(-.28f,.15f,0,.14f,.24f,.65f,1);Part(.28f,.15f,0,.14f,.24f,.65f,1);
-                    Part(0,.5f,-.06f,.46f,.3f,.36f);
-                    Part(-.15f,.55f,.3f,.12f,.15f,.88f,1);Part(.15f,.55f,.3f,.12f,.15f,.88f,1);
-                    Part(-.15f,.55f,.7f,.17f,.18f,.14f,2);Part(.15f,.55f,.7f,.17f,.18f,.14f,2);
+                    if(!animatedCombat)
+                    {
+                        Part(0,.5f,-.06f,.46f,.3f,.36f);
+                        Part(-.15f,.55f,.3f,.12f,.15f,.88f,1);Part(.15f,.55f,.3f,.12f,.15f,.88f,1);
+                        Part(-.15f,.55f,.7f,.17f,.18f,.14f,2);Part(.15f,.55f,.7f,.17f,.18f,.14f,2);
+                    }
                     height=.88f;break;
             }
-            b.Badge(type.role,height+.12f);
-            mesh=b.Finish(type.id,type.collisionRadius/.45f);meshes.Add(type.id,mesh);return mesh;
+            if(!animatedWorker)b.Badge(type.role,height+.12f);
+            mesh=b.Finish(key,type.collisionRadius/.45f);meshes.Add(key,mesh);return mesh;
+        }
+        public Mesh CombatPart(Archetype type, bool leg)
+        {
+            string key=type.id+(leg?"/leg":"/weapon");if(meshes.TryGetValue(key,out var mesh))return mesh;
+            if(type.faction=="biological"){mesh=BiologicalVisuals.CombatPart(type,leg);meshes.Add(key,mesh);return mesh;}
+            var b=new Builder();
+            void Part(float x,float y,float z,float sx,float sy,float sz,int material=1)
+            {if(type.faction=="biological")b.Lobe(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);else b.Box(new Vector3(x,y,z),new Vector3(sx,sy,sz),material);}
+            if(leg)
+            {
+                float length=type.role=="melee"?.48f:.44f;
+                Part(0,-length*.5f,0,.17f,length,.22f);Part(0,-length+.07f,.08f,.2f,.14f,.32f,0);
+            }
+            else switch(type.role)
+            {
+                case "melee":
+                    Part(.04f,-.12f,.1f,.18f,.28f,.28f,0);Part(.07f,-.22f,.3f,.13f,.12f,.42f);
+                    if(type.faction=="biological")
+                    {Part(-.04f,-.19f,.62f,.1f,.12f,.55f,2);Part(.17f,-.19f,.6f,.1f,.12f,.5f,2);}
+                    else
+                    {Part(.07f,-.22f,.66f,.14f,.08f,.64f,2);Part(.07f,-.22f,.41f,.36f,.12f,.08f);}
+                    break;
+                case "ranged":
+                    Part(0,0,.12f,.13f,.15f,.8f);Part(0,0,.5f,.16f,.17f,.14f,2);Part(-.03f,-.08f,-.04f,.2f,.16f,.25f,0);break;
+                case "siege":
+                    Part(0,0,0,.46f,.3f,.36f,0);
+                    for(int side=-1;side<=1;side+=2){Part(side*.15f,.05f,.36f,.12f,.15f,.88f);Part(side*.15f,.05f,.76f,.17f,.18f,.14f,2);}break;
+                default: Part(0,0,0,.14f,.12f,.4f);Part(0,0,.2f,.16f,.14f,.12f,2);break;
+            }
+            mesh=b.Finish(key,type.collisionRadius/.45f);meshes.Add(key,mesh);return mesh;
         }
         public void Dispose()
         {

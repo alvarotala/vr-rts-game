@@ -1,12 +1,14 @@
 # Hotkeys predeterminados
 
-Referencia vigente de las fuentes, revisada el 18 de octubre de 2026. Se consulta dentro del juego desde **Main menu → Hotkeys** o **Pause → Hotkeys**. Incluye 47 entradas por dispositivo entre gestos, acciones de menú y aclaraciones. Las acciones como Build, Train, Research, Stop y Hold se eligen desde el panel o la rueda; no tienen una tecla individual asignada.
+Referencia de los valores predeterminados. **Main menu → Hotkeys**, **New Match → Hotkeys** y **Pause → Hotkeys** abren el editor de asignaciones. Las seis categorías de consulta y la guía de pausa muestran los controles actuales, incluidos los cambios guardados. Hay 47 entradas de referencia por dispositivo entre gestos, acciones de menú y aclaraciones. Build, Train, Research, Stop y Hold se eligen desde el panel o la rueda; no tienen una tecla individual asignada.
 
-La pantalla es de solo lectura y abre con el dispositivo activo. Se puede consultar el otro dispositivo sin modificar las entradas reales. Quest usa únicamente el mando derecho; el izquierdo está sin asignar. El tablero confirmado permanece fijo.
+**Edit bindings → Change** permite capturar una tecla o botón. Los cambios se guardan localmente; **Swap bindings** confirma un intercambio si la entrada está ocupada. **Restore device defaults** restaura solo el perfil elegido, después de confirmar. Los perfiles de Quest Touch y mouse/teclado son independientes. **Settings → Hand: Left/Right** elige el único mando de Quest que controla el juego. Hotkeys muestra solamente ese mando, o mouse/teclado en desktop; no permite capturar entradas de la mano inactiva. Cambiar la mano conserva las funciones configuradas y se guarda localmente.
 
-La tabla en inglés coincide con los nombres de la interfaz y se exporta desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`. Los IDs estables y el esquema versionado preparan la identificación de comandos para el futuro editor; las asignaciones personalizadas y su persistencia todavía no están implementadas. Contrato técnico: [arquitectura](architecture.md).
+Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando derecho, gatillo/X y Y en el izquierdo, clic izquierdo y Escape en desktop. Los modificadores aceptan Shift, Ctrl o Alt de ambos lados. Arrastre, mantener/soltar y doble pulsación siguen al botón de su función; los ejes del joystick y la rueda del mouse no se reasignan. El tablero confirmado permanece fijo. Contrato técnico: [arquitectura](architecture.md).
 
-Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura y las pruebas de Editor no verifican la comodidad física de estos tiempos en Quest.
+Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
+
+La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X/Y y se usa el stick izquierdo. Se genera desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`.
 
 ## Quest 3 - right Touch controller
 
@@ -14,11 +16,11 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Trigger on map / selection icon | Select an allied unit, building or resource. A selection icon isolates that item. |
+| Select an item | Trigger on map / Trigger / A on icon | Select an allied unit, building or resource. A selection icon isolates that item. |
 | Select an area | Hold Trigger + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Grip + Trigger | Keep your selection and add more units, including by dragging an area. |
 | Remove one item | Grip + hold Trigger / hold icon | Map: hold still with Grip for 0.5 s. Selection icon: hold for 0.65 s, without Grip. |
-| Select the same type | Double Trigger on map / icon | Map: same type within 12 cells (Grip adds). Icon: same type from the current selection only. |
+| Select the same type | Map: double Trigger · Icon: double click | Map: same type within 12 cells (Grip adds). Icon: same type from selection; use Trigger / A. |
 | Toggle one item | Grip + short Trigger on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
 | Clear selection | Trigger on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |
@@ -29,7 +31,7 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 |---|---|---|
 | Move | A on terrain | Selected units move to that location using their movement and collision rules. |
 | Attack a target | A on a visible enemy | Focus attacks on that enemy. Double A over an enemy also attacks directly. |
-| Attack Move | Double A on terrain / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
+| Attack Move | Double A / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
 | Gather resources | Worker selected · A on minerals / gas | Assign workers automatically among nearby deposits. Gas needs a completed extractor. |
 | Repair an ally | Industrial worker · A on damaged ally | Repair a friendly unit or building, spending minerals. Biological units regenerate instead. |
 | Queue orders | Grip + A / double A | Append movement, work or attack orders. Without Grip, a new order replaces the plan. |
@@ -40,12 +42,12 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Open / close action wheel | Press right stick / double Grip | Stick click toggles the wheel; double Grip opens it. Actions depend on your selection. |
+| Open / close action wheel | Press Stick click / double Grip | Stick click toggles the wheel; double Grip opens it. Actions depend on your selection. |
 | Choose a wheel action | Tilt right stick | Center the stick first, then tilt toward an action. Build opens a submenu. |
 | Execute an action | Trigger / A in the wheel | Execute the highlighted action. Building and Attack Move then need a point on the map. |
 | Back in action wheel | Grip / B | Return from Build, or close the action wheel. Group wheels use B to cancel. |
 | Use menu buttons | Trigger / A | Press and release on the same button. Empty menu areas never send orders through to the map. |
-| Pause / resume | B / Pause / Resume match | During play, cancel an armed action first; otherwise open pause. Resume continues the same match. |
+| Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
@@ -56,8 +58,8 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 | Recall a group | Tilt right stick; release to center | Tilting opens the four-group wheel immediately. Return to center to select. No button press is needed. |
 | Choose a group | 1 up · 2 right · 3 down · 4 left | The wheel follows the stick direction. Rotate to change the highlighted group before releasing. |
 | Confirm recall | Let the stick return to center | Select the highlighted group immediately. A and Trigger are not required. |
-| Replace a group | Hold stick click + tilt; release click | Replace ALL previous members with your current selection. This does not merge selections. |
-| Cancel group choice | B / press right stick | Close without changing a group. Centering a held stick does not save until you release its click. |
+| Replace a group | Hold Stick click + tilt; release | Replace ALL previous members with your current selection. This does not merge selections. |
+| Cancel group choice | B / Stick click | Close without changing a group. Centering a held stick does not save until you release its click. |
 | Save from the panel | Hold a Group button (over 0.65 s) | Replace that group's members with your current selection. Tap instead to recall it. |
 | Group lifetime | Applies to all four groups | Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups. |
 
@@ -84,7 +86,7 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 | Reposition the board | Settings > Reposition board | Enter placement. The confirmed battlefield stays fixed while you walk around it. |
 | Place the board | Point at a surface + Trigger | Confirm the board position. Table / Floor and Detect surfaces provide placement options. |
 | Placement size / rotation | Right stick while placing | Up / down changes size; left / right rotates. These axes do not navigate the map during play. |
-| Placement height | Grip + right stick up / down | Adjust the board's height during placement. The left controller is unassigned. |
+| Placement height | Grip + right stick up / down | Adjust the board's height during placement. The other controller is unused. |
 | Cancel board placement | B while placing | Restore the previously confirmed board position and size. |
 
 ## Desktop - mouse and keyboard
@@ -93,25 +95,25 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Left-click on map / selection icon | Select an allied unit, building or resource. A selection icon isolates that item. |
-| Select an area | Hold left mouse button + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
-| Add to selection | Shift + Left-click | Keep your selection and add more units, including by dragging an area. |
-| Remove one item | Shift + hold left click / hold icon | Map: hold still with Shift for 0.5 s. Selection icon: hold for 0.65 s, without Shift. |
-| Select the same type | Double left-click on map / icon | Map: same type within 12 cells (Shift adds). Icon: same type from the current selection only. |
-| Toggle one item | Shift + short Left-click on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
-| Clear selection | Left-click on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
+| Select an item | Left mouse on map / Left-click on icon | Select an allied unit, building or resource. A selection icon isolates that item. |
+| Select an area | Hold Left mouse + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
+| Add to selection | Shift + Left mouse | Keep your selection and add more units, including by dragging an area. |
+| Remove one item | Shift + hold Left mouse / hold icon | Map: hold still with Shift for 0.5 s. Selection icon: hold for 0.65 s, without Shift. |
+| Select the same type | Map: double Left mouse · Icon: double click | Map: same type within 12 cells (Shift adds). Icon: same type from selection; use Left-click. |
+| Toggle one item | Shift + short Left mouse on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
+| Clear selection | Left mouse on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |
 
 ### Orders
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Move | Right-click on terrain | Selected units move to that location using their movement and collision rules. |
-| Attack a target | Right-click on a visible enemy | Focus attacks on that enemy. Double Right-click over an enemy also attacks directly. |
-| Attack Move | Double right-click / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
-| Gather resources | Worker selected · Right-click on minerals / gas | Assign workers automatically among nearby deposits. Gas needs a completed extractor. |
-| Repair an ally | Industrial worker · Right-click on damaged ally | Repair a friendly unit or building, spending minerals. Biological units regenerate instead. |
-| Queue orders | Shift + Right-click / double Right-click | Append movement, work or attack orders. Without Shift, a new order replaces the plan. |
+| Move | Right mouse on terrain | Selected units move to that location using their movement and collision rules. |
+| Attack a target | Right mouse on a visible enemy | Focus attacks on that enemy. Double Right mouse over an enemy also attacks directly. |
+| Attack Move | Double Right mouse / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
+| Gather resources | Worker selected · Right mouse on minerals / gas | Assign workers automatically among nearby deposits. Gas needs a completed extractor. |
+| Repair an ally | Industrial worker · Right mouse on damaged ally | Repair a friendly unit or building, spending minerals. Biological units regenerate instead. |
+| Queue orders | Shift + Right mouse / double Right mouse | Append movement, work or attack orders. Without Shift, a new order replaces the plan. |
 | Stop | Stop action | Clear current and queued orders and brake. Units can still engage nearby enemies. |
 | Hold Position | Hold Position action | Clear orders and keep units in place. Attack in range without chasing; resist allied pushes. |
 
@@ -122,9 +124,9 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 | Open unit actions | Select units or a building | Use the selected item's actions. Workers have Build; producers have Train and Research. |
 | Choose a menu action | Point at an action button | Available actions follow your selection. Hover to preview the button before clicking. |
 | Execute an action | Left-click the action | Execute the highlighted action. Building and Attack Move then need a point on the map. |
-| Cancel a pending action | Escape | Cancel an armed build or Attack Move. Otherwise, Escape opens pause or returns from a menu. |
+| Cancel a pending action | Escape | Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus. |
 | Use menu buttons | Left-click | Press and release on the same button. Empty menu areas never send orders through to the map. |
-| Pause / resume | Escape / Space / Pause / Resume match | During play, cancel an armed action first; otherwise open pause. Resume continues the same match. |
+| Pause / resume | Escape / Space / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
@@ -132,10 +134,10 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Recall a group | Keys 1–4 | Replace the current selection with the surviving members of the chosen control group. |
+| Recall a group | 1 / 2 / 3 / 4 | Replace the current selection with the surviving members of the chosen control group. |
 | Choose a group | Group 1 / 2 / 3 / 4 buttons | The four buttons show how many members are currently assigned. |
 | Confirm recall | Tap a Group button | Recall the group's surviving members. Empty groups show an empty message. |
-| Replace a group | Ctrl + 1–4 | Replace ALL previous members with your current selection. This does not merge selections. |
+| Replace a group | Ctrl + 1 / 2 / 3 / 4 | Replace ALL previous members with your current selection. This does not merge selections. |
 | Cancel group choice | Release mouse outside the Group button | A button press released outside its target does not recall or replace a group. |
 | Save from the panel | Hold a Group button (over 0.65 s) | Replace that group's members with your current selection. Tap instead to recall it. |
 | Group lifetime | Applies to all four groups | Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups. |
@@ -144,12 +146,12 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Build a structure | Worker > Build > choose a building | Point at a valid foundation, then left or right click to place it. Escape cancels placement. |
+| Build a structure | Worker > Build > choose a building | Point at a valid foundation, then Left mouse / Right mouse to place it. Escape cancels placement. |
 | Train a unit | Production building > Train | Spend resources and reserve supply to add a unit to the building's production queue. |
 | Research an upgrade | Technology building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
 | Cancel one queued item | Left-click on its production card | The card turns red on hover. Cancel immediately and refund its cost; other items keep their order. |
 | Cancel / refund | Cancel / refund action | Remove the last queued item, or cancel unfinished construction with a partial refund. |
-| Set a Rally Point | Select producer(s) · Right-click on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
+| Set a Rally Point | Select producer(s) · Right mouse on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
 | Clear a Rally Point | Clear Rally Point action | Restore default exits. New workers auto-gather again; production stays queued. |
 | Read action details | Hover over an action for 1.5 s | See what the unit, building or upgrade does, along with its cost, timing and requirements. |
 
@@ -157,40 +159,11 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Pan the map | WASD | Move the desktop development view across the battlefield. |
+| Pan the map | W / A / S / D | Move the desktop development view across the battlefield. |
 | Zoom the map | Mouse wheel | Change the desktop map scale. Quest keeps the placed board fixed. |
 | See the full map | F / Full map button | Reset the desktop view to show the whole battlefield. |
 | Recover the menu | M / Reset position | Return the menu above the board. |
 | Move the menu | Drag MOVE MENU with left mouse button | Move the console without changing the board position. |
 | Adjust menu distance | Mouse wheel while dragging menu | Bring the grabbed console closer or move it farther away. |
-| Place or reposition the board | Settings / New Match > Place board | Point at the position and left-click to confirm. Table / Floor set the manual height. |
+| Place or reposition the board | Settings / New Match > Place board | Point and use Left mouse to confirm. Table / Floor set the manual height. |
 | Cancel board placement | Escape / Space while placing | Restore the previous board position and size. |
-
-## Acciones de contenido por facción
-
-Se ejecutan con los gestos de Build, Train y Research indicados arriba, respetando recursos y requisitos.
-
-| Acción | The Consortium | Symbiosis |
-|---|---|---|
-| Construir base | Command Core | Heart |
-| Construir extractor de gas | Refinery | Siphon |
-| Construir suministro | Relay | Node |
-| Construir barraca | Barracks | Brood Nest |
-| Construir tecnología | Arsenal | Chrysalis |
-| Construir defensa | Sentinel | Stinger |
-| Producir trabajador | Operator | Seeder |
-| Producir explorador | Tracker | Prowler |
-| Producir combate cercano | Bastion | Ripper |
-| Producir tirador | Lancer | Spitter |
-| Producir artillería | Hammer | Bombardier |
-| Investigar ataque | Firepower I | Firepower I |
-| Investigar resistencia | Armor I | Armor I |
-
-## Acciones de preparación y partida
-
-- **New Match**: elegir facción, oponente, dificultad y mapa; confirmar tablero y usar **START MATCH**.
-- **Settings**: **Reposition board**, **Table / height 75 cm**, **Floor / height 0** y **Detect surfaces**.
-- **Hotkeys**: elegir dispositivo y categoría; **Previous / Next** recorren la lista; **Back/B** regresa al menú de origen.
-- **Pause / Resume match**: pausar o continuar la misma partida. La ayuda de controles sigue visible en pausa.
-- **Return to main menu → Leave match**: abandonar; **Keep playing** cancela la salida.
-- Al terminar: **Rematch** inicia otra partida con la misma configuración; **Main menu** vuelve al inicio.

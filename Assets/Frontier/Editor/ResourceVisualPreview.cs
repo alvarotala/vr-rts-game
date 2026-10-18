@@ -50,7 +50,7 @@ namespace Frontier.Editor
                 board.Pointer = patch.position; board.HoveredResource = patch.id; Capture("mineral-hover", patch.position, 3.4f, new Vector3(0, 1.4f, -2));
                 board.Pointer = gas.position; board.HoveredResource = gas.id; Capture("gas-hover", gas.position, 3.2f, new Vector3(0, 1.2f, -2)); board.Pointer = null;
                 var type = session.Catalog.Role("industrial", "extractor");
-                session.View.entities = new[] { new VisibleEntity { id = 900, owner = 0, definition = type.id, position = new Point(11, 24), health = type.health, complete = false, progress = .7f } };
+                session.View.entities = new[] { new VisibleEntity { id = 900, owner = 0, definition = type.id, position = new Point(gas.position.x-type.footprint*.5f, gas.position.y-type.footprint*.5f), health = type.health, complete = false, progress = .7f } };
                 Invoke(board, "LateUpdate"); Check(!vapor.gameObject.activeSelf, "An extractor under construction covers the natural gas plume");
                 session.View.entities[0].complete = true; Capture("gas-extractor", gas.position, 4.4f, new Vector3(0, 1.2f, -2));
                 Check(!vapor.gameObject.activeSelf, "Completed extractor has no natural plume passing through its model");

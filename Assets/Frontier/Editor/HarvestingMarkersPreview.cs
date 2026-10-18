@@ -32,7 +32,7 @@ namespace Frontier.Editor
                     var hq = session.Match.Entities.Values.First(e => e.owner == 0 && session.Catalog[e.definition].role == "hq");
                     var mineral = session.Match.Resources.First(r => r.kind == "mineral"); var gas = session.Match.Resources.First(r => r.kind == "catalyst");
                     var workerType = session.Catalog.Role(faction, "worker");
-                    for (int i = 0; i < 7; i++) session.Match.Entities.Add(1000 + i, new EntityState { id = 1000 + i, owner = 0, definition = workerType.id, health = workerType.health, position = new Point(8 + i, 18) });
+                    for (int i = 0; i < 7; i++) session.Match.Entities.Add(1000 + i, new EntityState { id = 1000 + i, owner = 0, definition = workerType.id, health = workerType.health, position = new Point(8 + i, 17) });
                     var workers = session.Match.Entities.Values.Where(e => e.owner == 0 && session.Catalog[e.definition].role == "worker").ToArray();
                     CameraAt(0); Refresh();
                     Check(Value(hq.id) == "6/8", "Unselected base shows the six starting workers and capacity across four mineral patches");
@@ -45,7 +45,7 @@ namespace Frontier.Editor
                     Check(workers.Take(9).All(e => e.order == CommandKind.Gather && e.position.Distance(mineral.position) > 1.5f), "Travelling workers are counted before they reach the patches");
                     workers[0].cargo = 5; Assign(workers.Take(1), mineral.id); Check(Value(hq.id) == "9/8", "Delivering cargo does not remove a worker from the counter");
                     var extractorType = session.Catalog.Role(faction, "extractor");
-                    var extractor = new EntityState { id = 1100, owner = 0, definition = extractorType.id, health = extractorType.health, position = new Point(11, 24), complete = false };
+                    var extractor = new EntityState { id = 1100, owner = 0, definition = extractorType.id, health = extractorType.health, position = new Point(gas.position.x-extractorType.footprint*.5f, gas.position.y-extractorType.footprint*.5f), complete = false };
                     session.Match.Entities.Add(extractor.id, extractor); session.Match.Map.Occupy(extractor.position, extractorType.footprint, extractor.id); Refresh();
                     Check(Labels().Length == 1, "Gas counter waits for a completed extractor");
                     extractor.complete = true; Refresh(); Check(Value(extractor.id) == "0/3", "Completed gas extractor shows 0/3 without selection");

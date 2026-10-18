@@ -15,6 +15,7 @@ Simulation New(string a = "industrial", string b = "biological") => new Simulati
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
 Check(new GridMap(map).Count == 16384 && new GridMap(training).Count == 2304, "both authored maps validate");
+ResourceLayoutChecks.Run(catalog, new[]{map, training}, Check);
 var roundtrip = JsonSerializer.Deserialize<MapDefinition>(JsonSerializer.Serialize(map, json), json);
 Check(new GridMap(roundtrip).Definition.resources.Length == map.resources.Length, "map roundtrip preserves resources");
 Check(JsonSerializer.Serialize(roundtrip,json)==JsonSerializer.Serialize(map,json),"map roundtrip preserves every field");
@@ -73,7 +74,7 @@ foreach(string faction in new[]{"industrial","biological"})
     Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:barracks.id,position:new Point(18,8))).accepted,"barracks builds "+faction);
     for(int i=0;i<1000;i++)s.Step();
     Check(s.HasRole(0,"barracks"),"barracks completes "+faction);
-    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:catalog.Role(faction,"tech").id,position:new Point(8,14))).accepted,"tech prerequisites accepted "+faction);
+    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:catalog.Role(faction,"tech").id,position:new Point(8,8))).accepted,"tech prerequisites accepted "+faction);
     for(int i=0;i<1200;i++)s.Step();
     var tech=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="tech");
     Check(tech.complete&&s.Submit(Cmd(CommandKind.Research,tech.id,definition:"attack")).accepted,"research starts "+faction);
@@ -81,10 +82,12 @@ foreach(string faction in new[]{"industrial","biological"})
     for(int i=0;i<800;i++)s.Step();
     Check(s.Players[0].attackLevel==1&&!s.Submit(Cmd(CommandKind.Research,tech.id,definition:"attack")).accepted,"research applies once "+faction);
     var extractor=catalog.Role(faction,"extractor");
+    var gasResource=s.Resources.First(r=>r.definition=="camp0.catalyst");
+    var extractorPosition=new Point(gasResource.position.x-extractor.footprint*.5f,gasResource.position.y-extractor.footprint*.5f);
     Check(!s.Submit(Cmd(CommandKind.Build,worker.id,definition:extractor.id,position:new Point(20,10))).accepted,"extractor requires deposit "+faction);
-    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:extractor.id,position:new Point(11,24))).accepted,"extractor covers deposit "+faction);
+    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:extractor.id,position:extractorPosition)).accepted,"extractor covers deposit "+faction);
     for(int i=0;i<1000;i++)s.Step();
-    int gas=s.Players[0].catalyst;var gasResource=s.Resources.First(r=>r.kind=="catalyst"&&r.position.x<30);
+    int gas=s.Players[0].catalyst;
     Check(s.Submit(Cmd(CommandKind.Gather,worker.id,target:gasResource.id)).accepted,"catalyst order accepted "+faction);
     for(int i=0;i<1200;i++)s.Step();
     Check(s.Players[0].catalyst>gas,"catalyst deposited "+faction);
@@ -122,7 +125,7 @@ foreach(string faction in new[]{"industrial","biological"})
     Check(s.View(0).entities.First(e=>e.id==shooter.id).damageTick<0,"firing does not trigger received damage feedback "+faction);
     var shot=s.View(0).attacks.Single(a=>a.attacker==shooter.id);
     Check(shooter.target==0&&shot.origin.Distance(s.Center(shooter))<.01f&&shot.destination.Distance(s.Center(victim))<.01f&&shot.tick==victim.lastDamageTick,"automatic fire records actual endpoints "+faction);
-    Check(s.View(1).attacks.Any(a=>a.id==shot.id)&&shot.definition==artillery.id&&shot.targetDefinition==victimType.id,"visible defenders receive same weapon event "+faction);
+    Check(s.View(1).attacks.Any(a=>a.id==shot.id&&a.target==victim.id)&&shot.definition==artillery.id&&shot.targetDefinition==victimType.id,"visible defenders receive same weapon event and exact victim "+faction);
     var copy=s.View(0);copy.attacks[0].origin=new Point(0,0);
     Check(s.View(0).attacks.Single(a=>a.id==shot.id).origin.Distance(shot.origin)<.01f,"view cannot mutate authoritative weapon events "+faction);
     s.Paused=true;s.Step();s.Paused=false;
@@ -174,6 +177,7 @@ ProductionChecks.Run(catalog,map,Check);
 CommandQueueChecks.Run(catalog,Check);
 RallyPointChecks.Run(catalog,Check);
 HarvestingChecks.Run(catalog,map,Check);
+WorkerActivityChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
 if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);
 
@@ -194,7 +198,7 @@ if(args.Contains("--matches"))
             if(tick%20==0)for(int player=0;player<2;player++)foreach(var command in bots[player].Decide(sim.View(player)))
             { if(sim.Submit(command).accepted)accepted++;else rejected++; }
             sim.Step();
-            if(sim.Players.Any(p=>p.minerals<0||p.catalyst<0)||sim.Units(0)>50||sim.Units(1)>50)throw new Exception("Economy invariant violated");
+            if(sim.Players.Any(p=>p.minerals<0||p.catalyst<0)||sim.Units(0)>Simulation.UnitLimit||sim.Units(1)>Simulation.UnitLimit)throw new Exception("Economy invariant violated");
             if(args.Contains("--trace") && tick%1200==0)Console.WriteLine($"t={tick/20}s units={sim.Units(0)}/{sim.Units(1)} buildings={sim.Buildings(0)}/{sim.Buildings(1)} resources={sim.Players[0].minerals}:{sim.Players[0].catalyst}/{sim.Players[1].minerals}:{sim.Players[1].catalyst}");
         }
         watch.Stop();
