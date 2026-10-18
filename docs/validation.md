@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## APK integrado — 0.1.7 (8) — 18 de octubre de 2026
+
+Compilación solicitada por el usuario desde el commit limpio `d6a572d`, con todos los cambios hasta `9737dcf`: pantalla separada de Hotkeys, referencia CSV por categorías, recuperación de grupos al inclinar el stick y cuadrícula interactiva de selección. El guardado de grupos conserva el comportamiento confirmado: mantener pulsado el stick más dirección y soltar la pulsación para reemplazar el grupo. Las notas históricas de «sin APK» de estas tareas quedan incluidas en esta entrega.
+
+- **APK:** `Builds/Quest/FrontierCommand.apk`, **59.091.981 bytes**, paquete `com.alvaro.frontiercommand`, versión **0.1.7**, código **8**, Android ARM64/IL2CPP, mínimo 32 y objetivo 36.
+- **SHA-256:** `3062c569042b7098a217243636127c458300c454033ba7872cb9eb91ac54b342`.
+- Unity **6000.3.26f1** / CLI **1.0.0-beta.13**: compilación correcta, `editorErrors` vacío. Integridad ZIP y firma APK v2 verificadas; certificado idéntico al de 0.1.6. El manifiesto conserva Quest 3, passthrough, escena, anclas y control de visibilidad del límite.
+- Evidencias: `TestResults/unity-apk-0.1.7.log`, `apk-0.1.7-build.json`, `apk-0.1.7-signature.txt`, `apk-0.1.7-badging.txt`, `apk-0.1.7-manifest.txt`, `delivery-0.1.7.json` y `Builds/Quest/FrontierCommand.provenance.json`.
+- APK anterior y procedencia conservados en `Builds/Quest/Archive/FrontierCommand-0.1.6.apk` y `FrontierCommand-0.1.6.provenance.json`; hash del APK anterior verificado. La compilación no dejó cambios adicionales en los archivos versionados.
+
+Actualizar con `adb install -r Builds/Quest/FrontierCommand.apk`. Se conservan las pruebas de las tareas anteriores; esta entrega solo cambia la versión y registra el empaquetado. Pendiente del usuario: instalación, interacción, legibilidad y rendimiento en Quest físico.
+
 ## Iconos interactivos de selección — fuentes, sin APK — 18 de octubre de 2026
 
 El panel de partida muestra **SELECTED ITEMS** con iconos cuadrados de los modelos reales, nombres, vida y páginas de hasta 20 elementos. Trigger/A selecciona uno, doble Trigger/A filtra por definición dentro de la selección completa y mantener 0,65 s elimina un miembro con progreso rojo. Mouse izquierdo comparte los gestos. El clic simple espera 0,35 s para distinguir el doble sin perder el conjunto original.
