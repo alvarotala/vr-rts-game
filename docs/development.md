@@ -46,7 +46,7 @@ unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
 
 Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
 
-`ControlGroupPreview.RunValidation` prueba los cuatro grupos, doble stick, recuperación al volver al centro, reemplazo al soltar una pulsación mantenida e inclinada y cancelaciones, además de las regresiones de rueda de acciones, gestos de colas, rally, menús y HUD:
+`ControlGroupPreview.RunValidation` prueba los cuatro grupos, apertura directa al inclinar el stick, recuperación al volver al centro, reemplazo al soltar una pulsación mantenida e inclinada y cancelaciones, además de las regresiones de rueda de acciones, gestos de colas, rally, menús y HUD:
 
 ```sh
 unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \

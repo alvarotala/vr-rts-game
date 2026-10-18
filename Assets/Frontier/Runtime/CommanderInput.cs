@@ -16,8 +16,8 @@ namespace Frontier.Runtime
         private float lastGripPress=-1;
         private Simulation gripTapMatch;
         private const float DoubleGripWindow=.35f;
-        private float lastStickPress=-1;
-        private Simulation stickTapMatch;
+        private bool groupRecallReady;
+        private Simulation groupRecallMatch;
         private bool stickHoldPending,stickHoldReady;
         private Simulation stickHoldMatch;
         private readonly HashSet<int> stickHoldSelection=new HashSet<int>();
@@ -80,7 +80,7 @@ namespace Frontier.Runtime
             }
             ValidateMapGestures(add);
             if(Quest.Placing)
-            {Wheel?.Close();ResetGripTap();ResetStickTap();ResetStickHold();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
+            {Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
             if(Quest.Active&&RouteWheel(ray,primaryStick,wheelPressed,order,down,triggerHeld,cancel,add,gripDown,Time.unscaledTime,wheelHeld,wheelReleased))return;
             // Back/pause must work even when the pointer is over a menu button.
             if(cancel)
@@ -127,13 +127,17 @@ namespace Frontier.Runtime
             if(gripTapMatch!=Session.Match)ResetGripTap();
             if(stickHoldMatch!=Session.Match||!Wheel.CanOpen||!stickHoldSelection.SetEquals(Session.Selection)||cancel||confirm||triggerDown||triggerHeld||(!stickHeld&&!stickReleased))
                 ResetStickHold();
-            if(stickTapMatch!=Session.Match||!Wheel.CanOpen||confirm||cancel||triggerDown||triggerHeld||gripDown||stick.magnitude>=.45f)
-                ResetStickTap();
-            // A single click stays immediate. Its second click opens groups, whether
-            // the first click opened or closed the action wheel.
-            if(press&&Wheel.CanOpen&&lastStickPress>=0&&now>=lastStickPress&&now-lastStickPress<=DoubleTapWindow)
+            if(groupRecallMatch!=Session.Match){ResetGroupRecall();groupRecallMatch=Session.Match;}
+            // Observe neutral in free gameplay before accepting a direction. A stick
+            // held through placement, menu dragging or wheel dismissal must not reopen
+            // groups. Press-and-tilt saving and open action wheels keep priority.
+            bool freeStick=Wheel.CanOpen&&!Wheel.IsOpen&&!wheelReleasePending&&panelButton==PanelButton.None&&!dragging
+                &&!press&&!stickHeld&&!stickReleased&&!confirm&&!cancel&&!triggerDown&&!triggerHeld&&!gripDown;
+            if(!freeStick)groupRecallReady=false;
+            else if(stick.magnitude<.25f)groupRecallReady=true;
+            else if(groupRecallReady&&stick.magnitude>=.45f)
             {
-                ResetStickTap();ResetGripTap();ResetStickHold();
+                ResetGroupRecall();ResetGripTap();ResetStickHold();
                 Wheel.OpenGroups(ray,stick,false);
                 ClearPointer();CancelPanelInput();wheelReleasePending=true;
                 if(laser!=null)laser.enabled=false;
@@ -150,7 +154,7 @@ namespace Frontier.Runtime
             }
             if(stickHoldPending&&stickHeld&&stick.magnitude<.25f)stickHoldReady=true;
             bool startSaving=stickHoldPending&&stickHoldReady&&(stickHeld||stickReleased)&&stick.magnitude>=.45f&&!Wheel.GroupSaveMode;
-            if(startSaving){Wheel.OpenGroups(ray,stick,true);ResetStickTap();ResetGripTap();}
+            if(startSaving){Wheel.OpenGroups(ray,stick,true);ResetGroupRecall();ResetGripTap();}
             bool doubleGrip=false;
             if(Wheel.IsOpen)
             {
@@ -170,8 +174,7 @@ namespace Frontier.Runtime
             if(stickReleased||(wasOpen&&!Wheel.IsOpen&&!press))ResetStickHold();
             if(consumed)
             {
-                if(press&&!startSaving&&Wheel.CanOpen&&!confirm&&!cancel&&!triggerHeld){lastStickPress=now;stickTapMatch=Session.Match;}
-                else if(press||!Wheel.IsOpen)ResetStickTap();
+                ResetGroupRecall();
                 ResetGripTap();
                 ClearPointer();CancelPanelInput();wheelReleasePending=true;
                 if(laser!=null)laser.enabled=!Wheel.IsOpen;
@@ -182,7 +185,7 @@ namespace Frontier.Runtime
             return false;
         }
         private void ResetGripTap(){lastGripPress=-1;gripTapMatch=null;}
-        private void ResetStickTap(){lastStickPress=-1;stickTapMatch=null;}
+        private void ResetGroupRecall(){groupRecallReady=false;groupRecallMatch=null;}
         private void ResetStickHold(){stickHoldPending=stickHoldReady=false;stickHoldMatch=null;stickHoldSelection.Clear();}
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
         {
@@ -286,8 +289,8 @@ namespace Frontier.Runtime
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,OVRInput.Controller.RTouch);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
-        {if(!focused){Wheel?.Close();ResetGripTap();ResetStickTap();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){Wheel?.Close();ResetGripTap();ResetStickTap();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {if(!focused){Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){Wheel?.Close();ResetGripTap();ResetGroupRecall();ResetStickHold();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

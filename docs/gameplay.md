@@ -90,7 +90,7 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Elegir acción de la rueda | Inclinar joystick derecho | — |
 | Ejecutar en la rueda | Gatillo derecho o A | — |
 | Volver / cerrar la rueda | Grip derecho o B | — |
-| Abrir rueda de grupos | Doble pulsación del joystick derecho | — |
+| Abrir rueda de grupos | Inclinar el joystick derecho hacia un grupo, sin pulsarlo | — |
 | Elegir grupo en la rueda | Inclinar/girar y soltar al centro | — |
 | Reemplazar un grupo con la selección | Mantener pulsado el joystick, inclinar hacia un grupo y soltar la pulsación | — |
 | Cancelar / opciones | B | Escape |
@@ -110,13 +110,13 @@ Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionad
 
 ### Rueda de grupos
 
-**Doble pulsación del joystick derecho** abre cuatro grupos: 1 arriba, 2 a la derecha, 3 abajo y 4 a la izquierda. Inclinar y girar el stick cambia el resaltado; **soltarlo para que vuelva al centro** selecciona directamente el grupo resaltado y cierra la rueda. A/gatillo no son necesarios. Abrir sin inclinar no elige un grupo por defecto. **B** o una nueva pulsación del stick cierran sin seleccionar.
+**Inclinar el joystick derecho sin pulsar ningún botón** abre la rueda de cuatro grupos y resalta inmediatamente la dirección elegida: 1 arriba, 2 a la derecha, 3 abajo y 4 a la izquierda. Girar el stick cambia el resaltado; **soltarlo para que vuelva al centro** selecciona directamente el grupo resaltado y cierra la rueda. Funciona también sin selección previa. **B** o pulsar el stick cierran sin seleccionar; después hay que volver al centro antes de abrirla otra vez.
 
 Para guardar, **mantener pulsado el joystick derecho desde el centro e inclinarlo hacia un grupo** abre el modo amarillo **REPLACE GROUP**. **Soltar la pulsación del stick** reemplaza todos los miembros del grupo con la selección actual; no suma a los anteriores. Se puede girar para cambiar el grupo antes de soltar. Volver al centro mientras sigue apretado conserva el último grupo resaltado, sin guardar todavía. B cancela. No requiere grip ni una espera de pulsación larga.
 
 La selección de grupos usa cian y sigue confirmando al volver el stick al centro. Grip no cambia entre recuperar y guardar. Los contadores excluyen unidades destruidas. Se pueden guardar unidades y edificios propios; los grupos se reinician al comenzar otra partida. Los cuatro botones del panel conservan clic para recuperar y pulsación larga para guardar.
 
-La pulsación simple sigue alternando inmediatamente la rueda de acciones. Una segunda pulsación dentro de 0,35 segundos abre grupos, incluso si la primera había cerrado una rueda de acciones abierta; si ya se eligió una dirección o se usó otra acción, el gesto doble se interrumpe. Mantener la segunda pulsación de ese doble clic conserva la rueda de recuperación y no inicia guardado. El doble grip sigue abriendo acciones, y grip/B siguen retrocediendo dentro de esa rueda.
+Pulsar el stick alterna la rueda de acciones; dos clics consecutivos simplemente la abren y cierran. Mientras la rueda de acciones está abierta, inclinar el stick elige sus acciones. Durante colocación o arrastre del menú, el eje conserva su función de ajuste. Se requiere volver al centro al recuperar el control después de esas operaciones, pausa o pérdida de foco, para que un stick sostenido no abra grupos por accidente. El doble grip sigue abriendo acciones, y grip/B siguen retrocediendo dentro de esa rueda.
 
 ### Punto de reunión de edificios
 

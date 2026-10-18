@@ -61,9 +61,11 @@ namespace Frontier.Editor
 
                     Check(Frame(press:true)&&wheel.IsOpen&&!wheel.InGroupMenu,"Single stick click opens actions immediately");
                     Frame();Frame(press:true);
-                    Check(wheel.InGroupMenu&&wheel.Items.Count==4&&wheel.Highlighted==-1,"Double click switches to four groups without a default choice");
-                    Frame();Frame(new Vector2(.15f,.12f));
-                    Check(wheel.IsOpen&&session.Selection.SetEquals(new[]{workers[0].id}),"Centered stick and small drift do not choose a group");Capture(faction+"-neutral");
+                    Check(!wheel.IsOpen,"Two stick clicks toggle actions and never open groups");Drain();
+                    Frame(new Vector2(.15f,.12f));Frame(new Vector2(.3f,0));
+                    Check(!wheel.IsOpen&&session.Selection.SetEquals(new[]{workers[0].id}),"Small drift and deadzone shoulder do not open groups");
+                    Frame(Vector2.right);
+                    Check(wheel.InGroupMenu&&wheel.Items.Count==4&&wheel.Highlighted==1,"Tilting without any button opens four groups and highlights the direction immediately");Capture(faction+"-direct-tilt");
                     Frame(Vector2.right);Frame(Vector2.right,a:true,down:true,held:true);
                     Check(wheel.Highlighted==1&&wheel.IsOpen&&session.Selection.Contains(workers[0].id),"A and trigger do not confirm or select terrain while choosing groups");
                     Frame(Vector2.right);Capture(faction+"-recall");
@@ -130,11 +132,11 @@ namespace Frontier.Editor
                     session.Group(3,false);Check(session.Selection.SetEquals(new[]{workers[3].id}),"Changing selection during a hold cancels rather than saving a different selection");
                     session.Select(workers[0].id,false);Frame(press:true);Frame(Vector2.left,clickHeld:true);Call(input,"OnDisable");Frame(Vector2.left,clickUp:true);Drain();
                     session.Group(3,false);Check(session.Selection.SetEquals(new[]{workers[3].id}),"Disabling input cancels a pending save");
-                    // Double-click recall owns its second press even if that press stays held.
-                    session.Select(workers[0].id,false);Frame(press:true);Frame(clickUp:true);Frame(press:true);Frame(Vector2.right,clickHeld:true);
-                    Check(wheel.InGroupMenu&&!wheel.GroupSaveMode,"Holding the second click of a double tap keeps recall mode");
-                    Frame(Vector2.right,clickUp:true);Check(wheel.IsOpen&&!wheel.GroupSaveMode,"Releasing the second click does not select a tilted recall group");
-                    Frame();Check(session.Selection.SetEquals(new[]{workers[1].id})&&session.GroupSize(1)==1,"Double-click recall still confirms on centering");Drain();
+                    // A fast tap pair now has the same ordinary toggle behavior as slow clicks.
+                    session.Select(workers[0].id,false);Frame(press:true);Frame(clickUp:true);Frame(press:true);Frame(clickUp:true);
+                    Check(!wheel.IsOpen&&session.GroupSize(1)==1,"A quick double click does not recall or modify a group");Drain();
+                    Frame(Vector2.right);Check(wheel.InGroupMenu&&!wheel.GroupSaveMode&&wheel.Highlighted==1,"After a double click, a fresh tilt recalls directly");
+                    Frame();Check(session.Selection.SetEquals(new[]{workers[1].id}),"Fresh tilt confirms on centering");Drain();
 
                     session.Select(hq.id,false);ClickGroup4(true);session.Select(0,false);ClickGroup4(false);
                     Check(session.Selection.SetEquals(new[]{hq.id})&&session.GroupSize(3)==1,"Fourth HUD button saves on hold and recalls on click");
@@ -149,16 +151,30 @@ namespace Frontier.Editor
                     Frame(press:true);Frame(elapsed:.4f);Frame(press:true);
                     Check(!wheel.IsOpen,"Slow stick clicks toggle actions instead of opening groups");Drain();Frame(elapsed:.4f);
                     Frame(press:true);Frame();Frame(Vector2.right);Frame(Vector2.right,press:true);
-                    Check(!wheel.IsOpen,"Using the action wheel direction interrupts a pending double click");Drain();Frame(elapsed:.4f);
-                    Frame(press:true);Frame(elapsed:.4f);Frame(press:true);Frame();Frame(press:true);
-                    Check(wheel.InGroupMenu,"Double stick also opens groups when actions were already open");Frame(b:true);Drain();
+                    Check(!wheel.IsOpen,"Stick directions stay inside the action wheel until it is closed");Drain();Frame(elapsed:.4f);
+                    Frame(press:true);Frame();Frame(Vector2.right);
+                    Check(wheel.IsOpen&&!wheel.InGroupMenu,"Tilting in an open action wheel never switches to groups");Frame(b:true);Drain();
+
+                    OpenGroups();Frame(Vector2.right,b:true);Frame(Vector2.right);Frame(Vector2.right);
+                    Check(!wheel.IsOpen,"Cancel while tilted does not immediately reopen groups");Frame();Frame(Vector2.left);
+                    Check(wheel.InGroupMenu&&wheel.Highlighted==3,"Recentering rearms direct recall after cancellation");Frame(b:true);Drain();
+                    panel.Back();Frame(Vector2.right);panel.Back();Frame(Vector2.right);
+                    Check(!wheel.IsOpen,"Stick held through pause cannot open groups after resuming");Frame();Frame(Vector2.right);
+                    Check(wheel.InGroupMenu,"A new neutral-to-direction gesture works after pause");Frame(b:true);Drain();
+                    quest.BeginPlacement();Frame(Vector2.right);quest.CancelPlacement();Frame(Vector2.right);
+                    Check(!wheel.IsOpen,"Placement consumes directions and requires neutral before recalling again");Drain();
+                    typeof(CommandPanel).GetField("moving",Private).SetValue(panel,true);Frame(Vector2.right);
+                    typeof(CommandPanel).GetField("moving",Private).SetValue(panel,false);Frame(Vector2.right);
+                    Check(!wheel.IsOpen,"Menu depth adjustment cannot turn into group recall when dragging ends");Drain();
+                    Frame(Vector2.right,held:true);Frame(Vector2.right);
+                    Check(!wheel.IsOpen,"Holding the selection trigger cannot arm direct group recall");Drain();
 
                     session.Select(workers[0].id,false);OpenGroups();Frame(Vector2.right);session.Pause("tracking",true);Frame();
                     Check(!wheel.IsOpen&&session.Selection.Contains(workers[0].id),"Tracking pause cancels without a release selection");session.Pause("tracking",false);Drain();
                     OpenGroups();Frame(Vector2.right);Call(input,"OnApplicationFocus",false);Frame();
                     Check(!wheel.IsOpen&&session.Selection.Contains(workers[0].id),"Focus loss cancels the highlighted group");Drain();
                     Frame(press:true);Call(input,"OnApplicationFocus",false);Drain();Frame(press:true);
-                    Check(wheel.IsOpen&&!wheel.InGroupMenu,"Focus loss also clears a half-complete double stick gesture");Frame(b:true);Drain();
+                    Check(wheel.IsOpen&&!wheel.InGroupMenu,"Action wheel remains available after focus recovery");Frame(b:true);Drain();
                     OpenGroups();Frame(Vector2.right);session.Select(hq.id,false);Frame();
                     Check(!wheel.IsOpen&&session.Selection.Contains(hq.id),"An external selection change invalidates group confirmation");Drain();
 
@@ -174,8 +190,8 @@ namespace Frontier.Editor
                     Check(!wheel.IsOpen&&Enumerable.Range(0,4).All(i=>session.GroupSize(i)==0),"Rematch resets all four groups and cancels the old wheel");Drain();
                     OpenGroups();Frame(Vector2.right);session.LeaveMatch();Frame();
                     Check(!wheel.IsOpen&&session.Selection.Count==0,"Leaving the match cancels group selection");Drain();
-                    Frame(press:true);Frame();Frame(press:true);
-                    Check(!wheel.IsOpen,"Double stick is inactive in the main menu");Drain();
+                    Frame();Frame(Vector2.right);Frame(press:true);
+                    Check(!wheel.IsOpen,"Stick tilt and click are inactive in the main menu");Drain();
                 }
                 Debug.Log($"FRONTIER_CONTROL_GROUPS passed: {checks} checks, {captures} views; no player build");
 
@@ -186,7 +202,7 @@ namespace Frontier.Editor
                     if(!used&&panel.AcceptsGameInput)Call(input,"PointBoard",ray,down,false,a,grip);
                     return used;
                 }
-                void OpenGroups(bool grip=false){Drain();Frame(press:true,grip:grip);Frame(grip:grip,clickUp:true);Frame(press:true,grip:grip);Check(wheel.InGroupMenu,"Double stick opens the group wheel");}
+                void OpenGroups(bool grip=false){Drain();Frame(Vector2.up,grip:grip);Check(wheel.InGroupMenu&&wheel.Highlighted==0,"Stick direction opens and highlights a group without clicking");}
                 void Drain(){Frame();Frame();}
                 void Refresh(){typeof(GameSession).GetProperty("View").SetValue(session,session.Match.View(0));typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Call(panel,"LateUpdate");}
                 void Check(bool value,string message){if(!value)throw new Exception(message);checks++;Debug.Log("CONTROL_GROUP_PASS: "+message);}

@@ -78,9 +78,9 @@ namespace Frontier.Runtime
             items.Clear();
             for (int i = 0; i < GameSession.ControlGroupCount; i++)
                 items.Add(new SelectionAction { Id = "group-" + (i + 1), Label = "Group " + (i + 1) });
-            // The router has already observed a neutral-to-direction motion while
-            // the click is held. Save mode can highlight that direction immediately.
-            stickReady = save;
+            // Both recall and saving reach here after the router observed neutral
+            // followed by a direction. Highlight the opening direction immediately.
+            stickReady = true;
             BuildSectors(); RefreshGroups(save); UpdatePose(pointer); Aim(stick);
             return true;
         }

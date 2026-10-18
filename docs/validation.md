@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Recuperación de grupos al inclinar el stick — fuentes, sin APK — 18 de octubre de 2026
+
+Inclinar el joystick derecho sin pulsar ningún botón abre la rueda de grupos y resalta inmediatamente 1 arriba, 2 derecha, 3 abajo o 4 izquierda. Girarlo cambia el resaltado y volver al centro confirma. Se retiró la apertura por doble clic del stick. Clic conserva la rueda de acciones; mantener clic más dirección y soltar sigue reemplazando un grupo. Hotkeys, guía de pausa y referencia CSV reflejan el nuevo gesto.
+
+- `ControlGroupPreview.RunValidation`: **818 comprobaciones enumeradas y 85 vistas**. Incluye grupos (**186 / 8 vistas**), acciones (**148 / 18**), entrada de colas (**64**), rally (**126**), menús y Hotkeys (**294 / 41**), más **18 vistas** del HUD/recolección.
+- Se verificaron apertura y resaltado en el mismo cuadro para ambas facciones, las cuatro direcciones, giro, confirmación al centro, grupos vacíos, cancelación, guardado, ausencia de selección previa y conservación del tablero. Los pequeños movimientos dentro de la zona muerta no abren grupos.
+- Las direcciones de una rueda de acciones, colocación, arrastre del menú o gatillo sostenido no inician recuperación. Después de cancelar, pausar o terminar esos ajustes, un eje inclinado no abre grupos hasta volver al centro. Foco, seguimiento, cambios de selección, nueva partida y salida invalidan gestos pendientes.
+- Unity **6000.3.26f1** / CLI **1.0.0-beta.13** terminó correctamente, sin errores de compilación ni excepciones de pruebas. Registro: `TestResults/unity-group-tilt.log`. Se inspeccionaron `TestResults/ControlGroups/industrial-direct-tilt.png` y `TestResults/Menus/hotkeys-touch-groups-1.png`.
+- Los **55 hashes** de `TestResults/group-tilt-baseline.json` verifican que ProjectSettings, Assets/XR y los APK existentes permanecen iguales. No se cambió la simulación ni se generó APK o ejecutable desktop.
+
+Pendiente: validar ergonomía y sensibilidad con el mando físico. El APK 0.1.6 disponible aún utiliza el gesto anterior.
+
 ## Pantalla separada de Hotkeys y catálogo de defaults — fuentes, sin APK — 18 de octubre de 2026
 
 Hotkeys reemplaza la entrada Controls del menú principal y de pausa con una referencia dedicada: selector Quest Touch / Mouse-Keyboard, seis categorías, cinco filas por página y navegación Previous/Next. Cada fila identifica comando, entrada o acción de menú y contexto. La guía de tarjetas sigue visible dentro de pausa. Ambas pantallas usan `DefaultControlCatalog`, con esquema 1, datos inmutables e IDs estables; la personalización de bindings queda pendiente y no cambió el enrutador de entrada. La revisión incorpora los gestos existentes de alternar con clic modificado, limpiar selección y cerrar ruedas, además de los atajos de colocación de escritorio.

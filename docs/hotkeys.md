@@ -53,8 +53,8 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Recall a group | Double press right stick | Open the four-group wheel. You do not need to have a unit selected first. |
-| Choose a group | 1 up · 2 right · 3 down · 4 left | Tilt or rotate the stick to highlight one of four groups. |
+| Recall a group | Tilt right stick; release to center | Tilting opens the four-group wheel immediately. Return to center to select. No button press is needed. |
+| Choose a group | 1 up · 2 right · 3 down · 4 left | The wheel follows the stick direction. Rotate to change the highlighted group before releasing. |
 | Confirm recall | Let the stick return to center | Select the highlighted group immediately. A and Trigger are not required. |
 | Replace a group | Hold stick click + tilt; release click | Replace ALL previous members with your current selection. This does not merge selections. |
 | Cancel group choice | B / press right stick | Close without changing a group. Centering a held stick does not save until you release its click. |
