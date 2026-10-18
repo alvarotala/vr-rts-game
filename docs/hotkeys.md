@@ -6,7 +6,7 @@ La pantalla es de solo lectura y abre con el dispositivo activo. Se puede consul
 
 La tabla en inglés coincide con los nombres de la interfaz y se exporta desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`. Los IDs estables y el esquema versionado preparan la identificación de comandos para el futuro editor; las asignaciones personalizadas y su persistencia todavía no están implementadas. Contrato técnico: [arquitectura](architecture.md).
 
-Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s**, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura y las pruebas de Editor no verifican la comodidad física de estos tiempos en Quest.
+Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura y las pruebas de Editor no verifican la comodidad física de estos tiempos en Quest.
 
 ## Quest 3 - right Touch controller
 
@@ -14,11 +14,11 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Trigger on an item | Select an allied unit, building or resource to see its information and available actions. |
+| Select an item | Trigger on map / selection icon | Select an allied unit, building or resource. A selection icon isolates that item. |
 | Select an area | Hold Trigger + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Grip + Trigger | Keep your selection and add more units, including by dragging an area. |
-| Remove one item | Grip + hold Trigger still (0.5 s) | Point at a selected unit or building and hold still to remove it from the selection. |
-| Select the same type | Double Trigger | Select allied units of the same type within 12 map cells. Hold Grip to keep other selected units. |
+| Remove one item | Grip + hold Trigger / hold icon | Map: hold still with Grip for 0.5 s. Selection icon: hold for 0.65 s, without Grip. |
+| Select the same type | Double Trigger on map / icon | Map: same type within 12 cells (Grip adds). Icon: same type from the current selection only. |
 | Toggle one item | Grip + short Trigger on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
 | Clear selection | Trigger on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |
@@ -93,11 +93,11 @@ Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble A, conservar 
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Left-click on an item | Select an allied unit, building or resource to see its information and available actions. |
+| Select an item | Left-click on map / selection icon | Select an allied unit, building or resource. A selection icon isolates that item. |
 | Select an area | Hold left mouse button + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Shift + Left-click | Keep your selection and add more units, including by dragging an area. |
-| Remove one item | Shift + hold left click still (0.5 s) | Point at a selected unit or building and hold still to remove it from the selection. |
-| Select the same type | Double left-click | Select allied units of the same type within 12 map cells. Hold Shift to keep other selected units. |
+| Remove one item | Shift + hold left click / hold icon | Map: hold still with Shift for 0.5 s. Selection icon: hold for 0.65 s, without Shift. |
+| Select the same type | Double left-click on map / icon | Map: same type within 12 cells (Shift adds). Icon: same type from the current selection only. |
 | Toggle one item | Shift + short Left-click on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
 | Clear selection | Left-click on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |

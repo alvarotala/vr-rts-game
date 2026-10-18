@@ -36,7 +36,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public int selectionId; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -92,6 +92,7 @@ namespace Frontier.Runtime
                 FaceViewer();
             }
             if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
+            TickSelectionClick(Time.unscaledTime);
             Board.SetVisible(ShowsBoard);
             string state=Page+":"+Quest.Active+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
@@ -256,6 +257,7 @@ namespace Frontier.Runtime
         {
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys){hotkeysTouch=Quest.Active;hotkeysPage=0;}
             Page=page;signature=null;moving=false;
+            ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
             Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result);
             Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(default,default,false);
@@ -296,6 +298,7 @@ namespace Frontier.Runtime
         public void Recall(){moving=false;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset above the board.");}
         public void CancelPointerInteraction()
         {
+            ClearSelectionGesture();
             pressed=null;
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
             hovered=null;
@@ -353,10 +356,11 @@ namespace Frontier.Runtime
             Target hit=null;
             foreach(var target in targets)
             {
-                if(Hit(target.rect,ray,out _)){hit=target;break;}
+                if(target.rect.gameObject.activeInHierarchy&&Hit(target.rect,ray,out _)){hit=target;break;}
             }
             if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??Color.Lerp(hovered.normal,Color.white,.2f);}
             UpdateProductionHover();
+            if(PointSelectionGrid(hit,down,up,Time.unscaledTime))return true;
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
             UpdateActionHelp();
             if(up&&pressed!=null)

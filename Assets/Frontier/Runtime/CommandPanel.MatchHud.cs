@@ -57,6 +57,7 @@ namespace Frontier.Runtime
             matchTargets[0]=HudButton(matchStrip,"Full map","Reset view",new Vector2(14,-36),new Vector2(140,54),()=>Board.Fit(),null,out _);
             matchTargets[1]=HudButton(matchStrip,"Pause","Menu",new Vector2(166,-36),new Vector2(140,54),()=>Show(MenuPage.Pause),null,out _);
             CreateProductionHud();
+            CreateSelectionGrid();
             orderPlanStrip=Section(matchHud,"Unit order plan",new Vector2(24,-484),new Vector2(1052,96));
             Label(orderPlanStrip,"UNIT ORDER PLAN",new Vector2(16,-7),new Vector2(320,24),16,accent);
             orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAnchor.MiddleRight);
@@ -94,13 +95,14 @@ namespace Frontier.Runtime
             bool production=hud&&SelectedProducer()!=null;
             bool orders=hud&&SelectedMobileUnits().Length>0;
             bool rally=hud&&OrderQueueVisuals.RallyProducers(Session).Length>0;
-            float queueSpace=(production?180:0)+(orders?108:0)+(rally?84:0)+62;
+            float selectionSpace=LayoutSelectionGrid(hud);
+            float queueSpace=selectionSpace+(production?180:0)+(orders?108:0)+(rally?84:0)+62;
             orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
             rallyPointStrip.gameObject.SetActive(rally);
-            productionStrip.anchoredPosition=new Vector2(24,-484);
-            orderPlanStrip.anchoredPosition=new Vector2(24,-484-(production?180:0));
-            rallyPointStrip.anchoredPosition=new Vector2(24,-484-(production?180:0)-(orders?108:0));
+            productionStrip.anchoredPosition=new Vector2(24,-484-selectionSpace);
+            orderPlanStrip.anchoredPosition=new Vector2(24,-484-selectionSpace-(production?180:0));
+            rallyPointStrip.anchoredPosition=new Vector2(24,-484-selectionSpace-(production?180:0)-(orders?108:0));
             matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:paused?1026:controls?1004:526);matchHud.sizeDelta=root.sizeDelta;
             controlGuide.anchoredPosition=new Vector2(30,paused?-390:-216);
             harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
@@ -160,6 +162,7 @@ namespace Frontier.Runtime
             }
             UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
             UpdateProductionHud();
+            UpdateSelectionGrid();
             UpdateOrderPlanHud();
             UpdateRallyPointHud();
             status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
@@ -226,6 +229,7 @@ namespace Frontier.Runtime
         {
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
             BindProductionTargets();
+            BindSelectionTargets();
             var available=SelectionActions.For(Session);
             actionHint.text=available.Hint;actionHeading.text=available.Heading;
             float y=0;

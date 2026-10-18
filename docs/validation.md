@@ -4,6 +4,18 @@
 
 La simulación, la compilación Unity, la ejecución gráfica desktop y el funcionamiento en Quest son comprobaciones diferentes. Este archivo registra cada una; no considera una compilación como prueba física de realidad mixta.
 
+## Iconos interactivos de selección — fuentes, sin APK — 18 de octubre de 2026
+
+El panel de partida muestra **SELECTED ITEMS** con iconos cuadrados de los modelos reales, nombres, vida y páginas de hasta 20 elementos. Trigger/A selecciona uno, doble Trigger/A filtra por definición dentro de la selección completa y mantener 0,65 s elimina un miembro con progreso rojo. Mouse izquierdo comparte los gestos. El clic simple espera 0,35 s para distinguir el doble sin perder el conjunto original.
+
+- `SelectionGridPreview.Render`: **359 comprobaciones y 12 vistas** para ambas facciones, con el máximo de **50 unidades y 20 edificios** y recorrido de cuatro páginas. Registro final: `TestResults/unity-selection-grid-capacity.log`.
+- Verificados: aislamiento de un elemento, coincidencias en otras páginas, exclusión de aliados cercanos no seleccionados, edificios de la misma definición, eliminación antes de soltar, retirada del último miembro, cancelación al salir de la casilla, cambios externos de selección, muerte, pausa, cancelación de foco/puntero, nueva partida y salida. A comparte la ruta y no interrumpe una pulsación del trigger ni produce clics al mapa.
+- Regresiones en `TestResults/unity-selection-grid.log`: grupos **186 / 8 vistas**, rueda **148 / 18**, órdenes encoladas **64**, entrada de rally **126**, menús/Hotkeys **294 / 41**, producción **48 / 16** y **18 vistas** de recolección/HUD. Algunas rutinas vuelven a ejecutar menús/HUD; no se suman como cobertura nueva.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.13**: ambas ejecuciones finales terminaron con código 0, sin errores de compilación ni excepciones. Se inspeccionaron vistas industriales y biológicas, incluyendo progreso rojo y texto del CSV. El primer prototipo requirió añadir CanvasRenderer al gráfico personalizado y ajustar el rayo del fixture después de una captura que cambia el transform del panel. La suite conjunta expuso además dos aserciones preexistentes `IsNormalized(direction)` en el rayo inicial de `ControlGroupPreview` (también presentes en `unity-group-tilt.log`); se corrigió ese rayo y se repitió su suite por separado en `unity-selection-grid-group-regression.log`.
+- Hotkeys, guía de pausa y CSV se mantienen sincronizados: las mismas **94 filas / 6 categorías**, con solo seis filas modificadas. `git diff --check` pasa. Los **55 hashes** de `TestResults/selection-grid-baseline.json` confirman que ProjectSettings, Assets/XR y APK existentes permanecen iguales. No se cambió la simulación ni se construyó APK.
+
+Pendiente: tamaño percibido, precisión del puntero y comodidad de los tiempos de clic en Quest físico. La evidencia anterior usa el Editor, rayos sintéticos y capturas.
+
 ## Recuperación de grupos al inclinar el stick — fuentes, sin APK — 18 de octubre de 2026
 
 Inclinar el joystick derecho sin pulsar ningún botón abre la rueda de grupos y resalta inmediatamente 1 arriba, 2 derecha, 3 abajo o 4 izquierda. Girarlo cambia el resaltado y volver al centro confirma. Se retiró la apertura por doble clic del stick. Clic conserva la rueda de acciones; mantener clic más dirección y soltar sigue reemplazando un grupo. Hotkeys, guía de pausa y referencia CSV reflejan el nuevo gesto.

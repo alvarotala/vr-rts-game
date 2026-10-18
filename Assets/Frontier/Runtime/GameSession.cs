@@ -126,6 +126,13 @@ namespace Frontier.Runtime
                     &&entity.position.Distance(source.position)<=12)Selection.Add(entity.id);
             Feedback?.Invoke(true);Changed?.Invoke();
         }
+        public void SelectSameTypeInSelection(int id)
+        {
+            var source=View?.entities.FirstOrDefault(e=>e.id==id&&Selection.Contains(id)&&OwnGroupMember(id));
+            if(source==null)return;
+            Selection.RemoveWhere(member=>!View.entities.Any(e=>e.id==member&&e.owner==View.player&&!e.remembered&&e.definition==source.definition));
+            SelectedResource=0;Feedback?.Invoke(true);Changed?.Invoke();
+        }
         public void Group(int index, bool save)
         {
             if(View==null||index<0||index>=groups.Length)return;

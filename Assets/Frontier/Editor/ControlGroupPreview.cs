@@ -44,7 +44,7 @@ namespace Frontier.Editor
                 var panel=console.AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;Call(panel,"Start");
                 var wheel=wheelObject.AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;preview.AddSingleGO(wheelObject);
                 var input=fixture.AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;input.Wheel=wheel;
-                Ray ray=default;
+                Ray ray=new Ray(Vector3.up,Vector3.down);
                 var directions=new[]{Vector2.up,Vector2.right,Vector2.down,Vector2.left};
                 foreach(string faction in new[]{"industrial","biological"})
                 {

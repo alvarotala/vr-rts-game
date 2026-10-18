@@ -33,11 +33,11 @@ namespace Frontier.Runtime
             string click=touch?"Trigger / A":"Left-click";
             return new[]{
                 new Topic("Selection",
-                    new Command("selection.single","Select an item",select+" on an item","Select an allied unit, building or resource to see its information and available actions."),
+                    new Command("selection.single","Select an item",select+" on map / selection icon","Select an allied unit, building or resource. A selection icon isolates that item."),
                     new Command("selection.area","Select an area",touch?"Hold Trigger + drag":"Hold left mouse button + drag","Enclose units in the flat rectangle. The drag can start outside the map."),
                     new Command("selection.add","Add to selection",shift+" + "+select,"Keep your selection and add more units, including by dragging an area."),
-                    new Command("selection.remove","Remove one item",shift+" + hold "+(touch?"Trigger":"left click")+" still (0.5 s)","Point at a selected unit or building and hold still to remove it from the selection."),
-                    new Command("selection.same-type","Select the same type",touch?"Double Trigger":"Double left-click","Select allied units of the same type within 12 map cells. Hold "+shift+" to keep other selected units."),
+                    new Command("selection.remove","Remove one item",shift+" + hold "+(touch?"Trigger":"left click")+" / hold icon","Map: hold still with "+shift+" for 0.5 s. Selection icon: hold for 0.65 s, without "+shift+"."),
+                    new Command("selection.same-type","Select the same type",touch?"Double Trigger on map / icon":"Double left-click on map / icon","Map: same type within 12 cells ("+shift+" adds). Icon: same type from the current selection only."),
                     new Command("selection.toggle","Toggle one item",shift+" + short "+select+" on an ally","Add or remove one allied unit or building. Area selection with the modifier only adds units."),
                     new Command("selection.clear","Clear selection",select+" on empty terrain","Clear the current selection without the modifier. Finish or cancel an armed action first."),
                     new Command("selection.hover","Preview your target","Point at a unit, building or resource","The hover highlight identifies your target; the point on the map shows where you are aiming.")),
