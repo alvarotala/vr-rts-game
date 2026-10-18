@@ -1,5 +1,7 @@
 # Guía de juego
 
+La experiencia de juego está orientada a Quest 3. Las ruedas de acciones y grupos se usan únicamente en VR. La versión desktop queda por ahora para desarrollo y prueba de mecánicas: mouse y teclado, acciones desde el panel, teclas **1–4** para recuperar grupos y **Ctrl+1–4** para guardarlos. Comparte las reglas del juego y conserva WASD, rueda del mouse y F para navegar cómodamente durante las pruebas.
+
 ## Empezar una partida
 
 Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Hotkeys**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.

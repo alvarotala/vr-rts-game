@@ -5,6 +5,7 @@
 - Mantener el `README.md` de la raíz centrado en introducción, requisitos, instalación, configuración y uso básico.
 - Documentar avances, cambios y decisiones en `docs/`. Usar [arquitectura](architecture.md) para responsabilidades y decisiones técnicas, [mapas](maps.md) para contratos de datos y [validación](validation.md) para resultados, evidencias y pendientes. Crear otro documento aquí cuando el tema lo necesite.
 - Mantener los controles y las mecánicas actuales en la [guía de juego](gameplay.md).
+- Las ruedas de acciones y grupos son exclusivas de VR. Desktop se mantiene por ahora como herramienta de desarrollo para probar las mecánicas con mouse, teclado y paneles; no requiere reproducir los gestos de los mandos ni ofrecer una experiencia de producto terminada. Ambas entradas comparten las mismas reglas de simulación.
 - El juego usa inglés como único idioma por ahora: interfaz, controles, avisos, tutorial, nombres de facciones/unidades/edificios/mejoras y títulos de mapas. Otros idiomas quedan para una etapa posterior; mantener los identificadores de contenido estables e independientes de los nombres visibles. La documentación de desarrollo puede continuar en español.
 - Realizar un commit local por tarea. Nunca hacer push al repositorio.
 - Compilar el APK únicamente cuando el usuario lo pida explícitamente; no generarlo automáticamente después de cada cambio.
