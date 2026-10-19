@@ -8,8 +8,6 @@ namespace Frontier.Runtime
     public sealed class CommanderInput:MonoBehaviour
     {
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
-        public ControllerHints Hints;
-        private bool hasFocus=true;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
         private bool wheelReleasePending;
         private OVRInput.Controller inputController=OVRInput.Controller.None;
@@ -38,14 +36,8 @@ namespace Frontier.Runtime
         }
         private void LateUpdate()
         {
-            // Read after input routing so menu, wheel and double-A changes appear in this frame.
+            // Read after input routing so pointer mode changes appear in this frame.
             if(laser!=null&&Board!=null)laser.sharedMaterial.color=Board.PointerColor;
-            if(Hints!=null)
-            {
-                bool available=hasFocus&&Quest!=null&&Quest.Active&&Board!=null&&Board.Content!=null&&!controllerReleasePending;
-                var ray=available?Quest.PointerRay():default;
-                Hints.Tick(ray,available,available&&Panel!=null&&Panel.ContainsPointer(ray));
-            }
         }
         private void Update()
         {
@@ -330,8 +322,8 @@ namespace Frontier.Runtime
         private void Haptic(bool success)
         {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Quest.ActiveController);hapticEnd=Time.unscaledTime+.07f;}
         private void OnApplicationFocus(bool focused)
-        {hasFocus=focused;if(!focused){Hints?.Hide();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){Hints?.Hide();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {if(!focused){ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

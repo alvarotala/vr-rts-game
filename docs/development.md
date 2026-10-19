@@ -297,16 +297,6 @@ unity run . --log-file TestResults/unity-unified-wheel.log --no-tail -- -buildTa
 
 La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, apertura por inclinación, categorías del nivel 1, confirmación por gatillo, neutral obligatorio entre niveles, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
 
-### Leyenda de botones junto al mando
-
-`Frontier.Editor.ControllerHintPreview.Render` verifica la leyenda persistente y genera diez vistas en `TestResults/ControllerHints/`: controles predeterminados, mano izquierda, remapeos, destino de ataque, rueda, grupos, pausa, colocación y composición junto al hint direccional o la rueda completa. Comprueba los textos y su ausencia de recortes, la actualización de funciones y el ocultamiento por foco, seguimiento, desactivación o entrada no disponible. Ejecuta también `UnifiedWheelPreview.Render` para cubrir la navegación existente.
-
-```sh
-unity run . --log-file TestResults/unity-controller-hints-final.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ControllerHintPreview.Render
-```
-
-Son comprobaciones y capturas de Editor, sin generar un ejecutable. El tamaño y la comodidad de la leyenda junto a la mano requieren prueba física en Quest.
-
 ## Apuntado de minerales
 
 Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resource models** o `unity run . --log-file TestResults/unity-resource-models.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourceVisualPreview.Render`. Guarda diez vistas en `TestResults/ResourceModels/`, incluyendo cristales, gas desde arriba, vapor en dos momentos, hover, tablero compacto y extractor. Comprueba el ciclo visual del vapor y usa una vista preparada para mostrar los modelos; no genera un ejecutable. Después de cambiar las siluetas, `ResourcePickingPreview.Render` verifica el apuntado con rayos y órdenes reales.

@@ -1,5 +1,9 @@
 # Registro de validación
 
+## Retiro de la leyenda de botones — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+Se retira la tarjeta de Trigger, A/B, Grip y Stick junto al mando, incluyendo su componente, conexiones y previsualización específica. La rueda conserva su hint direccional. Compilación y **190 comprobaciones de la rueda aprobadas**, con cuatro vistas, en Unity **6000.3.26f1**, salida 0; registro `TestResults/unity-remove-controller-hints.log`. No se generó un APK nuevo.
+
 ## Leyenda permanente del mando — fuentes, sin nuevo APK — 19 de octubre de 2026
 
 Una tarjeta junto al mando muestra gatillo para seleccionar, A para mover/dar órdenes, Grip para agregar/encolar, B para pausa y stick para la rueda. Las etiquetas siguen la mano activa y los botones configurados; cambian al apuntar ataques, construir, lanzar habilidades, abrir menús, guardar grupos o colocar el tablero. La tarjeta permanece con la rueda abierta y la pausa de usuario, y se oculta al perder foco o durante interrupciones del sistema.
