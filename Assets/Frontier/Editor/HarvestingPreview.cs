@@ -175,13 +175,16 @@ namespace Frontier.Editor
         {
             SaveCanvas(panel.transform,Field<RectTransform>(panel,"root"),path,preview);
         }
-        internal static void SaveCanvas(Transform container,RectTransform root,string path,PreviewRenderUtility preview,int width=1600,int height=0)
+        internal static void SaveCanvas(Transform container,RectTransform root,string path,PreviewRenderUtility preview,int width=1600,int height=0,bool preservePose=false)
         {
             foreach(var label in container.GetComponentsInChildren<Text>().Where(t=>!t.resizeTextForBestFit))
                 Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
-            root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
-            preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,root.rect.height*.0005f+.03f);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
-            preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
+            if(!preservePose)
+            {
+                root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
+                preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,root.rect.height*.0005f+.03f);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
+                preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
+            }
             preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
             // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
             // meshes with their font textures, preserving hierarchy order and runtime layout.
@@ -194,8 +197,11 @@ namespace Frontier.Editor
                 var mesh=Object.Instantiate(source);meshes.Add(mesh);
                 if(mesh.vertexCount==0)continue;
                 var material=new Material(graphic.materialForRendering){mainTexture=graphic.mainTexture};materials.Add(material);
+                // At an oblique angle transparent distance sorting can draw a sector
+                // over its label. Reproduce Canvas hierarchy order in these mesh previews.
+                if(preservePose)material.renderQueue=3000+meshes.Count;
                 if(graphic is Text)material.SetVector("_TextureSampleAdd",new Vector4(1,1,1,0));
-                var matrix=Matrix4x4.Translate(Vector3.back*.0001f*meshes.Count)*graphic.transform.localToWorldMatrix;
+                var matrix=Matrix4x4.Translate(-preview.camera.transform.forward*.0001f*meshes.Count)*graphic.transform.localToWorldMatrix;
                 preview.DrawMesh(mesh,matrix,material,0);
             }
             Check(meshes.Sum(m=>m.vertexCount)>100,"Console did not generate UI geometry");

@@ -132,8 +132,9 @@ namespace Frontier.Runtime
         public Ray PointerRay()
         {
             var controller=ActiveController;
-            return new Ray(TrackingSpace.TransformPoint(OVRInput.GetLocalControllerPosition(controller)),TrackingSpace.TransformDirection(OVRInput.GetLocalControllerRotation(controller)*Vector3.forward));
+            return new Ray(TrackingSpace.TransformPoint(OVRInput.GetLocalControllerPosition(controller)),PointerRotation()*Vector3.forward);
         }
+        public Quaternion PointerRotation() => TrackingSpace.rotation * OVRInput.GetLocalControllerRotation(ActiveController);
         private async void SaveAnchor()
         {
             if(!Active||busy)return;busy=true;int generation=++anchorGeneration;

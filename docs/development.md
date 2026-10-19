@@ -89,7 +89,7 @@ unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
 
 Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
 
-`ControlGroupPreview.RunValidation` prueba los cuatro grupos dentro de la rueda unificada: raíz por inclinación, entrada y recuperación con gatillo, guardado al soltar clic sostenido + dirección y cancelaciones, además de las regresiones de hint, acciones, gestos de colas, rally, menús y HUD:
+`ControlGroupPreview.RunValidation` prueba los cuatro grupos dentro de la rueda unificada: entrada directa por inclinación, recuperación con gatillo sin recentrar, asignación desde abajo con gatillo, guardado alternativo al soltar clic sostenido + dirección y cancelaciones, además de las regresiones de hint, acciones, gestos de colas, rally, menús y HUD:
 
 ```sh
 unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
@@ -295,7 +295,9 @@ Para comprobar el enrutamiento de entrada y renderizar las ruedas de ambas facci
 unity run . --log-file TestResults/unity-unified-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.UnifiedWheelValidationBatch.Run
 ```
 
-La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, apertura por inclinación, categorías del nivel 1, confirmación por gatillo, neutral obligatorio entre niveles, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, entrada directa en las cuatro categorías con la dirección ya resaltada, recorridos entre niveles sin centrar, una confirmación por pulsación de gatillo, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+
+Las vistas `UnifiedWheel/*-hand-hint.png` y `*-hand-groups.png` conservan escala, posición y giro reales frente a una cámara fija. El marcador amarillo identifica el origen del rayo únicamente en la previsualización. Las comprobaciones verifican ambos mandos, tamaño físico compacto y anclaje independiente de los movimientos de cabeza para cada sección de la rueda.
 
 ## Apuntado de minerales
 

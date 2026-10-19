@@ -91,9 +91,7 @@ namespace Frontier.Editor
                     var wheelRay=new Ray(new Vector3(0,1,-1),Vector3.forward);
                     wheel.ProcessUnified(wheelRay,Vector2.zero,false,false,false,false,100f);
                     wheel.ProcessUnified(wheelRay,Vector2.right,false,false,false,false,100.05f);
-                    wheel.ProcessUnified(wheelRay,Vector2.right,true,true,false,false,100.10f);
-                    wheel.ProcessUnified(wheelRay,Vector2.right,false,false,true,false,100.15f);
-                    wheel.ProcessUnified(wheelRay,Vector2.zero,false,false,false,false,100.20f);
+                    Check(wheel.HighlightedId=="ability:"+heal.id&&session.PendingAbility==null,"Opening direction immediately highlights healing without arming it: "+faction);
                     int index=wheel.Items.ToList().FindIndex(a=>a.Id=="ability:"+heal.id);
                     Check(index>=0&&wheel.Page==WheelPage.Selection,"Unified Selection submenu exposes healing: "+faction);
                     var direction=wheel.DirectionFor("ability:"+heal.id);wheel.ProcessUnified(wheelRay,direction,false,false,false,false,100.25f);

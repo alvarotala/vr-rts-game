@@ -4,9 +4,9 @@ Referencia de los valores predeterminados. **Main menu → Hotkeys**, **New Matc
 
 **Edit bindings → Change** permite capturar una tecla o botón. Los cambios se guardan localmente; **Swap bindings** confirma un intercambio si la entrada está ocupada. **Restore device defaults** restaura solo el perfil elegido, después de confirmar. Los perfiles de Quest Touch y mouse/teclado son independientes. **Settings → Hand: Left/Right** elige el único mando de Quest que controla el juego. Hotkeys muestra solamente ese mando, o mouse/teclado en desktop; no permite capturar entradas de la mano inactiva. Cambiar la mano conserva las funciones configuradas y se guarda localmente.
 
-La rueda unificada se abre al inclinar el joystick desde el centro: arriba Groups, derecha Selection e izquierda Unit orders; el gatillo físico entra o confirma. Un hint compacto recuerda esas direcciones durante el juego. Centrar durante 0,8 s sin acción cierra la rueda; mantener una dirección la conserva. En Groups, clic sostenido del stick + dirección y soltar guarda; el gatillo recupera. El clic de stick y doble grip no abren la rueda, y volver al centro no selecciona grupos.
+Al inclinar el joystick desde el centro se entra directamente en Groups (arriba), Selection (derecha), Assign group (abajo) o Unit orders (izquierda). La dirección se conserva entre niveles; el gatillo físico confirma cada paso. En Assign group, elegir una dirección y gatillar reemplaza los miembros del grupo por la selección actual. Un hint compacto recuerda las cuatro direcciones durante el juego. Centrar durante 0,8 s sin acción cierra la rueda; mantener una dirección la conserva. En Groups, el gatillo recupera; clic sostenido del stick + dirección y soltar conserva el guardado alternativo. El clic de stick y doble grip no abren la rueda, y volver al centro no selecciona grupos.
 
-Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando derecho, gatillo/X y Y en el izquierdo, clic izquierdo y Escape en desktop. En la rueda solo gatillo confirma y B/Y vuelve; A/X y grip no navegan. El guardado se edita como **Save group modifier** y admite clic de stick, A/X o grip. Si antes usaba gatillo o B/Y, se intercambia con la función asignada al clic de stick para dejar libres los botones de navegación; las demás asignaciones se conservan. Los modificadores aceptan Shift, Ctrl o Alt de ambos lados. Arrastre, mantener/soltar y doble pulsación siguen al botón de su función; los ejes del joystick y la rueda del mouse no se reasignan. El tablero confirmado permanece fijo. Contrato técnico: [arquitectura](architecture.md).
+Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando derecho, gatillo/X y Y en el izquierdo, clic izquierdo y Escape en desktop. En la rueda solo gatillo confirma y B/Y vuelve; A/X y grip no navegan. El gesto alternativo de guardado se edita como **Save group modifier** y admite clic de stick, A/X o grip. Si antes usaba gatillo o B/Y, se intercambia con la función asignada al clic de stick para dejar libres los botones de navegación; las demás asignaciones se conservan. Los modificadores aceptan Shift, Ctrl o Alt de ambos lados. Arrastre, mantener/soltar y doble pulsación siguen al botón de su función; los ejes del joystick y la rueda del mouse no se reasignan. El tablero confirmado permanece fijo. Contrato técnico: [arquitectura](architecture.md).
 
 Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
 
@@ -45,9 +45,9 @@ La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X
 | Command | Default input / menu action | Context |
 |---|---|---|
 | Open unified wheel | Tilt right stick from center | A small controller hint stays visible. Tilt to open; idle at center for 0.8 s to close. |
-| Choose a wheel category | Up Groups · Right Selection · Left Unit orders | Tilt toward an option; press Trigger to enter. Holding a direction keeps the wheel open. |
+| Choose a wheel category | Up Groups · Right Selection · Down Assign · Left Orders | Tilt to enter. Keep the stick tilted across levels; press Trigger for each step. |
 | Execute an action | Trigger in the wheel | Execute the highlighted action. Building and Attack Move then need a point on the map. |
-| Back in the wheel | Down + Trigger / B | Down returns a level; at the root it closes. In Groups, use B to go back. |
+| Back in the wheel | Down + Trigger / B | B goes back or closes the root. Down returns from actions; in group pages it chooses group 3. |
 | Use menu buttons | Trigger / A | Press and release on the same button. Empty menu areas never send orders through to the map. |
 | Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
@@ -58,9 +58,9 @@ La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X
 | Command | Default input / menu action | Context |
 |---|---|---|
 | Recall a group | Wheel up > Groups > Trigger | Enter Groups, choose a direction and press Trigger. Centering never recalls a group. |
-| Choose a group | 1 up · 2 right · 3 down · 4 left | Tilt to highlight a group. Rotate to change it; press Trigger to recall. |
+| Choose a group | 1 up · 2 right · 3 down · 4 left | Tilt to choose. Trigger recalls in Groups, or replaces members in Assign group. |
 | Confirm recall | Trigger on a group | Recall the group's surviving members. Empty groups show an empty message. |
-| Replace a group | In Groups: hold Stick click + tilt; release | Replace ALL previous members with your current selection. This does not merge selections. |
+| Replace a group | Wheel down > Assign group > Trigger | Replace all members with your selection. Also in Groups: hold Stick click + tilt; release. |
 | Cancel group choice | B | Return to the root without recalling or saving. Centering for 0.8 s closes the wheel. |
 | Save from the panel | Hold a Group button (over 0.65 s) | Replace that group's members with your current selection. Tap instead to recall it. |
 | Group lifetime | Applies to all four groups | Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups. |

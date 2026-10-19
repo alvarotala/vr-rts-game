@@ -66,7 +66,7 @@ namespace Frontier.Editor
                 savedGroupLoaded.Assign(true,"select","touch:grip",true,out _);savedGroupLoaded.Assign(true,"back","touch:trigger",true,out _);
                 var wheelGuide=DefaultControlCatalog.For(true,savedGroupLoaded).SelectMany(t=>t.Commands).ToDictionary(c=>c.Id);
                 Check(wheelGuide["menus.execute-action"].Gesture=="Trigger in the wheel"&&wheelGuide["menus.back-action"].Gesture=="Down + Trigger / Y","Wheel navigation help stays physical after gameplay remaps and uses the active hand");
-                Check(wheelGuide["groups.replace"].Gesture.Contains("hold X")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Group-save help follows its binding while wheel opening follows the active stick");
+                Check(wheelGuide["groups.replace"].Gesture=="Wheel down > Assign group > Trigger"&&wheelGuide["groups.replace"].Description.Contains("hold X")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Assignment uses down and Trigger while alternate group-save help follows its binding");
                 foreach(string reserved in new[]{"touch:trigger","touch:b"})
                 {
                     var reservedProfile=new HotkeyBindings();string before=reservedProfile.ToJson();
@@ -235,12 +235,31 @@ namespace Frontier.Editor
                             TouchFrame(Vector2.up);
                             Check(!wheel.IsOpen,"Actual "+hand+" Update requires a fresh center after remapped selection");
                             TouchFrame(Vector2.zero);TouchFrame(Vector2.up);
-                            Check(wheel.IsOpen&&wheel.Page==WheelPage.Root&&wheel.HighlightedId=="groups-menu","Actual "+hand+" Update opens the root after neutral then tilt");
+                            Check(wheel.InGroupMenu&&wheel.HighlightedId=="group-1","Actual "+hand+" Update enters Groups with the opening direction highlighted");
                             TouchFrame(Vector2.up,trigger);
-                            Check(wheel.InGroupMenu,"Actual "+hand+" Update uses the physical Trigger to enter Groups despite selection remapping");
-                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.up,trigger);
-                            Check(!wheel.IsOpen&&session.Selection.Contains(worker.id),"Actual "+hand+" Update uses physical Trigger to recall the group without leaking a map selection");
+                            Check(!wheel.IsOpen&&session.Selection.Contains(worker.id),"Actual "+hand+" Update recalls the group with Trigger without recentering or leaking a map selection");
                             TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            TouchFrame(Vector2.right);
+                            Check(wheel.Page==WheelPage.Selection&&wheel.IsOpen&&wheel.HighlightedId=="build-menu","Actual "+hand+" Update enters Selection with Build highlighted");
+                            TouchFrame(Vector2.right,trigger);
+                            Check(wheel.InBuildMenu&&wheel.HighlightedId.StartsWith("build:"),"Actual "+hand+" Update carries the held direction into Build");
+                            string build=wheel.HighlightedId.Substring("build:".Length);
+                            TouchFrame(Vector2.right,trigger);
+                            Check(wheel.InBuildMenu&&session.BuildDefinition==null,"Actual "+hand+" Update cannot confirm the child with a held Trigger");
+                            TouchFrame(Vector2.right);TouchFrame(Vector2.right,trigger);
+                            Check(!wheel.IsOpen&&session.BuildDefinition==build,"Actual "+hand+" Update confirms the building on a new Trigger edge without centering");
+                            TouchFrame(Vector2.right,trigger);TouchFrame(Vector2.right);session.CancelMode();
+                            wheel.Close();TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            TouchFrame(Vector2.left);
+                            Check(wheel.Page==WheelPage.Orders&&wheel.IsOpen&&wheel.HighlightedId=="attack-move","Actual "+hand+" Update enters Orders with the opening direction highlighted");
+                            wheel.Close();TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            session.Select(0,false);session.Group(2,true);session.Select(worker.id,false);TouchFrame(Vector2.zero);
+                            TouchFrame(Vector2.down);
+                            Check(wheel.Page==WheelPage.AssignGroups&&wheel.GroupSaveMode&&wheel.HighlightedId=="group-3"&&session.GroupSize(2)==0,"Actual "+hand+" Update opens Assign group without saving");
+                            TouchFrame(Vector2.down,trigger);
+                            Check(!wheel.IsOpen&&session.GroupSize(2)==1&&session.Selection.Contains(worker.id),"Actual "+hand+" Update assigns the held direction with Trigger despite selection remapping");
+                            TouchFrame(Vector2.down,trigger);TouchFrame(Vector2.down);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(session.GroupSize(2)==1&&session.Selection.Contains(worker.id),"Actual "+hand+" assignment drains the confirming trigger before map selection");
 
                             void TouchFrame(Vector2 stick,OVRInput.RawButton buttons=OVRInput.RawButton.None)
                             {

@@ -31,6 +31,7 @@ namespace Frontier.Editor
                     f.Ray = new Ray(f.Ray.origin + new Vector3(.12f, .04f, 0), f.Ray.direction); f.Frame();
                     f.Check(hint.position != hintPosition, "The compact hint follows the active pointer pose");
                     f.Capture(faction + "-idle-hint", "hintRoot");
+                    CheckHandAttachment(f, faction);
 
                     var movePoint = new Point(worker.position.x + 2, worker.position.y);
                     UnifiedWheelFixture.Call(f.Input, "OrderClick", movePoint, 0, 0, false, 100f);
@@ -52,10 +53,28 @@ namespace Frontier.Editor
                     f.Check(!f.Wheel.IsOpen && f.Session.Selection.Contains(worker.id), "Stick click and double grip do not open a wheel or recall a group");
                     f.Drain(); f.Frame(new Vector2(.15f, .12f)); f.Frame(new Vector2(.30f, 0));
                     f.Check(!f.Wheel.IsOpen, "Ordinary drift and the deadzone shoulder do not open the wheel");
+                    f.Session.Group(0, true);
                     f.Frame(Vector2.up);
-                    f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == "groups-menu", "A neutral-to-up tilt opens the root with Groups highlighted");
+                    f.Check(f.Wheel.InGroupMenu && f.Wheel.HighlightedId == "group-1", "Up enters Groups with group 1 already highlighted");
                     f.Check(!f.Wheel.HintVisible, "The small hint is hidden while the full wheel is open");
-                    foreach (var target in new[] { ("groups-menu", Vector2.up), ("selection-menu", Vector2.right), ("close-wheel", Vector2.down), ("orders-menu", Vector2.left) })
+                    f.Frame(Vector2.up, elapsed: 1f);
+                    f.Check(f.Wheel.InGroupMenu && f.Wheel.HighlightedId == "group-1", "Holding the opening direction keeps the group ready without recalling it");
+                    f.Capture(faction + "-direct-groups");
+                    f.Frame(Vector2.up, down: true, held: true);
+                    f.Check(!f.Wheel.IsOpen && f.Session.Selection.Contains(worker.id), "A fresh trigger recalls group 1 without ever centering the opening direction");
+                    f.Frame(held: true); f.Frame(up: true); f.Drain();
+                    f.OpenSelection();
+                    f.Check(f.Wheel.HighlightedId == "build-menu", "Right enters Selection with the action under the held direction highlighted");
+                    f.Capture(faction + "-direct-selection");
+                    f.OpenOrders();
+                    f.Check(f.Wheel.HighlightedId == "attack-move", "Left enters Orders with Attack Move already highlighted");
+                    f.Capture(faction + "-direct-orders");
+                    f.Dismiss(); f.Frame(Vector2.down);
+                    f.Check(f.Wheel.Page == WheelPage.AssignGroups && f.Wheel.GroupSaveMode && f.Wheel.HighlightedId == "group-3" && f.Session.GroupSize(2) == 0,
+                        "Down from the hint opens Assign group with group 3 highlighted without saving");
+                    f.Capture(faction + "-direct-assign-group");
+                    f.OpenRoot(); f.Frame();
+                    foreach (var target in new[] { ("groups-menu", Vector2.up), ("selection-menu", Vector2.right), ("assign-groups-menu", Vector2.down), ("orders-menu", Vector2.left) })
                     {
                         f.Frame(target.Item2);
                         f.Check(f.Wheel.HighlightedId == target.Item1, "Root cardinal direction selects " + target.Item1);
@@ -66,31 +85,54 @@ namespace Frontier.Editor
                     f.Frame(Vector2.left, a: true);
                     f.Check(f.Wheel.Page == WheelPage.Root, "The contextual order button cannot execute a wheel option");
                     f.Frame(Vector2.left, down: true, held: true);
-                    f.Check(f.Wheel.Page == WheelPage.Orders && f.Wheel.Highlighted == -1, "Trigger enters unit orders without inheriting the root direction");
+                    f.Check(f.Wheel.Page == WheelPage.Orders && f.Wheel.HighlightedId == "attack-move", "Trigger enters unit orders and immediately carries the left direction into the child page");
                     f.Frame(Vector2.left, held: true, elapsed: 1f);
-                    f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Orders && f.Wheel.Highlighted == -1, "A held trigger and direction cannot execute a child command");
+                    f.Check(f.Wheel.IsOpen && f.Wheel.HighlightedId == "attack-move" && !f.Session.AttackMoveMode, "A held trigger cannot execute the already highlighted child command");
+                    f.Frame(Vector2.right, held: true);
+                    f.Check(f.Wheel.HighlightedId == "hold" && worker.order != CommandKind.Hold, "Sweeping directly to another direction while holding Trigger changes only the highlight");
+                    f.Frame(Vector2.left, held: true);
                     f.Frame(Vector2.left);
-                    f.Check(f.Wheel.Highlighted == -1, "Releasing the trigger alone does not select a child without neutral");
+                    f.Check(f.Wheel.HighlightedId == "attack-move" && !f.Session.AttackMoveMode, "Releasing only Trigger keeps the held direction ready");
+                    f.Frame(Vector2.left, down: true, held: true);
+                    f.Check(!f.Wheel.IsOpen && f.Session.AttackMoveMode, "A new trigger press confirms the child without centering the stick");
+                    f.Frame(held: true); f.Frame(up: true); f.Drain(); f.Session.CancelMode(); f.OpenOrders();
                     f.Frame();
                     f.Check(f.Wheel.Highlighted == -1 && f.Wheel.IsOpen, "Centering clears the highlight without confirming");
                     f.Choose("back"); f.Confirm();
-                    f.Check(f.Wheel.Page == WheelPage.Root && f.Wheel.Highlighted == -1, "Down and trigger return to root without selecting another category");
+                    f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == "assign-groups-menu", "Back preserves the downward highlight without entering Assign group");
                     f.Frame(); f.Frame(elapsed: .65f);
                     f.Check(f.Wheel.IsOpen, "A brief centered pause leaves the wheel available");
                     f.Frame(elapsed: .20f);
                     f.Check(!f.Wheel.IsOpen, "The centered wheel closes after its idle timeout"); f.Drain();
                     f.Check(f.Wheel.HintVisible, "Closing restores the compact hint");
 
-                    f.OpenRoot(); f.Choose("selection-menu"); f.Confirm();
-                    f.Check(f.Wheel.Page == WheelPage.Selection, "Right and trigger enter contextual selection actions");
-                    f.Choose("build-menu"); f.Confirm();
-                    f.Check(f.Wheel.InBuildMenu, "A worker's selection page reaches the building submenu");
+                    f.OpenSelection();
+                    f.Frame(Vector2.right, b: true);
+                    f.Check(f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == "selection-menu", "B preserves the held direction when returning to the parent");
+                    f.Frame(Vector2.right, down: true, held: true);
+                    f.Frame(Vector2.right, held: true);
+                    f.Check(f.Wheel.Page == WheelPage.Selection && f.Wheel.HighlightedId == "build-menu", "One trigger enters Selection without cascading into Build");
+                    f.Frame(Vector2.right); f.Frame(Vector2.right, down: true, held: true);
+                    f.Check(f.Wheel.InBuildMenu && f.Wheel.HighlightedId.StartsWith("build:"), "The next trigger enters Build with the same held direction already highlighted");
+                    string building = f.Wheel.HighlightedId.Substring("build:".Length);
+                    f.Frame(Vector2.right, held: true);
+                    f.Check(f.Wheel.InBuildMenu && f.Session.BuildDefinition == null, "Holding Trigger on the building submenu does not arm construction");
+                    f.Frame(Vector2.right); f.Frame(Vector2.right, down: true, held: true);
+                    f.Check(!f.Wheel.IsOpen && f.Session.BuildDefinition == building, "Root to Selection to Build to construction can be chained with no neutral frames");
+                    f.Check(f.Frame(held: true) && f.Frame(up: true), "The final continuous-chain trigger is drained before map placement");
+                    f.Drain(); f.Session.CancelMode(); f.OpenSelection(); f.Enter("build-menu");
                     f.Choose("back"); f.Confirm();
                     f.Check(f.Wheel.Page == WheelPage.Selection, "Build Back returns one level to selection actions");
-                    f.Choose("back"); f.Confirm(); f.Choose("close-wheel");
-                    f.Frame(f.Wheel.DirectionFor("close-wheel"), down: true, held: true);
-                    f.Check(!f.Wheel.IsOpen && !f.Session.IsPaused, "Root Down and trigger close the wheel without pausing");
-                    f.Check(f.Frame(held: true) && f.Frame(up: true), "The closing trigger and release are drained before map input resumes"); f.Drain();
+                    f.Choose("back"); f.Confirm();
+                    f.Frame(Vector2.down, down: true, held: true);
+                    f.Check(f.Wheel.Page == WheelPage.AssignGroups && f.Wheel.HighlightedId == "group-3", "Down and trigger enter Assign group from the root");
+                    f.Frame(Vector2.down, held: true);
+                    f.Check(f.Session.GroupSize(2) == 0 && f.Wheel.IsOpen, "Holding the entering trigger cannot assign the child group");
+                    f.Frame(Vector2.down); f.Frame(Vector2.down, down: true, held: true);
+                    f.Check(!f.Wheel.IsOpen && f.Session.GroupSize(2) == 1 && !f.Session.IsPaused, "A fresh trigger assigns group 3 without centering");
+                    f.Check(f.Frame(held: true) && f.Frame(up: true), "The assignment trigger and release are drained before map input resumes"); f.Drain();
+                    f.OpenRoot(); f.Frame(b: true);
+                    f.Check(!f.Wheel.IsOpen && !f.Session.IsPaused, "B from the root closes the wheel without pausing"); f.Drain();
                     f.Check(f.Session.Selection.SetEquals(new[] { worker.id }), "Wheel navigation never selects terrain underneath it");
 
                     f.OpenRoot(); f.Session.Pause("tracking", true); f.Frame(Vector2.up);
@@ -122,6 +164,62 @@ namespace Frontier.Editor
                     f.Check(f.Board.transform.localToWorldMatrix == originalPose, "Unified wheel gestures leave the board placement unchanged");
                 }
                 f.Report("UNIFIED_WHEEL");
+            }
+        }
+
+        private static void CheckHandAttachment(UnifiedWheelFixture f, string faction)
+        {
+            var tracking = new GameObject("Synthetic wheel tracking space");
+            var previousTracking = f.Quest.TrackingSpace; var previousBindings = f.Quest.Bindings;
+            var previousRay = f.Ray; bool previousLeft = f.Panel.Bindings.LeftHand;
+            var camera = f.Quest.Camera.transform;
+            var cameraPosition = camera.position; var cameraRotation = camera.rotation;
+            typeof(QuestBridge).GetProperty("TrackingSpace").SetValue(f.Quest, tracking.transform);
+            f.Quest.Bindings = f.Panel.Bindings;
+            try
+            {
+                foreach (bool left in new[] { false, true })
+                {
+                    f.Panel.Bindings.SelectHand(left);
+                    string hand = left ? "left" : "right";
+                    var rotation = Quaternion.Euler(20, left ? -15 : 15, left ? 30 : -30);
+                    // Native controller tracking is absent in Editor. Apply a synthetic
+                    // world pose through the real tracking-space conversion for each hand.
+                    tracking.transform.rotation = rotation * Quaternion.Inverse(OVRInput.GetLocalControllerRotation(f.Quest.ActiveController));
+                    tracking.transform.position = new Vector3(left ? -.08f : .08f, .8f, -.15f);
+                    f.Ray = f.Quest.PointerRay(); f.Dismiss();
+                    CheckPose("hintRoot", true);
+                    f.CaptureHandPose(faction + "-" + hand + "-hand-hint", "hintRoot");
+                    f.OpenGroups(); CheckPose("root", false);
+                    f.CaptureHandPose(faction + "-" + hand + "-hand-groups", "root");
+                    f.OpenSelection(); CheckPose("root", false);
+                    f.Enter("build-menu"); CheckPose("root", false);
+                    f.OpenOrders(); CheckPose("root", false);
+                    f.OpenAssignGroups(); CheckPose("root", false);
+                    f.Dismiss();
+
+                    void CheckPose(string field, bool hint)
+                    {
+                        var view = UnifiedWheelFixture.Field<RectTransform>(f.Wheel, field);
+                        var offset = view.position - f.Ray.origin;
+                        f.Check(offset.magnitude < .04f && Mathf.Abs(Vector3.Dot(offset, f.Ray.direction)) < .005f,
+                            hand + " " + field + " stays at the ray base without forward reach");
+                        f.Check(Quaternion.Angle(view.rotation, rotation) < .1f, hand + " " + field + " follows pitch, yaw and wrist roll");
+                        float width = view.rect.width * view.lossyScale.x;
+                        f.Check(width < (hint ? .10f : .19f) && width > (hint ? .07f : .15f), hand + " " + field + " has compact physical dimensions");
+                        var position = view.position; var orientation = view.rotation;
+                        camera.SetPositionAndRotation(f.Ray.origin + Vector3.back * .12f, Quaternion.Euler(-15, 55, 25));
+                        f.Frame();
+                        f.Check(Vector3.Distance(view.position, position) < .0001f && Quaternion.Angle(view.rotation, orientation) < .1f,
+                            hand + " " + field + " remains attached when the head moves close and turns");
+                    }
+                }
+            }
+            finally
+            {
+                f.Wheel.Close(); f.Ray = previousRay; f.Panel.Bindings.SelectHand(previousLeft); f.Quest.Bindings = previousBindings;
+                typeof(QuestBridge).GetProperty("TrackingSpace").SetValue(f.Quest, previousTracking);
+                camera.SetPositionAndRotation(cameraPosition, cameraRotation); Object.DestroyImmediate(tracking); f.Drain();
             }
         }
     }
@@ -170,7 +268,7 @@ namespace Frontier.Editor
             return consumed;
         }
         internal void Drain() { Frame(); Frame(); Frame(); }
-        internal void OpenRoot() { if (Wheel.IsOpen) Wheel.Close(); Drain(); Frame(Vector2.up); Check(Wheel.IsOpen && Wheel.Page == WheelPage.Root, "Fresh tilt opens the root wheel"); }
+        internal void OpenRoot() { OpenGroups(); Frame(b: true); Check(Wheel.IsOpen && Wheel.Page == WheelPage.Root, "Back from a directly opened category reaches the root wheel"); }
         internal void Choose(string id)
         {
             Frame(); Check(Wheel.Items.Any(a => a.Id == id), "Wheel offers " + id);
@@ -178,9 +276,12 @@ namespace Frontier.Editor
         }
         internal void Confirm() { var direction = Wheel.HighlightedId == null ? Vector2.zero : Wheel.DirectionFor(Wheel.HighlightedId); Frame(direction, down: true, held: true); Frame(direction); }
         internal void Enter(string id) { Choose(id); Confirm(); }
-        internal void OpenSelection() { OpenRoot(); Enter("selection-menu"); }
-        internal void OpenOrders() { OpenRoot(); Enter("orders-menu"); }
-        internal void OpenGroups() { OpenRoot(); Enter("groups-menu"); Check(Wheel.InGroupMenu, "Trigger enters the group submenu"); }
+        private void OpenCategory(Vector2 direction)
+        { if (Wheel.IsOpen) Wheel.Close(); Drain(); Frame(direction); Check(Wheel.IsOpen, "Fresh tilt opens its category without a trigger"); }
+        internal void OpenSelection() { OpenCategory(Vector2.right); }
+        internal void OpenOrders() { OpenCategory(Vector2.left); Check(Wheel.Page == WheelPage.Orders, "Left directly opens unit orders"); }
+        internal void OpenGroups() { OpenCategory(Vector2.up); Check(Wheel.InGroupMenu, "Up directly opens groups"); }
+        internal void OpenAssignGroups() { OpenCategory(Vector2.down); Check(Wheel.Page == WheelPage.AssignGroups && Wheel.GroupSaveMode, "Down directly opens Assign group"); }
         internal void Dismiss() { Wheel.Close(); Drain(); }
         internal void Refresh() { typeof(GameSession).GetProperty("View").SetValue(Session, Session.Match.View(0)); typeof(CommandPanel).GetField("nextText", Private).SetValue(Panel, 0f); Call(Panel, "LateUpdate"); }
         internal EntityState Add(string role, int id, Point position)
@@ -210,6 +311,29 @@ namespace Frontier.Editor
             HarvestingPreview.SaveCanvas(Wheel.transform, Field<RectTransform>(Wheel, rootField), output + "/" + name + ".png", preview, 900, 1050); captures++;
         }
         internal void CapturePanel(string name) { Refresh(); HarvestingPreview.SavePanel(Panel, output + "/" + name + ".png", preview); captures++; }
+        internal void CaptureHandPose(string name, string rootField)
+        {
+            // Fixed viewpoint and real world scale: yellow marks the ray origin.
+            // Unlike layout captures, these views retain the runtime hand attachment.
+            var reference = new GameObject("Wheel ray reference");
+            var material = new Material(Shader.Find("Universal Render Pipeline/Unlit")); material.color = new Color(1, .7f, .3f);
+            var origin = GameObject.CreatePrimitive(PrimitiveType.Sphere); origin.transform.SetParent(reference.transform);
+            origin.transform.position = Ray.origin; origin.transform.localScale = Vector3.one * .012f;
+            origin.GetComponent<Renderer>().sharedMaterial = material;
+            var line = reference.AddComponent<LineRenderer>(); line.sharedMaterial = material;
+            line.positionCount = 2; line.widthMultiplier = .002f; line.SetPosition(0, Ray.origin); line.SetPosition(1, Ray.GetPoint(.3f));
+            preview.AddSingleGO(reference);
+            try
+            {
+                preview.camera.orthographic = false; preview.camera.fieldOfView = 50;
+                preview.camera.nearClipPlane = .01f; preview.camera.farClipPlane = 10;
+                preview.camera.transform.position = new Vector3(0, 1.05f, -.6f);
+                preview.camera.transform.LookAt(new Vector3(0, .8f, -.15f));
+                HarvestingPreview.SaveCanvas(Wheel.transform, Field<RectTransform>(Wheel, rootField), output + "/" + name + ".png", preview, 1000, 900, preservePose: true);
+                captures++;
+            }
+            finally { Object.DestroyImmediate(reference); Object.DestroyImmediate(material); }
+        }
         internal void Report(string label) => Debug.Log($"FRONTIER_{label} passed: {checks} checks, {captures} views; no player build");
         public void Dispose() { Object.DestroyImmediate(wheelObject); Object.DestroyImmediate(console); Object.DestroyImmediate(fixture); preview.Cleanup(); }
     }

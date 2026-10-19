@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Frontier.Runtime
 {
-    public enum WheelPage { Root, Groups, Selection, Build, Orders }
+    public enum WheelPage { Root, Groups, Selection, Build, Orders, AssignGroups }
 
     public sealed class ActionWheel : MonoBehaviour
     {
@@ -16,8 +16,8 @@ namespace Frontier.Runtime
         public bool IsOpen { get; private set; }
         public WheelPage Page { get; private set; }
         public bool InBuildMenu => IsOpen && Page == WheelPage.Build;
-        public bool InGroupMenu => IsOpen && Page == WheelPage.Groups;
-        public bool GroupSaveMode { get; private set; }
+        public bool InGroupMenu => IsOpen && (Page == WheelPage.Groups || Page == WheelPage.AssignGroups);
+        public bool GroupSaveMode => IsOpen && (Page == WheelPage.AssignGroups || saveGestureReady);
         public bool HintVisible => hintRoot != null && hintRoot.gameObject.activeSelf;
         public int Highlighted { get; private set; } = -1;
         public string HighlightedId => Highlighted < 0 || Highlighted >= items.Count ? null : items[Highlighted].Id;
@@ -52,7 +52,7 @@ namespace Frontier.Runtime
             if (!CanOpen) { openReady = false; TickHint(pointer, false); return false; }
             if (cancel && IsOpen)
             {
-                Back();
+                Back(stick);
                 if (IsOpen) UpdatePose(pointer);
                 TickHint(pointer, true); return true;
             }
@@ -61,21 +61,24 @@ namespace Frontier.Runtime
             {
                 if (stick.magnitude < .25f) openReady = true;
                 if (!openReady || stick.magnitude < .45f) { TickHint(pointer, true); return false; }
-                Open(); stickReady = true; Aim(stick); UpdatePose(pointer); TickHint(pointer, true);
-                // Opening with a tilt is navigation only, even if a trigger edge arrives together.
+                Open(); stickReady = true; Aim(stick); Confirm(stick);
+                if (IsOpen) UpdatePose(pointer);
+                TickHint(pointer, true);
+                // Enter the hinted category and highlight the same direction there.
+                // Only a subsequent trigger press can execute its highlighted option.
                 return true;
             }
 
             RefreshActions(); UpdatePose(pointer);
-            if (InGroupMenu)
+            if (Page == WheelPage.Groups)
             {
                 if (stickDown)
                 {
                     saveGesturePending = true; saveGestureReady = stick.magnitude < .25f;
-                    GroupSaveMode = saveGestureReady; saveTarget = -1;
+                    saveTarget = -1;
                 }
                 if (saveGesturePending && stickHeld && stick.magnitude < .25f)
-                { saveGestureReady = true; GroupSaveMode = true; }
+                { saveGestureReady = true; }
                 // Save the explicitly chosen slot even if releasing the click centers the stick.
                 // Centering alone never recalls or saves a group.
                 if (stickUp && saveGesturePending)
@@ -87,11 +90,11 @@ namespace Frontier.Runtime
                 else if (saveGesturePending && !stickHeld && !stickDown) ResetSaveGesture();
             }
             Aim(stick);
-            if (InGroupMenu && GroupSaveMode && Highlighted >= 0) saveTarget = Highlighted;
+            if (saveGesturePending && GroupSaveMode && Highlighted >= 0) saveTarget = Highlighted;
             if (InGroupMenu) RefreshGroups();
             if (triggerDown && !saveGesturePending)
             {
-                neutralSince = -1; Confirm();
+                neutralSince = -1; Confirm(stick);
                 if (!IsOpen) { TickHint(pointer, true); return true; }
             }
             if (IsOpen && stick.magnitude < .25f && !triggerHeld && !stickHeld)
@@ -117,7 +120,7 @@ namespace Frontier.Runtime
                 hintSelection.color = actions.Any(a => a.Category != ActionCategory.Orders) ? Color.white : Disabled;
                 hintOrders.color = actions.Any(a => a.Category == ActionCategory.Orders) ? Color.white : Disabled;
             }
-            Place(hintRoot, pointer, .11f, .035f, .26f, .00038f);
+            Place(hintRoot, pointer, .00024f);
         }
 
         private void Open()
@@ -139,17 +142,20 @@ namespace Frontier.Runtime
             selectedIds.SequenceEqual(Session.Selection.OrderBy(id => id)) &&
             selectedIds.All(id => Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player));
 
-        private void Back()
+        private void Back(Vector2 stick)
         {
             if (Page == WheelPage.Root) { Close(); return; }
-            Enter(Page == WheelPage.Build ? WheelPage.Selection : WheelPage.Root);
+            Enter(Page == WheelPage.Build ? WheelPage.Selection : WheelPage.Root, stick);
         }
 
-        private void Enter(WheelPage page)
+        private void Enter(WheelPage page, Vector2 stick)
         {
             Page = page; actionSignature = null; Highlighted = -1; stickReady = false; neutralSince = -1;
             failedAction = failureMessage = null;
             ResetSaveGesture(); RefreshActions();
+            // Deliberate navigation preserves the held direction, including Back.
+            // Unexpected action-list changes still invalidate a stale highlight.
+            stickReady = true; Aim(stick);
         }
 
         private static SelectionAction Navigation(string id, string label, string description)
@@ -157,21 +163,21 @@ namespace Frontier.Runtime
 
         private void RefreshActions()
         {
-            if (Page == WheelPage.Groups && actionSignature != null) { RefreshGroups(); return; }
+            if (InGroupMenu && actionSignature != null) { RefreshGroups(); return; }
             if (actionSignature != null && ReferenceEquals(actionView, Session.View)) return;
             actionView = Session.View;
             var available = SelectionActions.For(Session);
             var current = new List<SelectionAction>(); disabled.Clear();
             if (Page == WheelPage.Root)
             {
-                current.Add(Navigation("groups-menu", "Groups", "Select or save a control group"));
+                current.Add(Navigation("groups-menu", "Groups", "Select a control group"));
                 current.Add(Navigation("selection-menu", "Selection", "Build, train, research and abilities"));
-                current.Add(Navigation("close-wheel", "Close", "Return to the battlefield"));
+                current.Add(Navigation("assign-groups-menu", "Assign group", "Assign your selection to a control group"));
                 current.Add(Navigation("orders-menu", "Unit orders", "Attack, stop and hold position"));
                 if (!available.Items.Any(a => a.Category != ActionCategory.Orders)) disabled.Add("selection-menu");
                 if (!available.Items.Any(a => a.Category == ActionCategory.Orders)) disabled.Add("orders-menu");
             }
-            else if (Page == WheelPage.Groups)
+            else if (InGroupMenu)
             {
                 for (int i = 0; i < GameSession.ControlGroupCount; i++)
                     current.Add(Navigation("group-" + (i + 1), "Group " + (i + 1), ""));
@@ -199,8 +205,8 @@ namespace Frontier.Runtime
             // Never remap a held direction when a queue change adds/removes a command.
             Highlighted = -1; stickReady = false; BuildSectors();
             var selection = Session.View.entities.Where(e => Session.Selection.Contains(e.id)).ToArray();
-            heading.text = Page == WheelPage.Groups ? "CONTROL GROUPS" : selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "COMMAND WHEEL";
-            if (Page == WheelPage.Groups) RefreshGroups();
+            heading.text = InGroupMenu ? Page == WheelPage.AssignGroups ? "ASSIGN TO GROUP" : "CONTROL GROUPS" : selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "COMMAND WHEEL";
+            if (InGroupMenu) RefreshGroups();
             else { UpdateHighlight(); UpdateDescription(); }
         }
 
@@ -212,7 +218,7 @@ namespace Frontier.Runtime
                 if (Application.isPlaying) Destroy(child); else DestroyImmediate(child);
             }
             sectors.Clear(); sectorLabels.Clear(); angles.Clear();
-            bool cardinal = Page == WheelPage.Root || Page == WheelPage.Groups;
+            bool cardinal = Page == WheelPage.Root || InGroupMenu;
             int commands = cardinal ? items.Count : items.Count - 1;
             float step = cardinal ? 360f / Mathf.Max(1, commands) : 270f / Mathf.Max(1, commands);
             for (int i = 0; i < items.Count; i++)
@@ -256,13 +262,13 @@ namespace Frontier.Runtime
                 stickReady = true;
                 // Releasing the held save modifier still commits this slot after
                 // centering, so keep its destination visible until release or cancel.
-                if (InGroupMenu && GroupSaveMode && saveTarget >= 0) return;
+                if (saveGesturePending && GroupSaveMode && saveTarget >= 0) return;
                 if (Highlighted >= 0) { Highlighted = -1; failedAction = failureMessage = null; UpdateHighlight(); UpdateDescription(); }
                 return;
             }
             if (!stickReady || stick.magnitude < .45f || items.Count == 0) return;
             float angle = Mathf.Atan2(stick.x, stick.y) * Mathf.Rad2Deg;
-            bool cardinal = Page == WheelPage.Root || Page == WheelPage.Groups;
+            bool cardinal = Page == WheelPage.Root || InGroupMenu;
             float step = cardinal ? 360f / items.Count : 270f / Mathf.Max(1, items.Count - 1);
             int next = cardinal ? Mathf.FloorToInt((Mathf.Repeat(angle, 360) + step * .5f) / step) % items.Count :
                 Mathf.Abs(angle) >= 135 || items.Count == 1 ? items.Count - 1 : Mathf.Clamp(Mathf.FloorToInt((angle + 135) / step), 0, items.Count - 2);
@@ -290,6 +296,13 @@ namespace Frontier.Runtime
             detail.color = Ink;
             if (InGroupMenu)
             {
+                if (Page == WheelPage.AssignGroups)
+                {
+                    title.text = "ASSIGN GROUP" + (Highlighted >= 0 ? " " + (Highlighted + 1) : "");
+                    detail.text = Session.Selection.Count + " selected\n" + (Highlighted >= 0 ? "Trigger to assign" : "Tilt to choose a group");
+                    help.text = "Trigger · Assign     " + Panel.Bindings.MenuBackName + " · Back\nCenter stick to hide";
+                    return;
+                }
                 string saveButton = Panel.Bindings.Name(true, "wheel");
                 title.text = GroupSaveMode ? "SAVE GROUP" : "CONTROL GROUPS";
                 if (Highlighted >= 0) title.text = (GroupSaveMode ? "SAVE GROUP " : "GROUP ") + (Highlighted + 1);
@@ -299,13 +312,13 @@ namespace Frontier.Runtime
             }
             title.text = Highlighted >= 0 ? items[Highlighted].Title : Page == WheelPage.Root ? "COMMANDS" : Page == WheelPage.Selection ? "SELECTION" : Page == WheelPage.Build ? "BUILD" : "UNIT ORDERS";
             detail.text = Highlighted >= 0 ? disabled.Contains(items[Highlighted].Id) ? "No actions for this selection" : items[Highlighted].Detail : "Tilt to choose\nTrigger to enter";
-            help.text = "Trigger · " + (Page == WheelPage.Root ? "Enter" : "Confirm") + "     Down · " + (Page == WheelPage.Root ? "Close" : "Back") + "\nCenter stick to hide";
+            help.text = Page == WheelPage.Root ? "Trigger · Enter     " + Panel.Bindings.MenuBackName + " · Close\nCenter stick to hide" : "Trigger · Confirm     Down · Back\nCenter stick to hide";
             if (failedAction != null && failedAction == HighlightedId) { detail.text = failureMessage; detail.color = Save; }
         }
 
         private void ResetSaveGesture()
         {
-            GroupSaveMode = false; saveGesturePending = saveGestureReady = false; saveTarget = -1;
+            saveGesturePending = saveGestureReady = false; saveTarget = -1;
         }
 
         private void ConfirmGroup(int group, bool save)
@@ -313,18 +326,18 @@ namespace Frontier.Runtime
             Close(); Session.CancelMode(); Session.Group(group, save);
         }
 
-        private void Confirm()
+        private void Confirm(Vector2 stick)
         {
             if (Highlighted < 0) return;
             string id = items[Highlighted].Id;
             if (disabled.Contains(id)) { detail.text = "No actions for this selection"; detail.color = Save; return; }
-            if (InGroupMenu) { ConfirmGroup(Highlighted, false); return; }
-            if (id == "close-wheel") { Close(); return; }
-            if (id == "back") { Back(); return; }
-            if (id == "groups-menu") { Enter(WheelPage.Groups); return; }
-            if (id == "selection-menu") { Enter(WheelPage.Selection); return; }
-            if (id == "orders-menu") { Enter(WheelPage.Orders); return; }
-            if (id == "build-menu") { Enter(WheelPage.Build); return; }
+            if (InGroupMenu) { ConfirmGroup(Highlighted, Page == WheelPage.AssignGroups); return; }
+            if (id == "back") { Back(stick); return; }
+            if (id == "groups-menu") { Enter(WheelPage.Groups, stick); return; }
+            if (id == "assign-groups-menu") { Enter(WheelPage.AssignGroups, stick); return; }
+            if (id == "selection-menu") { Enter(WheelPage.Selection, stick); return; }
+            if (id == "orders-menu") { Enter(WheelPage.Orders, stick); return; }
+            if (id == "build-menu") { Enter(WheelPage.Build, stick); return; }
             // Resolve again just before submitting; availability can change while aiming.
             var action = SelectionActions.For(Session).Items.FirstOrDefault(a => a.Id == id);
             if (action == null) { actionSignature = null; RefreshActions(); return; }
@@ -332,15 +345,14 @@ namespace Frontier.Runtime
             else { failedAction = id; failureMessage = Session.Message; UpdateDescription(); }
         }
 
-        private void UpdatePose(Ray pointer) => Place(root, pointer, .28f, .10f, .48f, .00055f);
+        private void UpdatePose(Ray pointer) => Place(root, pointer, .00028f);
 
-        private void Place(RectTransform view, Ray pointer, float reach, float lift, float minimumDistance, float scale)
+        private void Place(RectTransform view, Ray pointer, float scale)
         {
-            var camera = Quest.Camera.transform;
-            var position = pointer.GetPoint(reach) + camera.up * lift;
-            var offset = position - camera.position;
-            if (offset.magnitude < minimumDistance) position = camera.position + (offset.sqrMagnitude > .001f ? offset.normalized : camera.forward) * minimumDistance;
-            view.SetPositionAndRotation(position, Quaternion.LookRotation(position - camera.position, camera.up));
+            // Keep both layers at the ray's base, with the controller's full rotation
+            // (including wrist roll). Head movement must not push or turn the wheel.
+            var rotation = Quest.TrackingSpace != null ? Quest.PointerRotation() : Quaternion.LookRotation(pointer.direction, Vector3.up);
+            view.SetPositionAndRotation(pointer.origin + rotation * new Vector3(0, .025f, 0), rotation);
             view.localScale = Vector3.one * scale;
         }
 
@@ -351,7 +363,7 @@ namespace Frontier.Runtime
             if (hintRoot != null) return;
             EnsureFont(); hintRoot = Rect("Controller command hint", transform, Vector2.zero, new Vector2(360, 280));
             var canvas = hintRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 19;
-            foreach (float angle in new[] { 0f, 90f, 270f })
+            foreach (float angle in new[] { 0f, 90f, 180f, 270f })
             {
                 var slice = Rect("Direction " + angle, hintRoot, Vector2.zero, new Vector2(240, 240)).gameObject.AddComponent<RadialSector>();
                 slice.Angle = angle; slice.Sweep = 78; slice.InnerRadius = 27; slice.OuterRadius = 92; slice.color = Normal; slice.raycastTarget = false;
@@ -359,7 +371,7 @@ namespace Frontier.Runtime
             Label(hintRoot, "Groups", new Vector2(0, 118), new Vector2(116, 34), 22, Color.white);
             hintSelection = Label(hintRoot, "Selection", new Vector2(128, 0), new Vector2(110, 42), 21, Color.white);
             hintOrders = Label(hintRoot, "Unit orders", new Vector2(-128, 0), new Vector2(110, 52), 21, Color.white);
-            Label(hintRoot, "Move stick", new Vector2(0, -72), new Vector2(144, 34), 20, Ink);
+            Label(hintRoot, "Assign group", new Vector2(0, -118), new Vector2(160, 42), 21, Save);
             Label(hintRoot, "+", Vector2.zero, new Vector2(42, 42), 28, Accent);
         }
 

@@ -1,5 +1,44 @@
 # Registro de validación
 
+## Asignar grupos desde abajo y confirmar con gatillo — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+El hint incorpora una cuarta dirección, **Assign group** abajo. Abre una rueda de cuatro grupos en amarillo, con el grupo 3 resaltado por la dirección sostenida. Girar el stick elige otro grupo; una nueva pulsación del gatillo reemplaza sus miembros con la selección actual y cierra la rueda. Arriba conserva la recuperación de grupos. La raíz ofrece la misma categoría abajo; B/Y cierra desde la raíz. Se mantiene el guardado alternativo por modificador dentro de Groups.
+
+- Batch completo `UnifiedWheelValidationBatch.Run` aprobado en Unity **6000.3.26f1**, salida 0; registro `TestResults/unity-trigger-group-assignment.log`. Incluye **526 comprobaciones de rueda / 20 vistas**, **548 de grupos / 12 vistas** y **110 de hotkeys**, además de las regresiones de acciones, menús, rally, colas, habilidades y puntero.
+- Se asignan los cuatro espacios y se comprueban sus miembros exactos, conservación de la selección, reemplazo por edificios y asignación vacía para limpiar un espacio. Se verifican apertura sin escritura, dirección continua, una confirmación por gatillo, drenaje antes del mapa, cancelación por B/tiempo/cambio de selección/seguimiento y regreso al modo de recuperación. Clic de stick no confirma la página Assign group. Entrada real de `CommanderInput.Update` con estados OVR sintéticos, ambas manos y selección reasignada a Grip.
+- Inspeccionadas `UnifiedWheel/industrial-idle-hint.png`, `industrial-direct-assign-group.png` y `ControlGroups/industrial-trigger-assign-building.png`: cuarta dirección visible, modo amarillo, grupo resaltado y ayuda de gatillo legibles. Las comprobaciones de pose incluyen la nueva sección. `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. La validación corresponde al Editor; ergonomía y legibilidad física quedan pendientes en Quest.
+
+## Navegación continua de la rueda — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+La inclinación de apertura ya resalta la opción de la sección: arriba entra a Groups con el grupo 1 listo para confirmar. Entrar o retroceder aplica la dirección sostenida al nuevo nivel en el mismo cuadro; se puede recorrer raíz → Selection → Build → construcción sin centrar el stick. Cada paso requiere una nueva pulsación del gatillo. Centrar sigue limpiando el resaltado e inicia el cierre tras 0,8 s, sin confirmar nada. Se conservan el tamaño compacto y la pose junto al origen del rayo.
+
+- `UnifiedWheelValidationBatch.Run` completo aprobado en Unity **6000.3.26f1**, salida 0: **462 comprobaciones de rueda / 18 vistas** y **104 de hotkeys**, además de grupos, rally, colas, menús, acciones y habilidades. Registro: `TestResults/unity-continuous-wheel-final.log`.
+- Se verifica recuperación directa del grupo 1, giro entre opciones sin centrar, navegación continua de varios niveles, retroceso con B/gatillo, ausencia de confirmaciones repetidas al mantener el gatillo, tiempo de cierre y consumo de la confirmación antes de volver al mapa. `CommanderInput.Update` recorre el gesto con OVR sintético en ambas manos y selección reasignada a Grip. La prueba de habilidades se actualizó para quitar la confirmación de categoría anterior.
+- Pasan las regresiones de cambio externo de cola, selección, foco, pausa y pose de la mano. Inspeccionada `UnifiedWheel/industrial-direct-groups.png`: grupo 1 resaltado inmediatamente y descripción visible. `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. Las entradas son sintéticas de Editor; la fluidez percibida requiere prueba física en Quest.
+
+## Rueda compacta anclada a la mano — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+El hint y la rueda abierta comparten posición a 2,5 cm sobre el origen del rayo, según el eje local del mando. Se elimina el avance hacia delante y el ajuste por distancia a la cámara; la orientación sigue la mano, incluido el giro de muñeca. El hint mide aproximadamente 9 cm de ancho y el marco de la rueda abierta 18 cm (anillo de 16 cm). Se conserva el acceso directo a Groups, Selection y Unit orders.
+
+- `UnifiedWheelValidationBatch.Run` completo aprobado en Unity **6000.3.26f1**, salida 0: **442 comprobaciones de rueda y 18 vistas**, más hotkeys, menús, grupos, colas, rally, acciones y habilidades. Registro: `TestResults/unity-hand-attached-wheel.log`.
+- Las pruebas de pose cubren ambas manos y facciones, hint, grupos, selección, construcción y órdenes. Verifican cercanía al origen del rayo, ausencia de avance, escala física, giro completo e independencia de la posición/orientación de la cabeza, incluso a 12 cm de distancia.
+- Las vistas `UnifiedWheel/*-hand-hint.png` y `*-hand-groups.png` conservan la escala y pose reales con una cámara fija; el marcador amarillo representa el origen del rayo solo en el fixture. Inspeccionadas ambas manos: anclaje, giro y texto correctos. La repetición focalizada después de corregir el orden de capas del renderizador de capturas aprobó las mismas **442 comprobaciones y 18 vistas**, salida 0 (`TestResults/unity-hand-wheel-views.log`). `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. Las poses son sintéticas de Editor; tamaño percibido, legibilidad y comodidad requieren prueba física en Quest.
+
+## Acceso directo desde el hint de la rueda — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+Inclinar desde el hint entra directamente en Groups (arriba), Selection (derecha) o Unit orders (izquierda), cuando la sección está disponible. El hint conserva su aspecto. La apertura no hereda una opción seleccionada: hay que centrar antes de elegir una acción o grupo y confirmarlo con gatillo. Abajo mantiene la rueda cerrada; volver desde una sección conserva el acceso a la raíz.
+
+- Batch completo `UnifiedWheelValidationBatch.Run` aprobado en Unity **6000.3.26f1**, salida 0, incluyendo **334 comprobaciones de navegación** y **100 de hotkeys**, además de acciones, grupos, colas, rally, menús, habilidades y entrega del puntero al mapa. Registro: `TestResults/unity-direct-wheel-entry.log`.
+- Entradas OVR sintéticas por `CommanderInput.Update` verifican las tres entradas directas en ambas manos con selección reasignada a Grip, neutral antes de elegir y recuperación por gatillo. Se generan diez vistas de navegación; inspeccionadas `UnifiedWheel/industrial-direct-groups.png`, `industrial-direct-selection.png` e `industrial-direct-orders.png`: sección correcta, sin opción heredada y texto legible.
+
+No se generó APK ni ejecutable desktop. La validación corresponde al Editor; el gesto y la comodidad en Quest físico quedan pendientes.
+
 ## Retiro de la leyenda de botones — fuentes, sin nuevo APK — 19 de octubre de 2026
 
 Se retira la tarjeta de Trigger, A/B, Grip y Stick junto al mando, incluyendo su componente, conexiones y previsualización específica. La rueda conserva su hint direccional. Compilación y **190 comprobaciones de la rueda aprobadas**, con cuatro vistas, en Unity **6000.3.26f1**, salida 0; registro `TestResults/unity-remove-controller-hints.log`. No se generó un APK nuevo.

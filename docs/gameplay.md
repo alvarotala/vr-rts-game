@@ -153,12 +153,12 @@ En Quest se solicita el modo de [realidad mixta sin límite contextual de Meta](
 | Punto de reunión del edificio seleccionado | A sobre el terreno | Clic derecho |
 | Attack Move / ataque directo sobre enemigo | Doble A; mantener grip para encolar | Doble clic derecho; Shift para encolar |
 | Abrir rueda unificada | Inclinar el joystick desde el centro | — |
-| Elegir categoría | Arriba: Groups; derecha: Actions; izquierda: Orders | — |
+| Elegir categoría | Arriba: Groups; derecha: Selection; abajo: Assign group; izquierda: Orders | — |
 | Entrar / ejecutar en la rueda | Gatillo del mando activo | — |
-| Volver / cerrar la rueda | Abajo + gatillo o B; dentro de Groups, B | — |
+| Volver / cerrar la rueda | B/Y vuelve y cierra desde la raíz; abajo + gatillo vuelve desde acciones | — |
 | Cerrar por inactividad | Dejar el joystick centrado durante 0,8 s | — |
 | Recuperar grupo en la rueda | Entrar a Groups, inclinar hacia un grupo y gatillar | — |
-| Reemplazar un grupo con la selección | Dentro de Groups: mantener pulsado el joystick, inclinar y soltar la pulsación | — |
+| Reemplazar un grupo con la selección | Abajo desde el hint → elegir grupo → gatillo | — |
 | Cancelar / opciones | B | Escape |
 | Desplazar mapa (solo escritorio) | — | WASD |
 | Zoom (solo escritorio) | — | Rueda |
@@ -176,17 +176,21 @@ Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionad
 
 ### Rueda unificada
 
-Durante el juego aparece un **hint compacto junto al mando activo**, incluso con la rueda cerrada: arriba **Groups**, derecha **Selection**, izquierda **Unit orders**. Es el nivel 0. Al inclinar el joystick desde el centro se despliega la rueda normal del nivel 1 y se resalta la dirección elegida. **El gatillo entra a la opción**; mantener una dirección conserva la rueda abierta. Centrar el joystick durante **0,8 s sin acción** la cierra. El hint se oculta al pausar, colocar el tablero o perder el seguimiento.
+El hint y la rueda abierta son pequeños y quedan junto al inicio del rayo. Acompañan la posición y orientación de la mano, incluido el giro de muñeca.
 
-**Groups** permite recuperar o guardar grupos; **Selection** reúne las acciones de la selección, como Build, Train, Research y habilidades de casters; **Unit orders** ofrece Attack Move, Stop y Hold Position. Los trabajadores abren los edificios disponibles desde **Build**. **Abajo + gatillo** retrocede un nivel o cierra desde la raíz; dentro de Groups, abajo corresponde al grupo 3 y **B** vuelve. B también permite retroceder en los demás niveles. Al cambiar de nivel, centrar el joystick antes de elegir otra opción evita confirmar una dirección heredada. La rueda muestra el nombre de la selección, la acción y su costo o efecto; las órdenes rechazadas indican el motivo.
+Durante el juego aparece un **hint compacto junto al mando activo**, incluso con la rueda cerrada: arriba **Groups**, derecha **Selection**, abajo **Assign group**, izquierda **Unit orders**. Es el nivel 0. Al inclinar el joystick desde el centro se abre **directamente la sección indicada**, con la opción de esa dirección ya resaltada. **No hace falta centrar entre niveles**: mantener o desplazar el stick elige la opción, y **una nueva pulsación del gatillo confirma cada paso**. Mantener una dirección conserva la rueda abierta. Centrar el joystick durante **0,8 s sin acción** la cierra. El hint se oculta al pausar, colocar el tablero o perder el seguimiento.
+
+**Groups** permite recuperar grupos; **Assign group** asigna la selección actual a un grupo; **Selection** reúne las acciones de la selección, como Build, Train, Research y habilidades de casters; **Unit orders** ofrece Attack Move, Stop y Hold Position. Los trabajadores abren los edificios disponibles desde **Build**. **Abajo + gatillo** retrocede desde Selection, Build y Unit orders. En la raíz abre Assign group; dentro de las dos ruedas de grupos corresponde al grupo 3. **B/Y** retrocede y cierra desde la raíz. Entrar o retroceder conserva la dirección del stick; mantener el gatillo no confirma otra opción hasta soltarlo y pulsarlo de nuevo. La rueda muestra el nombre de la selección, la acción y su costo o efecto; las órdenes rechazadas indican el motivo.
 
 La navegación usa siempre el gatillo físico y B/Y del mando activo. A/X y grip no ejecutan opciones ni cambian de nivel; sus funciones del mapa se conservan al cerrar. Las pulsaciones de joystick y el doble grip no abren la rueda. Al elegir una construcción, Attack Move o una habilidad, la rueda se cierra y espera un destino nuevo en el mapa, después de soltar los botones. Mientras está abierta consume la entrada para que la misma pulsación no seleccione ni ordene sobre el tablero. Cambiar la selección, perder una unidad seleccionada, pausar, perder foco/seguimiento o terminar la partida cierra la rueda. La consola permanece disponible para recursos, colas y las mismas acciones.
 
 ### Rueda de grupos
 
-La rueda unificada se abre inclinando el joystick desde el centro. **Arriba → gatillo** entra a **Groups**; todavía no cambia la selección. Dentro aparecen cuatro grupos: **1 arriba, 2 a la derecha, 3 abajo y 4 a la izquierda**. Inclinar resalta un grupo y **gatillar lo recupera**. Volver al centro no selecciona nada; tras **0,8 s** sin acción la rueda se cierra. **B** vuelve al nivel principal.
+La rueda unificada se abre inclinando el joystick desde el centro. **Arriba** entra directamente a **Groups** con el **grupo 1 ya resaltado**; basta gatillar para recuperarlo. Se puede girar directamente hacia otro grupo sin centrar: **1 arriba, 2 a la derecha, 3 abajo y 4 a la izquierda**. Inclinar solo resalta; **gatillar recupera**. Volver al centro no selecciona nada; tras **0,8 s** sin acción la rueda se cierra. **B** vuelve al nivel principal conservando la dirección.
 
-Para guardar, primero entrar a **Groups**. **Mantener pulsado el joystick desde el centro, inclinar hacia el grupo y soltar la pulsación** reemplaza todos sus miembros con la selección actual. El modo amarillo **SAVE GROUP** distingue este gesto de la recuperación. Se puede girar para cambiar el destino antes de soltar; volver al centro mientras sigue apretado conserva el grupo resaltado, sin guardar todavía. B cancela. La pulsación del joystick no abre la rueda ni guarda fuera de Groups.
+Para asignar, seleccionar unidades o edificios e inclinar **abajo desde el hint**. Abre **Assign group** en amarillo, con el grupo 3 resaltado. Elegir cualquiera de las cuatro direcciones y **confirmar con gatillo** reemplaza los miembros del grupo por la selección actual. No hace falta centrar ni pulsar el stick. B/Y cancela; centrar durante 0,8 s cierra sin asignar. Asignar una selección vacía limpia el grupo elegido.
+
+También se conserva el gesto alternativo dentro de **Groups**: **mantener pulsado el joystick desde el centro, inclinar hacia el grupo y soltar la pulsación** reemplaza todos sus miembros con la selección actual. El modo amarillo **SAVE GROUP** distingue este gesto de la recuperación. Se puede girar para cambiar el destino antes de soltar; volver al centro mientras sigue apretado conserva el grupo resaltado, sin guardar todavía. B cancela. La pulsación del joystick no abre la rueda ni guarda fuera de Groups.
 
 Los contadores excluyen unidades y edificios destruidos. Se pueden guardar unidades y edificios propios, incluidos grupos de varias barracas; recuperar un grupo conserva sus colas y puntos de reunión. Los grupos se reinician al comenzar otra partida. Los cuatro botones del panel conservan clic para recuperar y pulsación larga para guardar. El modificador de guardado de la rueda se puede reasignar desde Hotkeys; las direcciones y el gatillo de navegación son fijos.
 

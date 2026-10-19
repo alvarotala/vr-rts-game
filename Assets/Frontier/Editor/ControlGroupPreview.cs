@@ -33,6 +33,7 @@ namespace Frontier.Editor
                     f.Session.Select(workers[0].id, false); f.Refresh();
                     f.Check(UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts").Length == 4 && UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts").All(t => t.text == "1 assigned"), "HUD displays all four group counts");
                     f.CapturePanel(faction + "-hud");
+                    CheckTriggerAssignment();
                     f.OpenGroups(); f.Choose("group-2"); f.Frame();
                     f.Check(f.Wheel.InGroupMenu && f.Wheel.Highlighted == -1 && f.Session.Selection.Contains(workers[0].id), "Centering a group highlight clears it without recalling the group");
                     f.Choose("group-2"); f.Frame(directions[1], a: true);
@@ -127,6 +128,44 @@ namespace Frontier.Editor
                     f.Check(f.Board.transform.localToWorldMatrix == boardPose, "Group navigation leaves board placement unchanged");
                     f.OpenGroups(); f.Choose("group-2"); f.Session.StartMatch(); f.Frame();
                     f.Check(!f.Wheel.IsOpen && Enumerable.Range(0, 4).All(i => f.Session.GroupSize(i) == 0), "A rematch resets all groups and invalidates the open wheel"); f.Drain();
+
+                    void CheckTriggerAssignment()
+                    {
+                        for (int slot = 0; slot < 4; slot++)
+                        {
+                            f.Session.Select(workers[0].id, false); f.Session.Select(workers[1].id, true);
+                            f.OpenAssignGroups(); f.Frame(directions[slot]);
+                            f.Check(f.Wheel.HighlightedId == "group-" + (slot + 1) && f.Session.GroupSize(slot) == 1, "Assign group previews slot " + (slot + 1) + " without changing it");
+                            f.Frame(directions[slot], down: true, held: true);
+                            f.Check(!f.Wheel.IsOpen && f.Session.GroupSize(slot) == 2 && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }), "Trigger assigns slot " + (slot + 1) + " and preserves the selection");
+                            f.Check(f.Frame(held: true) && f.Frame(up: true), "Assignment consumes its held trigger and release"); f.Drain();
+                            f.Session.Select(0, false); f.Session.Group(slot, false);
+                            f.Check(f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }), "Assigned slot " + (slot + 1) + " contains exactly the chosen members");
+                            f.Session.Select(workers[slot].id, false); f.Session.Group(slot, true);
+                        }
+                        f.Session.Select(hq.id, false); f.OpenAssignGroups(); f.Frame(Vector2.left);
+                        f.Capture(faction + "-trigger-assign-building");
+                        f.Frame(Vector2.left, press: true); f.Frame(Vector2.left, clickUp: true);
+                        f.Check(f.Wheel.GroupSaveMode && f.Session.GroupSize(3) == 1, "Stick click release does not confirm the dedicated assignment page");
+                        f.Frame(Vector2.left, down: true, held: true); f.Drain(); f.Session.Select(0, false); f.Session.Group(3, false);
+                        f.Check(f.Session.Selection.SetEquals(new[] { hq.id }), "Trigger assignment replaces the old group with a building");
+                        f.Session.Select(workers[3].id, false); f.Session.Group(3, true);
+
+                        f.Session.Select(hq.id, false); f.OpenAssignGroups(); f.Frame(Vector2.up, b: true);
+                        f.Check(f.Wheel.Page == WheelPage.Root && !f.Wheel.GroupSaveMode, "Back leaves assignment mode without saving");
+                        f.Frame(Vector2.up, down: true, held: true); f.Frame(Vector2.up); f.Frame(Vector2.up, down: true, held: true); f.Drain();
+                        f.Check(f.Session.Selection.SetEquals(new[] { workers[0].id }), "Entering Groups after assignment cancellation recalls instead of assigning");
+                        f.OpenAssignGroups(); f.Frame(); f.Frame(elapsed: .81f);
+                        f.Check(!f.Wheel.IsOpen && Enumerable.Range(0, 4).All(i => f.Session.GroupSize(i) == 1), "Center timeout cancels assignment without saving"); f.Drain();
+                        f.OpenAssignGroups(); f.Session.Select(hq.id, false); f.Frame(Vector2.up, down: true, held: true); f.Drain();
+                        f.Check(!f.Wheel.IsOpen && f.Session.GroupSize(0) == 1, "Selection change cancels pending assignment before a trigger can save");
+                        f.OpenAssignGroups(); f.Session.Pause("tracking", true); f.Frame(Vector2.up, down: true, held: true);
+                        f.Session.Pause("tracking", false); f.Drain(); f.Session.Group(0, false);
+                        f.Check(f.Session.Selection.SetEquals(new[] { workers[0].id }), "Tracking interruption cancels assignment without overwriting a group");
+                        f.Session.Select(0, false); f.OpenAssignGroups(); f.Frame(Vector2.left, down: true, held: true); f.Drain();
+                        f.Check(f.Session.GroupSize(3) == 0 && f.Session.Selection.Count == 0, "Explicit assignment of an empty selection clears only the chosen slot");
+                        f.Session.Select(workers[3].id, false); f.Session.Group(3, true); f.Session.Select(workers[0].id, false);
+                    }
                 }
                 f.Report("CONTROL_GROUPS");
 

@@ -207,7 +207,7 @@ namespace Frontier.Editor
                     Reset();var before=session.Selection.ToArray();
                     Call(input,"RouteWheel",ray,Vector2.zero,false,false,false,false,false,true,false,110f,false,false);
                     bool consumed=(bool)Call(input,"RouteWheel",ray,Vector2.up,false,false,false,false,false,true,false,110.05f,false,false);
-                    Check(consumed&&wheel.IsOpen&&wheel.Page==WheelPage.Root&&session.Selection.SetEquals(before),"A neutral-to-direction tilt opens the unified root while Grip is held without changing selection");
+                    Check(consumed&&wheel.InGroupMenu&&wheel.HighlightedId=="group-1"&&session.Selection.SetEquals(before),"Up enters Groups with group 1 highlighted while Grip is held without recalling it");
                     wheel.Close();
 
                     // Exercise the original drag route, including starts outside the map.

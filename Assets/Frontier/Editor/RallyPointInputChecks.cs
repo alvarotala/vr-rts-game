@@ -123,8 +123,7 @@ namespace Frontier.Editor
                     // Reuse the real wheel route with a map ray underneath, so a leaked confirm is visible.
                     session.Context(first, 0, 0); Refresh(); Reset();
                     WheelFrame();
-                    Check(WheelFrame(stick: Vector2.right) && wheel.IsOpen && wheel.Page==WheelPage.Root, "Stick tilt opens the unified root");
-                    WheelFrame(stick:Vector2.right,down:true,held:true);WheelFrame(stick:Vector2.right);WheelFrame();
+                    Check(WheelFrame(stick: Vector2.right) && wheel.IsOpen && wheel.Page==WheelPage.Selection && wheel.Highlighted>=0, "Right tilt directly opens producer selection actions with its direction highlighted");
                     int index = wheel.Items.ToList().FindIndex(a => a.Id == "clear-rally-point");
                     Check(index >= 0, "Producer wheel exposes Clear rally independently of Cancel production");
                     var direction=wheel.DirectionFor("clear-rally-point");WheelFrame(stick: direction);
