@@ -1,5 +1,14 @@
 # Registro de validación
 
+## Vibración de navegación de la rueda — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+El mando activo recibe un pulso suave al cambiar de ítem (25 ms, amplitud 0,12) y uno más marcado al abrir o cambiar de nivel, incluido Back (55 ms, amplitud 0,28). El cambio de nivel y su resaltado inicial producen un solo pulso. Mantener dirección/gatillo, centrar, el temblor dentro de la histéresis o actualizar descripciones no repiten vibración. El feedback existente de comandos se conserva. Expirar el tiempo, cambiar de mano, perder foco o desactivar entrada detiene el mando que recibió el pulso.
+
+- Batch completo `UnifiedWheelValidationBatch.Run` aprobado en Unity **6000.3.26f1**, salida 0, registro `TestResults/unity-wheel-haptics.log`: **586 comprobaciones de rueda / 20 vistas**, además de hotkeys, grupos, acciones, menús, colas, rally, habilidades y puntero.
+- **60 comprobaciones nuevas de vibración** cubren ambas manos y facciones. Controladores sintéticos registran el despacho real de `OVRInput.SetControllerVibration` sin activar hardware. Comprueban una sola emisión por cambio, amplitudes relativas, duración, ausencia de repeticiones, feedback de rechazo, parada al expirar/foco/cambio de mano/desactivación y silencio en desktop. `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. El registro verifica las solicitudes al SDK; la sensación e intensidad de los pulsos requieren prueba física en Quest.
+
 ## Asignar grupos desde abajo y confirmar con gatillo — fuentes, sin nuevo APK — 19 de octubre de 2026
 
 El hint incorpora una cuarta dirección, **Assign group** abajo. Abre una rueda de cuatro grupos en amarillo, con el grupo 3 resaltado por la dirección sostenida. Girar el stick elige otro grupo; una nueva pulsación del gatillo reemplaza sus miembros con la selección actual y cierra la rueda. Arriba conserva la recuperación de grupos. La raíz ofrece la misma categoría abajo; B/Y cierra desde la raíz. Se mantiene el guardado alternativo por modificador dentro de Groups.

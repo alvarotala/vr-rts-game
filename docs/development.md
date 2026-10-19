@@ -299,6 +299,8 @@ La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joysti
 
 Las vistas `UnifiedWheel/*-hand-hint.png` y `*-hand-groups.png` conservan escala, posición y giro reales frente a una cámara fija. El marcador amarillo identifica el origen del rayo únicamente en la previsualización. Las comprobaciones verifican ambos mandos, tamaño físico compacto y anclaje independiente de los movimientos de cabeza para cada sección de la rueda.
 
+El fixture de rueda también registra el envío de vibración mediante controladores sintéticos del SDK: cambio de ítem/nivel, ausencia de pulsos duplicados al sostener o por histéresis, duración, parada por foco/desactivación/cambio de mano y ausencia de vibración desktop. El registro sustituye la salida física; la intensidad percibida se ajusta probando el visor.
+
 ## Apuntado de minerales
 
 Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resource models** o `unity run . --log-file TestResults/unity-resource-models.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourceVisualPreview.Render`. Guarda diez vistas en `TestResults/ResourceModels/`, incluyendo cristales, gas desde arriba, vapor en dos momentos, hover, tablero compacto y extractor. Comprueba el ciclo visual del vapor y usa una vista preparada para mostrar los modelos; no genera un ejecutable. Después de cambiar las siluetas, `ResourcePickingPreview.Render` verifica el apuntado con rayos y órdenes reales.

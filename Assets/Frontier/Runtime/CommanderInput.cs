@@ -9,6 +9,7 @@ namespace Frontier.Runtime
     {
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
+        private OVRInput.Controller hapticController=OVRInput.Controller.None;
         private bool wheelReleasePending;
         private OVRInput.Controller inputController=OVRInput.Controller.None;
         private bool controllerReleasePending;
@@ -41,6 +42,7 @@ namespace Frontier.Runtime
         }
         private void Update()
         {
+            UpdateHaptics();
             if(Board.Content==null){ResetMapGestures();Wheel?.TickHint(default,false);return;}
             bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
             Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,wheelHeld=false,wheelReleased=false,triggerHeld=false,gripDown=false;
@@ -61,7 +63,6 @@ namespace Frontier.Runtime
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);
                 wheelPressed=wheel.Down;wheelHeld=wheel.Held;wheelReleased=wheel.Up;
                 menuDepth=primaryStick.y;
-                if(Time.unscaledTime>hapticEnd)OVRInput.SetControllerVibration(0,0,primary);
                 laser.enabled=true;
                 laser.SetPosition(0,ray.origin);laser.SetPosition(1,ray.GetPoint(2));
             }
@@ -178,9 +179,17 @@ namespace Frontier.Runtime
                 }
                 return false;
             }
+            var previousPage=Wheel.Page;string previousItem=Wheel.HighlightedId;
             bool consumed=Wheel.ProcessUnified(ray,stick,triggerDown,triggerHeld,triggerUp,cancel,now,press,stickHeld,stickReleased);
             if(consumed)
             {
+                // A page transition also highlights an item: emit only the stronger
+                // level pulse. A held direction and description refresh stay silent.
+                if(Wheel.IsOpen)
+                {
+                    if(!wasOpen||Wheel.Page!=previousPage)PulseHaptic(.28f,.055f);
+                    else if(!triggerDown&&Wheel.HighlightedId!=null&&Wheel.HighlightedId!=previousItem)PulseHaptic(.12f,.025f);
+                }
                 ClearPointer();CancelPanelInput();wheelReleasePending=true;
                 if(laser!=null)laser.enabled=!Wheel.IsOpen;
                 return true;
@@ -314,16 +323,32 @@ namespace Frontier.Runtime
         private void ResetMapGestures(){ResetActionTap();ResetSelectTap();gestureMatch=null;}
         private void ChangeInputController(OVRInput.Controller controller)
         {
-            if(inputController!=OVRInput.Controller.None)OVRInput.SetControllerVibration(0,0,inputController);
-            inputController=controller;hapticEnd=0;controllerReleasePending=true;
+            StopHaptic();
+            inputController=controller;controllerReleasePending=true;
             ResetWheelRouting();
             CancelPanelInput();wheelReleasePending=true;ClearPointer();
         }
         private void Haptic(bool success)
-        {if(!Quest.Active)return;OVRInput.SetControllerVibration(.5f,success ? .2f : .65f,Quest.ActiveController);hapticEnd=Time.unscaledTime+.07f;}
+        {PulseHaptic(success ? .2f : .65f,.07f);}
+        private void PulseHaptic(float amplitude,float duration)
+        {
+            if(!isActiveAndEnabled||Quest==null||!Quest.Active)return;
+            var controller=Quest.ActiveController;
+            if(hapticController!=OVRInput.Controller.None&&hapticController!=controller)StopHaptic();
+            OVRInput.SetControllerVibration(.5f,amplitude,controller);
+            hapticController=controller;hapticEnd=Time.unscaledTime+duration;
+        }
+        private void UpdateHaptics()
+        {if(hapticController!=OVRInput.Controller.None&&Time.unscaledTime>=hapticEnd)StopHaptic();}
+        private void StopHaptic()
+        {
+            if(hapticController!=OVRInput.Controller.None)OVRInput.SetControllerVibration(0,0,hapticController);
+            hapticController=OVRInput.Controller.None;hapticEnd=0;
+        }
         private void OnApplicationFocus(bool focused)
-        {if(!focused){ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {if(!focused){StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

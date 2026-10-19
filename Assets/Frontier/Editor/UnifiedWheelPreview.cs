@@ -32,6 +32,7 @@ namespace Frontier.Editor
                     f.Check(hint.position != hintPosition, "The compact hint follows the active pointer pose");
                     f.Capture(faction + "-idle-hint", "hintRoot");
                     CheckHandAttachment(f, faction);
+                    CheckNavigationHaptics(f);
 
                     var movePoint = new Point(worker.position.x + 2, worker.position.y);
                     UnifiedWheelFixture.Call(f.Input, "OrderClick", movePoint, 0, 0, false, 100f);
@@ -164,6 +165,72 @@ namespace Frontier.Editor
                     f.Check(f.Board.transform.localToWorldMatrix == originalPose, "Unified wheel gestures leave the board placement unchanged");
                 }
                 f.Report("UNIFIED_WHEEL");
+            }
+        }
+
+        private sealed class HapticRecorder : OVRInput.OVRControllerLTouch
+        {
+            internal readonly System.Collections.Generic.List<float> Amplitudes = new System.Collections.Generic.List<float>();
+            internal HapticRecorder(OVRInput.Controller hand) { controllerType = hand; }
+            public override void SetControllerVibration(float frequency, float amplitude) { Amplitudes.Add(amplitude); }
+        }
+
+        private static void CheckNavigationHaptics(UnifiedWheelFixture f)
+        {
+            var previousControllers = OVRInput.controllers; var previousDevice = OVRManager.loadedXRDevice;
+            var previousBindings = f.Quest.Bindings; bool previousLeft = f.Panel.Bindings.LeftHand;
+            var left = new HapticRecorder(OVRInput.Controller.LTouch); var right = new HapticRecorder(OVRInput.Controller.RTouch);
+            // Record the real SDK dispatch without sending vibration to physical hardware.
+            OVRInput.controllers = new System.Collections.Generic.List<OVRInput.OVRControllerBase> { left, right };
+            OVRManager.loadedXRDevice = OVRManager.XRDevice.Oculus; f.Quest.Bindings = f.Panel.Bindings;
+            try
+            {
+                foreach (bool useLeft in new[] { false, true })
+                {
+                    UnifiedWheelFixture.Call(f.Input, "StopHaptic"); f.Dismiss();
+                    f.Panel.Bindings.SelectHand(useLeft); left.Amplitudes.Clear(); right.Amplitudes.Clear();
+                    var active = useLeft ? left : right; var inactive = useLeft ? right : left;
+                    f.Frame(Vector2.up);
+                    f.Check(active.Amplitudes.Count == 1 && active.Amplitudes[0] > 0 && inactive.Amplitudes.Count == 0, "Opening sends exactly one level pulse to the active hand");
+                    float level = active.Amplitudes.Last();
+                    f.Check(Mathf.Abs(UnifiedWheelFixture.Field<float>(f.Input, "hapticEnd") - Time.unscaledTime - .055f) < .005f, "Level vibration is bounded to 55 ms");
+                    f.Frame(Vector2.up); f.Frame(new Vector2(.71f, .70f)); f.Frame(Vector2.up, elapsed: 1f);
+                    f.Check(active.Amplitudes.Count == 1, "Held directions and sector-boundary jitter do not repeat vibration");
+                    f.Frame(Vector2.right);
+                    f.Check(active.Amplitudes.Count == 2 && active.Amplitudes.Last() > 0 && active.Amplitudes.Last() < level, "Changing group emits one lighter item pulse");
+                    f.Check(Mathf.Abs(UnifiedWheelFixture.Field<float>(f.Input, "hapticEnd") - Time.unscaledTime - .025f) < .005f, "Item vibration is bounded to 25 ms");
+                    f.Frame(); f.Frame();
+                    f.Check(active.Amplitudes.Count == 2, "Centering the stick stays silent");
+                    f.Frame(Vector2.up); f.Frame(Vector2.up, b: true);
+                    f.Check(active.Amplitudes.Count == 4 && active.Amplitudes.Last() == level, "Back emits one level pulse despite also highlighting the parent option");
+                    f.Frame(Vector2.up, down: true, held: true);
+                    f.Check(active.Amplitudes.Count == 5 && active.Amplitudes.Last() == level, "Entering a submenu emits one level pulse without a duplicate item pulse");
+                    f.Frame(Vector2.up, held: true); f.Refresh(); f.Frame(Vector2.up, held: true);
+                    f.Check(active.Amplitudes.Count == 5, "A held trigger and description refresh do not repeat vibration");
+                    typeof(CommanderInput).GetField("hapticEnd", UnifiedWheelFixture.Private).SetValue(f.Input, Time.unscaledTime - 1);
+                    UnifiedWheelFixture.Call(f.Input, "UpdateHaptics"); UnifiedWheelFixture.Call(f.Input, "UpdateHaptics");
+                    f.Check(active.Amplitudes.Count == 6 && active.Amplitudes.Last() == 0, "Pulse expiry sends a single stop instead of vibrating indefinitely");
+                    UnifiedWheelFixture.Call(f.Input, "Haptic", false);
+                    f.Check(active.Amplitudes.Last() > level, "Rejected commands retain their stronger existing feedback");
+                    UnifiedWheelFixture.Call(f.Input, "OnApplicationFocus", false);
+                    f.Check(active.Amplitudes.Last() == 0 && UnifiedWheelFixture.Field<float>(f.Input, "hapticEnd") == 0, "Focus loss immediately stops the active pulse");
+                    UnifiedWheelFixture.Call(f.Input, "OnApplicationFocus", true); f.Drain(); f.Frame(Vector2.up);
+                    UnifiedWheelFixture.Call(f.Input, "ChangeInputController", useLeft ? OVRInput.Controller.RTouch : OVRInput.Controller.LTouch);
+                    f.Check(active.Amplitudes.Last() == 0 && inactive.Amplitudes.Count == 0, "Changing hand stops the original hand without pulsing the other controller");
+                    f.Drain(); f.Frame(Vector2.up); UnifiedWheelFixture.Call(f.Input, "OnDisable");
+                    f.Check(active.Amplitudes.Last() == 0, "Disabling input immediately stops navigation vibration");
+                    int count = active.Amplitudes.Count;
+                    typeof(QuestBridge).GetProperty("Active").SetValue(f.Quest, false); f.Drain(); f.Frame(Vector2.up);
+                    f.Check(active.Amplitudes.Count == count && inactive.Amplitudes.Count == 0, "Desktop does not send controller vibration");
+                    typeof(QuestBridge).GetProperty("Active").SetValue(f.Quest, true);
+                }
+            }
+            finally
+            {
+                UnifiedWheelFixture.Call(f.Input, "StopHaptic"); f.Wheel.Close();
+                OVRInput.controllers = previousControllers; OVRManager.loadedXRDevice = previousDevice;
+                typeof(QuestBridge).GetProperty("Active").SetValue(f.Quest, true);
+                f.Panel.Bindings.SelectHand(previousLeft); f.Quest.Bindings = previousBindings; f.Drain();
             }
         }
 
