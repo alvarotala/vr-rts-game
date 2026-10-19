@@ -2,6 +2,58 @@ using Frontier.Core;
 
 static class HarvestingChecks
 {
+    public static void Depletion(Catalog catalog, IEnumerable<MapDefinition> maps, Action<bool,string> check)
+    {
+        void Step(Simulation sim,int count) {for(int i=0;i<count;i++)sim.Step();}
+        foreach(var map in maps)
+        foreach(string faction in new[]{"industrial","biological"})
+        foreach(bool explored in new[]{false,true})
+        {
+            var sim=new Simulation(map,catalog,faction);
+            var workers=sim.Entities.Values.Where(e=>e.owner==0&&sim.Type(e).role=="worker").ToArray();
+            foreach(var enemy in sim.Entities.Values.Where(e=>e.owner==1&&!sim.Type(e).building))enemy.order=CommandKind.Hold;
+            var local=sim.Resources.Where(r=>r.kind=="mineral"&&r.definition.StartsWith("camp0.")).ToArray();
+            var remote=sim.Resources.First(r=>r.definition==(map.id=="rift"?"camp2.mineral0":"camp1.mineral0"));
+            string label=map.id+"/"+faction+"/"+(explored?"remembered":"unexplored");
+            if(explored)
+            {
+                var type=catalog.Role(faction,"supply");
+                var observer=new EntityState{id=1000,owner=0,definition=type.id,health=type.health,
+                    position=new Point(remote.position.x-type.footprint*.5f,remote.position.y-type.footprint*.5f)};
+                sim.Entities.Add(observer.id,observer);Step(sim,4);sim.Entities.Remove(observer.id);Step(sim,4);
+            }
+            check(sim.Explored(0,remote.position)==explored&&!sim.Visible(0,remote.position),"Depletion fixture preserves remote fog: "+label);
+            foreach(var mineral in local)mineral.remaining=0;
+            foreach(var worker in workers){worker.cargo=0;worker.depositing=false;}
+            // The last partial load is still owed to the player's economy.
+            workers[0].cargo=5;workers[0].cargoKind="mineral";
+            int money=sim.Players[0].minerals;
+            bool stayedLocal=true;
+            for(int i=0;i<600;i++)
+            {
+                sim.Step();
+                stayedLocal&=workers.All(w=>w.order!=CommandKind.Gather||local.Any(r=>r.id==w.resourceId));
+            }
+            check(stayedLocal&&workers.All(w=>w.order==CommandKind.Stop&&w.resourceId==0),
+                "Exhausted camp leaves all miners idle without transferring to other zones: "+label);
+            check(sim.Players[0].minerals==money+5&&workers.All(w=>w.cargo==0),"Last partial mineral load is deposited before idling: "+label);
+            var positions=workers.Select(w=>w.position).ToArray();Step(sim,200);
+            check(workers.Select((w,i)=>w.order==CommandKind.Stop&&w.position.Distance(positions[i])<.01f).All(x=>x),
+                "Idle miners stay at the exhausted camp: "+label);
+            var hq=sim.Entities.Values.First(e=>e.owner==0&&sim.Type(e).role=="hq");
+            check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Train,entities=new[]{hq.id},definition=catalog.Role(faction,"worker").id}).accepted,
+                "Worker can still be trained at an exhausted camp: "+label);
+            Step(sim,600);
+            var born=sim.Entities.Values.Where(e=>e.owner==0&&sim.Type(e).role=="worker"&&!workers.Contains(e)).ToArray();
+            check(born.Length==1&&born[0].order==CommandKind.Stop&&born[0].resourceId==0,
+                "New worker does not auto-transfer from an exhausted camp: "+label);
+            if(explored)
+                check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Gather,entities=new[]{workers[0].id},target=remote.id}).accepted
+                    &&workers[0].order==CommandKind.Gather&&workers[0].resourceId==remote.id,
+                    "Explicit transfer to remembered remote minerals remains available: "+label);
+        }
+    }
+
     public static void Run(Catalog catalog, MapDefinition map, Action<bool,string> check)
     {
         EntityState[] Workers(Simulation s) => s.Entities.Values.Where(e=>e.owner==0&&s.Type(e).role=="worker").OrderBy(e=>e.id).ToArray();

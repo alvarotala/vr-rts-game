@@ -37,9 +37,9 @@ static class RallyPointChecks
         foreach(string faction in new[]{"industrial","biological"})
         {
             foreach(var type in catalog.Definition.archetypes.Where(a=>a.faction==faction))
-                check(catalog.CanProduceUnits(type.id)==(type.role=="hq"||type.role=="barracks"||type.role=="tech"),"catalog identifies actual unit producer "+type.id);
-            var sim=Fixture(faction);var hq=Headquarters(sim);var barracks=Add(sim,"barracks",new Point(20,15));var tech=Add(sim,"tech",new Point(20,25));Add(sim,"supply",new Point(20,5));
-            var producers=new[]{hq,barracks,tech};var roles=new[]{"worker","ranged","siege"};Point destination=new Point(35.5f,20.5f);
+                check(catalog.CanProduceUnits(type.id)==(type.role=="hq"||type.role=="barracks"||type.role=="tech"||type.role=="academy"),"catalog identifies actual unit producer "+type.id);
+            var sim=Fixture(faction);var hq=Headquarters(sim);var barracks=Add(sim,"barracks",new Point(20,15));var tech=Add(sim,"tech",new Point(20,25));var academy=Add(sim,"academy",new Point(20,35));Add(sim,"supply",new Point(20,5));
+            var producers=new[]{hq,barracks,tech,academy};var roles=new[]{"worker","ranged","siege","caster"};Point destination=new Point(35.5f,20.5f);
             check(Rally(sim,destination,producers)&&producers.All(e=>e.hasRallyPoint&&e.rallyPoint.Distance(destination)<.001f),"rally supports all selected producers "+faction);
             for(int n=0;n<producers.Length;n++)
             {

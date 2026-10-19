@@ -36,10 +36,13 @@ namespace Frontier.Editor
                 {
                     session.Faction=faction;session.StartMatch();
                     int id=1000;
+                    int buildingTypes=session.Catalog.Definition.archetypes.Count(t=>t.faction==faction&&t.building);
+                    int buildingsLeft=Simulation.BuildingLimit-session.Match.Buildings(0);
                     int extraWorkers=Simulation.UnitLimit-session.Match.Units(0)-3*session.Catalog.Definition.archetypes.Count(t=>t.faction==faction&&!t.building&&t.role!="worker");
                     foreach(var type in session.Catalog.Definition.archetypes.Where(t=>t.faction==faction))
                     {
-                        int count=type.building?(type.role=="barracks"?4:3):type.role=="worker"?extraWorkers:3;
+                        int count=type.building?(buildingsLeft+buildingTypes-1)/buildingTypes:type.role=="worker"?extraWorkers:3;
+                        if(type.building){buildingsLeft-=count;buildingTypes--;}
                         for(int i=0;i<count;i++)session.Match.Entities.Add(id,new EntityState{id=id++,owner=0,definition=type.id,position=new Point(20,20),health=type.health});
                     }
                     Call(session,"RefreshView");

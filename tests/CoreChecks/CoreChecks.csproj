@@ -7,4 +7,9 @@
   <ItemGroup><Compile Include="../../Assets/Frontier/Core/*.cs"/><Compile Include="Program.cs"/><Compile Include="NavigationChecks.cs"/><Compile Include="PathfindingChecks.cs"/><Compile Include="CollisionChecks.cs"/><Compile Include="CombatMotionChecks.cs"/><Compile Include="HarvestingChecks.cs"/><Compile Include="DifficultyChecks.cs"/><Compile Include="ProductionChecks.cs"/><Compile Include="CommandQueueChecks.cs"/><Compile Include="RallyPointChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="WorkerActivityChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="ResourceLayoutChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="CombatBehaviorChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="CasterChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="AiEconomyChecks.cs"/><Compile Include="AiTacticsChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="FactionParityChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="GroupProductionChecks.cs"/></ItemGroup>
 </Project>

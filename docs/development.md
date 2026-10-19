@@ -23,20 +23,62 @@ La escena `Assets/Frontier/Scenes/Frontier.unity` crea sus componentes en ejecuc
 
 ```sh
 bash scripts/check-core.sh
+bash scripts/check-core.sh --caster-only
+bash scripts/check-core.sh --faction-parity-only
+bash scripts/check-core.sh --group-production-only
+bash scripts/check-core.sh --ai-only
+bash scripts/check-core.sh --ai-expansion-only
 bash scripts/check-core.sh --matches --count=20
-bash scripts/check-core.sh --practice --matches --opponent=very-easy --count=4
+bash scripts/check-core.sh --practice --matches --opponent=hard --count=4
 bash scripts/unity.sh validate
 ```
 
 El núcleo se prueba con .NET 8 sin dependencias NuGet. El script busca `dotnet` o el SDK incluido en la instalación local de Unity 6.5; se puede indicar otro ejecutable mediante `DOTNET`.
 
-Las comprobaciones de dificultad cubren igualdad inicial de recursos, posiciones y asignaciones de trabajadores en ambos mapas y los cuatro cruces de facciones, acceso a todos los tipos de unidad y mejoras, reservas, presupuesto, defensa, preparación, oleadas limitadas y descanso después de pérdidas o retirada. `--practice` añade doce simulaciones de hasta 24 minutos contra un jugador pasivo, cruzando ambos mapas, ambas facciones de IA y las tres dificultades. Verifica producción efectiva de todos los tipos, ausencia de daño durante la preparación, primera ofensiva, tamaños máximos y capacidad de ganar; guarda muestras económicas y órdenes rechazadas en `TestResults/difficulty-practice.json`. `--matches --opponent=very-easy --count=4` enfrenta Normal contra Very Easy en los cuatro cruces de facciones y registra resultados en `TestResults/matches.json`. Sin ese modificador, las partidas alternan rivales Normal y Easy. Estas pruebas no sustituyen el balance con jugadores humanos.
+`--faction-parity-only` ejecuta el contrato de igualdad mecánica del catálogo y las regresiones de construcción atendida, pausa al retirar/perder al constructor, reparación y ausencia de regeneración pasiva en ambas facciones. Compara también simulaciones con las mismas posiciones y órdenes al intercambiar las identidades de facción. Forma parte de la batería general; los nombres, IDs y modelos pueden diferir, los parámetros y resultados de juego equivalentes deben coincidir.
+
+Para comprobar los controles y la ayuda de ambas facciones sin generar un ejecutable:
+
+```sh
+unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-faction-parity.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.FactionParityValidationBatch.Run
+```
+
+Esta batería valida construcción desde el menú, asignación y liberación del constructor, reanudación contextual y reparación encolada. Recorre además ayuda, producción, recolección, rueda y menús, comprobando que el texto quepa en los paneles.
+
+`--group-production-only` comprueba producción con varios edificios seleccionados: una compra por orden, reparto por tiempo pendiente, colas llenas, productores incompatibles/incompletos y las mismas restricciones de recursos, suministro e investigación. Para verificar selección doble, guardado/recuperación de barracas, acciones y resumen de producción en Unity:
+
+```sh
+unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-building-groups.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.BuildingGroupValidationBatch.Run
+```
+
+Las comprobaciones de dificultad cubren igualdad inicial en ambos mapas y los cuatro cruces de facciones, acceso al catálogo, reservas, presupuesto, defensa, preparación y habilidades. `bash scripts/check-core.sh --ai-only` ejecuta las pruebas de economía, táctica y perfiles. `--ai-expansion-only` comprueba desarrollo real de bases, exploración y tecnología durante doce minutos simulados. `--ai-only --practice` añade doce simulaciones contra un jugador pasivo, que registran producción, población, primera ofensiva, daño y órdenes rechazadas en `TestResults/difficulty-practice.json`. `--matches --opponent=hard --count=4` enfrenta Normal contra Hard en los cuatro cruces de facciones; también admite Easy y Normal.
+
+Para comparar versiones de la IA bajo las mismas reglas, `bash scripts/check-ai.sh --difficulty=all --limit=6 --output=TestResults/ai-first-six.json` ejecuta inicialmente los tres niveles en ambos mapas. El script usa una copia de la estrategia anterior en `TestResults/ai-before/LegacyStrategist.cs` o la ruta indicada con `--baseline=/ruta/LegacyStrategist.cs`. Esa copia es un artefacto local de comparación y no forma parte del juego. `--difficulty=Hard --limit=16` amplía a los cuatro cruces de facciones y ambos lados de cada mapa. Registra hashes de fuentes/catálogo, daño real, pérdidas, actividad productiva, exploración y resultados; los empates por tiempo se informan como tales. Estas simulaciones no sustituyen el balance con jugadores humanos.
+
+`--difficulty=all --limit=48 --development` ejecuta la matriz completa y doce escenarios económicos de doce minutos. Los escenarios económicos desactivan el daño para observar expansiones aunque la ofensiva ganaría antes; se registran aparte de las victorias competitivas. `--opponent=current --difficulty=Hard --legacy-difficulty=Normal --pair=mirrors --limit=8` compara los niveles actuales en ambos mapas, lados y facciones. Cada ejecución compila una copia congelada de fuentes y datos en `TestResults/ai-snapshots`, conservando sus hashes para que los resultados no se confundan con cambios posteriores.
 
 Incluye regresiones de navegación: 60 unidades de ambas facciones, destinos en una esquina, tráfico opuesto, aliados quietos, mantener posición, bloqueo enemigo, edificios nuevos, rampas y doce trabajadores en el mismo recurso. En cada paso verifican separación, límites de velocidad y permanencia sobre terreno transitable.
 
 `PathfindingChecks` añade grupos mixtos por corredores largos, selecciones solapadas, unidades estacionadas junto a una salida y convoyes de distintas velocidades. `CollisionChecks` comprueba masa, empujes, aceleración, frenado, Hold y nuevas órdenes durante una cesión. Parámetros y decisiones: [movimiento](movement.md).
 
 `CombatMotionChecks` verifica frenado en Attack, Attack Move y persecución automática, continuidad durante cooldown, alcance/visión después de frenar y excepciones de Hold y torres.
+
+`CombatBehaviorChecks` cubre prioridades de amenazas, defensores que llegan durante un asedio, foco explícito, adquisición después de una baja, estabilidad del objetivo, recarga, continuación de rutas/colas, retirada, cesión de paso durante combate, objetivos inaccesibles, búsqueda de línea de tiro y pérdida de visión. Incluye grupos de 18 soldados mixtos con una sola orden, y selecciones dispersas de 18 y 60 soldados cuyo foco muere antes de que llegue la retaguardia. Ambas baterías se pueden ejecutar con `bash scripts/check-core.sh --combat-only`. `QueuedInputChecks.Run` verifica además cinco recorridos de ataque con 18 unidades en ambas facciones: orden directa, doble A, menú confirmado con A, menú con doble A y menú confirmado con gatillo seguido de A.
+
+`Frontier.Editor.AttackPointerPreview.Render` comprueba y renderiza la mira roja y el color del rayo para doble A y Attack Move desde el panel, incluida confirmación, cancelación, destino rechazado, pausa, expiración del feedback y cambio a Move/construcción. Guarda ocho vistas en `TestResults/AttackPointer` y ejecuta las regresiones `QueuedInputChecks.Run` y `ActionWheelPreview.Render`; esta última confirma además un destino con A después de cerrar la rueda. `CombatBehaviorChecks` verifica que una sola orden elimine dos enemigos sucesivos y una estructura antes de llegar al destino.
+
+`CasterChecks` forma parte de la batería general y puede ejecutarse sola con `bash scripts/check-core.sh --caster-only`. Usa construcción y producción reales de la academia para ambas facciones y verifica energía inicial/regeneración/tope, pausa, recarga, daño a tropas/estructuras, curación limitada sin edificios, selección mixta de un solo caster, acercamiento con alcance/línea de visión, recuperación de Move/Attack Move/Attack/Stop/Hold y conservación de la cola. Comprueba también que un caster en Hold ejecute en orden los destinos agregados mientras prepara el lanzamiento. Incluye cancelación por nueva orden, pérdida de visión, muerte, imposibilidad de llegar, datos inválidos/roles obligatorios, privacidad de energía/recargas y eventos, y exclusión de enemigos ocultos del área de daño. Las variantes inválidas del catálogo son copias; no modifican el catálogo compartido de otras pruebas.
+
+Para comprobar selección, panel/rueda, apuntado y efectos de habilidades sin generar un jugador:
+
+```sh
+unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-caster-abilities.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.CasterAbilityPreview.Render
+```
+
+`CasterAbilityPreview.Render` usa rayos y pulsaciones sintéticas contra las acciones reales: producción desde la academia, energía en selección mixta, habilitación desde panel/rueda, A/gatillo, segundo A rápido, área/rango, destinos bajo niebla, pausa, cancelación y cambio de selección. Guarda vistas en `TestResults/CasterControls`. También llama a `CasterVisualPreview.Render` para modelos de Conduit/Oracle y Resonance Lab/Spore Sanctum, `AbilityEffectsPreview.Render` para explosiones/curación y `AttackPointerPreview.Render` para las regresiones de ataque. Los resultados de una ejecución concreta se registran en [validación](validation.md); estos comandos y capturas de Editor no certifican mandos físicos, ergonomía ni rendimiento en Quest.
 
 `RallyPointChecks` comprueba asignación, actualización y borrado por edificio, validación de productores, privacidad y despliegue de unidades con rutas/salidas bloqueadas. La batería de Editor para puntos de reunión incluye gestos, banderas, HUD y regresiones de producción y colas:
 
@@ -47,7 +89,7 @@ unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
 
 Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
 
-`ControlGroupPreview.RunValidation` prueba los cuatro grupos, apertura directa al inclinar el stick, recuperación al volver al centro, reemplazo al soltar una pulsación mantenida e inclinada y cancelaciones, además de las regresiones de rueda de acciones, gestos de colas, rally, menús y HUD:
+`ControlGroupPreview.RunValidation` prueba los cuatro grupos dentro de la rueda unificada: raíz por inclinación, entrada y recuperación con gatillo, guardado al soltar clic sostenido + dirección y cancelaciones, además de las regresiones de hint, acciones, gestos de colas, rally, menús y HUD:
 
 ```sh
 unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
@@ -125,7 +167,7 @@ unity run . --log-file TestResults/unity-harvesting.log --no-tail -- \
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.HarvestingPreview.Render
 ```
 
-Comprueba las órdenes contextuales, selección de recursos, totales de base, exceso y órdenes sobre el extractor. Renderiza cinco estados del panel en `TestResults/Harvesting`. Son vistas estáticas del panel real desde el Editor; no certifican legibilidad en el visor. `HarvestingChecks` forma parte de `check-core.sh` y comprueba reparto, reservas, agotamiento, gas, carga y niebla de guerra para ambas facciones.
+Comprueba las órdenes contextuales, selección de recursos, totales de base, exceso y órdenes sobre el extractor. Renderiza cinco estados del panel en `TestResults/Harvesting`. Son vistas estáticas del panel real desde el Editor; no certifican legibilidad en el visor. `HarvestingChecks` forma parte de `check-core.sh` y comprueba reparto, reservas, agotamiento, gas, carga y niebla de guerra para ambas facciones. Se puede ejecutar por separado con `bash scripts/check-core.sh --harvesting-only`; incluye el agotamiento completo en ambos mapas, recursos remotos explorados y desconocidos, entrega de la última carga, trabajadores que permanecen inactivos, producción en una base agotada y traslado manual a otra zona.
 
 Para comprobar los contadores persistentes sobre el tablero, usar **Frontier → Preview workforce counters**, o:
 
@@ -245,15 +287,25 @@ Guardar registros, capturas e informes locales en `TestResults/` y los ejecutabl
 
 El multijugador por internet y el editor de computadora son etapas posteriores. El núcleo ya separa órdenes, estado autoritativo, información visible y colocación física. No se han conectado servicios de Relay ni creado cuentas de infraestructura. Los criterios de integración están en [arquitectura](architecture.md).
 
-## Rueda contextual Touch
+## Rueda unificada Touch
 
 Para comprobar el enrutamiento de entrada y renderizar las ruedas de ambas facciones sin generar un ejecutable:
 
 ```sh
-unity run . --log-file TestResults/unity-action-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ActionWheelPreview.Render
+unity run . --log-file TestResults/unity-unified-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.UnifiedWheelValidationBatch.Run
 ```
 
-La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba doble grip rápido/lento, grip sostenido como Shift, apertura sin cierre accidental, gatillo/A para ejecutar, grip/B para retroceder, selección del sector, zona neutra, submenú Build, producción, investigación, costos, cancelación, rechazo, cambios de selección/cola, interrupciones y liberación de botones. Guarda las vistas en `TestResults/ActionWheel/`. El panel comparte `SelectionActions`; `ProductionQueuePreview.Render` verifica las acciones de la consola y ejecuta las regresiones de HUD y menús. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, apertura por inclinación, categorías del nivel 1, confirmación por gatillo, neutral obligatorio entre niveles, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+
+### Leyenda de botones junto al mando
+
+`Frontier.Editor.ControllerHintPreview.Render` verifica la leyenda persistente y genera diez vistas en `TestResults/ControllerHints/`: controles predeterminados, mano izquierda, remapeos, destino de ataque, rueda, grupos, pausa, colocación y composición junto al hint direccional o la rueda completa. Comprueba los textos y su ausencia de recortes, la actualización de funciones y el ocultamiento por foco, seguimiento, desactivación o entrada no disponible. Ejecuta también `UnifiedWheelPreview.Render` para cubrir la navegación existente.
+
+```sh
+unity run . --log-file TestResults/unity-controller-hints-final.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ControllerHintPreview.Render
+```
+
+Son comprobaciones y capturas de Editor, sin generar un ejecutable. El tamaño y la comodidad de la leyenda junto a la mano requieren prueba física en Quest.
 
 ## Apuntado de minerales
 

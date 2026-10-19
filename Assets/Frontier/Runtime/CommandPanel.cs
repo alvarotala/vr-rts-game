@@ -37,7 +37,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public int selectionId; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public int selectionId; public string actionId; public Text detail; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -161,7 +161,7 @@ namespace Frontier.Runtime
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
                     harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";
-                    harvesting.text+=Session.Difficulty=="very-easy"?" · All units · Small waves from 12 min.":Session.Difficulty=="easy"?" · All units · Gentle waves from 10 min.":" · All units · Mixed waves from 8 min.";break;
+                    harvesting.text+=Session.Difficulty=="hard"?" · Fast economy · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Builds and scouts · Attacks from 5 min.":" · Reinforcements and spells · Attacks from 3:30.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
                     selection.text=Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.";break;
@@ -221,7 +221,7 @@ namespace Frontier.Runtime
             {
                 Add("Faction: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                 Add("Opponent: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
-                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="very-easy"?"easy":Session.Difficulty=="easy"?"normal":"very-easy";Rebuild();});
+                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":Session.Difficulty=="normal"?"hard":"easy";Rebuild();});
                 Add("Map: "+Session.Map.title,()=>{Session.LoadMap(Session.MapId=="rift"?"training":"rift");Board.Rebuild();Rebuild();});
                 Add("Place board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
@@ -350,7 +350,7 @@ namespace Frontier.Runtime
         private static bool IsFinite(Vector3 p)=>!float.IsNaN(p.x)&&!float.IsInfinity(p.x)&&!float.IsNaN(p.y)&&!float.IsInfinity(p.y)&&!float.IsNaN(p.z)&&!float.IsInfinity(p.z);
         private static string Other(string faction)=>faction=="industrial"?"biological":"industrial";
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
-        private string DifficultyLabel=>Session.Difficulty=="very-easy"?"Very Easy":Session.Difficulty=="easy"?"Easy":"Normal";
+        private string DifficultyLabel=>Session.Difficulty=="hard"?"Hard":Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
         public bool Point(Ray ray,bool down,bool up,float depth=0)
         {

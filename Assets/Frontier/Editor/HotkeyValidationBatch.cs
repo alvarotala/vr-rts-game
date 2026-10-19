@@ -58,6 +58,31 @@ namespace Frontier.Editor
                 loaded.Reset(true);Check(loaded.Get(true,"select")=="touch:trigger"&&loaded.Get(false,"order")=="key:Q","Reset affects only the selected device");
                 Check(HotkeyBindings.FromJson("invalid json").Get(false,"order")=="mouse:right","Corrupt JSON falls back to defaults");
                 Check(HotkeyBindings.FromJson(profile.ToJson().Replace("key:Q","key:Digit1")).Get(false,"order")=="mouse:right","Duplicate saved inputs cannot install a broken profile");
+                var savedGroupProfile=new HotkeyBindings();savedGroupProfile.SelectHand(true);
+                Check(savedGroupProfile.Assign(true,"wheel","touch:a",true,out _),"The group-save modifier retains explicit binding swaps");
+                var savedGroupLoaded=HotkeyBindings.FromJson(savedGroupProfile.ToJson());
+                Check(savedGroupLoaded.LeftHand&&savedGroupLoaded.Get(true,"wheel")=="touch:a"&&savedGroupLoaded.Get(true,"order")=="touch:stick","Existing group-save remaps and handedness remain compatible");
+                Check(HotkeyBindings.Definitions(true).First(d=>d.Id=="wheel").Name=="Save group modifier"&&!HotkeyBindings.Definitions(true).First(d=>d.Id=="add").Description.Contains("double"),"Bindings describe group saving without obsolete wheel-opening gestures");
+                savedGroupLoaded.Assign(true,"select","touch:grip",true,out _);savedGroupLoaded.Assign(true,"back","touch:trigger",true,out _);
+                var wheelGuide=DefaultControlCatalog.For(true,savedGroupLoaded).SelectMany(t=>t.Commands).ToDictionary(c=>c.Id);
+                Check(wheelGuide["menus.execute-action"].Gesture=="Trigger in the wheel"&&wheelGuide["menus.back-action"].Gesture=="Down + Trigger / Y","Wheel navigation help stays physical after gameplay remaps and uses the active hand");
+                Check(wheelGuide["groups.replace"].Gesture.Contains("hold X")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Group-save help follows its binding while wheel opening follows the active stick");
+                foreach(string reserved in new[]{"touch:trigger","touch:b"})
+                {
+                    var reservedProfile=new HotkeyBindings();string before=reservedProfile.ToJson();
+                    Check(!reservedProfile.Supports(true,"wheel",reserved)&&!reservedProfile.Assign(true,"wheel",reserved,true,out _)&&reservedProfile.ToJson()==before,"Group saving rejects the fixed navigation button "+reserved+" without changing bindings");
+                    string occupied=reserved=="touch:trigger"?"select":"back";
+                    Check(!reservedProfile.Assign(true,occupied,"touch:stick",true,out _)&&reservedProfile.ToJson()==before,"An indirect swap cannot assign group saving to "+reserved);
+                    reservedProfile.SelectHand(true);reservedProfile.Assign(true,"select","touch:grip",true,out _);
+                    reservedProfile.Assign(true,"order","touch:b",true,out _);reservedProfile.Assign(false,"order","key:Q",false,out _);
+                    string legacy=reservedProfile.ToJson().Replace("\"touch:stick\"","\"legacy-swap\"").Replace("\""+reserved+"\"","\"touch:stick\"").Replace("\"legacy-swap\"","\""+reserved+"\"");
+                    var compatible=HotkeyBindings.FromJson(legacy);
+                    Check(compatible.LeftHand&&compatible.Get(false,"order")=="key:Q"&&HotkeyBindings.Definitions(true).All(d=>compatible.Get(true,d.Id)==reservedProfile.Get(true,d.Id)),"Legacy "+reserved+" group-save mapping repairs only its swap and preserves unrelated remaps and hand");
+                    Check(HotkeyBindings.FromJson(compatible.ToJson()).ToJson()==compatible.ToJson(),"Normalized "+reserved+" group-save profile round-trips without another migration");
+                    var broken=HotkeyBindings.FromJson(legacy.Replace("\"touch:grip\"","\"touch:a\""));
+                    Check(broken.LeftHand&&broken.Get(false,"order")=="key:Q"&&HotkeyBindings.Definitions(true).All(d=>broken.Get(true,d.Id)==d.Default),"Migration does not repair a corrupt duplicate profile around "+reserved);
+                }
+                Check(new[]{"touch:a","touch:grip","touch:stick"}.All(button=>new HotkeyBindings().Assign(true,"wheel",button,true,out _)),"Group saving still supports A/X, Grip and stick click");
 
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Call(session,"Awake");session.LoadMap("training");
                 var board=fixture.AddComponent<BoardView>();board.Session=session;Call(board,"Start");
@@ -151,6 +176,7 @@ namespace Frontier.Editor
                 Frame();session.Send(CommandKind.Stop);
                 InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()}.WithButton(MouseButton.Right));Frame();
                 Check(entity.order==CommandKind.Stop,"Old order button no longer commands the map");Neutral();
+                CheckUnifiedWheelUpdate();
 
                 Debug.Log($"FRONTIER_HOTKEYS passed: {checks} checks; synthetic desktop input and rendered UI, no physical Quest input");
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;Debug.Log("HOTKEY_PASS: "+message);}
@@ -177,6 +203,63 @@ namespace Frontier.Editor
                 {
                     Vector2 screen=preview.camera.WorldToScreenPoint(board.Content.TransformPoint(new Vector3(point.x,0,point.y)));
                     InputSystem.QueueStateEvent(mouse,new MouseState{position=screen});Frame();
+                }
+                void CheckUnifiedWheelUpdate()
+                {
+                    var previousControllers=OVRInput.controllers;var previousBindings=panel.Bindings;var previousTracking=quest.TrackingSpace;
+                    var left=new OVRInput.OVRControllerLTouch();
+                    var right=(OVRInput.OVRControllerBase)Activator.CreateInstance(typeof(OVRInput).GetNestedType("OVRControllerRTouch",BindingFlags.NonPublic),true);
+                    var wheel=fixture.AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;input.Wheel=wheel;
+                    var rayObject=new GameObject("Synthetic Touch pointer");var rayLine=rayObject.AddComponent<LineRenderer>();rayLine.positionCount=2;Set(input,"laser",rayLine);
+                    OVRInput.controllers=new System.Collections.Generic.List<OVRInput.OVRControllerBase>{left,right};
+                    typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);
+                    typeof(QuestBridge).GetProperty("TrackingSpace").SetValue(quest,preview.camera.transform);
+                    try
+                    {
+                        foreach(bool useLeft in new[]{false,true})
+                        {
+                            var touchBindings=new HotkeyBindings();touchBindings.SelectHand(useLeft);touchBindings.Assign(true,"select","touch:grip",true,out _);
+                            typeof(CommandPanel).GetProperty("Bindings").SetValue(panel,touchBindings);quest.Bindings=touchBindings;
+                            left.currentState=left.previousState=default;right.currentState=right.previousState=default;
+                            session.Select(0,false);wheel.Close();
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            var grip=useLeft?OVRInput.RawButton.LHandTrigger:OVRInput.RawButton.RHandTrigger;
+                            var trigger=useLeft?OVRInput.RawButton.LIndexTrigger:OVRInput.RawButton.RIndexTrigger;
+                            string hand=useLeft?"left":"right";
+                            TouchFrame(Vector2.up,grip);
+                            Check(!wheel.IsOpen,"Actual "+hand+" Update keeps remapped Grip selection ahead of a simultaneous tilt");
+                            TouchFrame(Vector2.up,grip);
+                            Check(!wheel.IsOpen,"Actual "+hand+" Update does not open the wheel during held remapped selection");
+                            TouchFrame(Vector2.up);
+                            Check(!wheel.IsOpen,"Actual "+hand+" Update consumes remapped selection release before stick navigation");
+                            TouchFrame(Vector2.up);
+                            Check(!wheel.IsOpen,"Actual "+hand+" Update requires a fresh center after remapped selection");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);
+                            Check(wheel.IsOpen&&wheel.Page==WheelPage.Root&&wheel.HighlightedId=="groups-menu","Actual "+hand+" Update opens the root after neutral then tilt");
+                            TouchFrame(Vector2.up,trigger);
+                            Check(wheel.InGroupMenu,"Actual "+hand+" Update uses the physical Trigger to enter Groups despite selection remapping");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.up,trigger);
+                            Check(!wheel.IsOpen&&session.Selection.Contains(worker.id),"Actual "+hand+" Update uses physical Trigger to recall the group without leaking a map selection");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+
+                            void TouchFrame(Vector2 stick,OVRInput.RawButton buttons=OVRInput.RawButton.None)
+                            {
+                                var controller=useLeft?(OVRInput.OVRControllerBase)left:right;
+                                controller.previousState=controller.currentState;controller.currentState=default;
+                                controller.currentState.Buttons=(uint)buttons;
+                                if(useLeft)controller.currentState.LThumbstick=new OVRPlugin.Vector2f{x=stick.x,y=stick.y};
+                                else controller.currentState.RThumbstick=new OVRPlugin.Vector2f{x=stick.x,y=stick.y};
+                                Call(input,"Update");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        wheel.Close();input.Wheel=null;Set(input,"laser",null);Object.DestroyImmediate(rayObject);Object.DestroyImmediate(wheel);
+                        OVRInput.controllers=previousControllers;typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
+                        typeof(QuestBridge).GetProperty("TrackingSpace").SetValue(quest,previousTracking);
+                        typeof(CommandPanel).GetProperty("Bindings").SetValue(panel,previousBindings);quest.Bindings=previousBindings;
+                    }
                 }
                 void CheckSingleController()
                 {

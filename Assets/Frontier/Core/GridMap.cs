@@ -152,7 +152,7 @@ namespace Frontier.Core
         private readonly List<HeapEntry> heap = new List<HeapEntry>();
         private struct HeapEntry { public int cell, priority; public HeapEntry(int c, int p) { cell = c; priority = p; } }
         public Pathfinder(GridMap map) { this.map = map; visited = new int[map.Count]; previous = new int[map.Count]; cost = new int[map.Count]; }
-        public List<int> Find(Point from, Point destination, float stopRange = .1f, Func<int,int> extraCost = null, float radius = 0)
+        public List<int> Find(Point from, Point destination, float stopRange = .1f, Func<int,int> extraCost = null, float radius = 0, Func<Point,bool> acceptable = null)
         {
             int start = map.Cell(from), target = map.Cell(destination);
             if (start < 0 || target < 0) return null;
@@ -160,7 +160,8 @@ namespace Frontier.Core
             while (heap.Count > 0)
             {
                 int current = Pop();
-                if (current == target || map.Center(current).Distance(destination) <= stopRange)
+                if ((current == target || map.Center(current).Distance(destination) <= stopRange)
+                    && (acceptable == null || acceptable(map.Center(current))))
                 {
                     var path = new List<int>();
                     while (current != start) { path.Add(current); current = previous[current]; }

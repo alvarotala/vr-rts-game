@@ -29,11 +29,11 @@ namespace Frontier.Editor
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;board.Viewer=preview.camera;Invoke(board,"Start");preview.AddSingleGO(boardObject);
                 var visuals=(Dictionary<int,Transform>)typeof(BoardView).GetField("entities",Private).GetValue(board);
                 var actors=new List<VisibleEntity>();
-                string[] roles={"hq","barracks","extractor","supply","tech","defense"};
+                string[] roles={"hq","barracks","extractor","supply","tech","defense","academy"};
                 for(int i=0;i<roles.Length;i++)
                 {
                     var type=session.Catalog.Role("biological",roles[i]);
-                    actors.Add(new VisibleEntity{id=100+i,owner=0,definition=type.id,position=new Point(14+i%3*11,18+i/3*12),health=type.health,complete=true});
+                    actors.Add(new VisibleEntity{id=100+i,owner=0,definition=type.id,position=new Point(12+i%4*10,18+i/4*12),health=type.health,complete=true});
                 }
                 session.View.entities=actors.ToArray();session.View.resources=Array.Empty<ResourceState>();session.View.attacks=Array.Empty<AttackEvent>();Array.Fill(session.View.visibility,(byte)2);session.View.tick=0;
                 CameraAt(new Point(27,25),19);Refresh();Capture("living-buildings");
@@ -73,13 +73,13 @@ namespace Frontier.Editor
                 // Actual runtime rigs: six legs (eight on artillery), with real
                 // movement-driven gait and no motion while standing or paused.
                 session.LeaveMatch();session.StartMatch();actors.Clear();
-                string[] units={"worker","scout","melee","ranged","siege"};
+                string[] units={"worker","scout","melee","ranged","siege","caster"};
                 for(int i=0;i<units.Length;i++)
                 {
                     var type=session.Catalog.Role("biological",units[i]);actors.Add(new VisibleEntity{id=600+i,owner=0,definition=type.id,position=new Point(18+i*4,24),health=type.health,complete=true,order=CommandKind.Stop});
                 }
-                session.View.entities=actors.ToArray();session.View.resources=Array.Empty<ResourceState>();Array.Fill(session.View.visibility,(byte)2);session.View.tick=0;CameraAt(new Point(26,24),11);Refresh();Capture("creatures");
-                for(int i=1;i<actors.Count;i++)Check(visuals[actors[i].id].GetComponentsInChildren<Transform>().Count(t=>t.name.Contains("stride"))==(i==4?8:6),"Articulated insect limbs: "+units[i]);
+                session.View.entities=actors.ToArray();session.View.resources=Array.Empty<ResourceState>();Array.Fill(session.View.visibility,(byte)2);session.View.tick=0;CameraAt(new Point(28,24),13);Refresh();Capture("creatures");
+                for(int i=1;i<actors.Count;i++)Check(visuals[actors[i].id].GetComponentsInChildren<Transform>().Count(t=>t.name.Contains("stride"))==(units[i]=="siege"?8:6),"Articulated insect limbs: "+units[i]);
                 var scoutLeg=visuals[601].Find("Left stride");var rest=scoutLeg.localRotation;
                 session.View.tick=4;actors[1].position=new Point(22.3f,24);Refresh();Check(Quaternion.Angle(rest,scoutLeg.localRotation)>1,"Skitter gait follows actual displacement");
                 session.View.tick=8;Refresh();Check(Quaternion.Angle(rest,scoutLeg.localRotation)<.001f,"Standing insect settles its legs");

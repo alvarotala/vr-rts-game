@@ -76,13 +76,86 @@ namespace Frontier.Editor
                     var unit=session.View.entities.First(e=>e.owner==0&&!session.Catalog[e.definition].building);
                     session.Select(unit.id,false);Refresh();Check(!QueueShown(),"Units hide production queue");
                     session.Select(supply.id,false);Refresh();Check(!QueueShown(),"Non-producing buildings hide production queue");
-                    session.Select(tech.id,false);session.Select(hq.id,true);Refresh();Check(!QueueShown(),"Multiple buildings do not show a misleading combined queue");
+                    session.Select(tech.id,false);Refresh();
+                    var pendingCard=Field<Image[]>(panel,"queuedCards")[1].rectTransform;
+                    var pendingCenter=pendingCard.TransformPoint(pendingCard.rect.center);
+                    var pendingRay=new Ray(pendingCenter-pendingCard.forward,pendingCard.forward);
+                    Check(panel.Point(pendingRay,true,false),"Pending item can be pressed before changing to a building group");
+                    int techOrders=tech.queue.Count,hqOrders=hq.queue.Count;
+                    session.Select(hq.id,true);Refresh();
+                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")=="2 buildings",
+                        "Multiple producers show an explicit group summary");
+                    Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text==(techOrders+hqOrders).ToString(),
+                        "Group summary totals the real queues and their combined capacity");
+                    Check(Text("productionHint")=="SELECT ONE BUILDING TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
+                        "Group production cards do not expose ambiguous cancel targets");
+                    panel.Point(pendingRay,false,true);Refresh();
+                    Check(tech.queue.Count==techOrders&&hq.queue.Count==hqOrders,"Changing selection invalidates a pressed individual queue item");
+                    Capture(faction+"-group");
+                    session.Pause("tracking",true);Refresh();
+                    Check(Text("productionState")=="PAUSED","Building group production displays the paused state");session.Pause("tracking",false);
+                    var foundation=AddBuilding("barracks",1003,new Point(28,12));foundation.complete=false;Refresh();
+                    session.Select(barracks.id,false);session.Select(foundation.id,true);Refresh();
+                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")=="1 building"&&
+                        Text("productionCount")==$"{barracks.queue.Count} / 5",
+                        "A completed barracks and unfinished barracks show the available producer's activity as a group summary");
+                    Check(Text("productionHint")=="SELECT ONE BUILDING TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
+                        "One eligible producer in a larger building selection never exposes individual cancellation");
+                    session.Select(supply.id,true);Refresh();
+                    Check(QueueShown()&&Text("productionCount")==$"{barracks.queue.Count} / 5"&&Text("productionTitle")=="GROUP PRODUCTION",
+                        "Nonproducing buildings do not hide or inflate a building group's production summary");
+                    session.Select(unit.id,true);Refresh();Check(!QueueShown(),"A mixed unit and building selection hides the producer summary");
+                    session.Match.Entities.Remove(foundation.id);session.Match.Map.Occupy(foundation.position,session.Catalog[foundation.definition].footprint,0);
+                    session.Select(tech.id,false);Refresh();
+                    Check(Text("productionTitle")=="PRODUCTION QUEUE"&&Text("productionHint")=="CLICK AN ITEM TO CANCEL"&&
+                        Field<Text[]>(panel,"queuedPositions").Select(t=>t.text).SequenceEqual(new[]{"2","3","4","5"}),
+                        "Returning to one building restores its individual queue labels");
+                    pendingCenter=pendingCard.TransformPoint(pendingCard.rect.center);pendingRay=new Ray(pendingCenter-pendingCard.forward,pendingCard.forward);
+                    Check(panel.Point(pendingRay,true,false)&&panel.Point(pendingRay,false,true),"Returning to one building restores its real cancellation target");Refresh();
+                    Check(tech.queue.Count==techOrders-1&&hq.queue.Count==hqOrders&&tech.queue[0].definition=="attack",
+                        "Individual cancellation after a group affects only the chosen item and producer");
                     session.Select(tech.id,false);tech.complete=false;Refresh();Check(!QueueShown(),"Unfinished producer hides production queue");tech.complete=true;Refresh();
                     panel.ToggleMenu();Refresh();Check(!QueueShown(),"Pause menu hides match production queue");panel.ToggleMenu();Refresh();
                     Check(QueueShown()&&Text("productionName")=="Firepower I","Resuming restores the selected building queue");
 
+                    // Every producer role plus rally clearing exercises the densest building action layout.
+                    var academy=AddBuilding("academy",1004,new Point(28,18));
+                    var allProducers=new[]{hq,barracks,tech,academy};
+                    foreach(var producer in allProducers){producer.hasRallyPoint=true;producer.rallyPoint=new Point(20,20);}
+                    Refresh();session.Select(0,false);foreach(var producer in allProducers)session.Select(producer.id,true);Refresh();
+                    var groupActions=SelectionActions.For(session).Items;
+                    Check(groupActions.Count==9&&groupActions.Any(a=>a.Id=="clear-rally-point"),
+                        "All four producer roles expose six train actions, two upgrades and rally clearing");
+                    Check(Text("productionState")=="ONE PER CLICK · SHORTEST WAIT"&&Text("productionHint")=="SELECT ONE BUILDING TO CANCEL",
+                        "Producer group visibly explains one order per click and dispatch without suggesting group cancellation");
+                    Canvas.ForceUpdateCanvases();
+                    var actionArea=Field<RectTransform>(panel,"actions");
+                    var actionCards=actionArea.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null).ToArray();
+                    Check(actionCards.Length==9&&Inside(Field<RectTransform>(panel,"root"),actionArea)&&actionCards.All(card=>Inside(actionArea,card)),
+                        "All nine production actions remain within the existing action section and panel");
+                    Check(actionCards.All(card=>card.GetComponentsInChildren<Text>().All(text=>Inside(card,text.rectTransform)&&Fits(text))),
+                        "Both text lines fit completely inside every compact production action");
+                    Check(actionCards.SelectMany((card,i)=>actionCards.Skip(i+1).Select(other=>
+                        new Rect(card.anchoredPosition-new Vector2(0,card.rect.height),card.rect.size).Overlaps(
+                        new Rect(other.anchoredPosition-new Vector2(0,other.rect.height),other.rect.size)))).All(overlap=>!overlap),
+                        "Compact production actions do not overlap");
+                    Check(Fits(Field<Text>(panel,"productionState"))&&Fits(Field<Text>(panel,"productionHint")),
+                        "Group dispatch and cancellation guidance fit in the production summary");
+                    Capture(faction+"-all-producers");
+                    int totalOrders=allProducers.Sum(producer=>producer.queue.Count);
+                    Click("Train "+session.Catalog.Role(faction,"caster").name);
+                    Check(academy.queue.Count==1&&allProducers.Sum(producer=>producer.queue.Count)==totalOrders+1,
+                        "The compact caster button queues exactly one order at the compatible selected producer");
+                    Click("Clear Rally Points");
+                    Check(allProducers.All(producer=>!producer.hasRallyPoint),"The compact clear-rally action remains usable for every selected producer");
+                    session.Match.Entities.Remove(academy.id);session.Match.Map.Occupy(academy.position,session.Catalog[academy.definition].footprint,0);
+
                     // Isolate deployment feedback with a real finished order and occupied perimeter.
-                    hq.queue.Clear();tech.queue.Clear();barracks.queue.Clear();session.Select(barracks.id,false);Refresh();
+                    hq.queue.Clear();tech.queue.Clear();barracks.queue.Clear();session.Select(barracks.id,false);session.Select(tech.id,true);Refresh();
+                    Check(Text("productionCount")=="0 / 10"&&Text("productionProgress")=="0 working · 2 idle"&&
+                        Field<Text[]>(panel,"queuedNames").Select(t=>t.text).SequenceEqual(new[]{"0","2","0","0"}),
+                        "An idle producer group keeps the summary visible with exact zero counts");
+                    session.Select(barracks.id,false);Refresh();
                     Click("Train "+session.Catalog.Role(faction,"scout").name);
                     int size=session.Catalog[barracks.definition].footprint;
                     Border(9999);barracks.queue[0].remaining=1;session.Match.Step();Refresh();
@@ -112,6 +185,18 @@ namespace Frontier.Editor
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;}
                 string Text(string field)=>Field<Text>(panel,field).text;
                 bool QueueShown()=>Field<RectTransform>(panel,"productionStrip").gameObject.activeInHierarchy;
+                bool Inside(RectTransform parent,RectTransform child)
+                {
+                    var corners=new Vector3[4];child.GetWorldCorners(corners);var rect=parent.rect;
+                    return corners.Select(parent.InverseTransformPoint).All(p=>p.x>=rect.xMin-.1f&&p.x<=rect.xMax+.1f&&p.y>=rect.yMin-.1f&&p.y<=rect.yMax+.1f);
+                }
+                bool Fits(Text text)
+                {
+                    var settings=text.GetGenerationSettings(text.rectTransform.rect.size);
+                    if(text.resizeTextForBestFit)settings.fontSize=text.resizeTextMinSize;
+                    settings.resizeTextForBestFit=false;
+                    return text.cachedTextGeneratorForLayout.GetPreferredHeight(text.text,settings)/text.pixelsPerUnit<=text.rectTransform.rect.height+.5f;
+                }
                 void Refresh()
                 {
                     if(session.Running)typeof(GameSession).GetProperty("View").SetValue(session,session.Match.View(0));

@@ -15,7 +15,7 @@ Cargo appears on the rear of the worker as crystals or gas canisters. Its size r
 
 Selecting or hovering a worker outlines its assigned deposit or building. While approaching or returning, a dashed connection identifies that assignment; an existing queued-order route takes precedence over the extra connection. Active workers face their work target and have a short tool-to-target effect. Assignment badges face the viewer, including when looking down at the board.
 
-`PlayerView` exposes cargo, cargo type, delivery and active-work state for owned workers only. Travel, braking, yielding, depleted deposits, missing extractors, completed construction, full health and unfunded repair do not produce active work effects. Biological workers return to harvesting when the simulation starts autonomous building growth. Pausing freezes animation time.
+`PlayerView` exposes cargo, cargo type, delivery and active-work state for owned workers only. Travel, braking, yielding, depleted deposits, missing extractors, completed construction, full health and unfunded repair do not produce active work effects. Both factions keep their worker assigned until construction finishes; leaving or losing the builder pauses progress. Completed construction advances the worker's queued orders or returns it to local harvesting. Pausing freezes animation time.
 
 `WorkerVisuals` batches tools, badges, cargo and connections into one dynamic mesh and one material. It adds no colliders or particle systems. It uses the board's clipping shader and is cleared on match restart/close; enemy orders and cargo remain private. `UnitVisuals` retains the static worker model for portraits and enemy units.
 

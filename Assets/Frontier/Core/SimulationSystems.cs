@@ -20,7 +20,8 @@ namespace Frontier.Core
         {
             var type = Type(building);
             bool active = building.remaining < type.duration && Catalog.Faction(type.faction).grows;
-            if (!active) active = Entities.Values.Any(w => w.owner == building.owner && w.order == CommandKind.Build && w.target == building.id && w.position.Distance(Center(building)) <= type.footprint * .75f + 1.3f);
+            if (!active) active = Entities.Values.Any(w => w.owner == building.owner && w.health > 0 && w.complete && Type(w).role == "worker"
+                && w.order == CommandKind.Build && w.target == building.id && w.position.Distance(Center(building)) <= type.footprint * .75f + 1.3f);
             if (!active) return;
             building.remaining--; building.health = Math.Min(type.health, building.health + type.health * .85f / type.duration);
             if (building.remaining <= 0) { building.complete = true; Notice?.Invoke(building.owner, type.name + " ready."); }
@@ -89,46 +90,6 @@ namespace Frontier.Core
             if (Travel(worker, Center(target), Type(target).footprint * .75f + 1.2f) && Tick % 4 == 0 && Players[worker.owner].minerals > 0)
             { Players[worker.owner].minerals--; target.health = Math.Min(Type(target).health, target.health + 4); }
         }
-        private void Attack(EntityState unit)
-        {
-            if (!Entities.TryGetValue(unit.target, out var enemy) || enemy.health <= 0 || !Visible(unit.owner, Center(enemy))) { unit.order = CommandKind.Stop; unit.target = 0; unit.path = null; return; }
-            Strike(unit, enemy, true);
-        }
-        private bool Fight(EntityState unit, bool pursue)
-        {
-            var type = Type(unit); if (type.damage <= 0) return false;
-            EntityState best = null; float bestDistance = pursue ? type.vision : type.range;
-            foreach (var enemy in Entities.Values)
-            {
-                if (enemy.owner == unit.owner || enemy.health <= 0 || !Visible(unit.owner, Center(enemy))) continue;
-                float distance = Center(unit).Distance(Center(enemy)) - (Type(enemy).building ? Type(enemy).footprint * .4f : 0);
-                if (distance <= bestDistance) { best = enemy; bestDistance = distance; }
-            }
-            if (best == null) return false;
-            Strike(unit, best, pursue); return true;
-        }
-        private void Strike(EntityState unit, EntityState target, bool pursue)
-        {
-            var type = Type(unit); float range = type.range + (Type(target).building ? Type(target).footprint * .4f : 0);
-            if (Center(unit).Distance(Center(target)) > range || !Map.HasLineOfSight(Center(unit), Center(target)))
-            { if (pursue && !type.building) Travel(unit, Center(target), range * .85f); return; }
-            // Entering weapon range does not erase the momentum accumulated while
-            // approaching. Brake during the cooldown too; Hold stays anchored.
-            if(!type.building&&unit.order!=CommandKind.Hold&&unit.velocity.Distance(default)>.001f)
-            {
-                Brake(unit);
-                // Residual motion can carry us out of range or behind terrain before
-                // this tick's shot. Do not fire using the pre-braking position.
-                if(Center(unit).Distance(Center(target))>range||!Map.HasLineOfSight(Center(unit),Center(target)))return;
-            }
-            if (Tick < unit.attackReadyTick) return;
-            float damage = Math.Max(1, type.damage * (1 + Players[unit.owner].attackLevel * .2f) - Players[target.owner].armorLevel * 2);
-            target.health -= damage; target.lastDamageTick = Tick; unit.attackReadyTick = Tick + type.attackPeriod;
-            RecordAttack(unit,target);
-            if (type.role == "siege") foreach (var other in Entities.Values)
-                if (other.id != target.id && other.owner != unit.owner && Center(other).Distance(Center(target)) < 2)
-                { other.health -= damage * .35f; other.lastDamageTick = Tick; }
-        }
         private void UpdateVision()
         {
             for (int player = 0; player < 2; player++)
@@ -169,6 +130,8 @@ namespace Frontier.Core
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
                 if (entity.owner == player) { item.target = entity.target; item.destination = entity.destination;
+                    item.energy = entity.energy;
+                    item.abilityCooldowns = entity.abilityCooldowns.Select(c => new AbilityCooldown { ability = c.ability, readyTick = c.readyTick }).ToArray();
                     if (Type(entity).role == "worker")
                     {
                         item.cargo = entity.cargo; item.cargoKind = entity.cargoKind;
@@ -187,6 +150,7 @@ namespace Frontier.Core
             var upgrades = new List<string>(); if (Players[player].attackLevel > 0) upgrades.Add("attack"); if (Players[player].armorLevel > 0) upgrades.Add("armor");
             return new PlayerView { player = player, tick = Tick, winner = Winner, faction = Players[player].faction, minerals = Players[player].minerals, catalyst = Players[player].catalyst,
                 supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray(),
+                abilityEvents = recentAbilities.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.origin) && Visible(player,a.effect.position)).Select(a=>ObservedAbility(a.effect,a.ids[player])).ToArray(),
                 // Never reveal a previously unseen shot when an observer arrives later, or keep a trail in lost vision.
                 attacks = recentAttacks.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.shot.origin) && Visible(player,a.shot.destination)).Select(a=>a.shot).ToArray() };
         }

@@ -88,14 +88,15 @@ namespace Frontier.Core
         private CommandResult ExecuteCommand(GameCommand command, List<EntityState> selected, bool preserveQueue)
         {
             EntityState first = selected[0];
+            if (command.kind == CommandKind.Cast) return BeginCast(command, selected);
             if (command.kind == CommandKind.Build)
             {
                 var result = Build(command, first);
                 if (result.accepted) MarkUnitOrder(first, command.sequence, preserveQueue);
                 return result;
             }
-            if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, first);
-            if (command.kind == CommandKind.Cancel) return Cancel(first, command.queueOrderId);
+            if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, selected);
+            if (command.kind == CommandKind.Cancel) return selected.Count == 1 ? Cancel(first, command.queueOrderId) : Reject("Select one building to cancel production or construction.");
             if (command.kind == CommandKind.SetRallyPoint || command.kind == CommandKind.ClearRallyPoint) return ConfigureRallyPoint(command, selected);
             if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
@@ -109,8 +110,8 @@ namespace Frontier.Core
             if (command.kind == CommandKind.Attack || command.kind == CommandKind.Repair)
             {
                 if (!Entities.TryGetValue(command.target, out var target)) return Reject("Target does not exist.");
-                if (command.kind == CommandKind.Attack && (target.owner == command.player || !Visible(command.player, Center(target)))) return Reject("No visible enemy at that location.");
-                if (command.kind == CommandKind.Repair && (target.owner != command.player || Catalog.Faction(Players[command.player].faction).regenerates || selected.Any(e => Type(e).role != "worker"))) return Reject("Only industrial workers can repair allies.");
+                if (command.kind == CommandKind.Attack && (target.health <= 0 || target.owner == command.player || !Visible(command.player, Center(target)))) return Reject("No visible enemy at that location.");
+                if (command.kind == CommandKind.Repair && (target.owner != command.player || Catalog.Faction(Players[command.player].faction).regenerates || selected.Any(e => Type(e).role != "worker"))) return Reject("These workers cannot repair that target.");
             }
             else if (command.kind == CommandKind.Gather)
             {
@@ -126,6 +127,8 @@ namespace Frontier.Core
             {
                 MarkUnitOrder(entity, command.sequence, preserveQueue);
                 ResetTravel(entity);entity.order = command.kind; entity.target = command.target;
+                if (command.kind == CommandKind.Attack)
+                { entity.destination = Center(Entities[command.target]); entity.targetSeenTick = Tick; }
                 entity.braking=command.kind==CommandKind.Stop&&entity.velocity.Distance(default)>.01f;
                 if (command.kind == CommandKind.Repair && !Entities[command.target].complete) entity.order = CommandKind.Build;
             }
@@ -165,14 +168,31 @@ namespace Frontier.Core
             if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("The worker cannot reach that location.");
             return Accept();
         }
-        private CommandResult Produce(GameCommand command, EntityState producer)
+        private EntityState AvailableProducer(IEnumerable<EntityState> selected, string role)
+            => selected.Where(e => e.health > 0 && e.complete && Type(e).building && Type(e).role == role && e.queue.Count < 5)
+                .OrderBy(ProductionIsBlocked).ThenBy(e => e.queue.Sum(q => q.remaining)).ThenBy(e => e.queue.Count).ThenBy(e => e.id).FirstOrDefault();
+
+        private bool ProductionIsBlocked(EntityState producer)
         {
-            int player = producer.owner;
-            if (!producer.complete || !Type(producer).building || producer.queue.Count >= 5) return Reject("Building unavailable or queue full.");
+            if (producer.queue.Count == 0) return false;
+            var active = producer.queue[0];
+            if (active.research || active.remaining > 0) return false;
+            // A finished unit cannot release its queue until it can deploy. Its zero
+            // remaining time must not outrank a producer that is still advancing.
+            if (Units(producer.owner) >= Capacity(producer.owner)) return true;
+            float radius = Catalog[active.definition].collisionRadius;
+            return !(producer.hasRallyPoint ? FreeRallyExit(producer, radius) : FreeExit(producer, radius)).HasValue;
+        }
+
+        private CommandResult Produce(GameCommand command, List<EntityState> selected)
+        {
+            int player = command.player;
             if (command.kind == CommandKind.Research)
             {
                 var upgrade = Catalog.Upgrade(command.definition);
-                if (upgrade == null || Type(producer).role != "tech") return Reject("Invalid upgrade.");
+                if (upgrade == null) return Reject("Invalid upgrade.");
+                var producer = AvailableProducer(selected, "tech");
+                if (producer == null) return Reject("Building unavailable or queue full.");
                 if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Upgrade already researched or queued.");
                 if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");
                 Pay(player, upgrade.minerals, upgrade.catalyst);
@@ -182,7 +202,9 @@ namespace Frontier.Core
             {
                 if (!Catalog.Has(command.definition)) return Reject("Unknown unit.");
                 var type = Catalog[command.definition];
-                if (type.building || type.faction != Players[player].faction || type.producer != Type(producer).role) return Reject("This building cannot train that unit.");
+                if (type.building || type.faction != Players[player].faction) return Reject("This building cannot train that unit.");
+                var producer = AvailableProducer(selected, type.producer);
+                if (producer == null) return Reject("Building unavailable or queue full.");
                 if (!string.IsNullOrEmpty(type.requires) && !HasRole(player, type.requires)) return Reject("Required technology missing.");
                 if (Units(player) + Reserved(player) >= Capacity(player)) return Reject("You need more supply.");
                 if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
@@ -210,7 +232,7 @@ namespace Frontier.Core
         public void Step()
         {
             if (Paused || Winner != -1) return;
-            Tick++; recentAttacks.RemoveAll(a=>Tick-a.shot.tick>=TickRate); Array.Clear(unitCells, 0, unitCells.Length);
+            Tick++; recentAttacks.RemoveAll(a=>Tick-a.shot.tick>=TickRate); recentAbilities.RemoveAll(a=>Tick-a.effect.tick>=TickRate); Array.Clear(unitCells, 0, unitCells.Length);
             foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c]++; }
             var active = Entities.Values.OrderBy(e => e.id).ToArray();
             BeginMovementStep(active);
@@ -220,9 +242,20 @@ namespace Frontier.Core
                 if (e.health <= 0 || !Entities.ContainsKey(e.id)) continue;
                 var type = Type(e);
                 if (!e.complete) { AdvanceConstruction(e); continue; }
+                if (type.energyMax > 0) e.energy = Math.Min(type.energyMax, Math.Max(0, e.energy) + type.energyRegen / TickRate);
                 if (Catalog.Faction(type.faction).regenerates && Tick - e.lastDamageTick > 120) e.health = Math.Min(type.health, e.health + type.health * .00015f);
                 if (type.building) { AdvanceProduction(e); if (type.damage > 0) Fight(e, false); continue; }
-                if(e.yieldUntil>Tick){Travel(e,e.position,0);continue;}
+                if (e.order == CommandKind.Cast)
+                { AdvanceCast(e); if (e.order == CommandKind.Stop) AdvanceUnitOrders(e); continue; }
+                if(e.yieldUntil>Tick)
+                {
+                    // Traffic must not silence a combatant with an available shot.
+                    if(e.order==CommandKind.Attack && Entities.TryGetValue(e.target,out var focus)
+                        && ValidEnemy(e,focus) && CanFire(e,focus))
+                    { EndCombatYield(e); Attack(e); continue; }
+                    if((e.order==CommandKind.AttackMove || (e.order==CommandKind.Stop && type.role!="worker")) && Fight(e,false))continue;
+                    Travel(e,e.position,0);continue;
+                }
                 if(e.braking){Brake(e);continue;}
                 if(e.order==CommandKind.Move&&Tick<e.resumeMoveTick)continue;
                 switch (e.order)
@@ -246,7 +279,7 @@ namespace Frontier.Core
         private EntityState Spawn(int player, string definition, Point position)
         {
             var type = Catalog[definition];
-            var e = new EntityState { id = nextId++, owner = player, definition = definition, position = position, health = type.health };
+            var e = new EntityState { id = nextId++, owner = player, definition = definition, position = position, health = type.health, energy = type.energyMax };
             Entities.Add(e.id, e);
             if (type.building) Map.Occupy(position, type.footprint, e.id);
             else { int c = Map.Cell(position); if (c >= 0) unitCells[c]++; e.stepOrigin=position;mobiles.Add(e); }

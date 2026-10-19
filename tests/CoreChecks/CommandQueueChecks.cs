@@ -102,8 +102,8 @@ static class CommandQueueChecks
             sim.Submit(Order(unit,CommandKind.Move,3,new Point(15.5f,26.5f),true));
             check(Until(sim,()=>unit.activeOrderSequence==2)&&sim.Players[0].minerals==cash-supply.minerals&&sim.Buildings(0)==2,"queued construction pays once on activation "+faction);
             var foundation=sim.Entities.Values.Single(e=>e.definition==supply.id);
-            check(Until(sim,()=>unit.activeOrderSequence==3)&&(faction=="industrial"?foundation.complete:!foundation.complete&&foundation.remaining<supply.duration),
-                "construction releases next action at the faction's completion point "+faction);
+            check(Until(sim,()=>unit.activeOrderSequence==3)&&foundation.complete,
+                "construction retains its worker until completion before advancing the queue "+faction);
             check(sim.Players[0].minerals==cash-supply.minerals,"finishing queued construction never charges twice "+faction);
         }
         sim=Fixture();unit=Unit(sim,new Point(16.5f,20.5f));Steps(sim,4);sim.Players[0].minerals=0;

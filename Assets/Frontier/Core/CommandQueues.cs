@@ -17,8 +17,10 @@ namespace Frontier.Core
 
         private void MarkUnitOrder(EntityState unit, int sequence, bool preserveQueue)
         {
+            unit.castingAbility = null; unit.castResume = null;
             if (!preserveQueue) unit.pendingOrders.Clear();
             unit.activeOrderSequence = sequence;
+            unit.combatTarget = 0; unit.approachTarget = 0; unit.unreachableTargets.Clear();
         }
 
         private Point PlanningOrigin(EntityState unit, int replacing)
@@ -97,7 +99,7 @@ namespace Frontier.Core
                     return Reject("No visible enemy at that location.");
                 if (target == null || target.health <= 0) return Reject("Target is no longer available.");
                 if (command.kind == CommandKind.Repair && (target.owner != command.player || Catalog.Faction(Players[command.player].faction).regenerates || selected.Any(e => Type(e).role != "worker")))
-                    return Reject("Only industrial workers can repair allies.");
+                    return Reject("These workers cannot repair that target.");
             }
             if (command.kind == CommandKind.Gather)
             {

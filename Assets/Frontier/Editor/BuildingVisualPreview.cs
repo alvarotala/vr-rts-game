@@ -27,9 +27,9 @@ namespace Frontier.Editor
                 var session=sessionObject.AddComponent<GameSession>();if(session.Catalog==null)Invoke(session,"Awake");session.LoadMap("training");session.StartMatch();
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;Invoke(board,"Start");preview.AddSingleGO(boardObject);
                 var actors=new List<VisibleEntity>();var labels=new List<Transform>();
-                string[] roles={"hq","barracks","extractor","supply","tech","defense"};
-                string[] titles={"HEADQUARTERS","BARRACKS","GAS","SUPPLY","TECHNOLOGY","DEFENSE"};
-                for(int faction=0;faction<2;faction++)for(int role=0;role<6;role++)
+                string[] roles={"hq","barracks","extractor","supply","tech","defense","academy"};
+                string[] titles={"HEADQUARTERS","BARRACKS","GAS","SUPPLY","TECHNOLOGY","DEFENSE","CASTERS"};
+                for(int faction=0;faction<2;faction++)for(int role=0;role<roles.Length;role++)
                 {
                     var type=session.Catalog.Role(faction==0?"industrial":"biological",roles[role]);float half=type.footprint*.5f;
                     var center=new Point(6+role*7,16+faction*15);
@@ -44,7 +44,7 @@ namespace Frontier.Editor
                 preview.camera.orthographic=true;preview.camera.nearClipPlane=.001f;preview.camera.farClipPlane=10;
                 preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.025f,.04f,.06f);
                 var visuals=(Dictionary<int,Transform>)typeof(BoardView).GetField("entities",flags).GetValue(board);
-                Capture("friendly",new Point(24,23),.43f,new Vector3(0,1.3f,-1.7f));
+                Capture("friendly",new Point(27,23),.46f,new Vector3(0,1.3f,-1.7f));
                 int vertices=0;
                 foreach(var e in actors)
                 {
@@ -52,15 +52,15 @@ namespace Frontier.Editor
                     Check(mesh.bounds.min.y>=-.001f&&mesh.bounds.extents.x<=type.footprint*.5f&&mesh.bounds.extents.z<=type.footprint*.5f,"Model extends outside footprint: "+e.definition);
                     Check(visuals[e.id].Find("Health").localPosition.y>mesh.bounds.max.y&&visuals[e.id].Find("Damage impact").localPosition.y>mesh.bounds.max.y,"Health/impact hidden inside building: "+e.definition);
                 }
-                Capture("top",new Point(24,23),.43f,new Vector3(0,2,-.001f));
-                Capture("opposite-side",new Point(24,23),.43f,new Vector3(0,1.3f,1.7f));
+                Capture("top",new Point(27,23),.46f,new Vector3(0,2,-.001f));
+                Capture("opposite-side",new Point(27,23),.46f,new Vector3(0,1.3f,1.7f));
                 Capture("headquarters-and-barracks",new Point(9.5f,16),.15f,new Vector3(0,1.3f,-1.7f));
                 Capture("biological-headquarters-and-barracks",new Point(9.5f,31),.15f,new Vector3(0,1.3f,-1.7f));
 
                 var friendlyHull=Model(actors[0]).GetComponent<Renderer>().sharedMaterials[0];
                 session.View.entities=Array.Empty<VisibleEntity>();Invoke(board,"LateUpdate");
                 foreach(var e in actors)e.owner=1;session.View.entities=actors.ToArray();
-                Capture("enemy",new Point(24,23),.43f,new Vector3(0,1.3f,-1.7f));
+                Capture("enemy",new Point(27,23),.46f,new Vector3(0,1.3f,-1.7f));
                 Check(Model(actors[0]).GetComponent<Renderer>().sharedMaterials[0]!=friendlyHull,"Enemy hull lost team color");
                 session.View.entities=Array.Empty<VisibleEntity>();Invoke(board,"LateUpdate");
                 foreach(var e in actors)e.owner=0;session.View.entities=actors.ToArray();Invoke(board,"LateUpdate");
@@ -94,7 +94,7 @@ namespace Frontier.Editor
                 board.Zoom=3;board.Pan=new Vector2(-14,-8);board.transform.rotation=Quaternion.Euler(0,25,0);
                 Capture("zoom-and-rotation",new Point(9.5f,16),.44f,new Vector3(0,1.3f,-1.7f));
                 session.LeaveMatch();Check(visuals.Count==0,"Building models survive leaving match");
-                Debug.Log($"FRONTIER_BUILDING_PREVIEW passed: {checks} checks, 10 views, 12 building models, {vertices} vertices; footprint, height markers, fog/reveal, construction, hit/hover/selection, turret aiming, pool, zoom/rotation, exit; no player build");
+                Debug.Log($"FRONTIER_BUILDING_PREVIEW passed: {checks} checks, 10 views, {roles.Length*2} building models, {vertices} vertices; footprint, height markers, fog/reveal, construction, hit/hover/selection, turret aiming, pool, zoom/rotation, exit; no player build");
                 // Reuse existing focused regressions after changing the shared entity renderer.
                 HitFeedbackPreview.Render();WeaponPreview.Render();
 

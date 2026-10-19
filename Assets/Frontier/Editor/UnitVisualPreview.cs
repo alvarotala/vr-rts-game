@@ -24,9 +24,9 @@ namespace Frontier.Editor
                 var friendly=ColorMaterial(new Color(.2f,.8f,1));var enemy=ColorMaterial(new Color(1,.36f,.23f));
                 var dark=ColorMaterial(new Color(.12f,.17f,.22f));
                 var tissue=ColorMaterial(Color.white);
-                string[] roles={"worker","scout","melee","ranged","siege"};
-                var accents=new Material[5];for(int i=0;i<5;i++)accents[i]=ColorMaterial(UnitVisuals.Accent(roles[i]));
-                preview.camera.orthographic=true;preview.camera.orthographicSize=3.1f;preview.camera.nearClipPlane=.1f;preview.camera.farClipPlane=100;
+                string[] roles={"worker","scout","melee","ranged","siege","caster"};
+                var accents=new Material[roles.Length];for(int i=0;i<roles.Length;i++)accents[i]=ColorMaterial(UnitVisuals.Accent(roles[i]));
+                preview.camera.orthographic=true;preview.camera.orthographicSize=3.7f;preview.camera.nearClipPlane=.1f;preview.camera.farClipPlane=100;
                 preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.025f,.04f,.06f);
                 Directory.CreateDirectory("TestResults/UnitRoles");
                 for(int view=0;view<3;view++)
@@ -35,17 +35,17 @@ namespace Frontier.Editor
                     preview.camera.transform.LookAt(new Vector3(0,.5f,0));
                     preview.BeginStaticPreview(new Rect(0,0,1600,800));
                     int vertices=0;
-                    for(int faction=0;faction<2;faction++)for(int role=0;role<5;role++)
+                    for(int faction=0;faction<2;faction++)for(int role=0;role<roles.Length;role++)
                     {
                         var type=catalog.Role(faction==0?"industrial":"biological",roles[role]);var mesh=models.Get(type);vertices+=mesh.vertexCount;
-                        var matrix=Matrix4x4.TRS(new Vector3((role-2)*2.2f,0,(faction-.5f)*3),Quaternion.Euler(0,210,0),Vector3.one);
+                        var matrix=Matrix4x4.TRS(new Vector3((role-(roles.Length-1)*.5f)*2.2f,0,(faction-.5f)*3),Quaternion.Euler(0,210,0),Vector3.one);
                         preview.DrawMesh(mesh,matrix,view==1?enemy:friendly,0);
                         preview.DrawMesh(mesh,matrix,faction==1?tissue:dark,1);preview.DrawMesh(mesh,matrix,accents[role],2);
                     }
                     preview.Render(true);
                     var image=preview.EndStaticPreview();string name=view==0?"friendly":view==1?"enemy":"top";
                     File.WriteAllBytes("TestResults/UnitRoles/"+name+".png",image.EncodeToPNG());Object.DestroyImmediate(image);
-                    Debug.Log($"FRONTIER_UNIT_PREVIEW {name}: 10 models, {vertices} vertices, 3 submeshes per model");
+                    Debug.Log($"FRONTIER_UNIT_PREVIEW {name}: {roles.Length*2} models, {vertices} vertices, 3 submeshes per model");
                 }
             }
             finally

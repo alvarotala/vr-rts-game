@@ -16,8 +16,9 @@ namespace Frontier.Runtime
             => new Vector3(side * (type.role == "siege" ? .29f : .19f), .33f, (pair - (LegPairs(type) - 1) * .5f) * .24f - .07f);
         public static Quaternion LegRotation(int pair, int side) => Quaternion.Euler(0, side * (115 - pair * 28), 0);
         public static Vector3 WeaponPosition(string role) => role == "melee" ? new Vector3(.24f, .67f, .18f)
-            : role == "ranged" ? new Vector3(0, .78f, .12f) : role == "siege" ? new Vector3(0, .64f, .02f) : new Vector3(0, .32f, .25f);
-        public static float BadgeHeight(string role) => role == "ranged" ? 1.12f : role == "melee" ? 1.15f : role == "siege" ? 1.12f : .8f;
+            : role == "ranged" ? new Vector3(0, .78f, .12f) : role == "siege" ? new Vector3(0, .64f, .02f)
+            : role == "caster" ? new Vector3(0, .82f, .24f) : new Vector3(0, .32f, .25f);
+        public static float BadgeHeight(string role) => role == "caster" ? 1.5f : role == "ranged" ? 1.12f : role == "melee" ? 1.15f : role == "siege" ? 1.12f : .8f;
 
         public static Mesh Unit(Archetype type, bool animatedWorker, bool animatedCombat)
         {
@@ -64,6 +65,20 @@ namespace Frontier.Runtime
                 }
                 Eyes(b, new Vector3(0, .91f, .13f), .13f);
             }
+            else if (role == "caster")
+            {
+                // Upright oracle with a split crown and violet neural sacs; never a siege body.
+                b.Lobe(new Vector3(0, .38f, -.18f), new Vector3(.49f, .43f, .56f), 1, Flesh);
+                b.Lobe(new Vector3(0, .73f, -.04f), new Vector3(.32f, .68f, .32f), 0, Shell);
+                b.Lobe(new Vector3(0, 1.11f, .01f), new Vector3(.32f, .32f, .29f), 1, Soft);
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    b.Lobe(new Vector3(side * .22f, .63f, -.18f), new Vector3(.25f, .38f, .3f), 2, Color.white);
+                    b.Tendril(new[] { new Vector3(side * .1f, 1.13f, -.02f), new Vector3(side * .28f, 1.3f, -.03f), new Vector3(side * .23f, 1.43f, .08f) }, .065f, 1, Bone);
+                    b.Tendril(new[] { new Vector3(side * .13f, .82f, .02f), new Vector3(side * .27f, .71f, .24f), new Vector3(side * .18f, .79f, .43f) }, .055f, 0, Shell);
+                    b.Lobe(new Vector3(side * .09f, 1.13f, .14f), new Vector3(.065f, .065f, .055f), 2, Color.white);
+                }
+            }
             else
             {
                 b.Lobe(new Vector3(0, .5f, -.22f), new Vector3(.95f, .82f, .94f), 1, Flesh);
@@ -109,6 +124,12 @@ namespace Frontier.Runtime
                     b.Tendril(new[] { P(side * .17f, -.04f, -.13f), P(side * .22f, .18f, .23f), P(side * .15f, .05f, .75f) }, .14f, 0, Shell, false);
                     b.Mouth(P(side * .15f, .05f, .79f), .12f);
                 }
+            }
+            else if (role == "caster")
+            {
+                b.Lobe(P(0, 0, .21f), new Vector3(.27f, .27f, .27f), 2, Color.white);
+                for (int side = -1; side <= 1; side += 2)
+                    b.Tendril(new[] { P(side * .17f, -.03f, .05f), P(side * .18f, -.09f, .21f), P(side * .09f, -.07f, .34f) }, .025f, 1, Bone);
             }
             else
             {
@@ -179,6 +200,18 @@ namespace Frontier.Runtime
                     for (int side = -1; side <= 1; side += 2) for (int i = 0; i < 4; i++)
                         b.Tendril(new[] { new Vector3(side * .1f, .2f + i * .16f, .25f), new Vector3(side * .25f, .23f + i * .16f, .08f), new Vector3(side * .13f, .26f + i * .16f, -.09f) }, .036f, 0, Shell);
                     b.Tendril(new[] { new Vector3(0, .76f, .1f), new Vector3(.07f, .92f, .13f), new Vector3(0, 1.04f, .18f) }, .07f, 1, Bone); break;
+                case "academy":
+                    // An open flower of neural tissue surrounds a suspended spore focus.
+                    b.Lobe(new Vector3(0, .23f, .09f), new Vector3(.61f, .35f, .56f), 1, Flesh);
+                    for (int i = 0; i < 5; i++)
+                    {
+                        float a = i * Mathf.PI * 2 / 5; var direction = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+                        var center = new Vector3(0, 0, .08f);
+                        b.Tendril(new[] { center + direction * .16f + Vector3.up * .14f, center + direction * .32f + Vector3.up * .43f, center + direction * .24f + Vector3.up * .76f }, .07f, 0, Shell);
+                        b.Lobe(center + direction * .25f + Vector3.up * .38f, new Vector3(.17f, .31f, .17f), 1, Soft);
+                        b.Lobe(center + direction * .24f + Vector3.up * .77f, new Vector3(.085f, .1f, .085f), 2, Color.white);
+                    }
+                    b.Lobe(new Vector3(0, .57f, .08f), new Vector3(.31f, .32f, .31f), 2, Color.white); break;
                 default:
                     b.Tendril(new[] { new Vector3(0, .12f, 0), new Vector3(0, .52f, -.08f), new Vector3(0, .91f, .04f), new Vector3(0, 1.2f, .17f) }, .16f, 0, Shell, false);
                     b.Lobe(new Vector3(0, 1.19f, .22f), new Vector3(.36f, .23f, .43f), 1, Soft);

@@ -122,14 +122,15 @@ namespace Frontier.Editor
 
                     // Reuse the real wheel route with a map ray underneath, so a leaked confirm is visible.
                     session.Context(first, 0, 0); Refresh(); Reset();
-                    Check(WheelFrame(press: true) && wheel.IsOpen, "Right stick opens the producer wheel");
-                    WheelFrame(); int index = wheel.Items.ToList().FindIndex(a => a.Id == "clear-rally-point");
+                    WheelFrame();
+                    Check(WheelFrame(stick: Vector2.right) && wheel.IsOpen && wheel.Page==WheelPage.Root, "Stick tilt opens the unified root");
+                    WheelFrame(stick:Vector2.right,down:true,held:true);WheelFrame(stick:Vector2.right);WheelFrame();
+                    int index = wheel.Items.ToList().FindIndex(a => a.Id == "clear-rally-point");
                     Check(index >= 0, "Producer wheel exposes Clear rally independently of Cancel production");
-                    float angle = index * 2 * Mathf.PI / wheel.Items.Count;
-                    WheelFrame(stick: new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)));
+                    var direction=wheel.DirectionFor("clear-rally-point");WheelFrame(stick: direction);
                     Check(wheel.HighlightedId == "clear-rally-point", "Right stick can highlight Clear rally");
-                    Check(WheelFrame(a: true) && !wheel.IsOpen && !hq.hasRallyPoint, "Wheel A clears the rally and is consumed before terrain input");
-                    Check(WheelFrame() && !hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Wheel closing frame preserves clear rally and the production queue");
+                    Check(WheelFrame(stick:direction,down:true,held:true) && !wheel.IsOpen && !hq.hasRallyPoint, "Wheel trigger clears the rally and is consumed before terrain input");
+                    Check(WheelFrame(held:true)&&WheelFrame(up:true) && !hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Wheel closing trigger and release preserve clear rally and the production queue");
                     Reset();session.Context(first,0,0);
                     var priorIds=new System.Collections.Generic.HashSet<int>(session.Match.Entities.Keys);
                     int moveEvents=0;Point bornHeading=default;
@@ -167,11 +168,11 @@ namespace Frontier.Editor
                     if (!consumed) Call(input, "PointBoard", RayAt(second), false, false, down, false);
                     return consumed;
                 }
-                bool WheelFrame(Vector2 stick = default, bool press = false, bool a = false)
+                bool WheelFrame(Vector2 stick = default, bool down = false, bool held = false, bool up = false)
                 {
                     clock += .05f; var ray = RayAt(second);
-                    bool consumed = (bool)Call(input, "RouteWheel", ray, stick, press, a, false, false, false, false, false, clock, press, false);
-                    if (!consumed) Call(input, "PointBoard", ray, false, false, a, false);
+                    bool consumed = (bool)Call(input, "RouteWheel", ray, stick, false, false, down, held||down, false, false, false, clock, false, false);
+                    if (!consumed) Call(input, "PointBoard", ray, down, up, false, false);
                     return consumed;
                 }
                 void Check(bool condition, string message)

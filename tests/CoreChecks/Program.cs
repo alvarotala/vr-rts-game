@@ -14,6 +14,56 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--group-production-only"))
+{
+    GroupProductionChecks.Run(catalog,map,Check);
+    Console.WriteLine($"{checks} group production checks passed.");
+    return;
+}
+if(args.Contains("--faction-parity-only"))
+{
+    FactionParityChecks.Run(catalog,new[]{map,training},Check);
+    Console.WriteLine($"{checks} faction parity checks passed.");
+    return;
+}
+if(args.Contains("--ai-expansion-only"))
+{
+    AiEconomyChecks.Expansion(catalog,map,training,Check);
+    Console.WriteLine($"{checks} AI expansion checks passed.");
+    return;
+}
+if(args.Contains("--ai-only"))
+{
+    AiEconomyChecks.Run(catalog,map,training,Check);
+    AiTacticsChecks.Run(catalog,Check);
+    AiTacticsChecks.Scouting(catalog,map,training,Check);
+    DifficultyChecks.Run(catalog,map,training,Check);
+    if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);
+    Console.WriteLine($"{checks} AI checks passed.");
+    return;
+}
+if(args.Contains("--caster-only"))
+{
+    CasterChecks.Run(catalog,map,Check);
+    Console.WriteLine($"{checks} caster checks passed.");
+    return;
+}
+if(args.Contains("--combat-only"))
+{
+    CombatBehaviorChecks.Run(catalog,Check);
+    CombatMotionChecks.Run(catalog,Check);
+    Console.WriteLine($"{checks} combat checks passed.");
+    return;
+}
+if(args.Contains("--harvesting-only"))
+{
+    HarvestingChecks.Run(catalog,map,Check);
+    HarvestingChecks.Depletion(catalog,new[]{map,training},Check);
+    Console.WriteLine($"{checks} harvesting checks passed.");
+    return;
+}
+
+FactionParityChecks.Run(catalog,new[]{map,training},Check);
 Check(new GridMap(map).Count == 16384 && new GridMap(training).Count == 2304, "both authored maps validate");
 ResourceLayoutChecks.Run(catalog, new[]{map, training}, Check);
 var roundtrip = JsonSerializer.Deserialize<MapDefinition>(JsonSerializer.Serialize(map, json), json);
@@ -58,7 +108,7 @@ for(int i=0;i<1100;i++)s.Step();
 Check(s.Units(0)==10 && s.Reserved(0)==0, "production finishes and units exit");
 Check(s.Submit(new GameCommand{kind=CommandKind.Surrender,player=1}).accepted && s.Winner==0,"surrender ends match");
 
-// Building placement, growth, upgrades, fog memory and blocked production exercise complete behavior.
+// Building placement, construction, upgrades, fog memory and blocked production exercise complete behavior.
 foreach(string faction in new[]{"industrial","biological"})
 {
     s=New(faction);worker=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="worker");
@@ -173,12 +223,19 @@ NavigationChecks.Run(catalog,map,Check);
 PathfindingChecks.Run(catalog,Check);
 CollisionChecks.Run(catalog,Check);
 CombatMotionChecks.Run(catalog,Check);
+CombatBehaviorChecks.Run(catalog,Check);
+CasterChecks.Run(catalog,map,Check);
 ProductionChecks.Run(catalog,map,Check);
+GroupProductionChecks.Run(catalog,map,Check);
 CommandQueueChecks.Run(catalog,Check);
 RallyPointChecks.Run(catalog,Check);
 HarvestingChecks.Run(catalog,map,Check);
+HarvestingChecks.Depletion(catalog,new[]{map,training},Check);
 WorkerActivityChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
+AiEconomyChecks.Run(catalog,map,training,Check);
+AiTacticsChecks.Run(catalog,Check);
+AiTacticsChecks.Scouting(catalog,map,training,Check);
 if(args.Contains("--practice"))DifficultyChecks.Practice(catalog,new[]{map,training},Check,root);
 
 if(args.Contains("--matches"))
@@ -190,7 +247,8 @@ if(args.Contains("--matches"))
     {
         string a=(match%4<2)?"industrial":"biological", b=(match%2==0)?"biological":"industrial";
         bool easy=match%8>=4;
-        var difficulty=args.Contains("--opponent=very-easy")?AiDifficulty.VeryEasy:easy?AiDifficulty.Easy:AiDifficulty.Normal;
+        var opponent=args.FirstOrDefault(a=>a.StartsWith("--opponent="))?.Substring(11);
+        var difficulty=opponent=="hard"?AiDifficulty.Hard:opponent=="easy"?AiDifficulty.Easy:opponent=="normal"?AiDifficulty.Normal:easy?AiDifficulty.Easy:AiDifficulty.Normal;
         var sim=New(a,b); var bots=new[]{new Strategist(0,AiDifficulty.Normal,catalog,map),new Strategist(1,difficulty,catalog,map)};
         var watch=Stopwatch.StartNew(); int rejected=0, accepted=0;
         for(int tick=0;tick<36000 && sim.Winner==-1;tick++)

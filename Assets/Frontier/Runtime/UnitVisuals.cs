@@ -17,6 +17,7 @@ namespace Frontier.Runtime
                 case "melee":return "Melee";
                 case "ranged":return "Ranged";
                 case "siege":return "Artillery";
+                case "caster":return "Caster";
                 default:return role;
             }
         }
@@ -28,6 +29,7 @@ namespace Frontier.Runtime
                 case "scout":return new Color(.45f,1,.65f);
                 case "melee":return new Color(1,.86f,.65f);
                 case "ranged":return new Color(.9f,.96f,1);
+                case "caster":return new Color(.76f,.38f,1);
                 default:return new Color(.84f,.55f,1);
             }
         }
@@ -72,6 +74,20 @@ namespace Frontier.Runtime
                     Part(0,1.12f,-.04f,.25f,.26f,.25f);
                     if(!animatedCombat){Part(.17f,.74f,.27f,.13f,.15f,.8f,1);Part(.17f,.74f,.65f,.16f,.17f,.14f,2);}
                     height=1.32f;break;
+                case "caster": // Hovering conduit: split mantle and an open crown, with no rifle or tracks.
+                    Part(0,.42f,-.08f,.32f,.48f,.3f,1);
+                    Part(-.2f,.52f,-.03f,.18f,.62f,.37f);Part(.2f,.52f,-.03f,.18f,.62f,.37f);
+                    Part(0,.87f,-.06f,.36f,.34f,.3f);Part(0,1.14f,-.04f,.22f,.22f,.24f,1);
+                    Part(0,1.16f,.09f,.16f,.08f,.04f,2);
+                    for(int side=-1;side<=1;side+=2)
+                    {
+                        Part(side*.28f,1.02f,-.04f,.13f,.25f,.25f);
+                        Part(side*.28f,1.3f,-.04f,.075f,.33f,.1f,2);
+                        Part(side*.2f,.82f,.2f,.12f,.12f,.38f);
+                        Part(side*.2f,.82f,.4f,.14f,.13f,.12f,1);
+                    }
+                    if(!animatedCombat)b.Lobe(new Vector3(0,.82f,.45f),new Vector3(.27f,.27f,.27f),2);
+                    height=1.5f;break;
                 default: // Low artillery platform with paired barrels/spines.
                     Part(0,.22f,-.04f,.64f,.3f,.58f);
                     Part(-.28f,.15f,0,.14f,.24f,.65f,1);Part(.28f,.15f,0,.14f,.24f,.65f,1);
@@ -112,6 +128,8 @@ namespace Frontier.Runtime
                 case "siege":
                     Part(0,0,0,.46f,.3f,.36f,0);
                     for(int side=-1;side<=1;side+=2){Part(side*.15f,.05f,.36f,.12f,.15f,.88f);Part(side*.15f,.05f,.76f,.17f,.18f,.14f,2);}break;
+                case "caster":
+                    b.Lobe(new Vector3(0,0,.21f),new Vector3(.27f,.27f,.27f),2);break;
                 default: Part(0,0,0,.14f,.12f,.4f);Part(0,0,.2f,.16f,.14f,.12f,2);break;
             }
             mesh=b.Finish(key,type.collisionRadius/.45f);meshes.Add(key,mesh);return mesh;
@@ -188,6 +206,9 @@ namespace Frontier.Runtime
                     case "ranged":
                         Stroke(h,new Vector2(-.37f,0),new Vector2(.37f,0),.08f);Stroke(h,new Vector2(0,-.37f),new Vector2(0,.37f),.08f);
                         for(int i=0;i<12;i++){float a=i*Mathf.PI/6,b=a+Mathf.PI/6;Stroke(h,new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.24f,new Vector2(Mathf.Cos(b),Mathf.Sin(b))*.24f,.07f);}break;
+                    case "caster":
+                        Polygon(h,new[]{new Vector2(0,.35f),new Vector2(.1f,.1f),new Vector2(.32f,0),new Vector2(.1f,-.1f),new Vector2(0,-.35f),new Vector2(-.1f,-.1f),new Vector2(-.32f,0),new Vector2(-.1f,.1f)},2);
+                        Stroke(h,new Vector2(-.31f,.23f),new Vector2(-.2f,.32f),.07f);Stroke(h,new Vector2(.2f,-.32f),new Vector2(.31f,-.23f),.07f);break;
                     default:
                         for(int i=-1;i<=1;i++){float x=i*.25f;Polygon(h,new[]{new Vector2(x-.07f,-.27f),new Vector2(x+.07f,-.27f),new Vector2(x+.07f,.16f),new Vector2(x,.32f),new Vector2(x-.07f,.16f)},2);}break;
                 }

@@ -73,6 +73,9 @@ namespace Frontier.Editor
                     Hover(build.Title);panel.Back();Refresh();Check(!HelpVisible(),"Pause hides help");panel.Back();Refresh();
                     Hover(build.Title);session.Pause("tracking",true);Refresh();Check(!HelpVisible(),"Tracking pause hides help");session.Pause("tracking",false);
                     Select(hq.id);Check(!HelpVisible(),"Changing selection clears the previous tooltip");CheckHelpForSelection(faction+"-worker");
+                    var workerHelp=SelectionActions.For(session).Items.Single(a=>a.Id=="train:"+worker.definition).Description;
+                    Check(workerHelp.Contains("Stays on site")&&workerHelp.Contains("resume unfinished construction")&&workerHelp.Contains("repair damaged allies"),
+                        "Worker help explains construction commitment and repair for "+faction);
                     Select(barracks.id);CheckHelpForSelection(faction+"-army");
                     Select(tech.id);CheckHelpForSelection(faction+"-tech");
 

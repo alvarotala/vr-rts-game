@@ -46,6 +46,7 @@ namespace Frontier.Runtime
                 case ActionCategory.Build:return "BUILD STRUCTURES";
                 case ActionCategory.Train:return "TRAIN UNITS";
                 case ActionCategory.Research:return "RESEARCH";
+                case ActionCategory.Abilities:return "CASTER ABILITIES";
                 case ActionCategory.Cancel:return "CANCEL / REFUND";
                 default:return "UNIT ORDERS";
             }
@@ -57,6 +58,7 @@ namespace Frontier.Runtime
                 case ActionCategory.Build:return new Color(1,.72f,.35f);
                 case ActionCategory.Train:return new Color(.36f,.92f,.73f);
                 case ActionCategory.Research:return new Color(.8f,.65f,1);
+                case ActionCategory.Abilities:return new Color(.86f,.53f,1);
                 case ActionCategory.Cancel:return new Color(1,.59f,.53f);
                 default:return new Color(.4f,.78f,1);
             }

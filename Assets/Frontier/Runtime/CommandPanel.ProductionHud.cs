@@ -8,9 +8,9 @@ namespace Frontier.Runtime
     public sealed partial class CommandPanel
     {
         private RectTransform productionStrip;
-        private Text productionCount, productionState, productionName, productionProgress;
+        private Text productionCount, productionState, productionName, productionProgress, productionTitle, productionHint;
         private Image productionFill, productionAccent, productionCard;
-        private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4];
+        private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4], queuedPositions=new Text[4];
         private readonly Image[] queuedCards=new Image[4];
         private readonly Target[] productionTargets=new Target[5];
         private readonly RectTransform[] cancelHints=new RectTransform[5];
@@ -20,8 +20,8 @@ namespace Frontier.Runtime
         private void CreateProductionHud()
         {
             productionStrip=Section(matchHud,"Production queue",new Vector2(24,-422),new Vector2(1052,168));
-            Label(productionStrip,"PRODUCTION QUEUE",new Vector2(16,-8),new Vector2(350,26),18,accent);
-            Label(productionStrip,"CLICK AN ITEM TO CANCEL",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
+            productionTitle=Label(productionStrip,"PRODUCTION QUEUE",new Vector2(16,-8),new Vector2(350,26),18,accent);
+            productionHint=Label(productionStrip,"CLICK AN ITEM TO CANCEL",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
             productionCount=Label(productionStrip,"",new Vector2(802,-8),new Vector2(234,26),20,Color.white,TextAnchor.MiddleRight);
 
             var active=Section(productionStrip,"Current production",new Vector2(14,-42),new Vector2(352,112),new Color(.055f,.18f,.22f));
@@ -37,7 +37,7 @@ namespace Frontier.Runtime
             {
                 var card=Section(productionStrip,"Queue position "+(i+2),new Vector2(380+i*166,-42),new Vector2(160,112));
                 queuedCards[i]=card.GetComponent<Image>();
-                Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
+                queuedPositions[i]=Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
                 queuedNames[i]=Label(card,"",new Vector2(12,-30),new Vector2(136,52),21,Color.white);
                 queuedKinds[i]=Label(card,"",new Vector2(12,-87),new Vector2(136,22),14,QueueIdleTint);
                 cancelHints[i+1]=CreateCancelHint(card,160);
@@ -92,18 +92,27 @@ namespace Frontier.Runtime
 
         private VisibleEntity SelectedProducer()
         {
-            if(Session.View==null||Session.Selection.Count!=1)return null;
-            var entity=Session.View.entities.FirstOrDefault(e=>Session.Selection.Contains(e.id));
-            if(entity==null||entity.owner!=Session.View.player||entity.remembered||!entity.complete)return null;
-            var type=Session.Catalog[entity.definition];
-            if(!type.building)return null;
-            return type.role=="tech"||Session.Catalog.Definition.archetypes.Any(t=>!t.building&&t.faction==type.faction&&t.producer==type.role)?entity:null;
+            if(Session.Selection.Count!=1)return null;
+            return SelectedProducers().FirstOrDefault();
+        }
+
+        private VisibleEntity[] SelectedProducers()
+        {
+            if(Session.View==null||Session.Selection.Count==0)return System.Array.Empty<VisibleEntity>();
+            var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).OrderBy(e=>e.id).ToArray();
+            if(selected.Length!=Session.Selection.Count||selected.Any(e=>e.owner!=Session.View.player||e.remembered||e.health<=0||
+                !Session.Catalog[e.definition].building))return System.Array.Empty<VisibleEntity>();
+            return selected.Where(e=>e.complete&&Session.Catalog.CanProduceUnits(e.definition)).ToArray();
         }
 
         private void UpdateProductionHud()
         {
-            var producer=SelectedProducer();
-            if(producer==null)return;
+            var producers=SelectedProducers();
+            if(producers.Length==0)return;
+            if(Session.Selection.Count>1){UpdateGroupProductionHud(producers);return;}
+            var producer=producers[0];
+            productionTitle.text="PRODUCTION QUEUE";
+            productionHint.text="CLICK AN ITEM TO CANCEL";
             var queue=producer.queue;
             productionCount.text=$"{queue.Length} / 5"+(queue.Length>=5?" · FULL":"");
             productionCount.color=queue.Length>=5?WarningTint:Color.white;
@@ -140,6 +149,7 @@ namespace Frontier.Runtime
             productionAccent.color=productionFill.color=productionState.color=tint;
             for(int i=0;i<4;i++)
             {
+                queuedPositions[i].text=(i+2).ToString();
                 bool occupied=i+1<queue.Length;
                 var item=occupied?queue[i+1]:null;
                 queuedNames[i].text=occupied?QueueLabel(item.definition):"Empty";
@@ -147,6 +157,32 @@ namespace Frontier.Runtime
                 queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
                 queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
             }
+            UpdateProductionHover();
+        }
+
+        private void UpdateGroupProductionHud(VisibleEntity[] producers)
+        {
+            int queued=producers.Sum(e=>e.queue.Length),capacity=producers.Length*5;
+            int idle=producers.Count(e=>e.queue.Length==0),full=producers.Count(e=>e.queue.Length>=5);
+            int waiting=producers.Count(e=>e.queue.Length>0&&!e.queue[0].research&&e.queue[0].remaining<=0);
+            productionTitle.text="GROUP PRODUCTION";
+            productionHint.text="SELECT ONE BUILDING TO CANCEL";
+            productionCount.text=$"{queued} / {capacity}"+(full==producers.Length?" · FULL":"");
+            productionCount.color=full==producers.Length?WarningTint:Color.white;
+            productionState.text=Session.IsPaused?"PAUSED":"ONE PER CLICK · SHORTEST WAIT";
+            productionName.text=producers.Length+(producers.Length==1?" building":" buildings");
+            productionProgress.text=$"{producers.Length-idle} working · {idle} idle";
+            productionFill.rectTransform.sizeDelta=new Vector2(0,12);
+            productionAccent.color=productionState.color=Session.IsPaused?WarningTint:accent;
+            string[] labels={"QUEUED","IDLE","FULL","WAITING"};
+            int[] values={queued,idle,full,waiting};
+            string[] kinds={"orders","buildings","queues","deployment"};
+            for(int i=0;i<4;i++)
+            {
+                queuedPositions[i].text=labels[i];queuedNames[i].text=values[i].ToString();
+                queuedNames[i].color=Color.white;queuedKinds[i].text=kinds[i];queuedCards[i].color=button;
+            }
+            // This is an aggregate, so none of its cards identifies a cancellable order.
             UpdateProductionHover();
         }
     }

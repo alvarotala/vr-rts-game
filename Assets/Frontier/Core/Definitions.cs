@@ -52,10 +52,13 @@ namespace Frontier.Core
         public float collisionRadius = .45f;
         public float collisionMass = 1, acceleration = 16, deceleration = 24;
         public int attackPeriod = 20;
+        public float energyMax, energyRegen;
+        public string[] abilities = Array.Empty<string>();
     }
     [Serializable] public sealed class FactionDefinition
     {
         public string id, name;
+        // Optional mechanics for future balance work; both factions currently use false.
         public bool grows, regenerates;
     }
     [Serializable] public sealed class CatalogDefinition
@@ -64,7 +67,15 @@ namespace Frontier.Core
         public FactionDefinition[] factions = Array.Empty<FactionDefinition>();
         public Archetype[] archetypes = Array.Empty<Archetype>();
         public UpgradeDefinition[] upgrades = Array.Empty<UpgradeDefinition>();
+        public AbilityDefinition[] abilities = Array.Empty<AbilityDefinition>();
     }
+    [Serializable] public sealed class AbilityDefinition
+    {
+        public string id, faction, name, description, effect;
+        public int energyCost, cooldown;
+        public float range, radius, amount;
+    }
+    [Serializable] public sealed class AbilityCooldown { public string ability; public int readyTick; }
     [Serializable] public sealed class UpgradeDefinition
     {
         public string id, name;
@@ -75,32 +86,50 @@ namespace Frontier.Core
         public readonly CatalogDefinition Definition;
         private readonly Dictionary<string, Archetype> types = new Dictionary<string, Archetype>();
         private readonly Dictionary<string, FactionDefinition> factions = new Dictionary<string, FactionDefinition>();
+        private readonly Dictionary<string, AbilityDefinition> abilities = new Dictionary<string, AbilityDefinition>();
         public Catalog(CatalogDefinition definition)
         {
             if (definition == null || definition.schemaVersion != 1) throw new ArgumentException("Incompatible catalog version.");
-            if (definition.factions == null || definition.archetypes == null || definition.upgrades == null) throw new ArgumentException("Incomplete catalog.");
+            if (definition.factions == null || definition.archetypes == null || definition.upgrades == null || definition.abilities == null) throw new ArgumentException("Incomplete catalog.");
             Definition = definition;
             foreach (var faction in definition.factions)
             {
                 if (faction == null || string.IsNullOrWhiteSpace(faction.id) || factions.ContainsKey(faction.id)) throw new ArgumentException("Invalid or duplicate faction.");
                 factions.Add(faction.id, faction);
             }
+            foreach (var ability in definition.abilities)
+            {
+                if (ability == null || string.IsNullOrWhiteSpace(ability.id) || abilities.ContainsKey(ability.id)
+                    || ability.faction == null || !factions.ContainsKey(ability.faction) || string.IsNullOrWhiteSpace(ability.name)
+                    || (ability.effect != "damage" && ability.effect != "heal") || ability.energyCost < 1 || ability.cooldown < 1
+                    || !Positive(ability.range) || !Positive(ability.radius) || !Positive(ability.amount))
+                    throw new ArgumentException("Invalid or duplicate ability: " + ability?.id);
+                abilities.Add(ability.id, ability);
+            }
             foreach (var type in definition.archetypes)
             {
                 if (type == null || string.IsNullOrWhiteSpace(type.id) || types.ContainsKey(type.id) || type.faction == null || !factions.ContainsKey(type.faction)
                     || !Positive(type.health) || !Nonnegative(type.speed) || !Nonnegative(type.damage) || !Nonnegative(type.range) || !Positive(type.vision)
+                    || !Nonnegative(type.energyMax) || !Nonnegative(type.energyRegen) || type.abilities == null
                     || (!type.building && (!Positive(type.collisionRadius) || type.collisionRadius > .49f
                         || !Positive(type.collisionMass) || !Positive(type.acceleration) || !Positive(type.deceleration)))
                     || type.duration < 1 || type.attackPeriod < 1 || type.footprint < 1 || type.footprint > 8 || type.minerals < 0 || type.catalyst < 0 || type.capacity < 0)
                     throw new ArgumentException("Invalid definition: " + type?.id);
                 types.Add(type.id, type);
+                var assigned = new HashSet<string>();
+                foreach (string id in type.abilities)
+                    if (id == null || !assigned.Add(id) || !abilities.TryGetValue(id, out var ability)
+                        || ability.faction != type.faction || type.building || type.role != "caster" || type.energyMax < ability.energyCost)
+                        throw new ArgumentException("Invalid caster ability: " + type.id);
+                if (type.role == "caster" && (type.abilities.Length == 0 || !Positive(type.energyMax)))
+                    throw new ArgumentException("Caster requires energy and abilities: " + type.id);
             }
             foreach (var faction in definition.factions)
             {
                 var roles = new HashSet<string>();
                 foreach (var type in definition.archetypes) if (type.faction == faction.id)
                     if (string.IsNullOrWhiteSpace(type.role) || !roles.Add(type.role)) throw new ArgumentException("Invalid or duplicate role: " + type.id);
-                foreach (string role in new[]{"worker","scout","melee","ranged","siege","hq","extractor","supply","barracks","tech","defense"})
+                foreach (string role in new[]{"worker","scout","melee","ranged","siege","caster","hq","extractor","supply","barracks","tech","academy","defense"})
                     if (!roles.Contains(role)) throw new ArgumentException("Missing role " + role + " in " + faction.id);
                 if (Role(faction.id,"hq").footprint != 4) throw new ArgumentException("The v1 starting base must occupy 4 x 4 cells.");
                 foreach (var type in definition.archetypes) if (type.faction == faction.id)
@@ -113,6 +142,9 @@ namespace Frontier.Core
             foreach (var upgrade in definition.upgrades)
                 if (upgrade == null || (upgrade.id != "attack" && upgrade.id != "armor") || !upgrades.Add(upgrade.id) || upgrade.minerals < 0 || upgrade.catalyst < 0 || upgrade.duration < 1)
                     throw new ArgumentException("Invalid or duplicate upgrade.");
+            foreach (var ability in definition.abilities)
+                if (!Array.Exists(definition.archetypes, type => Array.IndexOf(type.abilities, ability.id) >= 0))
+                    throw new ArgumentException("Ability has no caster: " + ability.id);
         }
         private static bool Nonnegative(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0;
         private static bool Positive(float value) => Nonnegative(value) && value > 0;
@@ -137,8 +169,9 @@ namespace Frontier.Core
             foreach (var u in Definition.upgrades) if (u.id == id) return u;
             return null;
         }
+        public AbilityDefinition Ability(string id) => id != null && abilities.TryGetValue(id, out var ability) ? ability : null;
     }
-    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint }
+    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint, Cast }
     [Serializable]
     public sealed class GameCommand
     {
@@ -186,6 +219,8 @@ namespace Frontier.Core
         public string definition;
         public Point position;
         public float health;
+        public float energy;
+        public List<AbilityCooldown> abilityCooldowns = new List<AbilityCooldown>();
         public bool complete = true;
         public int remaining, lastDamageTick = -1000, attackReadyTick;
         public CommandKind order = CommandKind.Stop;
@@ -197,6 +232,11 @@ namespace Frontier.Core
         public List<ProductionOrder> queue = new List<ProductionOrder>();
         public int activeOrderSequence;
         public List<UnitOrder> pendingOrders = new List<UnitOrder>();
+        // Combat intent is separate from the issued order and its waypoint/queue.
+        [NonSerialized] internal int combatTarget, lastShotTick = -1000, targetSeenTick;
+        [NonSerialized] internal int approachTarget, approachVersion = -1;
+        [NonSerialized] internal Point approachPosition, approachGoal;
+        [NonSerialized] internal Dictionary<int,int> unreachableTargets = new Dictionary<int,int>();
         [NonSerialized] internal List<int> path;
         [NonSerialized] internal int pathIndex, pathVersion = -1, blockedTicks;
         [NonSerialized] internal Point pathGoal, stepOrigin, velocity, yieldGoal;
@@ -210,6 +250,10 @@ namespace Frontier.Core
         [NonSerialized] internal bool moveGoal, settled, braking;
         [NonSerialized] internal int resumeMoveTick;
         [NonSerialized] internal bool depositing;
+        [NonSerialized] internal UnitOrder castResume;
+        [NonSerialized] internal string castingAbility;
+        [NonSerialized] internal Point castPoint, castGoal;
+        [NonSerialized] internal int castDeadline, castResumeSeenTick;
     }
     [Serializable] public sealed class PlayerState
     {
@@ -231,6 +275,8 @@ namespace Frontier.Core
         public string definition;
         public Point position;
         public float health, progress;
+        public float energy;
+        public AbilityCooldown[] abilityCooldowns = Array.Empty<AbilityCooldown>();
         public bool complete, remembered;
         public CommandKind order;
         // Own workers only. Presentation must not inspect the authoritative match.
@@ -252,6 +298,12 @@ namespace Frontier.Core
         // Centers at the instant of firing, retained even when the target dies.
         public Point origin, destination;
     }
+    [Serializable] public struct AbilityEvent
+    {
+        public int id, tick, caster, owner;
+        public string ability;
+        public Point position;
+    }
     [Serializable]
     public sealed class PlayerView
     {
@@ -259,6 +311,7 @@ namespace Frontier.Core
         public string faction;
         public VisibleEntity[] entities = Array.Empty<VisibleEntity>();
         public AttackEvent[] attacks = Array.Empty<AttackEvent>();
+        public AbilityEvent[] abilityEvents = Array.Empty<AbilityEvent>();
         public ResourceState[] resources = Array.Empty<ResourceState>();
         public byte[] visibility = Array.Empty<byte>();
         public string[] researched = Array.Empty<string>();

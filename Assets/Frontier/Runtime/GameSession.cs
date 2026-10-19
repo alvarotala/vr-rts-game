@@ -24,6 +24,13 @@ namespace Frontier.Runtime
         public event Action<int, Point> UnitMoveOrdered;
         public string BuildDefinition { get; private set; }
         public bool AttackMoveMode;
+        public string AbilityDefinitionId { get; private set; }
+        public AbilityDefinition PendingAbility => Catalog?.Ability(AbilityDefinitionId);
+        public bool HasTargetingMode => BuildDefinition != null || AttackMoveMode || AbilityDefinitionId != null;
+        public bool AbilityPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1 && PendingAbility != null;
+        private float attackFeedbackUntil;
+        public bool AttackPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1
+            && (AttackMoveMode || Time.unscaledTime < attackFeedbackUntil);
         private Strategist bot;
         private float accumulator;
         private int sequence;
@@ -46,10 +53,10 @@ namespace Frontier.Runtime
         public void StartMatch()
         {
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
-            bot = new Strategist(1, Difficulty == "very-easy" ? AiDifficulty.VeryEasy : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
+            bot = new Strategist(1, Difficulty == "hard" ? AiDifficulty.Hard : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
             pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
             Announce(MapId == "training" ? $"1 · Select a worker. Build: {Catalog.Role(Faction, "supply").name} + {Catalog.Role(Faction, "barracks").name}." : "Expand your base. Scout before attacking.");
@@ -60,7 +67,7 @@ namespace Frontier.Runtime
             if (Match != null) Match.Paused = true;
             Running = false; Match = null; View = null; bot = null;
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; sequence = 0; accumulator = 0;
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; sequence = 0; accumulator = 0;
             // Closing a match must not dismiss headset, focus or tracking interruptions.
             pauseReasons.Remove("menu");
             Announce("Ready for a new match.");
@@ -88,6 +95,9 @@ namespace Frontier.Runtime
             }
         }
         public bool IsPaused => pauseReasons.Count > 0;
+        // Menus and board placement still accept controller input. System interruptions
+        // must hide hand-attached UI even when one of those local menus is also open.
+        public bool HasSystemPause => pauseReasons.Any(reason => reason != "menu" && reason != "placement");
         public void Pause(string reason, bool paused)
         { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null) Match.Paused = IsPaused; Changed?.Invoke(); }
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
@@ -98,7 +108,7 @@ namespace Frontier.Runtime
             SelectedResource = 0;
             if (View != null && View.entities.Any(e => e.id == id && e.owner == 0)) { if (!Selection.Add(id) && additive) Selection.Remove(id); }
             else if (!additive && View != null && View.resources.Any(r => r.id == resourceId)) SelectedResource = resourceId;
-            Feedback?.Invoke(true); Changed?.Invoke();
+            ValidateAbilitySelection();Feedback?.Invoke(true); Changed?.Invoke();
         }
         public void SelectRectangle(Point a, Point b, bool additive)
         {
@@ -107,31 +117,31 @@ namespace Frontier.Runtime
             if (View == null) return;
             foreach (var e in View.entities)
                 if (e.owner == 0 && !Catalog[e.definition].building && e.position.x >= Math.Min(a.x,b.x) && e.position.x <= Math.Max(a.x,b.x) && e.position.y >= Math.Min(a.y,b.y) && e.position.y <= Math.Max(a.y,b.y)) Selection.Add(e.id);
-            Feedback?.Invoke(true); Changed?.Invoke();
+            ValidateAbilitySelection();Feedback?.Invoke(true); Changed?.Invoke();
         }
         public void Deselect(int id)
         {
             bool removed=Selection.Remove(id);
             if(removed)SelectedResource=0;
-            Feedback?.Invoke(removed);Changed?.Invoke();
+            ValidateAbilitySelection();Feedback?.Invoke(removed);Changed?.Invoke();
         }
-        public void SelectNearbySameType(int id,bool additive)
+        public void SelectSameTypeOnMap(int id,bool additive)
         {
-            var source=View?.entities.FirstOrDefault(e=>e.id==id&&e.owner==0&&!e.remembered);
-            if(source==null||Catalog[source.definition].building)return;
+            var source=View?.entities.FirstOrDefault(e=>e.id==id&&e.owner==View.player&&!e.remembered&&e.health>0);
+            if(source==null)return;
             if(!additive)Selection.Clear();
             SelectedResource=0;
             foreach(var entity in View.entities)
-                if(entity.owner==0&&!entity.remembered&&entity.definition==source.definition
+                if(entity.owner==View.player&&!entity.remembered&&entity.health>0&&entity.definition==source.definition
                     &&entity.position.Distance(source.position)<=12)Selection.Add(entity.id);
-            Feedback?.Invoke(true);Changed?.Invoke();
+            ValidateAbilitySelection();Feedback?.Invoke(true);Changed?.Invoke();
         }
         public void SelectSameTypeInSelection(int id)
         {
             var source=View?.entities.FirstOrDefault(e=>e.id==id&&Selection.Contains(id)&&OwnGroupMember(id));
             if(source==null)return;
             Selection.RemoveWhere(member=>!View.entities.Any(e=>e.id==member&&e.owner==View.player&&!e.remembered&&e.definition==source.definition));
-            SelectedResource=0;Feedback?.Invoke(true);Changed?.Invoke();
+            SelectedResource=0;ValidateAbilitySelection();Feedback?.Invoke(true);Changed?.Invoke();
         }
         public void Group(int index, bool save)
         {
@@ -139,19 +149,50 @@ namespace Frontier.Runtime
             if (save) { groups[index].Clear(); groups[index].AddRange(Selection.Where(OwnGroupMember)); Announce("Group " + (index + 1) + " saved."); }
             else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (OwnGroupMember(id)) Selection.Add(id);
                 Announce("Group " + (index + 1) + (Selection.Count>0?" selected.":" is empty.")); }
-            Feedback?.Invoke(save||Selection.Count>0);Changed?.Invoke();
+            ValidateAbilitySelection();Feedback?.Invoke(save||Selection.Count>0);Changed?.Invoke();
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseAttackMove()
+        {
+            BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null; attackFeedbackUntil = 0;
+            Announce("Attack Move · Choose a point on the battlefield."); Changed?.Invoke();
+        }
+        public IEnumerable<VisibleEntity> AbilityCasters(string id) => View == null ? Enumerable.Empty<VisibleEntity>() : View.entities.Where(e =>
+            e.owner == View.player && e.health > 0 && e.complete && Selection.Contains(e.id) && Catalog[e.definition].abilities.Contains(id));
+        public bool AbilityReady(VisibleEntity caster, AbilityDefinition ability) => ability != null && caster.energy >= ability.energyCost
+            && !caster.abilityCooldowns.Any(c => c.ability == ability.id && c.readyTick > View.tick);
+        public string AbilityStatus(string id)
+        {
+            var ability=Catalog.Ability(id);var casters=AbilityCasters(id).ToArray();
+            if(ability==null||casters.Length==0)return "Select a caster";
+            int ready=casters.Count(e=>AbilityReady(e,ability));
+            if(ready>0)return ability.energyCost+" energy · "+ready+" ready";
+            int wait=casters.Min(e=>Math.Max(0,e.abilityCooldowns.Where(c=>c.ability==id).Select(c=>c.readyTick-View.tick).DefaultIfEmpty(0).Max()));
+            return wait>0?ability.energyCost+" energy · "+((wait+Simulation.TickRate-1)/Simulation.TickRate)+" s cooldown"
+                :"Needs "+ability.energyCost+" energy";
+        }
+        public bool ChooseAbility(string id)
+        {
+            var ability=Catalog.Ability(id);
+            if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
+            {Announce(AbilityStatus(id));Feedback?.Invoke(false);Changed?.Invoke();return false;}
+            BuildDefinition=null;AttackMoveMode=false;attackFeedbackUntil=0;AbilityDefinitionId=id;
+            Announce(ability.name+" · Choose a visible point. One caster will move into range and cast.");Changed?.Invoke();return true;
+        }
+        private void ValidateAbilitySelection()
+        { if(AbilityDefinitionId!=null&&!AbilityCasters(AbilityDefinitionId).Any())AbilityDefinitionId=null; }
         public void CancelMode()
         {
             if (BuildDefinition != null) Announce("Construction placement cancelled.");
-            BuildDefinition = null; AttackMoveMode = false; Changed?.Invoke();
+            else if (AttackMoveMode) Announce("Attack destination cancelled.");
+            else if (PendingAbility != null) Announce(PendingAbility.name+" targeting cancelled.");
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; Changed?.Invoke();
         }
         private void RefreshView()
         {
-            var previous=View;View=Match.View(0);
+            var previous=View;View=Match.View(0);ValidateAbilitySelection();
             foreach(var entity in View.entities)
                 if(entity.owner==View.player&&(entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove))
                 {
@@ -172,6 +213,12 @@ namespace Frontier.Runtime
         public int Context(Point point,int entityId,int resourceId,bool append=false,bool attack=false,int replaceSequence=0)
         {
             if (View == null) return 0;
+            if (PendingAbility != null)
+            {
+                var ability=PendingAbility;
+                if(!Send(CommandKind.Cast,definition:ability.id,position:point))return 0;
+                AbilityDefinitionId=null;Announce(ability.name+" ordered.");Changed?.Invoke();return sequence;
+            }
             if(CanSetRallyPoint)
             {
                 if(!Send(CommandKind.SetRallyPoint,position:point))return 0;
@@ -186,7 +233,7 @@ namespace Frontier.Runtime
             if (AttackMoveMode)
             {
                 bool accepted=Send(CommandKind.AttackMove,position:point,append:append,replaceSequence:replaceSequence);
-                AttackMoveMode=false;return accepted?sequence:0;
+                if(accepted)AttackMoveMode=false;return accepted?sequence:0;
             }
             var entity = View.entities.FirstOrDefault(e=>e.id==entityId && !e.remembered);
             var selected = View.entities.Where(e=>Selection.Contains(e.id)).ToArray();
@@ -203,7 +250,7 @@ namespace Frontier.Runtime
             bool sent;
             if (entity != null && entity.owner != 0) sent=Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence);
             else if (resourceId > 0 && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Gather,target:resourceId,append:append,replaceSequence:replaceSequence);
-            else if (entity != null && entity.owner==0 && entity.health < Catalog[entity.definition].health && Faction=="industrial" && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Repair,target:entity.id,append:append,replaceSequence:replaceSequence);
+            else if (entity != null && entity.owner==0 && (!entity.complete || entity.health < Catalog[entity.definition].health) && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Repair,target:entity.id,append:append,replaceSequence:replaceSequence);
             else sent=Send(CommandKind.Move,position:point,append:append,replaceSequence:replaceSequence);
             return sent?sequence:0;
         }
@@ -213,6 +260,12 @@ namespace Frontier.Runtime
             var selected = Selection.OrderBy(id=>id).ToArray();
             var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence });
             if (!result.accepted) Announce(result.message);
+            else
+            {
+                bool attacking = kind == CommandKind.Attack || kind == CommandKind.AttackMove;
+                attackFeedbackUntil = attacking ? Time.unscaledTime + .8f : 0;
+                if (attacking) Announce((kind == CommandKind.AttackMove ? "Attack Move" : "Attack") + (append ? " queued." : " ordered."));
+            }
             Feedback?.Invoke(result.accepted); RefreshView();
             Changed?.Invoke(); return result.accepted;
         }

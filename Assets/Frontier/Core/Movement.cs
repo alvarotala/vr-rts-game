@@ -73,7 +73,7 @@ namespace Frontier.Core
             }
             return cost;
         }
-        private bool Travel(EntityState unit,Point destination,float range)
+        private bool Travel(EntityState unit,Point destination,float range,bool stopOnFailure=true)
         {
             bool yielding=Tick<unit.yieldUntil;
             if(yielding&&!mobiles.Any(other=>other.id!=unit.id&&other.owner==unit.owner&&other.health>0
@@ -112,7 +112,7 @@ namespace Frontier.Core
                 {
                     unit.repathAt=Tick+20;
                     // Traffic only changes costs: a null route means static terrain actually blocks the order.
-                    if(!yielding){Notice?.Invoke(unit.owner,"Destination unreachable.");unit.order=CommandKind.Stop;}
+                    if(!yielding && stopOnFailure){Notice?.Invoke(unit.owner,"Destination unreachable.");unit.order=CommandKind.Stop;}
                     return false;
                 }
                 SetPath(unit,route,destination,range);

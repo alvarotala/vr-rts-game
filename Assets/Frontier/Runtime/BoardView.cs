@@ -16,6 +16,12 @@ namespace Frontier.Runtime
         public bool Placed;
         public int Hovered;
         public int HoveredResource;
+        public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
+        public static readonly Color AttackPointerColor = new Color(1f,.16f,.12f);
+        public static readonly Color DamageAbilityColor = new Color(.85f,.4f,1f), HealingAbilityColor = new Color(.3f,1f,.55f);
+        public Color PointerColor => Session != null && Session.AbilityPointerActive
+            ? (Session.PendingAbility.effect=="heal"?HealingAbilityColor:DamageAbilityColor)
+            : Session != null && Session.AttackPointerActive ? AttackPointerColor : NormalPointerColor;
         private Transform terrainRoot;
         private MeshCollider terrainCollider;
         private Matrix4x4 raycastTransform;
@@ -49,6 +55,7 @@ namespace Frontier.Runtime
         private readonly Dictionary<string,Material> buildingMaterials=new Dictionary<string,Material>();
         private Material[] memoryMaterials, constructionMaterials;
         private WeaponEffects weapons;
+        private AbilityEffects abilityEffects;
         private HarvestingMarkers harvestingMarkers;
         private WorkerVisuals workerVisuals;
         private CreepVisuals creepVisuals;
@@ -80,8 +87,8 @@ namespace Frontier.Runtime
             neutral=Material(new Color(.2f,.28f,.35f));resourceMaterial=Material(Color.white);highlight=Material(new Color(.9f,1,.6f));
             unitStructure=Material(new Color(.12f,.17f,.22f));
             organicTissue=Material(Color.white);
-            foreach(string role in new[]{"worker","scout","melee","ranged","siege"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
-            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
+            foreach(string role in new[]{"worker","scout","melee","ranged","siege","caster"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
+            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","academy","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
             var memoryStructure=Material(new Color(.12f,.17f,.22f));memoryStructure.SetFloat("_Desaturate",1);
             memoryMaterials=new[]{neutral,memoryStructure,neutral};
             constructionMaterials=new[]{Material(new Color(.52f,.52f,.52f)),Material(new Color(.19f,.19f,.19f)),Material(new Color(.78f,.78f,.78f))};
@@ -97,6 +104,7 @@ namespace Frontier.Runtime
             buildingVisuals.Dispose();
             resourceVisuals.Dispose();
             weapons?.Dispose();
+            abilityEffects?.Dispose();
             harvestingMarkers?.Dispose();
             workerVisuals?.Dispose();
             creepVisuals?.Dispose();
@@ -117,6 +125,7 @@ namespace Frontier.Runtime
             if(Content==null)return;
             foreach(var visual in parts.Values)visual.soldier?.Dispose();
             weapons?.Dispose();weapons=null;firing.Clear();
+            abilityEffects?.Dispose();abilityEffects=null;
             harvestingMarkers?.Dispose();harvestingMarkers=null;
             workerVisuals?.Dispose();workerVisuals=null;
             creepVisuals?.Dispose();creepVisuals=null;
@@ -131,6 +140,7 @@ namespace Frontier.Runtime
             fog=new Texture2D(Session.Map.width,Session.Map.height,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,wrapMode=TextureWrapMode.Clamp};
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
+            abilityEffects=new AbilityEffects(Content,fog,Session.Map.width,Session.Map.height);
             harvestingMarkers=new HarvestingMarkers(Content);
             workerVisuals=new WorkerVisuals(Content);
             creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
@@ -177,6 +187,7 @@ namespace Frontier.Runtime
             if(!visible)
             {
                 weapons?.Clear();
+                abilityEffects?.Clear();
                 harvestingMarkers?.Hide();
                 workerVisuals?.Hide();
                 orderQueueVisuals?.Hide();
@@ -204,7 +215,7 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
+            if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
             workerVisuals.Begin(this,Time.unscaledDeltaTime);
             float combatTick=weapons.AdvanceClock(this);
             creepVisuals.Update(Session.View,Session.Catalog);ground.SetFloat("_CreepTime",combatTick/Simulation.TickRate);
@@ -339,6 +350,7 @@ namespace Frontier.Runtime
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
             weapons?.Render(this,combatTick,Viewer!=null?Viewer:Camera.main);
+            abilityEffects?.Render(this,combatTick,Viewer!=null?Viewer:Camera.main);
             var viewer=Viewer!=null?Viewer:Camera.main;
             resourceVisuals.UpdateVapor(this,viewer);
             harvestingMarkers?.Update(this,viewer);
@@ -397,6 +409,22 @@ namespace Frontier.Runtime
         {
             if(ground==null)return;
             bool visible=pointer.HasValue&&Content!=null&&Content.gameObject.activeInHierarchy&&Session.Running&&!Session.IsPaused;
+            ground.SetColor("_PointerColor",PointerColor);
+            ground.SetColor("_PointerDotColor",Session.AbilityPointerActive?PointerColor:Session.AttackPointerActive?new Color(1f,.3f,.24f):Color.white);
+            ground.SetVector("_AbilityArea",Vector4.zero);ground.SetVector("_AbilityRange",Vector4.zero);
+            if(visible&&Session.AbilityPointerActive)
+            {
+                var ability=Session.PendingAbility;Point point=pointer.Value;
+                int x=(int)point.x,y=(int)point.y,index=y*Session.Map.width+x;
+                bool seen=point.x>=0&&point.y>=0&&x<Session.Map.width&&y<Session.Map.height&&Session.View.visibility[index]==2;
+                ground.SetColor("_AbilityColor",seen?PointerColor:AttackPointerColor);
+                ground.SetVector("_AbilityArea",new Vector4(point.x,point.y,ability.radius,.0015f/CellScale));
+                var caster=Session.AbilityCasters(ability.id).Where(e=>Session.AbilityReady(e,ability))
+                    .OrderBy(e=>e.order==CommandKind.Cast?1:0)
+                    .ThenBy(e=>e.position.Distance(point)<=ability.range&&Session.Match.Map.HasLineOfSight(e.position,point)?0:1)
+                    .ThenBy(e=>e.position.Distance(point)).ThenBy(e=>e.id).FirstOrDefault();
+                if(caster!=null)ground.SetVector("_AbilityRange",new Vector4(caster.position.x,caster.position.y,ability.range,.001f/CellScale));
+            }
             // Keep the dot and guide lines the same physical size when zooming the map.
             ground.SetVector("_PointerArea",visible?new Vector4(pointer.Value.x,pointer.Value.y,.0018f/CellScale,.01f/CellScale):Vector4.zero);
         }

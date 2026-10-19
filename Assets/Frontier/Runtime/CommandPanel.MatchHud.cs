@@ -10,7 +10,7 @@ namespace Frontier.Runtime
     public sealed partial class CommandPanel
     {
         private RectTransform matchHud, resourceStrip, selectedCard, actionCard, groupStrip, matchStrip, harvestingStrip;
-        private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, actionHeading, actionHint, matchClock;
+        private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, casterStatus, actionHeading, actionHint, matchClock;
         private Image healthBackground, healthFill;
         private RectTransform orderPlanStrip;
         private Text orderPlanCount, orderPlanSteps, orderPlanHint;
@@ -36,6 +36,7 @@ namespace Frontier.Runtime
             healthFill=Section(bar,"Health",Vector2.zero,new Vector2(288,6),SupplyTint).GetComponent<Image>();
             selectionHealth=Label(selectedCard,"",new Vector2(16,-125),new Vector2(288,26),17,Color.white);
             selectionDetails=Label(selectedCard,"",new Vector2(16,-159),new Vector2(288,66),16,new Color(.72f,.82f,.87f),TextAnchor.UpperLeft);
+            casterStatus=Label(selectedCard,"",new Vector2(16,-228),new Vector2(288,32),14,new Color(.8f,.65f,1),TextAnchor.UpperLeft);
             Label(selectedCard,"Hover an action to learn more",new Vector2(16,-262),new Vector2(288,24),14,accent);
 
             actionCard=Section(matchHud,"Selected item actions",new Vector2(360,-178),new Vector2(716,296));
@@ -85,14 +86,16 @@ namespace Frontier.Runtime
         private Target HudButton(RectTransform parent,string title,string subtitle,Vector2 position,Vector2 size,Action click,Action hold,out Text detail)
         {
             var rect=Section(parent,title,position,size,button);
-            Label(rect,title,new Vector2(8,-3),new Vector2(size.x-16,25),18,Color.white,TextAnchor.MiddleCenter);
-            detail=Label(rect,subtitle,new Vector2(8,-28),new Vector2(size.x-16,21),14,new Color(.71f,.83f,.87f),TextAnchor.MiddleCenter);
-            return new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click,hold=hold};
+            bool compact=size.y<54;
+            var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,Color.white,TextAnchor.MiddleCenter);
+            if(compact){name.resizeTextForBestFit=true;name.resizeTextMinSize=13;name.resizeTextMaxSize=16;}
+            detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,new Color(.71f,.83f,.87f),TextAnchor.MiddleCenter);
+            return new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click,hold=hold,detail=detail};
         }
         private void LayoutPage()
         {
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Hotkeys,paused=Page==MenuPage.Pause;
-            bool production=hud&&SelectedProducer()!=null;
+            bool production=hud&&SelectedProducers().Length>0;
             bool orders=hud&&SelectedMobileUnits().Length>0;
             bool rally=hud&&OrderQueueVisuals.RallyProducers(Session).Length>0;
             float selectionSpace=LayoutSelectionGrid(hud);
@@ -133,7 +136,7 @@ namespace Frontier.Runtime
             for(int g=0;g<GameSession.ControlGroupCount;g++){int count=Session.GroupSize(g);groupCounts[g].text=count==0?"Empty":count+" assigned";}
 
             var selected=view.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            selectedKind.text="SELECTION";selectionRole.text="";selectionHealth.text="";selectionDetails.text="";
+            selectedKind.text="SELECTION";selectionRole.text="";selectionHealth.text="";selectionDetails.text="";casterStatus.text="";
             healthBackground.gameObject.SetActive(false);
             TopLeft(selectionDetails.rectTransform,new Vector2(16,-159),new Vector2(288,66));
             if(selected.Length==1)DescribeEntity(selected[0],false);
@@ -160,12 +163,41 @@ namespace Frontier.Runtime
                 else if(pointed!=null)DescribeEntity(pointed,true);
                 else{selection.text="No selection";selectionDetails.text="Select a unit or building to see its name and available orders.";}
             }
+            UpdateCasterStatus(selected);
+            UpdateMatchActionDetails();
             UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
             UpdateProductionHud();
             UpdateSelectionGrid();
             UpdateOrderPlanHud();
             UpdateRallyPointHud();
             status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
+        }
+        private void UpdateCasterStatus(VisibleEntity[] selected)
+        {
+            var casters=selected.Where(e=>e.owner==Session.View.player&&!e.remembered&&Session.Catalog[e.definition].energyMax>0).ToArray();
+            if(casters.Length==0)return;
+            float energy=casters.Sum(e=>e.energy),capacity=casters.Sum(e=>Session.Catalog[e.definition].energyMax);
+            int ready=0,total=0;
+            foreach(var caster in casters)foreach(string id in Session.Catalog[caster.definition].abilities)
+            {
+                var ability=Session.Catalog.Ability(id);if(ability==null)continue;total++;
+                if(caster.complete&&caster.health>0&&caster.energy>=ability.energyCost&&!caster.abilityCooldowns.Any(c=>c.ability==id&&c.readyTick>Session.View.tick))ready++;
+            }
+            casterStatus.text=$"ENERGY {Mathf.FloorToInt(energy)} / {Mathf.CeilToInt(capacity)}"+(casters.Length>1?$" · {casters.Length} casters":"")+$"\n{ready} / {total} abilities ready";
+        }
+        private void UpdateMatchActionDetails()
+        {
+            // Cooldowns change every tick. Refresh labels without rebuilding buttons,
+            // which would invalidate a press that is still held on the console.
+            var available=SelectionActions.For(Session);
+            actionHeading.text=Session.BuildDefinition!=null?"PLACING · "+Session.Catalog[Session.BuildDefinition].name
+                :Session.AbilityDefinitionId!=null?"TARGET · "+Session.PendingAbility.name:available.Heading;
+            foreach(var target in targets.Where(t=>t.actionId!=null))
+            {
+                var action=available.Items.FirstOrDefault(a=>a.Id==target.actionId);if(action==null)continue;
+                bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
+                target.help=action;target.detail.text=(active?"SELECTED · ":"")+action.Detail;
+            }
         }
         private VisibleEntity[] SelectedMobileUnits()=>Session.View==null?Array.Empty<VisibleEntity>():Session.View.entities
             .Where(e=>e.owner==Session.View.player&&!e.remembered&&Session.Selection.Contains(e.id)&&!Session.Catalog[e.definition].building).OrderBy(e=>e.id).ToArray();
@@ -199,7 +231,7 @@ namespace Frontier.Runtime
         }
         private static string PlanOrderLabel(CommandKind order)
         {
-            switch(order){case CommandKind.Move:return "Move";case CommandKind.Attack:return "Attack";case CommandKind.AttackMove:return "Attack Move";case CommandKind.Gather:return "Gather";case CommandKind.Build:return "Build";case CommandKind.Repair:return "Repair";case CommandKind.Hold:return "Hold Position";default:return "Stop";}
+            switch(order){case CommandKind.Move:return "Move";case CommandKind.Attack:return "Attack";case CommandKind.AttackMove:return "Attack Move";case CommandKind.Gather:return "Gather";case CommandKind.Build:return "Build";case CommandKind.Repair:return "Repair";case CommandKind.Hold:return "Hold Position";case CommandKind.Cast:return "Cast";default:return "Stop";}
         }
         private void DescribeEntity(VisibleEntity entity,bool pointing)
         {
@@ -220,11 +252,11 @@ namespace Frontier.Runtime
         }
         private static string BuildingRole(string role)
         {
-            switch(role){case "hq":return "Headquarters";case "extractor":return "Gas extractor";case "supply":return "Supply";case "barracks":return "Production";case "tech":return "Technology";case "defense":return "Defense";default:return "Building";}
+            switch(role){case "hq":return "Headquarters";case "extractor":return "Gas extractor";case "supply":return "Supply";case "barracks":return "Production";case "tech":return "Technology";case "academy":return "Caster production";case "defense":return "Defense";default:return "Building";}
         }
         private static string OrderLabel(CommandKind order)
         {
-            switch(order){case CommandKind.Move:return "Moving";case CommandKind.Attack:return "Attacking";case CommandKind.AttackMove:return "Attack move";case CommandKind.Gather:return "Gathering resources";case CommandKind.Build:return "Building";case CommandKind.Repair:return "Repairing";case CommandKind.Hold:return "Holding position";default:return "Idle";}
+            switch(order){case CommandKind.Move:return "Moving";case CommandKind.Attack:return "Attacking";case CommandKind.AttackMove:return "Attack move";case CommandKind.Gather:return "Gathering resources";case CommandKind.Build:return "Building";case CommandKind.Repair:return "Repairing";case CommandKind.Hold:return "Holding position";case CommandKind.Cast:return "Casting ability";default:return "Idle";}
         }
         private void BuildMatchActions()
         {
@@ -234,8 +266,13 @@ namespace Frontier.Runtime
             var available=SelectionActions.For(Session);
             actionHint.text=available.Hint;actionHeading.text=available.Heading;
             if(Session.BuildDefinition!=null)actionHeading.text="PLACING · "+Session.Catalog[Session.BuildDefinition].name;
-            float y=0;
-            foreach(var group in available.Items.GroupBy(a=>a.Category))
+            var groups=available.Items.GroupBy(a=>a.Category).ToArray();
+            int rows=groups.Sum(g=>(g.Count()+2)/3);
+            float rowHeight=rows==0?60:Mathf.Min(60,(actions.rect.height-groups.Length*20)/rows);
+            // Four rows of mixed producer actions still need room for both text lines.
+            // Reduce only their spacing; ordinary 54-pixel cards keep their layout.
+            float buttonHeight=Mathf.Min(rowHeight-2,Mathf.Max(42,rowHeight-6)),y=0;
+            foreach(var group in groups)
             {
                 var tint=ActionTint(group.Key);
                 Label(actions,CategoryLabel(group.Key),new Vector2(8,-y),new Vector2(660,18),13,tint);
@@ -244,20 +281,20 @@ namespace Frontier.Runtime
                 {
                     var captured=action;
                     bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
-                    var target=HudButton(actions,action.Title,(active?"SELECTED · ":"")+action.Detail,new Vector2(column*230,-y),new Vector2(218,54),()=>captured.Execute(),null,out var detail);
-                    target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;
+                    var target=HudButton(actions,action.Title,(active?"SELECTED · ":"")+action.Detail,new Vector2(column*230,-y),new Vector2(218,buttonHeight),()=>captured.Execute(),null,out var detail);
+                    target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
                     if(active)
                     {
                         detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
                         Section(target.rect,"Selected top",Vector2.zero,new Vector2(218,3),tint);
-                        Section(target.rect,"Selected bottom",new Vector2(0,-51),new Vector2(218,3),tint);
-                        Section(target.rect,"Selected right",new Vector2(215,0),new Vector2(3,54),tint);
+                        Section(target.rect,"Selected bottom",new Vector2(0,3-buttonHeight),new Vector2(218,3),tint);
+                        Section(target.rect,"Selected right",new Vector2(215,0),new Vector2(3,buttonHeight),tint);
                     }
-                    Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,54),tint);
+                    Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,buttonHeight),tint);
                     targets.Add(target);actionIndex++;
-                    if(++column==3){column=0;y+=60;}
+                    if(++column==3){column=0;y+=rowHeight;}
                 }
-                if(column!=0)y+=60;
+                if(column!=0)y+=rowHeight;
                 y+=2;
             }
             actionHint.gameObject.SetActive(actionIndex==0);

@@ -26,7 +26,7 @@ namespace Frontier.Runtime
         {
             this.root = root; this.body = body; this.type = type; scale = type.collisionRadius / .45f;
             weaponRest = (type.role == "melee" ? new Vector3(.32f, 1, .02f) : type.role == "ranged" ? new Vector3(.17f, .74f, .15f)
-                : type.role == "siege" ? new Vector3(0, .5f, -.06f) : new Vector3(0, .34f, .28f)) * scale;
+                : type.role == "siege" ? new Vector3(0, .5f, -.06f) : type.role == "caster" ? new Vector3(0,.82f,.24f) : new Vector3(0, .34f, .28f)) * scale;
             if(type.faction=="biological")weaponRest=BiologicalVisuals.WeaponPosition(type.role)*scale;
             weapon = Part("Animated weapon", body, meshes.CombatPart(type, false)); weapon.localPosition = weaponRest;
             if(type.faction=="biological")

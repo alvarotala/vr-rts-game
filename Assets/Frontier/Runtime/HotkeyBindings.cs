@@ -28,9 +28,9 @@ namespace Frontier.Runtime
         private static readonly Definition[] Touch={
             new Definition("select","Select / place","touch:trigger","Selection, drag, double-tap selection and board placement."),
             new Definition("order","Context order / confirm","touch:a","Move, attack, gather, repair and rally. Double-tap for Attack Move."),
-            new Definition("add","Add / queue modifier","touch:grip","Hold to add selection or queue orders; double-tap opens actions."),
-            new Definition("back","Cancel / pause","touch:b","Cancel the current action or open pause. Also closes wheels."),
-            new Definition("wheel","Action wheel / save group","touch:stick","Press for actions; hold + tilt, then release to replace a group.")
+            new Definition("add","Add / queue modifier","touch:grip","Hold to add selection or queue orders."),
+            new Definition("back","Cancel / pause","touch:b","Cancel the current action or open pause."),
+            new Definition("wheel","Save group modifier","touch:stick","Inside Groups: hold, tilt toward a group and release to replace it.")
         };
         private static readonly Definition[] Desktop={
             new Definition("select","Select / place","mouse:left","Selection, drag, double-click selection and board placement."),
@@ -64,7 +64,12 @@ namespace Frontier.Runtime
         public bool Assign(bool quest,string id,string input,bool swap,out string error)
         {
             var definition=Definitions(quest).FirstOrDefault(d=>d.Id==id);
-            if(definition==null||!Allowed(quest,definition,input)){error=definition?.Modifier==true?"Choose Shift, Ctrl or Alt.":"Choose a key or button, without a modifier combination.";return false;}
+            if(definition==null||!Allowed(quest,definition,input))
+            {
+                error=quest&&id=="wheel"?"Use Stick click, "+MenuConfirmName+" or Grip. Trigger and "+MenuBackName+" navigate the wheel.":
+                    definition?.Modifier==true?"Choose Shift, Ctrl or Alt.":"Choose a key or button, without a modifier combination.";
+                return false;
+            }
             string other=Conflict(quest,id,input);
             if(other!=null)
             {
@@ -78,7 +83,7 @@ namespace Frontier.Runtime
         private static bool Allowed(bool quest,Definition definition,string input)
         {
             if(string.IsNullOrEmpty(input))return false;
-            if(quest)return Touch.Any(d=>d.Default==input);
+            if(quest)return Touch.Any(d=>d.Default==input)&&(definition.Id!="wheel"||input!="touch:trigger"&&input!="touch:b");
             bool modifier=input=="key:LeftShift"||input=="key:LeftCtrl"||input=="key:LeftAlt";
             if(definition.Modifier)return modifier;
             if(modifier)return false;
@@ -100,6 +105,18 @@ namespace Frontier.Runtime
                 {
                     var entries=saved.entries.Where(e=>e!=null&&e.touch==quest).ToArray();var definitions=Definitions(quest);
                     if(entries.Length!=definitions.Count||entries.Select(e=>e.id).Distinct().Count()!=definitions.Count||entries.Select(e=>e.input).Distinct().Count()!=definitions.Count)continue;
+                    if(quest&&definitions.All(d=>entries.Any(e=>e.id==d.Id&&Touch.Any(t=>t.Default==e.input))))
+                    {
+                        // Older profiles allowed Trigger/B to open the wheel. They
+                        // now navigate it, so move group saving back to stick click
+                        // and preserve every other mapping with one pairwise swap.
+                        var save=entries.First(e=>e.id=="wheel");
+                        if(save.input=="touch:trigger"||save.input=="touch:b")
+                        {
+                            var stick=entries.First(e=>e.input=="touch:stick");
+                            stick.input=save.input;save.input="touch:stick";
+                        }
+                    }
                     if(definitions.Any(d=>!entries.Any(e=>e.id==d.Id&&Allowed(quest,d,e.input))))continue;
                     foreach(var entry in entries)result.Values(quest)[entry.id]=entry.input;
                 }

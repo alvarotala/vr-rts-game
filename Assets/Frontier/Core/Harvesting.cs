@@ -43,10 +43,10 @@ namespace Frontier.Core
         }
 
         private ResourceState FindGatherResource(EntityState worker, string kind, Point origin, int preferred,
-            Dictionary<int, int> assigned, bool onlyFree = false, bool local = true)
+            Dictionary<int, int> assigned, bool onlyFree = false)
         {
             var candidates = Resources.Where(r => r.kind == kind && Explored(worker.owner, r.position) && KnownRemaining(worker.owner, r) != 0
-                && (!local || r.position.Distance(origin) <= Harvesting.SearchRadius)
+                && r.position.Distance(origin) <= Harvesting.SearchRadius
                 && (kind != "catalyst" || Extractor(worker.owner, r))
                 && (!onlyFree || assigned[r.id] < Harvesting.OptimalWorkers(r.kind)))
                 .OrderBy(r => assigned[r.id] >= Harvesting.OptimalWorkers(r.kind) ? 1 : 0)
@@ -91,12 +91,14 @@ namespace Frontier.Core
             if (AdvanceUnitOrders(worker)) return;
             var assigned = GatherAssignments(worker.owner, new[] { worker.id });
             var previous = Resources.FirstOrDefault(r => r.id == worker.resourceId);
-            // Resume the old mineral line only while still nearby. A worker sent to
-            // construct an expansion should start harvesting at the new camp.
-            var resource = previous == null || previous.position.Distance(worker.position) > Harvesting.SearchRadius ? null :
-                FindGatherResource(worker, previous.kind, previous.position, 0, assigned);
-            if (resource == null) resource = FindGatherResource(worker, "mineral", worker.position, 0, assigned);
-            if (resource == null) resource = FindGatherResource(worker, "mineral", worker.position, 0, assigned, local: false);
+            // Depletion stays anchored to the mineral line, even after a delivery.
+            // Building at a distant expansion explicitly relocates the worker's job.
+            bool resumePrevious = previous != null && (worker.order == CommandKind.Gather
+                || previous.position.Distance(worker.position) <= Harvesting.SearchRadius);
+            Point origin = resumePrevious ? previous.position : worker.position;
+            string kind = resumePrevious ? previous.kind : "mineral";
+            var resource = FindGatherResource(worker, kind, origin, 0, assigned);
+            if (resource == null && kind != "mineral") resource = FindGatherResource(worker, "mineral", origin, 0, assigned);
             if (resource != null) { SetGather(worker, resource); return; }
             ResetTravel(worker); worker.order = CommandKind.Stop; worker.target = worker.resourceId = 0;
         }

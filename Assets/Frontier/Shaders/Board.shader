@@ -13,6 +13,11 @@ Shader "Frontier/Board"
         _HoverAmount("Hover model amount", Float) = 0
         _HoverColor("Hover color", Color) = (1,.92,.32,1)
         _PointerArea("Pointer center, dot radius, guide length", Vector) = (0,0,0,0)
+        _PointerColor("Pointer guides", Color) = (.3,.95,.94,1)
+        _PointerDotColor("Pointer center", Color) = (1,1,1,1)
+        _AbilityArea("Ability target center, radius, width", Vector) = (0,0,0,0)
+        _AbilityRange("Caster center, range, width", Vector) = (0,0,0,0)
+        _AbilityColor("Ability targeting", Color) = (.85,.4,1,1)
         _DamageAmount("Received damage flash", Float) = 0
         _Desaturate("Desaturate tissue", Float) = 0
         _CreepTex("Observed creep", 2D) = "black" {}
@@ -35,7 +40,8 @@ Shader "Frontier/Board"
             float4 _BaseColor; float _UseFog; float _Grid;
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
-            float4 _PointerArea;
+            float4 _PointerArea; float4 _PointerColor; float4 _PointerDotColor;
+            float4 _AbilityArea; float4 _AbilityRange; float4 _AbilityColor;
             float _DamageAmount;
             float _Desaturate; float _CreepTime;
             CBUFFER_END
@@ -109,6 +115,23 @@ Shader "Frontier/Board"
                         half outline=smoothstep(-aa*.5,aa*.5,edge)*(1-smoothstep(_HoverWidth-aa*.5,_HoverWidth+aa*.5,edge));
                         color=lerp(color,_HoverColor.rgb,outline*step(.5,input.topSurface)*step(.9,visibility));
                     }
+                    if(_AbilityArea.w>0)
+                    {
+                        float2 targetPosition=input.uv*_FrontierBounds.zw;
+                        float edge=abs(length(targetPosition-_AbilityArea.xy)-_AbilityArea.z);
+                        float aa=max(fwidth(edge),.001);
+                        half ring=1-smoothstep(_AbilityArea.w-aa,_AbilityArea.w+aa,edge);
+                        color=lerp(color,_AbilityColor.rgb,ring*step(.5,input.topSurface));
+                        if(_AbilityRange.w>0)
+                        {
+                            float2 offset=targetPosition-_AbilityRange.xy;
+                            float rangeEdge=abs(length(offset)-_AbilityRange.z);
+                            float rangeAa=max(fwidth(rangeEdge),.001);
+                            half dash=step(0,sin(atan2(offset.y,offset.x)*32));
+                            half rangeRing=1-smoothstep(_AbilityRange.w-rangeAa,_AbilityRange.w+rangeAa,rangeEdge);
+                            color=lerp(color,_PointerColor.rgb,rangeRing*dash*.55*step(.5,input.topSurface));
+                        }
+                    }
                     if(_PointerArea.w>0)
                     {
                         float2 offset=abs(input.uv*_FrontierBounds.zw-_PointerArea.xy);
@@ -124,7 +147,7 @@ Shader "Frontier/Board"
                         half dot=1-smoothstep(-aa,aa,dotDistance);
                         // Input feedback stays readable over fog without revealing terrain or entities.
                         color=lerp(color,half3(.012,.025,.035),border);
-                        color=lerp(color,lerp(half3(.3,.95,.94),half3(1,1,1),dot),mark);
+                        color=lerp(color,lerp(_PointerColor.rgb,_PointerDotColor.rgb,dot),mark);
                     }
                 }
                 return half4(color,1);

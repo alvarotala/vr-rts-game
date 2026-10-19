@@ -17,6 +17,7 @@ namespace Frontier.Runtime
                 case "extractor":return new Color(.82f,.5f,1);
                 case "supply":return new Color(.5f,1,.55f);
                 case "tech":return new Color(.7f,.94f,1);
+                case "academy":return UnitVisuals.Accent("caster");
                 default:return new Color(1,.9f,.77f);
             }
         }
@@ -84,6 +85,16 @@ namespace Frontier.Runtime
                     b.Tube(new Vector3(0,.42f,.11f),.29f,.24f,.07f,1);
                     b.Tube(new Vector3(0,.7f,.11f),.27f,.22f,.05f,0);
                     badgeHeight=.24f;break;
+                case "academy": // Three separate pylons frame a suspended resonance chamber.
+                    b.Prism(new Vector3(0,.15f,.08f),new Vector3(.74f,.18f,.66f),0,6);
+                    foreach(var p in new[]{new Vector3(-.3f,0,-.02f),new Vector3(.3f,0,-.02f),new Vector3(0,0,.32f)})
+                    {
+                        b.Prism(p+Vector3.up*.4f,new Vector3(.17f,.61f,.17f),0,6);
+                        b.Prism(p+Vector3.up*.75f,new Vector3(.11f,.18f,.11f),2,6);
+                    }
+                    b.Lobe(new Vector3(0,.49f,.1f),new Vector3(.35f,.35f,.35f),2);
+                    b.Tube(new Vector3(0,.31f,.1f),.23f,.18f,.05f,1);
+                    badgeHeight=.13f;break;
                 default: // Defensive turret / stinger; barrel at the existing weapon-effect height.
                     Part(0,.37f,.06f,.38f,.61f,.38f);
                     Part(0,.87f,.06f,.24f,.51f,.25f);
@@ -183,6 +194,8 @@ namespace Frontier.Runtime
                     case "tech":
                         Stroke(0,.14f,.12f,0);Stroke(.12f,0,0,-.14f);Stroke(0,-.14f,-.12f,0);Stroke(-.12f,0,0,.14f);
                         Stroke(-.05f,0,.05f,0);break;
+                    case "academy":
+                        Polygon(h,new[]{new Vector2(0,z+.15f),new Vector2(.045f,z+.045f),new Vector2(.14f,z),new Vector2(.045f,z-.045f),new Vector2(0,z-.15f),new Vector2(-.045f,z-.045f),new Vector2(-.14f,z),new Vector2(-.045f,z+.045f)},2);break;
                     default:
                         for(int i=0;i<8;i++){float a=i*Mathf.PI/4,b=a+Mathf.PI/4;Stroke(Mathf.Cos(a)*.095f,Mathf.Sin(a)*.095f,Mathf.Cos(b)*.095f,Mathf.Sin(b)*.095f,.025f);}
                         Stroke(-.15f,0,.15f,0,.025f);Stroke(0,-.15f,0,.15f,.025f);break;
