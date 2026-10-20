@@ -304,6 +304,13 @@ namespace Frontier.Core
         public string ability;
         public Point position;
     }
+    [Serializable] public struct DeathEvent
+    {
+        // Unit IDs are already observed; no global death counter leaks hidden losses.
+        public int unit, tick, owner;
+        public string definition;
+        public Point position, direction;
+    }
     [Serializable]
     public sealed class PlayerView
     {
@@ -312,6 +319,7 @@ namespace Frontier.Core
         public VisibleEntity[] entities = Array.Empty<VisibleEntity>();
         public AttackEvent[] attacks = Array.Empty<AttackEvent>();
         public AbilityEvent[] abilityEvents = Array.Empty<AbilityEvent>();
+        public DeathEvent[] deaths = Array.Empty<DeathEvent>();
         public ResourceState[] resources = Array.Empty<ResourceState>();
         public byte[] visibility = Array.Empty<byte>();
         public string[] researched = Array.Empty<string>();

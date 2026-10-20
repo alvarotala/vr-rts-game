@@ -12,4 +12,5 @@
   <ItemGroup><Compile Include="AiEconomyChecks.cs"/><Compile Include="AiTacticsChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="FactionParityChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="GroupProductionChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="DeathEventChecks.cs"/></ItemGroup>
 </Project>

@@ -14,6 +14,12 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--deaths-only"))
+{
+    DeathEventChecks.Run(catalog, map, Check);
+    Console.WriteLine($"{checks} death event checks passed.");
+    return;
+}
 if(args.Contains("--group-production-only"))
 {
     GroupProductionChecks.Run(catalog,map,Check);
@@ -232,6 +238,7 @@ RallyPointChecks.Run(catalog,Check);
 HarvestingChecks.Run(catalog,map,Check);
 HarvestingChecks.Depletion(catalog,new[]{map,training},Check);
 WorkerActivityChecks.Run(catalog,map,Check);
+DeathEventChecks.Run(catalog,map,Check);
 DifficultyChecks.Run(catalog,map,training,Check);
 AiEconomyChecks.Run(catalog,map,training,Check);
 AiTacticsChecks.Run(catalog,Check);

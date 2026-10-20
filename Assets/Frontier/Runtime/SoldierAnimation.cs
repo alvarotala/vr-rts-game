@@ -24,7 +24,7 @@ namespace Frontier.Runtime
 
         public SoldierAnimation(Transform root, Transform body, Archetype type, UnitVisuals meshes, Material[] materials)
         {
-            this.root = root; this.body = body; this.type = type; scale = type.collisionRadius / .45f;
+            this.root = root; this.body = body; this.type = type; scale = UnitVisuals.ModelScale(type);
             weaponRest = (type.role == "melee" ? new Vector3(.32f, 1, .02f) : type.role == "ranged" ? new Vector3(.17f, .74f, .15f)
                 : type.role == "siege" ? new Vector3(0, .5f, -.06f) : type.role == "caster" ? new Vector3(0,.82f,.24f) : new Vector3(0, .34f, .28f)) * scale;
             if(type.faction=="biological")weaponRest=BiologicalVisuals.WeaponPosition(type.role)*scale;

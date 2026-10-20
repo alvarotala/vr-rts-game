@@ -58,6 +58,7 @@ namespace Frontier.Runtime
         private Material[] memoryMaterials, constructionMaterials;
         private WeaponEffects weapons;
         private AbilityEffects abilityEffects;
+        private DeathEffects deathEffects;
         private HarvestingMarkers harvestingMarkers;
         private WorkerVisuals workerVisuals;
         private CreepVisuals creepVisuals;
@@ -108,6 +109,7 @@ namespace Frontier.Runtime
             resourceVisuals.Dispose();
             weapons?.Dispose();
             abilityEffects?.Dispose();
+            deathEffects?.Dispose();
             harvestingMarkers?.Dispose();
             workerVisuals?.Dispose();
             creepVisuals?.Dispose();
@@ -129,6 +131,7 @@ namespace Frontier.Runtime
             foreach(var visual in parts.Values)visual.soldier?.Dispose();
             weapons?.Dispose();weapons=null;firing.Clear();
             abilityEffects?.Dispose();abilityEffects=null;
+            deathEffects?.Dispose();deathEffects=null;
             harvestingMarkers?.Dispose();harvestingMarkers=null;
             workerVisuals?.Dispose();workerVisuals=null;
             creepVisuals?.Dispose();creepVisuals=null;
@@ -144,6 +147,7 @@ namespace Frontier.Runtime
             fogColors=new Color32[Session.Map.width*Session.Map.height];ground.SetTexture("_FogTex",fog);fogTick=-1;
             weapons=new WeaponEffects(Content,fog,Session.Map.width,Session.Map.height);
             abilityEffects=new AbilityEffects(Content,fog,Session.Map.width,Session.Map.height);
+            deathEffects=new DeathEffects(Content,fog,Session.Map.width,Session.Map.height);
             harvestingMarkers=new HarvestingMarkers(Content);
             workerVisuals=new WorkerVisuals(Content);
             creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
@@ -218,7 +222,7 @@ namespace Frontier.Runtime
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
+            if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
             workerVisuals.Begin(this,Time.unscaledDeltaTime);
             float combatTick=weapons.AdvanceClock(this);
             creepVisuals.Update(Session.View,Session.Catalog);ground.SetFloat("_CreepTime",combatTick/Simulation.TickRate);
@@ -322,6 +326,8 @@ namespace Frontier.Runtime
                 }
             }
             workerVisuals.End();
+            // Read the last live facing before the visual returns to its pool.
+            deathEffects?.Update(this,combatTick);
             removed.Clear();foreach(int id in entities.Keys)if(!alive.Contains(id))removed.Add(id);
             foreach(int id in removed) { var v=entities[id];v.gameObject.SetActive(false);pools[entityTypes[id]].Push(v);entities.Remove(id);entityTypes.Remove(id);pendingMoveFacing.Remove(id); }
             foreach(var resource in Session.View.resources)
@@ -378,11 +384,16 @@ namespace Frontier.Runtime
             if(!entities.TryGetValue(id,out var visual)||!visual.gameObject.activeInHierarchy||parts[visual].soldier==null)return false;
             muzzle=Content.InverseTransformPoint(parts[visual].soldier.Muzzle(shotId));return true;
         }
+        internal bool TryUnitRotation(int id, out Quaternion rotation)
+        {
+            if (entities.TryGetValue(id, out var visual)) { rotation = visual.localRotation; return true; }
+            rotation = Quaternion.identity; return false;
+        }
         private Transform MakeEntity(Archetype type,int owner)
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
             Material color=owner==0?blue:red;
-            float size=type.building?type.footprint*.85f:type.collisionRadius*2;
+            float size=type.building?type.footprint*.85f:UnitVisuals.ModelScale(type)*.9f;
             var model=new GameObject(type.building?"Building silhouette":"Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
             bool soldier=!type.building&&type.role!="worker";
             var mesh=type.building?buildingVisuals.Get(type):unitVisuals.Get(type,type.role=="worker"&&owner==(Session.View?.player??0),soldier);model.GetComponent<MeshFilter>().sharedMesh=mesh;

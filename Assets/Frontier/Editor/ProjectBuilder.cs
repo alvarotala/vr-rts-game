@@ -91,7 +91,7 @@ namespace Frontier.Editor
             // Shader.Find assets must be explicitly retained in player builds.
             var graphics=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
             var shaders=graphics.FindProperty("m_AlwaysIncludedShaders");
-            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Universal Render Pipeline/Unlit","UI/Default"})
+            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Frontier/Remains","Universal Render Pipeline/Unlit","UI/Default"})
             {
                 var shader=Shader.Find(name);if(shader==null)throw new BuildFailedException("Shader not found: "+name);
                 bool found=false;for(int i=0;i<shaders.arraySize;i++)if(shaders.GetArrayElementAtIndex(i).objectReferenceValue==shader)found=true;

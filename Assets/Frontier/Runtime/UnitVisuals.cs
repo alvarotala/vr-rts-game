@@ -8,6 +8,10 @@ namespace Frontier.Runtime
     public sealed class UnitVisuals
     {
         private readonly Dictionary<string,Mesh> meshes=new Dictionary<string,Mesh>();
+        // Hammer's low hull needs more visual mass than infantry. Keep its rig,
+        // muzzle and remains on the same scale, independently of simulation balance.
+        public static float ModelScale(Archetype type)
+            => type.collisionRadius / .45f * (type.faction == "industrial" && type.role == "siege" ? 1.8f : 1f);
         public static string RoleName(string role)
         {
             switch(role)
@@ -33,14 +37,14 @@ namespace Frontier.Runtime
                 default:return new Color(.84f,.55f,1);
             }
         }
-        public Mesh Get(Archetype type, bool animatedWorker = false, bool animatedCombat = false)
+        public Mesh Get(Archetype type, bool animatedWorker = false, bool animatedCombat = false, bool remains = false)
         {
-            string key=type.id+(animatedWorker?"/animated":animatedCombat?"/combat":"");
+            string key=type.id+(remains?"/remains":animatedWorker?"/animated":animatedCombat?"/combat":"");
             if(meshes.TryGetValue(key,out var mesh))return mesh;
             if(type.faction=="biological")
             {
-                var badge=new Builder();if(!animatedWorker)badge.Badge(type.role,BiologicalVisuals.BadgeHeight(type.role));
-                mesh=BiologicalVisuals.WithBadge(BiologicalVisuals.Unit(type,animatedWorker,animatedCombat),badge.Finish(key+"/badge",1),type.collisionRadius/.45f);
+                var badge=new Builder();if(!animatedWorker&&!remains)badge.Badge(type.role,BiologicalVisuals.BadgeHeight(type.role));
+                mesh=BiologicalVisuals.WithBadge(BiologicalVisuals.Unit(type,animatedWorker,animatedCombat),badge.Finish(key+"/badge",1),ModelScale(type));
                 meshes.Add(key,mesh);return mesh;
             }
             var b=new Builder();bool bio=type.faction=="biological";
@@ -99,8 +103,8 @@ namespace Frontier.Runtime
                     }
                     height=.88f;break;
             }
-            if(!animatedWorker)b.Badge(type.role,height+.12f);
-            mesh=b.Finish(key,type.collisionRadius/.45f);meshes.Add(key,mesh);return mesh;
+            if(!animatedWorker&&!remains)b.Badge(type.role,height+.12f);
+            mesh=b.Finish(key,ModelScale(type));meshes.Add(key,mesh);return mesh;
         }
         public Mesh CombatPart(Archetype type, bool leg)
         {
@@ -132,7 +136,7 @@ namespace Frontier.Runtime
                     b.Lobe(new Vector3(0,0,.21f),new Vector3(.27f,.27f,.27f),2);break;
                 default: Part(0,0,0,.14f,.12f,.4f);Part(0,0,.2f,.16f,.14f,.12f,2);break;
             }
-            mesh=b.Finish(key,type.collisionRadius/.45f);meshes.Add(key,mesh);return mesh;
+            mesh=b.Finish(key,ModelScale(type));meshes.Add(key,mesh);return mesh;
         }
         public void Dispose()
         {

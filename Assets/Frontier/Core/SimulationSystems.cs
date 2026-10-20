@@ -8,6 +8,18 @@ namespace Frontier.Core
     {
         private readonly List<(AttackEvent shot, int observers)> recentAttacks = new List<(AttackEvent, int)>();
         private int nextAttackId;
+        public const int DeathHistoryTicks = TickRate * 6, MaxDeathHistory = 256;
+        private readonly List<(DeathEvent death, int observers)> recentDeaths = new List<(DeathEvent, int)>();
+        private void RecordDeath(EntityState unit)
+        {
+            if (Type(unit).building) return;
+            int observers = 1 << unit.owner;
+            for (int player = 0; player < 2; player++)
+                if (Visible(player, unit.position)) observers |= 1 << player;
+            recentDeaths.Add((new DeathEvent { unit = unit.id, tick = Tick, owner = unit.owner,
+                definition = unit.definition, position = unit.position, direction = unit.velocity }, observers));
+            if (recentDeaths.Count > MaxDeathHistory) recentDeaths.RemoveAt(0);
+        }
         private void RecordAttack(EntityState source, EntityState target)
         {
             Point origin=Center(source),destination=Center(target);int observers=0;
@@ -151,6 +163,7 @@ namespace Frontier.Core
             return new PlayerView { player = player, tick = Tick, winner = Winner, faction = Players[player].faction, minerals = Players[player].minerals, catalyst = Players[player].catalyst,
                 supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray(),
                 abilityEvents = recentAbilities.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.origin) && Visible(player,a.effect.position)).Select(a=>ObservedAbility(a.effect,a.ids[player])).ToArray(),
+                deaths = recentDeaths.Where(d => (d.observers & (1<<player)) != 0 && (d.death.owner == player || Visible(player,d.death.position))).Select(d=>d.death).ToArray(),
                 // Never reveal a previously unseen shot when an observer arrives later, or keep a trail in lost vision.
                 attacks = recentAttacks.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.shot.origin) && Visible(player,a.shot.destination)).Select(a=>a.shot).ToArray() };
         }

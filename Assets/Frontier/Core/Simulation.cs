@@ -233,6 +233,7 @@ namespace Frontier.Core
         {
             if (Paused || Winner != -1) return;
             Tick++; recentAttacks.RemoveAll(a=>Tick-a.shot.tick>=TickRate); recentAbilities.RemoveAll(a=>Tick-a.effect.tick>=TickRate); Array.Clear(unitCells, 0, unitCells.Length);
+            recentDeaths.RemoveAll(d => Tick - d.death.tick >= DeathHistoryTicks);
             foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c]++; }
             var active = Entities.Values.OrderBy(e => e.id).ToArray();
             BeginMovementStep(active);
@@ -271,7 +272,7 @@ namespace Frontier.Core
                 if (e.order == CommandKind.Stop) AdvanceUnitOrders(e);
             }
             EndMovementStep();
-            foreach (var e in active) if (e.health <= 0 && Entities.ContainsKey(e.id)) Remove(e);
+            foreach (var e in active) if (e.health <= 0 && Entities.ContainsKey(e.id)) { RecordDeath(e); Remove(e); }
             if (Tick % 4 == 0) UpdateVision();
             bool a = Buildings(0) > 0, b = Buildings(1) > 0;
             if (!a || !b) Winner = !a && !b ? 2 : a ? 0 : 1;

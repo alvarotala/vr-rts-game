@@ -61,7 +61,7 @@ namespace Frontier.Runtime
                 var targetType=board.Session.Catalog[shot.targetDefinition];
                 var direction=new Vector3(shot.destination.x-shot.origin.x,0,shot.destination.y-shot.origin.y).normalized;
                 var side=Vector3.Cross(Vector3.up,direction);
-                float scale=type.building?1:type.collisionRadius/.45f;
+                float scale=type.building?1:UnitVisuals.ModelScale(type);
                 float muzzleHeight=type.building?2.45f:(type.role=="ranged"?.74f:siege?.55f:melee?.8f:.5f)*scale;
                 float muzzleForward=type.building?type.footprint*.46f:(type.role=="ranged"||siege?.7f:.4f)*scale;
                 Vector3 origin=new Vector3(shot.origin.x,board.HeightAt(shot.origin)+muzzleHeight,shot.origin.y)+direction*muzzleForward;
@@ -70,8 +70,8 @@ namespace Frontier.Runtime
                     origin=muzzle;
                 Vector3 targetCenter=new Vector3(shot.destination.x,board.HeightAt(shot.destination),shot.destination.y);
                 if(!melee&&board.TryCombatCenter(shot.target,out var liveTarget))targetCenter=liveTarget;
-                float targetRadius=targetType.building?targetType.footprint*.4f:targetType.collisionRadius*.7f;
-                Vector3 end=targetCenter+Vector3.up*(targetType.building?1.2f:.7f*targetType.collisionRadius/.45f)-direction*targetRadius;
+                float targetRadius=targetType.building?targetType.footprint*.4f:UnitVisuals.ModelScale(targetType)*.45f*.7f;
+                Vector3 end=targetCenter+Vector3.up*(targetType.building?1.2f:.7f*UnitVisuals.ModelScale(targetType))-direction*targetRadius;
                 // Keep traces legible on a full table, without growing excessively when zoomed in.
                 float width=Mathf.Clamp(.0015f/board.CellScale,.06f,.18f)*(siege?1.6f:1);
                 Color team=shot.owner==view.player?new Color(.25f,.85f,1):new Color(1,.32f,.22f);
