@@ -181,7 +181,7 @@ namespace Frontier.Runtime
             {
                 // A gesture begun over the board/console cannot turn into wheel input.
                 // Closing resets the neutral-to-tilt latch after interrupted interactions.
-                Wheel.Close();Wheel.TickHint(ray,Wheel.CanOpen&&!Panel.IsDragging);
+                Wheel.Close();Wheel.TickHint(ray,Wheel.CanOpen&&!Panel.IsDragging,now);
                 if(wheelReleasePending)
                 {
                     wheelReleasePending=triggerHeld||grip||stickHeld;

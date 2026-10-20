@@ -39,6 +39,7 @@ namespace Frontier.Editor
                     f.Capture(faction + "-idle-hint", "hintRoot");
                     CheckHandAttachment(f, faction);
                     CheckNavigationHaptics(f);
+                    CheckConfirmationFeedback(f, faction);
 
                     var movePoint = new Point(worker.position.x + 2, worker.position.y);
                     UnifiedWheelFixture.Call(f.Input, "OrderClick", movePoint, 0, 0, false, 100f);
@@ -182,6 +183,69 @@ namespace Frontier.Editor
                 }
                 f.Report("UNIFIED_WHEEL");
             }
+        }
+
+        private static void CheckConfirmationFeedback(UnifiedWheelFixture f, string faction)
+        {
+            bool Visible() { var view = UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "confirmationRoot"); return view != null && view.gameObject.activeSelf; }
+            float Started() => UnifiedWheelFixture.Field<float>(f.Wheel, "confirmationStarted");
+            var selection = f.Session.Selection.ToArray();
+            f.OpenSelection();
+            f.Check(!Visible(), "Tilting directly into a category does not claim that a command was confirmed");
+            string id = f.Wheel.HighlightedId; var direction = f.Wheel.DirectionFor(id);
+            f.Frame(direction, down: true, held: true);
+            f.Check(Visible() && f.Wheel.IsOpen && UnifiedWheelFixture.Field<string>(f.Wheel, "confirmedId") == id,
+                "A confirmed construction flashes its sector and check while Selection remains open");
+            var sector = f.Wheel.transform.Find("Controller action wheel/Sectors/Action " + id).GetComponent<RadialSector>();
+            f.Check(sector.color.g > .95f && sector.color.r > .6f, "Confirmation is visibly brighter than the normal teal hover");
+            var receipt = UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "confirmationRoot");
+            f.Check(receipt.GetComponentsInChildren<Graphic>(true).All(graphic => !graphic.raycastTarget), "Confirmation never intercepts rays or changes input ownership");
+            var glyph = UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "confirmationGlyph");
+            f.Check(glyph.anchoredPosition.y - 62 * glyph.localScale.y > 84, "The open-wheel check stays above the action title without covering its description");
+            f.Capture(faction + "-confirmed-selection");
+            float started = Started();
+            f.Frame(direction, held: true, elapsed: .08f);
+            f.Check(Visible() && Started() == started, "Holding Trigger does not restart visual confirmation");
+            string other = f.Wheel.Items.First(a => a.Building && a.Id != id).Id;
+            var otherDirection = f.Wheel.DirectionFor(other); f.Frame(otherDirection, elapsed: .04f);
+            f.Check(f.Wheel.HighlightedId == other && UnifiedWheelFixture.Field<string>(f.Wheel, "confirmedId") == id,
+                "Sweeping during feedback moves the highlight without moving the receipt to an unconfirmed item");
+            f.Frame(otherDirection, down: true, held: true, elapsed: .04f);
+            f.Check(Started() > started && UnifiedWheelFixture.Field<string>(f.Wheel, "confirmedId") == other,
+                "Each fresh Trigger replaces the pulse immediately, allowing rapid commands");
+            f.Frame(otherDirection, held: true, elapsed: .4f);
+            f.Check(!Visible() && f.Wheel.IsOpen && f.Wheel.HighlightedId == other, "The pulse expires without closing or changing the selected sector");
+            f.Session.CancelMode(); f.Dismiss();
+
+            f.Session.Group(0, true); f.OpenGroups(); f.Frame(Vector2.up, down: true, held: true);
+            f.Check(!f.Wheel.IsOpen && Visible() && UnifiedWheelFixture.Field<Text>(f.Wheel, "confirmationLabel").text == "Group 1 selected",
+                "Group recall closes input immediately but retains a compact confirmation");
+            f.Capture(faction + "-confirmed-group", "confirmationRoot");
+            var position = receipt.position; var previousRay = f.Ray;
+            f.Ray = new Ray(f.Ray.origin + Vector3.right * .04f, f.Ray.direction); f.Frame(held: true, elapsed: .05f);
+            f.Check(Visible() && receipt.position != position && !f.Wheel.IsOpen, "Closed confirmation follows the hand while Trigger release is drained");
+            f.Frame(up: true, elapsed: .05f); f.Frame(elapsed: .3f);
+            f.Check(!Visible() && f.Session.Selection.SetEquals(selection), "Closed confirmation expires without recalling twice or changing selection");
+            f.Ray = previousRay; f.Dismiss();
+
+            f.OpenOrders(); f.Frame(Vector2.left, down: true, held: true);
+            f.Check(Visible() && !f.Wheel.IsOpen && f.Session.AttackMoveMode, "Attack Move shows confirmation while immediately becoming ready for a destination");
+            f.Session.Pause("tracking", true); f.Wheel.TickHint(f.Ray, false);
+            f.Check(!Visible(), "Tracking loss hides even an already closed confirmation immediately");
+            f.Session.Pause("tracking", false); f.Session.CancelMode(); f.Drain();
+            f.OpenOrders(); f.Frame(Vector2.left, down: true, held: true);
+            f.Session.Select(0, false); f.Frame(held: true);
+            f.Check(!Visible(), "Changing selection clears an old confirmation");
+            foreach (int selected in selection) f.Session.Select(selected, true);
+            f.Session.CancelMode(); f.Drain();
+            f.OpenOrders(); f.Frame(Vector2.left, down: true, held: true);
+            UnifiedWheelFixture.Call(f.Input, "OnApplicationFocus", false);
+            f.Check(!Visible(), "Focus loss clears closed confirmation immediately");
+            UnifiedWheelFixture.Call(f.Input, "OnApplicationFocus", true); f.Session.CancelMode(); f.Drain();
+            f.OpenGroups(); f.Frame(Vector2.right, down: true, held: true);
+            f.Check(!Visible(), "An empty control group never shows a successful confirmation");
+            foreach (int selected in selection) f.Session.Select(selected, true);
+            f.Dismiss();
         }
 
         private sealed class HapticRecorder : OVRInput.OVRControllerLTouch
@@ -414,7 +478,23 @@ namespace Frontier.Editor
                     Check(bounded.vertexCount == complete.vertexCount, "Wheel text generates every glyph without clipping: " + label.text);
                 }
             }
-            HarvestingPreview.SaveCanvas(Wheel.transform, Field<RectTransform>(Wheel, rootField), output + "/" + name + ".png", preview, 900, 1050); captures++;
+            var view = Field<RectTransform>(Wheel, rootField);
+            var confirmation = Field<RectTransform>(Wheel, "confirmationRoot");
+            var position = confirmation != null ? confirmation.localPosition : Vector3.zero;
+            var rotation = confirmation != null ? confirmation.localRotation : Quaternion.identity;
+            var scale = confirmation != null ? confirmation.localScale : Vector3.one;
+            try
+            {
+                // The independent receipt shares the wheel pose at runtime. Keep both
+                // canvases aligned when the flat preview normalizes the wheel transform.
+                if (confirmation != null && rootField == "root")
+                { confirmation.localPosition = Vector3.zero; confirmation.localRotation = Quaternion.identity; confirmation.localScale = Vector3.one * .001f; }
+                HarvestingPreview.SaveCanvas(rootField == "confirmationRoot" ? view : Wheel.transform, view, output + "/" + name + ".png", preview, 900, 1050); captures++;
+            }
+            finally
+            {
+                if (confirmation != null) { confirmation.localPosition = position; confirmation.localRotation = rotation; confirmation.localScale = scale; }
+            }
         }
         internal void CapturePanel(string name) { Refresh(); HarvestingPreview.SavePanel(Panel, output + "/" + name + ".png", preview); captures++; }
         internal void CaptureHandPose(string name, string rootField)

@@ -75,6 +75,7 @@ namespace Frontier.Editor
                     f.Check(hq.queue.Count == 0 && f.Session.View.minerals == minerals, "The main panel still cancels and refunds each queued order");
                     f.Session.Match.Players[0].minerals = 0; f.Refresh(); f.OpenSelection(); f.Choose("train:" + worker.definition); f.Confirm();
                     f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Selection && hq.queue.Count == 0 && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text == f.Session.Message, "Rejected production keeps its submenu and displays the reason");
+                    f.Check(!UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "confirmationRoot").gameObject.activeSelf, "Rejected production never displays a successful confirmation");
                     f.Capture(faction + "-not-enough-resources");
                     f.Session.Match.Players[0].minerals = 5000; f.Refresh(); f.Choose(trainId); f.Confirm();
                     f.Check(hq.queue.Count == 1 && f.Wheel.IsOpen && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text == f.Wheel.Items.First(a => a.Id == trainId).Detail,

@@ -22,12 +22,22 @@ namespace Frontier.Runtime
         public string HighlightedId => Highlighted < 0 || Highlighted >= items.Count ? null : items[Highlighted].Id;
         public IReadOnlyList<SelectionAction> Items => items;
         public const float NeutralCloseDelay = .4f;
+        public const float ConfirmationDuration = .35f;
         private readonly List<SelectionAction> items = new List<SelectionAction>();
         private readonly List<RadialSector> sectors = new List<RadialSector>();
         private readonly List<Text> sectorLabels = new List<Text>();
         private readonly List<float> angles = new List<float>();
         private readonly HashSet<string> disabled = new HashSet<string>();
-        private RectTransform root, slices, hintRoot;
+        private RectTransform root, slices, hintRoot, confirmationRoot, confirmationGlyph;
+        private RadialSector confirmationArc, confirmationBadge;
+        private Text confirmationLabel;
+        private Image[] confirmationCheck;
+        private string confirmedId;
+        private WheelPage confirmedPage;
+        private Simulation confirmedMatch;
+        private int[] confirmedSelection;
+        private float confirmationStarted = -1, confirmationStrength;
+        private static readonly Color Confirmed = new Color(.65f, 1, .77f);
         private Text heading, title, detail, help, hintSelection, hintOrders;
         private readonly Text[] hintLabels = new Text[3];
         private readonly Text[] buttonHints = new Text[5];
@@ -52,37 +62,37 @@ namespace Frontier.Runtime
         public bool ProcessUnified(Ray pointer, Vector2 stick, bool triggerDown, bool triggerHeld, bool triggerUp, bool cancel, float now,
             bool stickDown = false, bool stickHeld = false, bool stickUp = false)
         {
-            if (IsOpen && !ValidContext()) { Close(); TickHint(pointer, false); return true; }
-            if (!CanOpen) { openReady = false; TickHint(pointer, false); return false; }
+            if (IsOpen && !ValidContext()) { Close(); TickHint(pointer, false, now); return true; }
+            if (!CanOpen) { openReady = false; TickHint(pointer, false, now); return false; }
             if (cancel && IsOpen)
             {
                 Back(stick);
                 if (IsOpen) UpdatePose(pointer);
-                TickHint(pointer, true); return true;
+                TickHint(pointer, true, now); return true;
             }
-            if (cancel) { openReady = false; TickHint(pointer, true); return false; }
+            if (cancel) { openReady = false; TickHint(pointer, true, now); return false; }
             if (stickDown)
             {
                 if (InGroupMenu)
                 {
                     Aim(stick);
-                    if (Highlighted >= 0) ConfirmGroup(Highlighted, true);
+                    if (Highlighted >= 0) ConfirmGroup(Highlighted, true, now);
                 }
                 else HintsEnabled = !HintsEnabled;
                 if (IsOpen) UpdatePose(pointer);
                 else openReady = false;
-                TickHint(pointer, true);
+                TickHint(pointer, true, now);
                 return true;
             }
             if (!IsOpen)
             {
                 if (stick.magnitude < .25f) openReady = true;
-                if (!openReady || stick.magnitude < .45f) { TickHint(pointer, true); return false; }
+                if (!openReady || stick.magnitude < .45f) { TickHint(pointer, true, now); return false; }
                 if (Mathf.Abs(Mathf.Atan2(stick.x, stick.y) * Mathf.Rad2Deg) >= 135)
-                { TickHint(pointer, true); return false; }
-                Open(); stickReady = true; Aim(stick); Confirm(stick);
+                { TickHint(pointer, true, now); return false; }
+                Open(); stickReady = true; Aim(stick); Confirm(stick, now, false);
                 if (IsOpen) UpdatePose(pointer);
-                TickHint(pointer, true);
+                TickHint(pointer, true, now);
                 // Enter the hinted category and highlight the same direction there.
                 // Only a subsequent trigger press can execute its highlighted option.
                 return true;
@@ -93,8 +103,8 @@ namespace Frontier.Runtime
             if (InGroupMenu) RefreshGroups();
             if (triggerDown)
             {
-                neutralSince = -1; Confirm(stick);
-                if (!IsOpen) { TickHint(pointer, true); return true; }
+                neutralSince = -1; Confirm(stick, now, true);
+                if (!IsOpen) { TickHint(pointer, true, now); return true; }
             }
             if (IsOpen && stick.magnitude < .25f && !triggerHeld && !stickHeld)
             {
@@ -102,12 +112,13 @@ namespace Frontier.Runtime
                 else if (now - neutralSince >= NeutralCloseDelay) Close();
             }
             else neutralSince = -1;
-            TickHint(pointer, true);
+            TickHint(pointer, true, now);
             return true;
         }
 
-        public void TickHint(Ray pointer, bool available)
+        public void TickHint(Ray pointer, bool available, float? now = null)
         {
+            TickConfirmation(pointer, available, now ?? Time.unscaledTime);
             bool visible = HintsEnabled && available && CanOpen && !IsOpen;
             if (!visible) { if (hintRoot != null) hintRoot.gameObject.SetActive(false); return; }
             EnsureHint(); hintRoot.gameObject.SetActive(true);
@@ -126,7 +137,7 @@ namespace Frontier.Runtime
 
         private void Open()
         {
-            EnsureView(); IsOpen = true; Page = WheelPage.Root; Highlighted = -1; stickReady = false; openReady = false;
+            HideConfirmation(); EnsureView(); IsOpen = true; Page = WheelPage.Root; Highlighted = -1; stickReady = false; openReady = false;
             selectedIds = Session.Selection.OrderBy(id => id).ToArray(); openedMatch = Session.Match;
             neutralSince = -1; actionSignature = null; root.gameObject.SetActive(true); RefreshActions();
         }
@@ -135,6 +146,8 @@ namespace Frontier.Runtime
         {
             IsOpen = false; Page = WheelPage.Root; Highlighted = -1; openedMatch = null; openReady = false;
             neutralSince = -1;
+            // A successful receipt may outlive the wheel while the router drains Trigger.
+            // TickHint clears it on context loss; opening a new wheel replaces it.
             if (root != null) root.gameObject.SetActive(false);
             if (hintRoot != null) hintRoot.gameObject.SetActive(false);
         }
@@ -145,6 +158,7 @@ namespace Frontier.Runtime
 
         private void Back(Vector2 stick)
         {
+            HideConfirmation();
             if (Page == WheelPage.Root) { Close(); return; }
             Enter(WheelPage.Root, stick);
         }
@@ -282,8 +296,10 @@ namespace Frontier.Runtime
             for (int i = 0; i < sectors.Count; i++)
             {
                 bool unavailable = disabled.Contains(items[i].Id);
-                sectors[i].color = i == Highlighted ? (unavailable ? new Color(.15f, .22f, .26f) : Accent) : Normal;
-                sectorLabels[i].color = unavailable ? Disabled : i == Highlighted ? new Color(.015f, .05f, .065f) : Color.white;
+                var color = i == Highlighted ? (unavailable ? new Color(.15f, .22f, .26f) : Accent) : Normal;
+                bool confirmed = confirmationStrength > 0 && confirmedPage == Page && confirmedId == items[i].Id;
+                sectors[i].color = confirmed ? Color.Lerp(color, Confirmed, confirmationStrength) : color;
+                sectorLabels[i].color = unavailable ? Disabled : i == Highlighted || confirmed ? new Color(.015f, .05f, .065f) : Color.white;
             }
         }
 
@@ -304,32 +320,103 @@ namespace Frontier.Runtime
             if (failedAction != null && failedAction == HighlightedId) { detail.text = failureMessage; detail.color = Save; }
         }
 
-        private void ConfirmGroup(int group, bool save)
+        private void ConfirmGroup(int group, bool save, float now)
         {
-            Close(); Session.CancelMode(); Session.Group(group, save);
+            float angle = angles[group], sweep = sectors[group].Sweep;
+            HideConfirmation(); Close(); Session.CancelMode(); Session.Group(group, save);
+            if (save || Session.Selection.Count > 0)
+                ShowConfirmation("group-" + (group + 1), "Group " + (group + 1) + (save ? " assigned" : " selected"), WheelPage.Groups, angle, sweep, now);
         }
 
-        private void Confirm(Vector2 stick)
+        private void Confirm(Vector2 stick, float now, bool feedback)
         {
             if (Highlighted < 0) return;
-            string id = items[Highlighted].Id;
+            string id = items[Highlighted].Id, label = items[Highlighted].Title;
+            float angle = angles[Highlighted], sweep = sectors[Highlighted].Sweep;
+            var page = Page;
+            if (feedback) HideConfirmation();
             if (disabled.Contains(id)) { detail.text = "No actions for this selection"; detail.color = Save; return; }
-            if (InGroupMenu) { ConfirmGroup(Highlighted, false); return; }
-            if (id == "back") { Back(stick); return; }
-            if (id == "groups-menu") { Enter(WheelPage.Groups, stick); return; }
-            if (id == "selection-menu") { Enter(WheelPage.Selection, stick); return; }
-            if (id == "orders-menu") { Enter(WheelPage.Orders, stick); return; }
-            // Resolve again just before submitting; availability can change while aiming.
-            var action = AvailableActions().FirstOrDefault(a => a.Id == id);
-            if (action == null) { actionSignature = null; RefreshActions(); return; }
-            if (action.Execute())
+            if (InGroupMenu) { ConfirmGroup(Highlighted, false, now); return; }
+            if (id == "back") Back(stick);
+            else if (id == "groups-menu") Enter(WheelPage.Groups, stick);
+            else if (id == "selection-menu") Enter(WheelPage.Selection, stick);
+            else if (id == "orders-menu") Enter(WheelPage.Orders, stick);
+            else
             {
+                // Resolve again just before submitting; availability can change while aiming.
+                var action = AvailableActions().FirstOrDefault(a => a.Id == id);
+                if (action == null) { actionSignature = null; RefreshActions(); return; }
+                if (!action.Execute()) { failedAction = id; failureMessage = Session.Message; UpdateDescription(); return; }
                 failedAction = failureMessage = null;
                 // Keep Selection ready for another fresh Trigger press in the held direction.
                 if (Page == WheelPage.Selection) { RefreshActions(); UpdateDescription(); }
                 else Close();
             }
-            else { failedAction = id; failureMessage = Session.Message; UpdateDescription(); }
+            if (feedback) ShowConfirmation(id, label, page, angle, sweep, now);
+        }
+
+        private void ShowConfirmation(string id, string label, WheelPage page, float angle, float sweep, float now)
+        {
+            EnsureConfirmation();
+            confirmedId = id; confirmedPage = page; confirmedMatch = Session.Match;
+            confirmedSelection = Session.Selection.ToArray(); confirmationStarted = now; confirmationStrength = 1;
+            confirmationLabel.text = label;
+            confirmationArc.Angle = angle; confirmationArc.Sweep = sweep; confirmationArc.SetVerticesDirty();
+            confirmationRoot.gameObject.SetActive(true); UpdateHighlight();
+        }
+
+        private void TickConfirmation(Ray pointer, bool available, float now)
+        {
+            if (confirmationStarted < 0) return;
+            if (!available || !CanOpen || Session.Match != confirmedMatch || !Session.Selection.SetEquals(confirmedSelection)
+                || confirmedSelection.Any(id => !Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player))
+                || now - confirmationStarted >= ConfirmationDuration)
+            { HideConfirmation(); return; }
+            float age = Mathf.Max(0, now - confirmationStarted);
+            confirmationStrength = 1 - Mathf.InverseLerp(.12f, ConfirmationDuration, age);
+            Place(confirmationRoot, pointer, .00028f, .025f, faceViewer: true);
+            // A closed wheel leaves only a small receipt. It never extends input ownership.
+            confirmationArc.gameObject.SetActive(IsOpen && Page == confirmedPage);
+            confirmationLabel.gameObject.SetActive(!IsOpen);
+            confirmationGlyph.anchoredPosition = IsOpen ? new Vector2(0, 112) : Vector2.zero;
+            confirmationGlyph.localScale = Vector3.one * (IsOpen ? .32f : 1);
+            var color = Confirmed; color.a = confirmationStrength;
+            confirmationArc.color = color; confirmationLabel.color = color;
+            foreach (var stroke in confirmationCheck) stroke.color = color;
+            confirmationBadge.color = new Color(.018f, .08f, .055f, .98f * confirmationStrength);
+            UpdateHighlight();
+        }
+
+        private void HideConfirmation()
+        {
+            if (confirmationStarted < 0) return;
+            confirmationStarted = -1; confirmationStrength = 0; confirmedId = null;
+            if (confirmationRoot != null) confirmationRoot.gameObject.SetActive(false);
+            UpdateHighlight();
+        }
+
+        private void EnsureConfirmation()
+        {
+            if (confirmationRoot != null) return;
+            EnsureFont();
+            confirmationRoot = Rect("Wheel confirmation", transform, Vector2.zero, new Vector2(640, 740));
+            var canvas = confirmationRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 21;
+            confirmationArc = Rect("Confirmed sector", confirmationRoot, Vector2.zero, new Vector2(620, 620)).gameObject.AddComponent<RadialSector>();
+            confirmationArc.InnerRadius = 294; confirmationArc.OuterRadius = 305; confirmationArc.raycastTarget = false;
+            confirmationGlyph = Rect("Confirmation check", confirmationRoot, Vector2.zero, new Vector2(130, 130));
+            confirmationBadge = Rect("Confirmation badge", confirmationGlyph, Vector2.zero, new Vector2(130, 130)).gameObject.AddComponent<RadialSector>();
+            confirmationBadge.InnerRadius = 0; confirmationBadge.OuterRadius = 62; confirmationBadge.Sweep = 360; confirmationBadge.raycastTarget = false;
+            confirmationCheck = new Image[2];
+            Stroke(0, new Vector2(-28, 1), new Vector2(-7, -20)); Stroke(1, new Vector2(-7, -20), new Vector2(31, 23));
+            confirmationLabel = Label(confirmationRoot, "", new Vector2(0, -96), new Vector2(310, 60), 23, Confirmed);
+            confirmationLabel.resizeTextForBestFit = true; confirmationLabel.resizeTextMinSize = 18; confirmationLabel.resizeTextMaxSize = 23;
+            var outline = confirmationLabel.gameObject.AddComponent<Outline>(); outline.effectColor = new Color(.015f, .035f, .05f, 1); outline.effectDistance = new Vector2(1, -1);
+            void Stroke(int index, Vector2 from, Vector2 to)
+            {
+                var line = Rect("Check " + index, confirmationGlyph, (from + to) * .5f, new Vector2(Vector2.Distance(from, to), 9));
+                line.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(to.y - from.y, to.x - from.x) * Mathf.Rad2Deg);
+                confirmationCheck[index] = line.gameObject.AddComponent<Image>(); confirmationCheck[index].raycastTarget = false;
+            }
         }
 
         private void UpdatePose(Ray pointer) => Place(root, pointer, .00028f, .025f, faceViewer: true);
@@ -467,6 +554,6 @@ namespace Frontier.Runtime
             label.fontSize = fontSize; label.alignment = TextAnchor.MiddleCenter; label.color = color; label.raycastTarget = false;
             label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Truncate; return label;
         }
-        private void OnDisable() { Close(); if (hintRoot != null) hintRoot.gameObject.SetActive(false); }
+        private void OnDisable() { HideConfirmation(); Close(); if (hintRoot != null) hintRoot.gameObject.SetActive(false); }
     }
 }
