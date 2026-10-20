@@ -37,8 +37,8 @@ namespace Frontier.Runtime
         private Image moveImage, resetImage;
         private bool moving, customPosition, positionInitialized;
         private bool lobbyPositionInitialized;
-        private Vector3 lobbyPosition, lastLobbyEyePosition;
-        private Quaternion lastLobbyEyeRotation;
+        private Vector3 lobbyPosition;
+        private const float LobbyRecallDistance=3.25f;
         private bool UsesLobbyPosition=>Quest!=null&&Session!=null&&Quest.Active&&!Session.Running;
         private float grabDistance;
         private Vector3 grabOffset, boardOffset;
@@ -91,7 +91,7 @@ namespace Frontier.Runtime
             Session.NewMatch-=OnMatchStarted;Session.MatchClosed-=OnMatchClosed;
         }
         private void OnMatchStarted()=>Show(MenuPage.Actions);
-        private void OnMatchClosed(){lobbyPositionInitialized=false;Show(MenuPage.Main);}
+        private void OnMatchClosed()=>Show(MenuPage.Main);
         private void LateUpdate()
         {
             if(root==null)return;
@@ -115,18 +115,16 @@ namespace Frontier.Runtime
                 // asynchronous board-anchor restoration and normal head movement.
                 if(!headTracked||Session.HasSystemPause)
                 {
-                    lobbyPositionInitialized=false;moving=false;CancelPointerInteraction();
+                    if(moving){moving=false;SavePosition();}
+                    CancelPointerInteraction();
                     root.gameObject.SetActive(false);return false;
                 }
                 var eye=Quest.Camera.transform;
-                // A valid first pose can still be corrected by Quest localization or
-                // recentering without a tracking-lost event. Recover from that jump;
-                // ordinary head movement keeps the menu fixed in the room.
-                if(lobbyPositionInitialized&&(Vector3.Distance(lastLobbyEyePosition,eye.position)>.75f
-                    ||Quaternion.Angle(lastLobbyEyeRotation,eye.rotation)>60
-                    ||(!moving&&Vector3.Distance(lobbyPosition,eye.position)>3.25f)))
+                // Preserve the user's lobby placement through matches and interruptions.
+                // A distant menu recovers after walking away or Quest relocalization;
+                // turning the head or returning to the lobby is not a placement reset.
+                if(lobbyPositionInitialized&&!moving&&Vector3.Distance(lobbyPosition,eye.position)>LobbyRecallDistance)
                 {lobbyPositionInitialized=false;moving=false;CancelPointerInteraction();}
-                lastLobbyEyePosition=eye.position;lastLobbyEyeRotation=eye.rotation;
                 if(!lobbyPositionInitialized)
                 {
                     var forward=Vector3.ProjectOnPlane(eye.forward,Vector3.up);
@@ -140,7 +138,7 @@ namespace Frontier.Runtime
                 if(!moving){root.position=lobbyPosition;FaceViewer();}
                 return true;
             }
-            lobbyPositionInitialized=false;root.gameObject.SetActive(true);
+            root.gameObject.SetActive(true);
             if(!positionInitialized||Quest.Placing)ResetPosition(false);
             root.localScale=Vector3.one*Mathf.Clamp(Board.Width/1300f,.00065f,.0012f);
             if(!moving)
@@ -204,13 +202,13 @@ namespace Frontier.Runtime
                 case MenuPage.Main:
                     headline.text="FRONTIER / COMMAND";economy.text="MAIN MENU";
                     selection.text="Lead your faction from a tabletop battlefield. Play offline against the AI.";
-                    status.text=Board.Placed?"Your saved play space is ready. Adjust it in Settings if needed.":"Place your battlefield when you start a match, or prepare it in Settings.";break;
+                    status.text=Board.Placed?"Your saved play space is ready. Adjust it from New Match if needed.":"Open New Match to position your battlefield and start playing.";break;
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
-                    harvesting.text=Board.Placed?"BOARD READY":"PLACE BOARD WHEN STARTING";
+                    harvesting.text=Board.Placed?"BOARD READY":"BOARD NOT PLACED";
                     harvesting.text+=Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.";
-                    status.text="Both factions start equally. Controls and play space are in Settings.";break;
+                    status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
                     selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":"Prepare your battlefield and choose where it sits in your room.";
@@ -371,7 +369,7 @@ namespace Frontier.Runtime
         private void OnApplicationFocus(bool focused)
         {
             if(root==null)return;
-            if(focused){if(UsesLobbyPosition)lobbyPositionInitialized=false;return;}
+            if(focused)return;
             if(HotkeyModalOpen)CancelHotkeyChange();
             if(moving){moving=false;SavePosition();}
             CancelPointerInteraction();

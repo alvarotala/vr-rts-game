@@ -83,7 +83,23 @@ namespace Frontier.Editor
                 panel.Back();Refresh();Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Hotkeys Back returns to Settings before the main menu");
                 Click("Back");Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
-                Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: The Rift")&&Has("START MATCH")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Place board")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match contains only match choices, start and Back");
+                Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: The Rift")&&Has("START MATCH")&&Has("Position board")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match includes direct board placement beside Start without adding advanced settings");
+                Click("Position board");
+                Check(quest.Placing&&!quest.StartPending&&!session.Running&&panel.Page==CommandPanel.MenuPage.MatchSetup,
+                    "Direct placement stays in setup and does not request a match");
+                panel.Back();Refresh();
+                Check(!quest.Placing&&!board.Placed&&panel.Page==CommandPanel.MenuPage.MatchSetup,"Cancel direct placement returns to setup with the board still missing");
+                Click("Position board");quest.PlaceRay(new Ray(new Vector3(0,2,0),Vector3.down),0,Vector2.zero,true);Refresh();
+                Check(board.Placed&&!quest.Placing&&!quest.StartPending&&!session.Running&&Field<Text>(panel,"harvesting").text.StartsWith("BOARD READY"),
+                    "Confirming direct placement prepares the board without starting the match");
+                var directPosition=board.transform.position;float directWidth=board.Width;
+                Click("Position board");board.transform.position+=Vector3.right;board.Width=2;panel.Back();Refresh();
+                Check(board.Placed&&board.transform.position==directPosition&&board.Width==directWidth&&panel.Page==CommandPanel.MenuPage.MatchSetup,
+                    "The same direct action repositions a ready board and cancellation preserves its previous placement");
+                Capture("05-direct-board-placement");
+                // Successful placement detaches the board; restore fixture ownership
+                // before the existing anchored-placement cancellation checks.
+                board.transform.SetParent(fixture.transform,true);board.Placed=false;
                 Click("Map: The Rift");Check(session.MapId=="training","Map selection still reaches Training Ground");
                 Click("Map: Training Grounds");Check(session.MapId=="desert"&&session.Map.width==160&&session.Map.height==160&&session.Map.theme=="desert","Map selection reaches Amber Wastes with its desert theme");Capture("05-desert-setup");
                 Click("Map: Amber Wastes");Check(session.MapId=="rift","Map selection cycles through all three maps");

@@ -45,8 +45,9 @@ namespace Frontier.Runtime
                     MenuCard("Opponent: "+ShortFaction(Session.EnemyFaction),"Enemy army · Select to switch faction.",new Vector2(528,0),new Vector2(512,108),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
                     MenuCard("AI: "+DifficultyLabel,Session.Difficulty=="easy"?"More time to build and learn the controls.":Session.Difficulty=="hard"?"Fast economy and sustained pressure.":"Steady attacks, reinforcements and abilities.",new Vector2(0,-124),new Vector2(512,108),()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":Session.Difficulty=="normal"?"hard":"easy";Rebuild();});
                     MenuCard("Map: "+Session.Map.title,Session.MapId=="desert"?"160 × 160 · Desert plateaus · 8 resource zones.":"Battlefield layout · Select to switch map.",new Vector2(528,-124),new Vector2(512,108),()=>{Session.CycleMap();Board.Rebuild();Rebuild();});
-                    MenuFooter("Back",Back);
-                    MenuFooter("START MATCH",Quest.RequestStartMatch,352,688,true);
+                    MenuFooter("Back",Back,0,336);
+                    MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
+                    MenuFooter("START MATCH",Quest.RequestStartMatch,704,336,true);
                     return true;
                 case MenuPage.Pause:
                     MenuCard("Resume match","Return to the battlefield.",Vector2.zero,new Vector2(1040,100),()=>Show(MenuPage.Actions),true);

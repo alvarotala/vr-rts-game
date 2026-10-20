@@ -50,13 +50,23 @@ namespace Frontier.Editor
                 var menuPosition=root.position;var menuScale=root.localScale;
                 anchor.SetPositionAndRotation(new Vector3(25,.9f,-17),Quaternion.Euler(0,-87,0));board.Width=.65f;board.Fit();Refresh();
                 Check(root.position==menuPosition&&root.localScale==menuScale,"Late spatial-anchor restoration and saved board size cannot move or resize the startup menu");
+                var returnGrab=RayTo("Move menu");panel.Point(returnGrab,true,false);
+                panel.Point(new Ray(returnGrab.origin+root.right*.3f,returnGrab.direction),false,true);Refresh();
+                var preferredMenuPosition=root.position;
+                session.StartMatch();Refresh();session.LeaveMatch();Refresh();
+                Check(root.position==preferredMenuPosition&&root.localScale==menuScale,
+                    "Returning from a match without moving preserves the user's dragged main-menu position and scale");
+                Capture("04-retained-menu-after-match");
                 // Quest can correct the tracked head pose after the first valid frame,
                 // without a focus change or a tracking-lost callback.
                 eye.SetPositionAndRotation(new Vector3(-18,1.7f,22),Quaternion.Euler(0,-40,0));Refresh();CheckInFront();
                 menuPosition=root.position;
                 eye.position+=new Vector3(.3f,.1f,-.2f);eye.rotation=Quaternion.Euler(0,-17,0);Refresh();
                 Check(root.position==menuPosition,"Looking or walking around does not attach the menu to the head");
-                eye.rotation=Quaternion.Euler(0,140,0);Refresh();CheckInFront();menuPosition=root.position;
+                eye.rotation=Quaternion.Euler(0,140,0);Refresh();
+                Check(root.position==menuPosition,"Turning around in place does not reset the lobby position");
+                eye.position+=Vector3.right*.9f;Refresh();
+                Check(root.position==menuPosition,"A nearby movement larger than the old per-frame jump threshold keeps the menu in place");
                 for(int step=0;step<20;step++){eye.position+=Vector3.right*.3f;Refresh();}
                 Check(Vector3.Distance(root.position,eye.position)<3.25f,"Gradual localization drift cannot leave the lobby menu out of reach");
                 panel.Recall();Refresh();CheckInFront();menuPosition=root.position;
@@ -75,20 +85,43 @@ namespace Frontier.Editor
                 panel.Point(new Ray(grab.origin+root.right*.25f,grab.direction),false,true);Refresh();
                 Check(!panel.IsDragging&&Vector3.Distance(root.position,menuPosition)>.2f&&Vector3.Distance(root.position,eye.position)<2,"Dragging startup UI stays near the viewer even when the board is far away");
                 Check(PlayerPrefs.GetString(key)==profile,"Dragging startup UI does not overwrite match-console placement");
+                menuPosition=root.position;
+                Call(panel,"OnApplicationFocus",false);Call(panel,"OnApplicationFocus",true);Refresh();
+                Check(root.position==menuPosition,"Recovering focus nearby retains the dragged lobby preference");
+                Call(panel,"OnApplicationPause",true);Call(panel,"OnApplicationPause",false);Refresh();
+                Check(root.position==menuPosition,"Resuming the app nearby retains the dragged lobby preference");
+                Call(panel,"UpdatePosition",false);Refresh();
+                Check(root.position==menuPosition,"Recovering tracking nearby retains the dragged lobby preference");
+                session.Pause("headset",true);Refresh();session.Pause("headset",false);Refresh();
+                Check(root.position==menuPosition,"Removing and replacing the headset nearby retains the dragged lobby preference");
                 Click("Reset menu");CheckInFront();Check(PlayerPrefs.GetString(key)==profile,"Reset position recenters startup UI without deleting saved match placement");
 
                 Call(panel,"OnApplicationFocus",false);eye.SetPositionAndRotation(new Vector3(-4,1.4f,6),Quaternion.Euler(0,-70,0));Call(panel,"OnApplicationFocus",true);Refresh();CheckInFront();
                 Capture("02-returned-from-another-position");
                 session.Pause("headset",true);Refresh();Check(!root.gameObject.activeSelf,"Headset interruption hides setup UI until tracking is usable");
                 eye.SetPositionAndRotation(new Vector3(14,1.7f,3),Quaternion.Euler(0,22,0));session.Pause("headset",false);Refresh();CheckInFront();
-                Call(panel,"OnApplicationPause",true);eye.rotation=Quaternion.Euler(0,-125,0);Call(panel,"OnApplicationPause",false);Refresh();CheckInFront();
+                menuPosition=root.position;
+                Call(panel,"OnApplicationPause",true);eye.rotation=Quaternion.Euler(0,-125,0);Call(panel,"OnApplicationPause",false);Refresh();
+                Check(root.position==menuPosition,"Resuming while looking in another direction keeps a nearby menu");
 
                 session.StartMatch();Refresh();
                 var expected=board.transform.TransformPoint(new Vector3(.45f*board.Width,.9f,-.6f*board.Depth));
                 Check(panel.Page==CommandPanel.MenuPage.Actions&&Vector3.Distance(root.position,expected)<.0001f,"Starting a match restores the existing board-relative console placement");
                 panel.ToggleMenu();Call(panel,"OnApplicationFocus",true);Refresh();
                 Check(session.IsPaused&&Vector3.Distance(root.position,expected)<.0001f,"Focus recovery during a match leaves its pause console anchored to the board");
-                session.LeaveMatch();Refresh();CheckInFront();
+                Click("Return to main menu");Click("Leave match");
+                Check(panel.Page==CommandPanel.MenuPage.Main&&root.position==menuPosition,
+                    "Leaving through pause restores the previous lobby location even after looking away");
+                session.StartMatch();Refresh();session.Send(Frontier.Core.CommandKind.Surrender);Refresh();
+                Check(panel.Page==CommandPanel.MenuPage.Result,"Completed match enters the result menu");
+                Click("Main menu");
+                Check(root.position==menuPosition,"Returning from a completed match retains the lobby location");
+                session.StartMatch();Refresh();eye.position+=Vector3.right*8;
+                session.LeaveMatch();Refresh();CheckInFront();menuPosition=root.position;
+                Check(PlayerPrefs.GetString(key)==profile&&board.transform.localToWorldMatrix==previousBoard,
+                    "Returning far away only recenters the lobby and preserves board and match-console preferences");
+                session.StartMatch();Refresh();session.LeaveMatch();Refresh();
+                Check(root.position==menuPosition,"The recovered lobby position becomes the stable position for the next match");
                 Object.DestroyImmediate(console);eye.SetPositionAndRotation(new Vector3(-9,1.55f,-15),Quaternion.Euler(0,75,0));
                 panel=CreatePanel();root=Field<RectTransform>(panel,"root");Refresh();CheckInFront();
                 Check(PlayerPrefs.GetString(key)==profile,"A fresh app console ignores the previous world position without erasing saved data");
@@ -98,7 +131,7 @@ namespace Frontier.Editor
                 quest.CancelPlacement();Refresh();
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);Refresh();
                 Check(Vector3.Distance(root.position,expected)<.0001f,"Desktop retains board-relative menu placement");
-                Debug.Log($"FRONTIER_STARTUP_MENU passed: {checks} checks, 3 views; synthetic head poses, no physical Quest input");
+                Debug.Log($"FRONTIER_STARTUP_MENU passed: {checks} checks, 4 views; synthetic head poses, no physical Quest input");
 
                 CommandPanel CreatePanel()
                 {
