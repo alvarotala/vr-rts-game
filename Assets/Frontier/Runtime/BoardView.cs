@@ -411,6 +411,16 @@ namespace Frontier.Runtime
             bool visible=pointer.HasValue&&Content!=null&&Content.gameObject.activeInHierarchy&&Session.Running&&!Session.IsPaused;
             ground.SetColor("_PointerColor",PointerColor);
             ground.SetColor("_PointerDotColor",Session.AbilityPointerActive?PointerColor:Session.AttackPointerActive?new Color(1f,.3f,.24f):Color.white);
+            ground.SetVector("_CommandPulse",Vector4.zero);
+            if(Content!=null&&Content.gameObject.activeInHierarchy&&Session.CommandPulseActive)
+            {
+                float age=Mathf.Clamp01((Time.unscaledTime-Session.LastCommandTime)/GameSession.CommandPulseDuration);
+                float radius=Mathf.Clamp(.012f/CellScale,.65f,1.6f)*Mathf.Lerp(.35f,1.2f,age);
+                var point=Session.LastCommandPoint;
+                ground.SetVector("_CommandPulse",new Vector4(point.x,point.y,radius,1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.35f,1,age))));
+                ground.SetFloat("_CommandWidth",Mathf.Clamp(.0014f/CellScale,.045f,.16f));
+                ground.SetColor("_CommandColor",Session.LastCommandKind==CommandKind.Move?NormalPointerColor:AttackPointerColor);
+            }
             ground.SetVector("_AbilityArea",Vector4.zero);ground.SetVector("_AbilityRange",Vector4.zero);
             if(visible&&Session.AbilityPointerActive)
             {

@@ -7,7 +7,8 @@ using UnityEngine.Rendering;
 namespace Frontier.Runtime
 {
     // A plan of requested destinations, not a preview of the navigation route.
-    // One selected own unit and selected producers are drawn, using PlayerView only.
+    // Every selected unit's active order, one queued plan and selected producers,
+    // all drawn from PlayerView only.
     public sealed class OrderQueueVisuals : System.IDisposable
     {
         public const int MaximumWaypoints=8;
@@ -21,6 +22,7 @@ namespace Frontier.Runtime
         private readonly List<Vector3> normals=new List<Vector3>();
         private PlayerView lastView;
         private int lastRepresentative;
+        private int[] lastUnits=System.Array.Empty<int>();
         private int[] lastRallyProducers=System.Array.Empty<int>();
         private float lastScale;
         private BoardView board;
@@ -45,14 +47,21 @@ namespace Frontier.Runtime
         {
             board=value;var session=board.Session;var view=session.View;
             if(!session.Running||!board.Content.gameObject.activeInHierarchy){Hide();return;}
-            var unit=Representative(session);
+            var active=view.entities.Where(e=>e.owner==view.player&&!e.remembered&&session.Selection.Contains(e.id)
+                &&!session.Catalog[e.definition].building&&TryPosition(e.order,e.target,e.destination,null,true,out _))
+                .OrderBy(e=>e.id).Take(Simulation.UnitLimit).ToArray();
+            var unit=Representative(session)??active.FirstOrDefault();
             var producers=RallyProducers(session).Where(e=>e.hasRallyPoint).ToArray();
             if(unit==null&&producers.Length==0){Hide();return;}
             root.gameObject.SetActive(true);
-            if(ReferenceEquals(lastView,view)&&lastRepresentative==(unit?.id??0)&&lastScale==board.CellScale&&lastRallyProducers.SequenceEqual(producers.Select(e=>e.id)))return;
-            lastView=view;lastRepresentative=unit?.id??0;lastScale=board.CellScale;lastRallyProducers=producers.Select(e=>e.id).ToArray();
+            if(ReferenceEquals(lastView,view)&&lastRepresentative==(unit?.id??0)&&lastScale==board.CellScale
+                &&lastUnits.SequenceEqual(active.Select(e=>e.id))&&lastRallyProducers.SequenceEqual(producers.Select(e=>e.id)))return;
+            lastView=view;lastRepresentative=unit?.id??0;lastScale=board.CellScale;lastUnits=active.Select(e=>e.id).ToArray();lastRallyProducers=producers.Select(e=>e.id).ToArray();
             vertices.Clear();triangles.Clear();colors.Clear();normals.Clear();
             foreach(var producer in producers)AddRallyPoint(producer);
+            foreach(var member in active)
+                if(member.id!=unit?.id&&TryPosition(member.order,member.target,member.destination,null,true,out var destination))
+                    AddLeg(member.position,destination,member.order,0,false);
             Point origin=unit?.position??default;int number=1;
             if(unit!=null)
             {
@@ -64,22 +73,26 @@ namespace Frontier.Runtime
             void AddOrder(CommandKind kind,int target,Point position,string definition,bool active)
             {
                 if(!TryPosition(kind,target,position,definition,active,out var destination)){number++;return;}
-                var tint=kind==CommandKind.Attack||kind==CommandKind.AttackMove?AttackTint:kind==CommandKind.Move?MoveTint:WorkTint;
-                float radius=Mathf.Clamp(.007f/board.CellScale,.55f,1.1f),width=Mathf.Clamp(.00095f/board.CellScale,.05f,.15f);
-                var delta=new Vector2(destination.x-origin.x,destination.y-origin.y);float distance=delta.magnitude;
-                if(distance>radius*2)
-                {
-                    var direction=delta/distance;
-                    DashedStroke(new Vector2(origin.x,origin.y)+direction*radius,new Vector2(destination.x,destination.y)-direction*radius,width,tint);
-                }
-                var center=new Vector2(destination.x,destination.y);
-                // The solid point is the exact destination. Put its number above the
-                // ring so the marker stays distinct from both the label and the route.
-                Dot(center,radius*.23f,tint);
-                Ring(center,radius,width*1.4f,tint);
-                Number(number,center+Vector2.up*radius*1.8f,radius*.45f,width*1.25f);
+                AddLeg(origin,destination,kind,unit.pendingOrders.Length>0?number:0,true);
                 origin=destination;number++;
             }
+        }
+        private void AddLeg(Point origin,Point destination,CommandKind kind,int number,bool emphasized)
+        {
+            var tint=kind==CommandKind.Attack||kind==CommandKind.AttackMove?AttackTint:kind==CommandKind.Move?MoveTint:WorkTint;
+            float radius=Mathf.Clamp(.007f/board.CellScale,.55f,1.1f),width=Mathf.Clamp(.00075f/board.CellScale,.04f,.12f);
+            var delta=new Vector2(destination.x-origin.x,destination.y-origin.y);float distance=delta.magnitude;
+            if(distance>radius*2)
+            {
+                var direction=delta/distance;
+                DashedStroke(new Vector2(origin.x,origin.y)+direction*radius,new Vector2(destination.x,destination.y)-direction*radius,width,tint*.8f);
+            }
+            var center=new Vector2(destination.x,destination.y);
+            Dot(center,radius*.23f,tint);
+            // Keep group lines light: one main destination ring, small endpoint dots
+            // for the rest. Numbering belongs to actual queued plans only.
+            if(emphasized)Ring(center,radius,width*1.4f,tint);
+            if(number>0)Number(number,center+Vector2.up*radius*1.8f,radius*.45f,width*1.25f);
         }
         private void AddRallyPoint(VisibleEntity producer)
         {
@@ -145,8 +158,11 @@ namespace Frontier.Runtime
             }
             else if(kind==CommandKind.Attack||kind==CommandKind.Repair||kind==CommandKind.Build&&active)
             {
-                var entity=session.View.entities.FirstOrDefault(e=>e.id==target&&!e.remembered);if(entity==null)return false;
-                var type=session.Catalog[entity.definition];float half=type.building?type.footprint*.5f:0;result=new Point(entity.position.x+half,entity.position.y+half);
+                var entity=session.View.entities.FirstOrDefault(e=>e.id==target&&!e.remembered);
+                if(entity==null)
+                {if(kind!=CommandKind.Attack||!active)return false;} // Own last-seen destination, never a hidden enemy's live position.
+                else
+                {var type=session.Catalog[entity.definition];float half=type.building?type.footprint*.5f:0;result=new Point(entity.position.x+half,entity.position.y+half);}
             }
             else if(kind==CommandKind.Build&&!string.IsNullOrEmpty(definition))
             {
@@ -195,7 +211,7 @@ namespace Frontier.Runtime
             }
             return new Vector3(point.x,height+.025f,point.y);
         }
-        public void Hide(){if(root!=null)root.gameObject.SetActive(false);lastView=null;lastRepresentative=0;lastRallyProducers=System.Array.Empty<int>();}
+        public void Hide(){if(root!=null)root.gameObject.SetActive(false);lastView=null;lastRepresentative=0;lastUnits=System.Array.Empty<int>();lastRallyProducers=System.Array.Empty<int>();}
         public void Dispose(){Release(root==null?null:root.gameObject);Release(mesh);Release(material);}
         private static void Release(Object item){if(item==null)return;if(Application.isPlaying)Object.Destroy(item);else Object.DestroyImmediate(item);}
     }

@@ -4,8 +4,9 @@ namespace Frontier.Editor
     {
         public static void Run()
         {
-            QueuedInputChecks.Run();
+            AttackPointerPreview.Render();
             OrderQueuePreview.Render();
+            RallyPointPreview.Render();
             UnitFacingPreview.Render();
             EdgeSelectionPreview.Render();
             ResourcePickingPreview.Render();

@@ -1,5 +1,27 @@
 # Registro de validación
 
+## Órdenes directas y destinos visibles — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+Se conserva la ejecución inmediata existente de A y doble A/X, y se elimina el rojo temporal del cursor después de aceptar un ataque, que podía confundirse con una confirmación pendiente. Cada Move/Attack/Attack Move aceptado deja un pulso expansivo de 1,2 segundos en el punto ordenado, cian para mover y rojo para atacar. El cursor rojo queda reservado para seleccionar un destino desde el menú. Todas las unidades propias seleccionadas muestran su destino activo con líneas punteadas de color, incluso sin cola; los pasos futuros siguen numerándose para una unidad representativa.
+
+- `OrderQueueValidationBatch.Run` completo aprobado en Unity **6000.3.26f1**, salida 0: `TestResults/unity-direct-order-batch.log`.
+- **92 comprobaciones de entrada/puntero y 12 vistas**: doble A/X mediante `CommanderInput.Update` con ambas manos, ambas facciones y orden reasignada a grip; el gatillo nunca se pulsa. Se verifica Move al primer toque, Attack Move al segundo, avance de simulación, ausencia de repeticiones al mantener, selección conservada, animación fija aunque se mueva el cursor o salga del mapa, expiración, rechazo, pausa, tablero oculto y reemplazo por Move/Stop.
+- **68 comprobaciones visuales de órdenes y 9 vistas**, incluidas líneas sin cola, colores distintos en dos unidades y deselección sin cambiar la vista de simulación. **166 comprobaciones de entrada/colas** y **76 de rally con 14 vistas**. Pasan además rueda de acciones, orientación, selección desde fuera del tablero, recursos, producción, ayuda y menús.
+- Inspeccionadas `AttackPointer/industrial-fixed-attack-pulse.png` y `OrderQueue/industrial-mixed-active-orders.png`: pulso separado del cursor normal y líneas rojas/cian diferenciadas. Las pruebas de guía y rally se actualizaron al panel vigente y al resumen de producción agrupada; se conservan las colas individuales. `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. La entrada es sintética y las capturas corresponden al Editor; comodidad, legibilidad y rendimiento en Quest requieren prueba física.
+
+## Adquisición y aproximación de combate — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+El ataque automático aprovecha primero un disparo disponible. Entre objetivos al alcance conserva el foco y prioriza amenazas; al perseguir considera distancia y aliados de alcance similar ya comprometidos, con una preferencia limitada por el objetivo actual. Cada aproximación busca un puesto con línea de tiro y espacio libre, reserva puestos de aliados y reconsidera los que se ocupan. Los combatientes de corto alcance pueden usar el borde del alcance sin superponer cuerpos. Las reglas son comunes a ambos jugadores; las órdenes explícitas, estadísticas, economía y física general de movimiento se conservan.
+
+- **180 comprobaciones de combate aprobadas**, incluidas **34 nuevas**: `TestResults/combat-engagement.log`. Cubren ambas facciones y puestos de jugador, cambio desde una persecución desfavorable, disparos disponibles, distribución de aproximaciones, puestos libres/ocupados y combates activos de **18 contra 18 y 50 contra 50** con los cinco roles militares. Se verifican participación y separación física; pasan las regresiones de aceleración, frenado, foco explícito, niebla, colas y continuidad de Attack Move.
+- Las mismas pruebas de comportamiento ejecutadas con el `Combat.cs` anterior reproducen **12 fallos** de adquisición, concentración de aproximaciones y puestos compartidos (`TestResults/combat-new-cases-old-code.log`). El código anterior se compiló en un harness temporal, sin reemplazar los archivos del proyecto.
+- **1.688 comprobaciones del núcleo completo aprobadas**, salida 0: `TestResults/combat-core-final.log`, incluyendo movimiento/colisiones, paridad de facciones, economía, habilidades e IA.
+- Unity **6000.3.26f1** compiló y ejecutó `AttackPointerPreview.Render`, salida 0: **36 comprobaciones del puntero**, **166 de entrada/colas** y **452 de rueda de acciones**; registro `TestResults/unity-combat-engagement.log`. `git diff --check` pasa.
+
+No se generó APK ni ejecutable desktop. Estas pruebas verifican simulación e integración de entradas en Editor; la sensación del combate y el rendimiento en Quest requieren probarlo en el visor. No constituyen una medición de la dificultad Easy contra una persona.
+
 ## Vibración de navegación de la rueda — fuentes, sin nuevo APK — 19 de octubre de 2026
 
 El mando activo recibe un pulso suave al cambiar de ítem (25 ms, amplitud 0,12) y uno más marcado al abrir o cambiar de nivel, incluido Back (55 ms, amplitud 0,28). El cambio de nivel y su resaltado inicial producen un solo pulso. Mantener dirección/gatillo, centrar, el temblor dentro de la histéresis o actualizar descripciones no repiten vibración. El feedback existente de comandos se conserva. Expirar el tiempo, cambiar de mano, perder foco o desactivar entrada detiene el mando que recibió el pulso.

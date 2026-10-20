@@ -39,6 +39,18 @@ namespace Frontier.Editor
                     var workers=session.View.entities.Where(e=>e.owner==0&&!session.Catalog[e.definition].building).OrderBy(e=>e.id).Take(2).ToArray();
                     var hq=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                     session.Select(workers[0].id,false);
+                    Check(session.Send(CommandKind.Move,position:new Point(22,14)),"Single MOVE accepted without a queue");Refresh();
+                    Check(Plan().gameObject.activeInHierarchy&&PlanMesh().vertexCount>0&&OrderQueueVisuals.Representative(session)==null,
+                        "A single active order draws its line even with no queued plan");
+                    Check(PlanMesh().colors.Any(c=>c.b>.8f&&c.r<.4f),"An active Move endpoint is cyan");CaptureBoard(faction+"-single-move");
+                    session.Select(workers[1].id,false);Check(session.Send(CommandKind.AttackMove,position:new Point(25,22)),"Second unit receives its own Attack Move");
+                    session.Selection.Add(workers[0].id);Refresh();
+                    Check(PlanMesh().colors.Any(c=>c.b>.8f&&c.r<.4f)&&PlanMesh().colors.Any(c=>c.r>.9f&&c.g<.25f&&c.b<.3f),
+                        "Each selected unit shows its own current order color without any queue");
+                    int groupVertices=PlanMesh().vertexCount;CaptureBoard(faction+"-mixed-active-orders");
+                    session.Selection.Remove(workers[1].id);Invoke(board,"LateUpdate");
+                    Check(PlanMesh().vertexCount<groupVertices&&!PlanMesh().colors.Any(c=>c.r>.9f&&c.g<.25f&&c.b<.3f),
+                        "Changing selection invalidates all active-unit lines even in the same simulation view");
                     Check(session.Send(CommandKind.Move,position:new Point(22,14)),"Initial MOVE accepted");
                     Check(session.Send(CommandKind.Move,position:new Point(25,22),append:true),"Second waypoint appended");
                     Check(session.Send(CommandKind.AttackMove,position:new Point(15,24),append:true),"Attack Move waypoint appended");Refresh();
@@ -75,8 +87,12 @@ namespace Frontier.Editor
                     session.Match.Entities.Remove(workers[0].id);Refresh();Check(!Plan().gameObject.activeInHierarchy,"Destroyed selected unit leaves no stale plan");
                     session.LeaveMatch();Refresh();Check(!Plan().gameObject.activeInHierarchy,"Leaving the match clears order overlays");
                 }
-                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Hotkeys});Refresh();
-                Check(Text("selection").Contains("Double trigger")&&Text("selection").Contains("Double A")&&Text("selection").Contains("Grip + hold Trigger still (0.5s): deselect pointed unit")&&!Text("selection").Contains("recall menu"),"Controller help describes double clicks and stationary grip-trigger deselection");
+                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Pause});Refresh();
+                Check(Field<Text[]>(panel,"controlGuideGestures")[4].text.Contains("double "+panel.Bindings.Name(true,"select"))
+                    &&Field<Text[]>(panel,"controlGuideDescriptions")[3].text.Contains("0.5 s"),"The current Selection guide describes double selection and stationary deselection");
+                typeof(CommandPanel).GetField("controlGuideTopic",Private).SetValue(panel,1);Invoke(panel,"Rebuild");Refresh();
+                Check(Field<Text[]>(panel,"controlGuideGestures")[2].text.Contains("Double "+panel.Bindings.Name(true,"order"))
+                    &&Field<Text[]>(panel,"controlGuideDescriptions")[2].text.Contains("immediately"),"The Orders guide distinguishes the immediate double press from menu targeting");
                 CapturePanel("controls");
                 Debug.Log($"FRONTIER_ORDER_QUEUE_PREVIEW passed: {checks} checks, {captures} views; no player build");
 

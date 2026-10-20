@@ -71,7 +71,9 @@ namespace Frontier.Editor
                     session.Select(barracks.id,false);Check(session.Context(new Point(26,20),0,0)>0,"Barracks accepts its own independent rally point");
                     session.Select(hq.id,true);Refresh();
                     Check(OrderQueueVisuals.RallyProducers(session).Length==2&&Text("rallyPointValue")=="2 / 2 rally points set","Multiple selected producers keep their individual destinations visible");
-                    Check(!Shown("productionStrip")&&Shown("rallyPointStrip"),"Multiple producers show rally state without combining production queues");
+                    Check(Shown("productionStrip")&&Shown("rallyPointStrip")&&Text("productionTitle")=="GROUP PRODUCTION"
+                        &&Text("productionCount")=="1 / 10"&&hq.queue[0].id==productionId&&barracks.queue.Count==0
+                        &&PanelGap("productionStrip","rallyPointStrip")>=11,"Multiple producers keep rally separate from their production summary and preserve individual queues");
                     CaptureBoard(faction+"-multiple");
 
                     session.Select(tech.id,false);

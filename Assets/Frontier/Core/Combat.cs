@@ -66,25 +66,44 @@ namespace Frontier.Core
         private bool Fight(EntityState unit, bool pursue)
         {
             var type = Type(unit); if (type.damage <= 0) return false;
+            // Only approaching units need to spread their attention. Soldiers already
+            // firing keep useful focus fire; this is not a one-enemy-per-soldier rule.
+            Dictionary<int,int> pressure = null;
+            if (pursue && !type.building)
+            {
+                pressure = new Dictionary<int,int>();
+                foreach (var ally in mobiles)
+                {
+                    if (ally.id == unit.id || ally.owner != unit.owner || ally.health <= 0 || ally.combatTarget == 0
+                        || Math.Abs(Type(ally).range-type.range) > 1.5f) continue;
+                    pressure.TryGetValue(ally.combatTarget,out int count);
+                    pressure[ally.combatTarget] = count + 1;
+                }
+            }
             var candidates = Entities.Values.Where(enemy => ValidEnemy(unit,enemy)
                     && Center(unit).Distance(Center(enemy)) <= (pursue ? type.vision : type.range)
                         + (Type(enemy).building ? Type(enemy).footprint * .4f : 0)
                     && (pursue || CanFire(unit,enemy)))
-                .OrderBy(ThreatPriority)
-                // A shot now beats chasing another enemy of the same threat class.
-                .ThenBy(enemy => CanFire(unit,enemy) ? 0 : 1)
-                .ThenBy(enemy => enemy.id == unit.combatTarget ? 0 : 1)
-                .ThenBy(enemy => Center(unit).Distance(Center(enemy)))
-                .ThenBy(enemy => enemy.id);
-            foreach (var enemy in candidates)
+                .Select(enemy => new { enemy, fire = CanFire(unit,enemy), distance = Center(unit).Distance(Center(enemy)) })
+                // Do not walk past an available shot to chase a distant threat.
+                .OrderBy(candidate => candidate.fire ? 0 : 1)
+                .ThenBy(candidate => ThreatPriority(candidate.enemy))
+                .ThenBy(candidate => candidate.fire ? (candidate.enemy.id == unit.combatTarget ? -1f : 0f)
+                    : Math.Max(0,candidate.distance-WeaponRange(unit,candidate.enemy))
+                        + (pressure != null && pressure.TryGetValue(candidate.enemy.id,out int count) ? count*.9f : 0)
+                        - (candidate.enemy.id == unit.combatTarget ? 1.25f : 0))
+                .ThenBy(candidate => candidate.distance)
+                .ThenBy(candidate => candidate.enemy.id);
+            foreach (var candidate in candidates)
             {
+                var enemy = candidate.enemy;
                 if (!Strike(unit,enemy,pursue)) continue;
                 unit.combatTarget = enemy.id;
                 // Combat must not spring a previously parked unit back into formation.
                 unit.moveGoal = false; unit.settled = false;
                 return true;
             }
-            unit.combatTarget = 0;
+            unit.combatTarget = 0; unit.approachTarget = 0;
             return false;
         }
 
@@ -94,6 +113,25 @@ namespace Frontier.Core
             unit.yieldUntil = 0; unit.yieldFor = 0; unit.path = null; unit.approachTarget = 0;
         }
 
+        private bool FiringPositionFree(EntityState unit, Point point)
+        {
+            foreach (var other in mobiles)
+            {
+                if (other.id == unit.id || other.health <= 0) continue;
+                if (other.owner != unit.owner && !Visible(unit.owner,other.position)) continue;
+                float clearance = Type(unit).collisionRadius + Type(other).collisionRadius + .05f;
+                if (point.Distance(other.position) < clearance) return false;
+                // Reserve destinations only for allies still approaching a live fight.
+                // Never read an enemy's intention or let a stale route reserve space.
+                if (other.owner == unit.owner && other.approachTarget != 0 && other.path != null
+                    && other.yieldUntil <= Tick
+                    && (other.order == CommandKind.Attack || other.order == CommandKind.AttackMove || other.order == CommandKind.Stop)
+                    && point.Distance(other.approachGoal) < clearance
+                    && Entities.TryGetValue(other.approachTarget,out var target) && ValidEnemy(other,target) && !CanFire(other,target)) return false;
+            }
+            return true;
+        }
+
         private bool ApproachEnemy(EntityState unit, EntityState enemy)
         {
             if (unit.approachVersion != Map.Version) unit.unreachableTargets.Clear();
@@ -101,16 +139,23 @@ namespace Frontier.Core
             if (unit.unreachableTargets.TryGetValue(enemy.id,out int retry) && Tick < retry) return false;
             Point position = Center(enemy);
             bool changed = unit.approachTarget != enemy.id || unit.approachPosition.Distance(position) > .5f;
-            if (changed || unit.path == null || unit.pathVersion != Map.Version || unit.blockedTicks >= TickRate * 2)
+            if (changed || unit.path == null || unit.pathVersion != Map.Version || unit.blockedTicks >= TickRate * 2
+                || (Tick >= unit.repathAt && !FiringPositionFree(unit,unit.approachGoal)))
             {
                 // Range alone is insufficient: terrain can hide the target from this
                 // shooter even when an ally reveals it. Find an actual firing position.
-                var route = paths.Find(unit.position,position,WeaponRange(unit,enemy)*.85f,
-                    c => TrafficCost(unit,c),Type(unit).collisionRadius,
+                Func<Point,bool> available =
                     // Do not repeatedly accept the current arrival cell if rounding
                     // near a terrain edge still blocks the shot from the actual position.
                     point => point.Distance(unit.position) > .15f && Map.CanStand(point,Type(unit).collisionRadius)
-                        && Map.HasLineOfSight(point,position));
+                        && Map.HasLineOfSight(point,position) && FiringPositionFree(unit,point);
+                float range = WeaponRange(unit,enemy);
+                var route = paths.Find(unit.position,position,Type(unit).range < 2 ? range-.01f : range*.85f,
+                    c => TrafficCost(unit,c),Type(unit).collisionRadius,available);
+                // A short-range fighter may only fit on the outside of the ring,
+                // especially when the target stands between cell centers.
+                if (route == null && Type(unit).range >= 2) route = paths.Find(unit.position,position,range-.01f,
+                    c => TrafficCost(unit,c),Type(unit).collisionRadius,available);
                 if (route == null || (!changed && unit.blockedTicks >= TickRate * 2))
                 {
                     unit.unreachableTargets[enemy.id] = Tick + TickRate;
@@ -119,9 +164,9 @@ namespace Frontier.Core
                 }
                 unit.approachTarget = enemy.id; unit.approachPosition = position;
                 unit.approachGoal = Map.Center(route.Count > 0 ? route[route.Count-1] : Map.Cell(unit.position));
-                SetPath(unit,route,unit.approachGoal,.1f);
+                SetPath(unit,route,unit.approachGoal,.005f);
             }
-            Travel(unit,unit.approachGoal,.1f,false);
+            Travel(unit,unit.approachGoal,.005f,false);
             return true;
         }
 

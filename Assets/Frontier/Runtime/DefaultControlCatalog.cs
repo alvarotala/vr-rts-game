@@ -47,7 +47,7 @@ namespace Frontier.Runtime
                 new Topic("Orders",
                     new Command("orders.move","Move",order+" on terrain","Selected units move to that location using their movement and collision rules."),
                     new Command("orders.attack","Attack a target",order+" on a visible enemy","Focus attacks on that enemy. Double "+order+" over an enemy also attacks directly."),
-                    new Command("orders.attack-move","Attack Move","Double "+order+" / Attack Move action","Move toward the point and attack enemies along the way. The action button needs a destination."),
+                    new Command("orders.attack-move","Attack Move","Double "+order+" / Attack Move action","Double "+order+" issues at the cursor immediately. Menu action: choose a destination."),
                     new Command("orders.gather","Gather resources","Worker selected · "+order+" on minerals / gas","Assign workers automatically among nearby deposits. Gas needs a completed extractor."),
                     new Command("orders.repair","Repair / resume construction","Worker · "+order+" on damaged ally / construction","Both factions: repair allies with minerals or resume construction. Keep a worker on site."),
                     new Command("orders.queue","Queue orders",shift+" + "+order+" / double "+order,"Append movement, work or attack orders. Without "+shift+", a new order replaces the plan."),

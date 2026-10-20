@@ -15,6 +15,9 @@ Shader "Frontier/Board"
         _PointerArea("Pointer center, dot radius, guide length", Vector) = (0,0,0,0)
         _PointerColor("Pointer guides", Color) = (.3,.95,.94,1)
         _PointerDotColor("Pointer center", Color) = (1,1,1,1)
+        _CommandPulse("Accepted order point, radius, opacity", Vector) = (0,0,0,0)
+        _CommandColor("Accepted order color", Color) = (.3,.95,.94,1)
+        _CommandWidth("Accepted order ring width", Float) = 0
         _AbilityArea("Ability target center, radius, width", Vector) = (0,0,0,0)
         _AbilityRange("Caster center, range, width", Vector) = (0,0,0,0)
         _AbilityColor("Ability targeting", Color) = (.85,.4,1,1)
@@ -41,6 +44,7 @@ Shader "Frontier/Board"
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea; float4 _PointerColor; float4 _PointerDotColor;
+            float4 _CommandPulse; float4 _CommandColor; float _CommandWidth;
             float4 _AbilityArea; float4 _AbilityRange; float4 _AbilityColor;
             float _DamageAmount;
             float _Desaturate; float _CreepTime;
@@ -131,6 +135,17 @@ Shader "Frontier/Board"
                             half rangeRing=1-smoothstep(_AbilityRange.w-rangeAa,_AbilityRange.w+rangeAa,rangeEdge);
                             color=lerp(color,_PointerColor.rgb,rangeRing*dash*.55*step(.5,input.topSurface));
                         }
+                    }
+                    if(_CommandPulse.w>0)
+                    {
+                        float distance=length(input.uv*_FrontierBounds.zw-_CommandPulse.xy);
+                        float edge=abs(distance-_CommandPulse.z);
+                        float aa=max(fwidth(distance),.001);
+                        half ring=1-smoothstep(_CommandWidth-aa,_CommandWidth+aa,edge);
+                        half dot=1-smoothstep(_CommandWidth*1.5-aa,_CommandWidth*1.5+aa,distance);
+                        // Feedback marks only the issued point, including under fog;
+                        // it never reveals terrain, and cannot paint vertical cliff faces.
+                        color=lerp(color,_CommandColor.rgb,max(ring,dot)*_CommandPulse.w*step(.5,input.topSurface));
                     }
                     if(_PointerArea.w>0)
                     {

@@ -28,9 +28,15 @@ namespace Frontier.Runtime
         public AbilityDefinition PendingAbility => Catalog?.Ability(AbilityDefinitionId);
         public bool HasTargetingMode => BuildDefinition != null || AttackMoveMode || AbilityDefinitionId != null;
         public bool AbilityPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1 && PendingAbility != null;
-        private float attackFeedbackUntil;
         public bool AttackPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1
-            && (AttackMoveMode || Time.unscaledTime < attackFeedbackUntil);
+            && AttackMoveMode;
+        public const float CommandPulseDuration = 1.2f;
+        public CommandKind LastCommandKind { get; private set; }
+        public Point LastCommandPoint { get; private set; }
+        public int LastCommandSequence { get; private set; }
+        public float LastCommandTime { get; private set; }
+        public bool CommandPulseActive => Running && !IsPaused && Match != null && Match.Winner == -1
+            && LastCommandSequence > 0 && Time.unscaledTime-LastCommandTime < CommandPulseDuration;
         private Strategist bot;
         private float accumulator;
         private int sequence;
@@ -56,7 +62,7 @@ namespace Frontier.Runtime
             bot = new Strategist(1, Difficulty == "hard" ? AiDifficulty.Hard : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; sequence = 0; accumulator = 0;
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
             pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
             Announce(MapId == "training" ? $"1 · Select a worker. Build: {Catalog.Role(Faction, "supply").name} + {Catalog.Role(Faction, "barracks").name}." : "Expand your base. Scout before attacking.");
@@ -67,7 +73,7 @@ namespace Frontier.Runtime
             if (Match != null) Match.Paused = true;
             Running = false; Match = null; View = null; bot = null;
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; sequence = 0; accumulator = 0;
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
             // Closing a match must not dismiss headset, focus or tracking interruptions.
             pauseReasons.Remove("menu");
             Announce("Ready for a new match.");
@@ -153,10 +159,10 @@ namespace Frontier.Runtime
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void ChooseAttackMove()
         {
-            BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null; attackFeedbackUntil = 0;
+            BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null;
             Announce("Attack Move · Choose a point on the battlefield."); Changed?.Invoke();
         }
         public IEnumerable<VisibleEntity> AbilityCasters(string id) => View == null ? Enumerable.Empty<VisibleEntity>() : View.entities.Where(e =>
@@ -178,7 +184,7 @@ namespace Frontier.Runtime
             var ability=Catalog.Ability(id);
             if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
             {Announce(AbilityStatus(id));Feedback?.Invoke(false);Changed?.Invoke();return false;}
-            BuildDefinition=null;AttackMoveMode=false;attackFeedbackUntil=0;AbilityDefinitionId=id;
+            BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=id;
             Announce(ability.name+" · Choose a visible point. One caster will move into range and cast.");Changed?.Invoke();return true;
         }
         private void ValidateAbilitySelection()
@@ -188,7 +194,7 @@ namespace Frontier.Runtime
             if (BuildDefinition != null) Announce("Construction placement cancelled.");
             else if (AttackMoveMode) Announce("Attack destination cancelled.");
             else if (PendingAbility != null) Announce(PendingAbility.name+" targeting cancelled.");
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; attackFeedbackUntil = 0; Changed?.Invoke();
+            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; Changed?.Invoke();
         }
         private void RefreshView()
         {
@@ -263,7 +269,16 @@ namespace Frontier.Runtime
             else
             {
                 bool attacking = kind == CommandKind.Attack || kind == CommandKind.AttackMove;
-                attackFeedbackUntil = attacking ? Time.unscaledTime + .8f : 0;
+                if (attacking || kind == CommandKind.Move)
+                {
+                    // Accepted commands mark their destination, independently of where
+                    // the cursor moves next. Never turn confirmation into targeting mode.
+                    var focus = kind == CommandKind.Attack ? View.entities.FirstOrDefault(e=>e.id==target&&!e.remembered) : null;
+                    float half = focus != null && Catalog[focus.definition].building ? Catalog[focus.definition].footprint*.5f : 0;
+                    LastCommandPoint = focus == null ? position : new Point(focus.position.x+half,focus.position.y+half);
+                    LastCommandKind = kind; LastCommandSequence = sequence; LastCommandTime = Time.unscaledTime;
+                }
+                else LastCommandSequence = 0;
                 if (attacking) Announce((kind == CommandKind.AttackMove ? "Attack Move" : "Attack") + (append ? " queued." : " ordered."));
             }
             Feedback?.Invoke(result.accepted); RefreshView();
