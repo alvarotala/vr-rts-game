@@ -18,12 +18,16 @@ namespace Frontier.Editor
         private static void Set(object obj,string name,object value)=>obj.GetType().GetField(name,Private).SetValue(obj,value);
         public static void Run()
         {
-            ControllerAssets.Prepare();
-            Render();
-            UnifiedWheelPreview.Render();
+            RenderControllerWheel();
             MenuFlowPreview.Render();
             AttackPointerPreview.Render();
             Debug.Log("FRONTIER_COMFORT_AUDIO_BATCH passed; no player build");
+        }
+        public static void RenderControllerWheel()
+        {
+            ControllerAssets.Prepare();
+            Render();
+            UnifiedWheelPreview.Render();
         }
         public static void Render()
         {
@@ -78,13 +82,36 @@ namespace Frontier.Editor
                     Check(visual.Root.GetChild(left?1:0).gameObject.activeSelf&&!visual.Root.GetChild(left?0:1).gameObject.activeSelf,"Only the active hand model is shown");
                     Check(Vector3.Distance(visual.EmitterPosition,ray.GetPoint(ControllerVisuals.EmitterDistance))<.0001f,"The rendered laser begins at the controller emitter");
                     var renderers=visual.Root.GetChild(left?1:0).GetComponentsInChildren<Renderer>();var modelBounds=renderers[0].bounds;
+                    var body=visual.Root.GetChild(left?1:0).GetComponentInChildren<SkinnedMeshRenderer>();
+                    Check(AssetDatabase.GetAssetPath(body.sharedMaterial.mainTexture).Contains("TouchPlus_"+(left?"Left":"Right")+"_BaseColor"),
+                        "Each controller body uses its own Touch Plus color texture, not the battery indicator");
                     foreach(var renderer in renderers)modelBounds.Encapsulate(renderer.bounds);
                     Check(modelBounds.size.magnitude>.08f&&modelBounds.size.magnitude<.3f,"Touch model has controller-scale physical dimensions: "+modelBounds.size);
                     laser.SetPosition(0,visual.EmitterPosition);laser.SetPosition(1,ray.GetPoint(.22f));
                     wheel.TickHint(ray,true);
+                    var hint=Field<RectTransform>(wheel,"hintRoot");
+                    var stick=visual.Root.GetChild(left?1:0).GetComponentsInChildren<Transform>(true).Single(part=>part.name.EndsWith("_b_thumbstick"));
+                    Check(Vector3.ProjectOnPlane(hint.position-stick.position,stick.up).magnitude<.0001f
+                        &&Vector3.Dot(hint.forward,stick.up)<-.999f,"Callout leaders remain anchored over the visible controller stick");
+                    Check(hint.GetComponentsInChildren<UnityEngine.UI.Text>().All(label=>
+                            Mathf.Abs(label.rectTransform.anchoredPosition.x)*hint.lossyScale.x>.05f),
+                        "All directional and button hints sit beside the active controller");
+                    var anchors=new[]{"touch:trigger","touch:b","touch:a","touch:grip"}.Select(button=>ControllerVisuals.ButtonPosition(left,button)).ToArray();
+                    Check(anchors.Distinct().Count()==4&&anchors.All(anchor=>Vector3.Distance(anchor,ControllerVisuals.StickSurface(left).position)>.01f),
+                        "Button leaders have distinct physical anchors, separate from the stick");
                     preview.camera.orthographic=false;preview.camera.fieldOfView=48;preview.camera.nearClipPlane=.01f;
                     preview.camera.transform.position=new Vector3(left?-.07f:.07f,1.08f,-.28f);preview.camera.transform.LookAt(new Vector3(0,.81f,.01f));
-                    HarvestingPreview.SaveCanvas(wheel.transform,Field<RectTransform>(wheel,"hintRoot"),output+"/"+(left?"left":"right")+"-controller.png",preview,1100,900,preservePose:true);
+                    HarvestingPreview.SaveCanvas(wheel.transform,hint,output+"/"+(left?"left":"right")+"-controller.png",preview,1100,900,preservePose:true);
+                    wheel.ProcessUnified(ray,Vector2.zero,false,false,false,false,10);
+                    wheel.ProcessUnified(ray,Vector2.up,false,false,false,false,10.1f);
+                    var opened=Field<RectTransform>(wheel,"root");
+                    var eye=(preview.camera.transform.position-opened.position).normalized;
+                    Check(wheel.InGroupMenu&&!wheel.HintVisible&&Vector3.Distance(opened.position,hint.position)<.025f
+                        &&Vector3.Angle(-opened.forward,stick.up)<=35.1f&&Vector3.Dot(-opened.forward,eye)>Vector3.Dot(stick.up,eye),
+                        "The open wheel stays close to the controller and tilts toward the viewing position");
+                    laser.enabled=false;
+                    HarvestingPreview.SaveCanvas(wheel.transform,opened,output+"/"+(left?"left":"right")+"-controller-wheel.png",preview,1100,900,preservePose:true);
+                    wheel.Close();laser.enabled=true;
                 }
                 session.Pause("tracking",true);visual.Update(quest,Color.white);Check(!visual.Root.gameObject.activeSelf,"System interruptions hide the controller");session.Pause("tracking",false);
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);visual.Update(quest,Color.white);Check(!visual.Root.gameObject.activeSelf,"Desktop does not show a floating VR controller");
@@ -119,7 +146,7 @@ namespace Frontier.Editor
                 Check(Field<AudioSource>(audio,"music").volume==0&&Field<AudioSource>(audio,"ui").volume==0&&Field<AudioSource[]>(audio,"voices").All(v=>v.volume==0),"Music and effects can both be muted");
                 AudioFeedback.CycleMusicVolume();AudioFeedback.CycleEffectsVolume();Check(AudioFeedback.MusicVolume==.25f&&AudioFeedback.EffectsVolume==.25f,"Separate volume controls persist their values");
                 session.LeaveMatch();Call(audio,"LateUpdate");Check(Field<AudioSource[]>(audio,"voices").All(v=>!v.isPlaying),"Leaving the match stops all battlefield voices");
-                Debug.Log($"FRONTIER_COMFORT_AUDIO passed: {checks} checks, 2 controller views, stereo WAV; no player build");
+                Debug.Log($"FRONTIER_COMFORT_AUDIO passed: {checks} checks, 4 controller views, stereo WAV; no player build");
             }
             finally
             {

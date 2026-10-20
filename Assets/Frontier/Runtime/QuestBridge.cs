@@ -15,6 +15,7 @@ namespace Frontier.Runtime
         public HotkeyBindings Bindings { get; set; }
         public OVRInput.Controller ActiveController=>Bindings?.TouchController??OVRInput.Controller.RTouch;
         public bool PointerTracked=>!Active||Application.isEditor||(OVRInput.GetControllerPositionTracked(ActiveController)&&OVRInput.GetControllerOrientationTracked(ActiveController));
+        public bool HeadTracked=>Camera!=null&&(!Active||Application.isEditor||(headPoseUpdated&&OVRPlugin.GetNodePositionTracked(OVRPlugin.Node.EyeCenter)&&OVRPlugin.GetNodeOrientationTracked(OVRPlugin.Node.EyeCenter)));
         public Camera Camera { get; private set; }
         public bool Active { get; private set; }
         public bool Placing { get; private set; }
@@ -33,6 +34,7 @@ namespace Frontier.Runtime
         private Quaternion placementRotation;
         private float placementWidth;
         private bool wasPlaced;
+        private bool headPoseUpdated;
         private int anchorGeneration;
         private string SavePath=>Path.Combine(Application.persistentDataPath,"board-placement.json");
         private void Awake()
@@ -45,6 +47,7 @@ namespace Frontier.Runtime
                 passthrough=go.AddComponent<OVRPassthroughLayer>(); // Meta's default is the background underlay.
                 Camera=rig.centerEyeAnchor.GetComponent<Camera>();Camera.clearFlags=CameraClearFlags.SolidColor;Camera.backgroundColor=Color.clear;Camera.nearClipPlane=.03f;Camera.farClipPlane=30;
                 TrackingSpace=rig.trackingSpace;
+                rig.UpdatedAnchors+=HeadPoseUpdated;
                 var room=new GameObject("Room understanding");mruk=room.AddComponent<MRUK>();
                 mruk.EnableWorldLock=false; // The board has its own persistent spatial anchor.
                 mruk.SceneSettings=new MRUK.MRUKSettings{LoadSceneOnStartup=false,RoomPrefabs=Array.Empty<GameObject>(),SceneJsons=Array.Empty<TextAsset>()};
@@ -66,7 +69,7 @@ namespace Frontier.Runtime
             Board.transform.position=new Vector3(0,.75f,0);Board.Placed=!Active;
             if(Active)
             {
-                // Keep the setup console in front of the wearer before any anchor exists.
+                // Provisional board position only; the setup console uses its own viewer-relative placement.
                 var forward=Vector3.ProjectOnPlane(Camera.transform.forward,Vector3.up).normalized;
                 if(forward.sqrMagnitude<.1f)forward=Vector3.forward;
                 var center=Camera.transform.position+forward*1.25f;center.y=.75f;
@@ -84,7 +87,8 @@ namespace Frontier.Runtime
                 &&!passthrough.hidden&&passthrough.textureOpacity>=.99f
                 &&manager.isInsightPassthroughEnabled&&OVRManager.IsInsightPassthroughInitialized();
         }
-        private void OnDisable(){if(manager!=null)manager.shouldBoundaryVisibilityBeSuppressed=false;}
+        private void OnDisable(){headPoseUpdated=false;if(manager!=null)manager.shouldBoundaryVisibilityBeSuppressed=false;}
+        private void HeadPoseUpdated(OVRCameraRig cameraRig)=>headPoseUpdated=true;
         public async void LoadRoom()
         {
             useScene=true;if(!Active||mruk==null){Session.Announce("Desktop mode uses a manual plane.");return;}
@@ -185,7 +189,7 @@ namespace Frontier.Runtime
             catch(Exception e){Debug.LogWarning(e);}
             finally{restoring=false;if(pendingStart&&this!=null)RequestStartMatch();}
         }
-        private void TrackingLost(){Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Tracking lost. Restore tracking and confirm the board placement.");}
+        private void TrackingLost(){headPoseUpdated=false;Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Tracking lost. Restore tracking and confirm the board placement.");}
         private void TrackingAcquired(){if(anchor!=null&&anchor.Localized){Board.Placed=true;Session.Pause("tracking",false);}else{Session.Pause("tracking",false);if(Session.Running)BeginPlacement();}}
         private void Unmounted()=>Session.Pause("headset",true);
         private void Mounted()=>Session.Pause("headset",false);
@@ -193,6 +197,7 @@ namespace Frontier.Runtime
         private void FocusGained()=>Session.Pause("vrfocus",false);
         private void OnDestroy()
         {
+            if(rig!=null)rig.UpdatedAnchors-=HeadPoseUpdated;
             OVRManager.TrackingLost-=TrackingLost;OVRManager.TrackingAcquired-=TrackingAcquired;OVRManager.HMDUnmounted-=Unmounted;OVRManager.HMDMounted-=Mounted;OVRManager.VrFocusLost-=FocusLost;OVRManager.VrFocusAcquired-=FocusGained;
         }
     }

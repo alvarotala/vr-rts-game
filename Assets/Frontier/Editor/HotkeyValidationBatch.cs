@@ -59,20 +59,20 @@ namespace Frontier.Editor
                 Check(HotkeyBindings.FromJson("invalid json").Get(false,"order")=="mouse:right","Corrupt JSON falls back to defaults");
                 Check(HotkeyBindings.FromJson(profile.ToJson().Replace("key:Q","key:Digit1")).Get(false,"order")=="mouse:right","Duplicate saved inputs cannot install a broken profile");
                 var savedGroupProfile=new HotkeyBindings();savedGroupProfile.SelectHand(true);
-                Check(savedGroupProfile.Assign(true,"wheel","touch:a",true,out _),"The group-save modifier retains explicit binding swaps");
+                Check(savedGroupProfile.Assign(true,"wheel","touch:a",true,out _),"The hint toggle retains explicit binding swaps");
                 var savedGroupLoaded=HotkeyBindings.FromJson(savedGroupProfile.ToJson());
                 Check(savedGroupLoaded.LeftHand&&savedGroupLoaded.Get(true,"wheel")=="touch:a"&&savedGroupLoaded.Get(true,"order")=="touch:stick","Existing group-save remaps and handedness remain compatible");
-                Check(HotkeyBindings.Definitions(true).First(d=>d.Id=="wheel").Name=="Save group modifier"&&!HotkeyBindings.Definitions(true).First(d=>d.Id=="add").Description.Contains("double"),"Bindings describe group saving without obsolete wheel-opening gestures");
+                Check(HotkeyBindings.Definitions(true).First(d=>d.Id=="wheel").Name=="Show / hide hints"&&!HotkeyBindings.Definitions(true).First(d=>d.Id=="add").Description.Contains("double"),"Bindings describe the hint toggle without obsolete wheel-opening gestures");
                 savedGroupLoaded.Assign(true,"select","touch:grip",true,out _);savedGroupLoaded.Assign(true,"back","touch:trigger",true,out _);
                 var wheelGuide=DefaultControlCatalog.For(true,savedGroupLoaded).SelectMany(t=>t.Commands).ToDictionary(c=>c.Id);
                 Check(wheelGuide["menus.execute-action"].Gesture=="Trigger in the wheel"&&wheelGuide["menus.back-action"].Gesture=="Down + Trigger / Y","Wheel navigation help stays physical after gameplay remaps and uses the active hand");
-                Check(wheelGuide["groups.replace"].Gesture=="Wheel down > Assign group > Trigger"&&wheelGuide["groups.replace"].Description.Contains("hold X")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Assignment uses down and Trigger while alternate group-save help follows its binding");
+                Check(wheelGuide["groups.replace"].Gesture=="Wheel up > group > Stick click"&&wheelGuide["groups.replace"].Description.StartsWith("Press the stick")&&wheelGuide["menus.actions"].Description.StartsWith("X shows/hides")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Assignment uses physical stick click while hint-toggle help follows its binding");
                 foreach(string reserved in new[]{"touch:trigger","touch:b"})
                 {
                     var reservedProfile=new HotkeyBindings();string before=reservedProfile.ToJson();
-                    Check(!reservedProfile.Supports(true,"wheel",reserved)&&!reservedProfile.Assign(true,"wheel",reserved,true,out _)&&reservedProfile.ToJson()==before,"Group saving rejects the fixed navigation button "+reserved+" without changing bindings");
+                    Check(!reservedProfile.Supports(true,"wheel",reserved)&&!reservedProfile.Assign(true,"wheel",reserved,true,out _)&&reservedProfile.ToJson()==before,"Hint toggle rejects the fixed navigation button "+reserved+" without changing bindings");
                     string occupied=reserved=="touch:trigger"?"select":"back";
-                    Check(!reservedProfile.Assign(true,occupied,"touch:stick",true,out _)&&reservedProfile.ToJson()==before,"An indirect swap cannot assign group saving to "+reserved);
+                    Check(!reservedProfile.Assign(true,occupied,"touch:stick",true,out _)&&reservedProfile.ToJson()==before,"An indirect swap cannot assign the hint toggle to "+reserved);
                     reservedProfile.SelectHand(true);reservedProfile.Assign(true,"select","touch:grip",true,out _);
                     reservedProfile.Assign(true,"order","touch:b",true,out _);reservedProfile.Assign(false,"order","key:Q",false,out _);
                     string legacy=reservedProfile.ToJson().Replace("\"touch:stick\"","\"legacy-swap\"").Replace("\""+reserved+"\"","\"touch:stick\"").Replace("\"legacy-swap\"","\""+reserved+"\"");
@@ -82,7 +82,7 @@ namespace Frontier.Editor
                     var broken=HotkeyBindings.FromJson(legacy.Replace("\"touch:grip\"","\"touch:a\""));
                     Check(broken.LeftHand&&broken.Get(false,"order")=="key:Q"&&HotkeyBindings.Definitions(true).All(d=>broken.Get(true,d.Id)==d.Default),"Migration does not repair a corrupt duplicate profile around "+reserved);
                 }
-                Check(new[]{"touch:a","touch:grip","touch:stick"}.All(button=>new HotkeyBindings().Assign(true,"wheel",button,true,out _)),"Group saving still supports A/X, Grip and stick click");
+                Check(new[]{"touch:a","touch:grip","touch:stick"}.All(button=>new HotkeyBindings().Assign(true,"wheel",button,true,out _)),"Hint toggle supports A/X, Grip and stick click");
 
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Call(session,"Awake");session.LoadMap("training");
                 var board=fixture.AddComponent<BoardView>();board.Session=session;Call(board,"Start");
@@ -147,7 +147,9 @@ namespace Frontier.Editor
                 Check(session.IsPaused&&match.Tick==tick&&session.View.minerals==minerals&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Editing during pause preserves simulation, resources, selection and groups");
                 Capture("05-paused-bindings");Click("Back");
                 Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Back returns to pause without resuming");
+                Click("Control guide");
                 Check(Field<Text[]>(panel,"controlGuideGestures")[0].text.StartsWith("E on map"),"Pause guide displays current bindings");
+                Click("Back");
                 Click("Resume match");
                 Check(session.Match==match&&!session.IsPaused&&panel.AcceptsGameInput,"Resume continues the original match");
 
@@ -226,6 +228,12 @@ namespace Frontier.Editor
                             var grip=useLeft?OVRInput.RawButton.LHandTrigger:OVRInput.RawButton.RHandTrigger;
                             var trigger=useLeft?OVRInput.RawButton.LIndexTrigger:OVRInput.RawButton.RIndexTrigger;
                             string hand=useLeft?"left":"right";
+                            var click=useLeft?OVRInput.RawButton.LThumbstick:OVRInput.RawButton.RThumbstick;
+                            Check(wheel.HintsEnabled&&wheel.HintVisible,"Actual "+hand+" Update shows hints before toggling");
+                            TouchFrame(Vector2.zero,click);TouchFrame(Vector2.zero,click);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(!wheel.HintsEnabled&&!wheel.HintVisible&&!wheel.IsOpen,"Actual "+hand+" stick click hides hints once without opening or assigning");
+                            TouchFrame(Vector2.zero,click);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(wheel.HintsEnabled&&wheel.HintVisible,"Actual "+hand+" second click restores hints");
                             TouchFrame(Vector2.up,grip);
                             Check(!wheel.IsOpen,"Actual "+hand+" Update keeps remapped Grip selection ahead of a simultaneous tilt");
                             TouchFrame(Vector2.up,grip);
@@ -240,14 +248,13 @@ namespace Frontier.Editor
                             Check(!wheel.IsOpen&&session.Selection.Contains(worker.id),"Actual "+hand+" Update recalls the group with Trigger without recentering or leaking a map selection");
                             TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
                             TouchFrame(Vector2.right);
-                            Check(wheel.Page==WheelPage.Selection&&wheel.IsOpen&&wheel.HighlightedId=="build-menu","Actual "+hand+" Update enters Selection with Build highlighted");
-                            TouchFrame(Vector2.right,trigger);
-                            Check(wheel.InBuildMenu&&wheel.HighlightedId.StartsWith("build:"),"Actual "+hand+" Update carries the held direction into Build");
+                            Check(wheel.Page==WheelPage.Selection&&wheel.IsOpen&&wheel.HighlightedId.StartsWith("build:")&&wheel.Items.Count(a=>a.Building)==7,
+                                "Actual "+hand+" Update opens Selection directly on the building options");
                             string build=wheel.HighlightedId.Substring("build:".Length);
+                            TouchFrame(Vector2.right);
+                            Check(wheel.IsOpen&&session.BuildDefinition==null,"Actual "+hand+" held opening direction never arms a building without Trigger");
                             TouchFrame(Vector2.right,trigger);
-                            Check(wheel.InBuildMenu&&session.BuildDefinition==null,"Actual "+hand+" Update cannot confirm the child with a held Trigger");
-                            TouchFrame(Vector2.right);TouchFrame(Vector2.right,trigger);
-                            Check(!wheel.IsOpen&&session.BuildDefinition==build,"Actual "+hand+" Update confirms the building on a new Trigger edge without centering");
+                            Check(wheel.IsOpen&&wheel.Page==WheelPage.Selection&&session.BuildDefinition==build,"Actual "+hand+" Update arms the building and keeps Selection open after Trigger");
                             TouchFrame(Vector2.right,trigger);TouchFrame(Vector2.right);session.CancelMode();
                             wheel.Close();TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
                             TouchFrame(Vector2.left);
@@ -255,11 +262,34 @@ namespace Frontier.Editor
                             wheel.Close();TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
                             session.Select(0,false);session.Group(2,true);session.Select(worker.id,false);TouchFrame(Vector2.zero);
                             TouchFrame(Vector2.down);
-                            Check(wheel.Page==WheelPage.AssignGroups&&wheel.GroupSaveMode&&wheel.HighlightedId=="group-3"&&session.GroupSize(2)==0,"Actual "+hand+" Update opens Assign group without saving");
-                            TouchFrame(Vector2.down,trigger);
-                            Check(!wheel.IsOpen&&session.GroupSize(2)==1&&session.Selection.Contains(worker.id),"Actual "+hand+" Update assigns the held direction with Trigger despite selection remapping");
-                            TouchFrame(Vector2.down,trigger);TouchFrame(Vector2.down);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
-                            Check(session.GroupSize(2)==1&&session.Selection.Contains(worker.id),"Actual "+hand+" assignment drains the confirming trigger before map selection");
+                            Check(!wheel.IsOpen&&session.GroupSize(2)==0,"Actual "+hand+" down does not open a wheel");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.down);
+                            Check(wheel.InGroupMenu&&wheel.HighlightedId=="group-3"&&session.GroupSize(2)==0,"Actual "+hand+" Groups highlights slot 3 without assigning");
+                            TouchFrame(Vector2.down,click);
+                            Check(!wheel.IsOpen&&session.GroupSize(2)==1&&session.Selection.Contains(worker.id)&&wheel.HintsEnabled,"Actual "+hand+" physical stick press immediately assigns without toggling hints");
+                            TouchFrame(Vector2.left,click);TouchFrame(Vector2.left);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(session.GroupSize(2)==1&&session.Selection.Contains(worker.id),"Actual "+hand+" assignment drains its click before map input");
+                            touchBindings.Assign(true,"wheel","touch:a",true,out _);
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            var hint=Field<RectTransform>(wheel,"hintRoot");
+                            var hints=hint.GetComponentsInChildren<Text>();
+                            string orderName=useLeft?"X":"A";
+                            Check(hints.Any(t=>t.text==orderName+" · Show / hide hints")&&hints.Any(t=>t.text.StartsWith("Stick click\nMove / interact")),
+                                "Actual "+hand+" callouts update both functions after swapping the hint hotkey");
+                            var toggle=useLeft?OVRInput.RawButton.X:OVRInput.RawButton.A;
+                            TouchFrame(Vector2.zero,toggle);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(!wheel.HintsEnabled&&!wheel.HintVisible&&session.Selection.Contains(worker.id),
+                                "Actual "+hand+" rebound hint toggle is consumed before map commands");
+                            touchBindings.Assign(true,"select","touch:stick",true,out _);
+                            session.Select(0,false);session.Group(1,true);session.Select(worker.id,false);
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.right,click);
+                            Check(!wheel.IsOpen&&session.GroupSize(1)==1&&!wheel.HintsEnabled,
+                                "Actual "+hand+" Groups always assigns with physical stick even when hints use A/X and selection uses stick");
+                            TouchFrame(Vector2.right,click);TouchFrame(Vector2.right,click);TouchFrame(Vector2.right);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(session.Selection.SetEquals(new[]{worker.id})&&!wheel.HintsEnabled,
+                                "Actual "+hand+" remapped selection cannot consume the held assignment click or its release");
+                            TouchFrame(Vector2.zero,toggle);TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
+                            Check(wheel.HintVisible,"Actual "+hand+" rebound toggle restores hints");
 
                             void TouchFrame(Vector2 stick,OVRInput.RawButton buttons=OVRInput.RawButton.None)
                             {

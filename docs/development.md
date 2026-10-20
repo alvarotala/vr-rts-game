@@ -89,7 +89,7 @@ unity run . --log-file TestResults/unity-rally-point.log --no-tail -- \
 
 Las capturas de `RallyPointPreview` quedan en `TestResults/RallyPoint`. `RallyPointInputChecks.Run` comprueba A/grip/doble A, limpieza por consola y rueda, y orientación al desplegar. No genera APK ni ejecutable desktop.
 
-`ControlGroupPreview.RunValidation` prueba los cuatro grupos dentro de la rueda unificada: entrada directa por inclinación, recuperación con gatillo sin recentrar, asignación desde abajo con gatillo, guardado alternativo al soltar clic sostenido + dirección y cancelaciones, además de las regresiones de hint, acciones, gestos de colas, rally, menús y HUD:
+`ControlGroupPreview.RunValidation` prueba los cuatro grupos dentro de la rueda unificada: entrada directa por inclinación, recuperación con gatillo sin recentrar, asignación inmediata al pulsar stick en Groups, drenaje de pulsación/liberación, centro sin asignación y cancelaciones, además de las regresiones de hint, acciones, gestos de colas, rally, menús y HUD:
 
 ```sh
 unity run . --log-file TestResults/unity-control-groups.log --no-tail -- \
@@ -261,6 +261,16 @@ unity run . --log-file TestResults/unity-hits.log --no-tail -- \
 
 Guarda ocho vistas en `TestResults/Hits`: antes, impactos simultáneos, trabajador, soldado seleccionado/bajo hover, edificios de ambas facciones, desvanecimiento y final del efecto. Comprueba renovación sin acumular objetos, limpieza al reutilizar una unidad, niebla y salida de partida. Las comprobaciones del núcleo también verifican impactos reales en unidades/edificios, daño de área, recuperación de vida y privacidad de edificios recordados.
 
+Para revisar las muertes, usar **Frontier → Preview and check unit deaths**, o:
+
+```sh
+bash scripts/check-core.sh --deaths-only
+unity run . --log-file TestResults/unity-death-visuals.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.DeathVisualPreview.Run
+```
+
+El núcleo verifica bajas reales, eliminación inmediata de la unidad, privacidad, observación tardía, duplicados, pausa, caducidad y cancelación sin cadáver. El preview guarda siete vistas en `TestResults/Deaths`: unidades vivas, caída, cuerpos, disolución y final; cubre los seis roles de ambas facciones, selección a través de los restos, niebla, límites de cuerpos/vértices, ausencia de objetos por muerte y limpieza al reiniciar. Es evidencia de Editor; no mide rendimiento ni percepción física en Quest.
+
 Para revisar los disparos y sus trayectorias, usar **Frontier → Preview weapon fire**, o:
 
 ```sh
@@ -295,9 +305,11 @@ Para comprobar el enrutamiento de entrada y renderizar las ruedas de ambas facci
 unity run . --log-file TestResults/unity-unified-wheel.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.UnifiedWheelValidationBatch.Run
 ```
 
-La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, entrada directa en las cuatro categorías con la dirección ya resaltada, recorridos entre niveles sin centrar, una confirmación por pulsación de gatillo, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
+La prueba alimenta `CommanderInput.RouteWheel` con cuadros sintéticos de joystick/A/B/gatillo/grip y un reloj controlado, pasa las entradas no consumidas a `PointBoard` y verifica los comandos reales. Comprueba el hint de nivel 0, entrada directa en las tres categorías y ausencia de acción abajo con la dirección ya resaltada, recorridos entre niveles sin centrar, una confirmación por pulsación de gatillo, cierre tras 0,8 s, dirección sostenida, vuelta/cierre, ausencia de apertura por clic o doble grip y consumo de botones hasta liberarlos. Incluye recuperación y guardado de grupos, edificios y rally compartido, construcción, producción, investigación, ataque y habilidades con energía/recarga. Cubre cambios de selección/cola, foco, seguimiento, pausa, colocación y cambio de mano. El batch añade compatibilidad de hotkeys y regresiones de menús, selección y puntero. Guarda vistas en `TestResults/UnifiedWheel/`, `ActionWheel/` y `ControlGroups/`, además de las carpetas de los fixtures relacionados. El panel comparte `SelectionActions`. Las entradas sintéticas no emulan los mandos físicos: tamaño, postura y comodidad deben confirmarse en Quest.
 
-Las vistas `UnifiedWheel/*-hand-hint.png` y `*-hand-groups.png` conservan escala, posición y giro reales frente a una cámara fija. El marcador amarillo identifica el origen del rayo únicamente en la previsualización. Las comprobaciones verifican ambos mandos, tamaño físico compacto y anclaje independiente de los movimientos de cabeza para cada sección de la rueda.
+Las vistas `UnifiedWheel/*-hand-hint.png` y `*-hand-groups.png` conservan escala, posición y giro reales frente a una cámara fija. El marcador amarillo identifica el origen del rayo únicamente en la previsualización. Las comprobaciones verifican ambos mandos, cuatro hints con flechas y seis segmentos sin raycast, columna lateral reflejada por mano, anclaje al stick del prefab, altura cercana de la rueda y giro hacia la cámara limitado a 35°. Mover la cabeza no desplaza el anclaje; girarla sin trasladarla no hace girar el menú. `ComfortAudioPreview.Render` añade vistas de ambas manos con el modelo Touch Plus real y con la rueda abierta, en `TestResults/ComfortAudio/*-controller.png` y `*-controller-wheel.png`.
+
+`ComfortAudioPreview.RenderControllerWheel` prepara los modelos/materiales y ejecuta esas vistas más `UnifiedWheelPreview`, sin las regresiones adicionales de menús y ataque del batch completo. La preparación identifica el cuerpo por nombre: no utiliza el primer renderer, porque puede ser el indicador de batería en una de las manos.
 
 El fixture de rueda también registra el envío de vibración mediante controladores sintéticos del SDK: cambio de ítem/nivel, ausencia de pulsos duplicados al sostener o por histéresis, duración, parada por foco/desactivación/cambio de mano y ausencia de vibración desktop. El registro sustituye la salida física; la intensidad percibida se ajusta probando el visor.
 
@@ -327,3 +339,6 @@ unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-comfort-au
 ```
 
 Las vistas de mandos y la música WAV quedan en `TestResults/ComfortAudio`. El audio se genera con código propio; las mallas, texturas y animaciones del mando siguen siendo assets del SDK de Meta. Esta validación no sustituye escuchar la mezcla, comprobar la postura de la muñeca y restaurar un ancla en un Quest físico.
+
+
+`Frontier.Editor.StartupMenuPreview.Run` prueba el menú de inicio de Quest con poses sintéticas del visor y un tablero guardado a más de 20 m. Verifica espera de seguimiento, restauración tardía del ancla, entrada a Settings y recolocación/cancelación, arrastre cerca del usuario, Reset position, regreso tras foco/suspensión/visor y preservación del desplazamiento de consola durante partida. Genera tres vistas con pose real en `TestResults/StartupMenu` y ejecuta las regresiones de `MenuFlowPreview` y `ComfortAudioPreview`. Restaura la preferencia de posición previa y no genera APK.

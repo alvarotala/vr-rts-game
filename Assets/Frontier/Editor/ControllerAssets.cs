@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -23,7 +24,10 @@ namespace Frontier.Editor
                 try
                 {
                     var material=new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                    var renderer=model.GetComponentInChildren<Renderer>(true);
+                    // Child ordering differs between hands; the first renderer may
+                    // be the battery indicator instead of the controller body.
+                    var renderer=model.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                        .Single(part=>part.name=="oculus_controller_"+(left?"l":"r")+"_MeshX");
                     material.SetTexture("_BaseMap",renderer.sharedMaterial.mainTexture);material.SetFloat("_Smoothness",.3f);
                     string materialPath=folder+"/"+name+".mat";
                     var existing=AssetDatabase.LoadAssetAtPath<Material>(materialPath);

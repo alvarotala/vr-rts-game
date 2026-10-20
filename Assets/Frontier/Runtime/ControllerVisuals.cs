@@ -7,6 +7,37 @@ namespace Frontier.Runtime
     public sealed class ControllerVisuals : System.IDisposable
     {
         public const float EmitterDistance=.035f;
+        private static readonly Pose?[] stickSurfaces=new Pose?[2];
+        // The prefab supplies the neutral stick pose, so tilting its animated cap
+        // while navigating never tilts the labels or the open menu.
+        public static Pose StickSurface(bool left)
+        {
+            int hand=left?1:0;
+            if(stickSurfaces[hand].HasValue)return stickSurfaces[hand].Value;
+            var surface=new Pose(new Vector3(0,.008f,0),Quaternion.Euler(90,0,0));
+            var model=Resources.Load<GameObject>("Controllers/TouchPlus"+(left?"Left":"Right"));
+            if(model!=null)foreach(var part in model.GetComponentsInChildren<Transform>(true))
+            {
+                if(!part.name.EndsWith("_b_thumbstick"))continue;
+                var normal=model.transform.InverseTransformDirection(part.up).normalized;
+                var position=Vector3.Scale(model.transform.InverseTransformPoint(part.position),model.transform.localScale);
+                // Lift from the pivot to the cap; keep text's up direction toward
+                // the front of the controller, independent of the bone's mesh yaw.
+                surface=new Pose(position+normal*.008f,Quaternion.LookRotation(-normal,Vector3.ProjectOnPlane(Vector3.forward,normal)));
+                break;
+            }
+            stickSurfaces[hand]=surface;return surface;
+        }
+        public static Vector3 ButtonPosition(bool left,string input)
+        {
+            string suffix=input=="touch:trigger"?"_b_trigger_front":input=="touch:grip"?"_b_trigger_grip":
+                input=="touch:a"?"b_button_"+(left?"x":"a"):input=="touch:b"?"b_button_"+(left?"y":"b"):"_b_thumbstick";
+            var model=Resources.Load<GameObject>("Controllers/TouchPlus"+(left?"Left":"Right"));
+            if(model!=null)foreach(var part in model.GetComponentsInChildren<Transform>(true))
+                if(part.name.EndsWith(suffix))
+                    return Vector3.Scale(model.transform.InverseTransformPoint(part.position),model.transform.localScale);
+            return StickSurface(left).position;
+        }
         private readonly Transform root;
         private readonly Material emitterMaterial;
         private readonly GameObject[] models=new GameObject[2];

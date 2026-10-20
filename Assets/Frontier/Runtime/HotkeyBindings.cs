@@ -30,7 +30,7 @@ namespace Frontier.Runtime
             new Definition("order","Context order / confirm","touch:a","Move, attack, gather, repair and rally. Double-tap for Attack Move."),
             new Definition("add","Add / queue modifier","touch:grip","Hold to add selection or queue orders."),
             new Definition("back","Cancel / pause","touch:b","Cancel the current action or open pause."),
-            new Definition("wheel","Save group modifier","touch:stick","Inside Groups: hold, tilt toward a group and release to replace it.")
+            new Definition("wheel","Show / hide hints","touch:stick","Toggle controller hints outside Groups. In Groups, physical Stick click assigns the highlighted group.")
         };
         private static readonly Definition[] Desktop={
             new Definition("select","Select / place","mouse:left","Selection, drag, double-click selection and board placement."),
@@ -108,7 +108,7 @@ namespace Frontier.Runtime
                     if(quest&&definitions.All(d=>entries.Any(e=>e.id==d.Id&&Touch.Any(t=>t.Default==e.input))))
                     {
                         // Older profiles allowed Trigger/B to open the wheel. They
-                        // now navigate it, so move group saving back to stick click
+                        // now navigate it, so move the hint toggle back to stick click
                         // and preserve every other mapping with one pairwise swap.
                         var save=entries.First(e=>e.id=="wheel");
                         if(save.input=="touch:trigger"||save.input=="touch:b")

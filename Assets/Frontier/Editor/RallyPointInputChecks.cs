@@ -128,8 +128,8 @@ namespace Frontier.Editor
                     Check(index >= 0, "Producer wheel exposes Clear rally independently of Cancel production");
                     var direction=wheel.DirectionFor("clear-rally-point");WheelFrame(stick: direction);
                     Check(wheel.HighlightedId == "clear-rally-point", "Right stick can highlight Clear rally");
-                    Check(WheelFrame(stick:direction,down:true,held:true) && !wheel.IsOpen && !hq.hasRallyPoint, "Wheel trigger clears the rally and is consumed before terrain input");
-                    Check(WheelFrame(held:true)&&WheelFrame(up:true) && !hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Wheel closing trigger and release preserve clear rally and the production queue");
+                    Check(WheelFrame(stick:direction,down:true,held:true) && wheel.IsOpen && !hq.hasRallyPoint && wheel.Highlighted == -1, "Wheel trigger clears rally and invalidates its removed sector while keeping Selection open");
+                    Check(WheelFrame(stick:direction,held:true)&&WheelFrame(stick:direction,up:true) && wheel.Highlighted == -1 && !hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Held direction cannot trigger a remapped sector after Clear rally disappears");
                     Reset();session.Context(first,0,0);
                     var priorIds=new System.Collections.Generic.HashSet<int>(session.Match.Entities.Keys);
                     int moveEvents=0;Point bornHeading=default;

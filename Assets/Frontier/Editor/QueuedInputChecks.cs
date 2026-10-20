@@ -63,6 +63,21 @@ namespace Frontier.Editor
 
                     Reset();Click(first,22,false);Click(first,22.5f,false);
                     Check(worker.order==CommandKind.AttackMove,"A relaxed half-second double press attacks immediately");
+                    foreach(float gap in new[]{0f,.016f,.04f,.1f,.5f})
+                    {
+                        Reset();Click(first,22,false);Click(first,22+gap,false);
+                        Check(worker.order==CommandKind.AttackMove,"Double A accepts rapid through relaxed press spacing: "+gap);
+                        Click(second,23,false);Click(second,23+gap,false);
+                        Check(worker.order==CommandKind.AttackMove&&worker.destination.Distance(second)<.01f,
+                            "A new double A retargets another point after the previous attack: "+gap);
+                    }
+                    float previousZoom=board.Zoom;board.Zoom=.5f;
+                    typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);
+                    Reset();Click(first,24,false);Click(new Point(first.x+2,first.y),24.02f,false);
+                    Check(worker.order==CommandKind.AttackMove,"Fast double A tolerates a small physical pointer shift on a zoomed-out board");
+                    Reset();Click(first,24,false);Click(new Point(first.x+4,first.y),24.02f,false);
+                    Check(worker.order==CommandKind.Move,"Distinct destinations outside the physical aim margin remain separate commands");
+                    board.Zoom=previousZoom;typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                     Reset();Click(first,23,false);Click(first,23.6f,false);
                     Check(worker.order==CommandKind.Move,"Presses beyond 0.55 seconds remain independent moves");
                     Reset();session.Send(CommandKind.Stop);Click(first,24,true);Click(first,24.5f,true);
@@ -117,6 +132,13 @@ namespace Frontier.Editor
                     Reset();Click(first,73,false);
                     Call(input,"OrderClick",new Point(first.x+.2f,first.y),worker.id,0,false,73.1f);
                     Check(worker.order==CommandKind.AttackMove,"Small aim drift from ground onto an ally still recognizes double A");
+                    Reset();Call(input,"OrderClick",first,worker.id,0,false,73.2f);
+                    Call(input,"OrderClick",new Point(first.x+.2f,first.y),other.id,0,false,73.22f);
+                    Check(worker.order==CommandKind.AttackMove,"Two fast taps across different friendly bodies still form one attack gesture");
+                    Call(input,"OrderClick",second,worker.id,0,false,73.3f);
+                    Call(input,"OrderClick",new Point(second.x+.2f,second.y),other.id,0,false,73.32f);
+                    Check(worker.order==CommandKind.AttackMove&&session.LastCommandPoint.Distance(new Point(second.x+.2f,second.y))<.01f,
+                        "Another fast double A across the army retargets attack instead of ending as Move: "+worker.order+" at "+session.LastCommandPoint.x+", "+session.LastCommandPoint.y);
 
                     Reset();session.AttackMoveMode=true;Click(new Point(-10,-10),74,false);
                     Check(session.AttackMoveMode,"A rejected menu attack keeps targeting armed so the destination can be corrected");

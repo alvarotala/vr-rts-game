@@ -26,6 +26,7 @@ namespace Frontier.Runtime
         private float dragThreshold=1.5f;
         private const float DoubleTapWindow=.35f;
         public const float AttackDoubleTapWindow=.55f;
+        private const float AttackTapAimTolerance=.035f;
         private float lastActionPress=-1,lastSelectPress=-1;
         private int actionSequence,actionEntity,actionResource,selectEntity;
         private Point actionPoint;
@@ -61,12 +62,16 @@ namespace Frontier.Runtime
                 ray=Quest.PointerRay();
                 var select=HotkeyInput.Read(gameplay?bindings.Get(true,"select"):"touch:trigger",primary);
                 var action=HotkeyInput.Read(gameplay?bindings.Get(true,"order"):"touch:a",primary);
-                var modifier=HotkeyInput.Read(bindings,true,"add");var wheel=HotkeyInput.Read(bindings,true,"wheel");
+                var modifier=HotkeyInput.Read(bindings,true,"add");
+                // Groups use physical stick click, just as wheel navigation uses
+                // physical Trigger/B. Outside Groups the hint hotkey remains editable.
+                var stickClick=HotkeyInput.Read("touch:stick",primary);
+                var wheel=Wheel!=null&&Wheel.InGroupMenu?stickClick:HotkeyInput.Read(bindings,true,"wheel");
                 down=select.Down;up=select.Up;triggerHeld=select.Held;
                 add=modifier.Held;gripDown=modifier.Down;order=action.Down;
                 cancel=HotkeyInput.Read(gameplay?bindings.Get(true,"back"):"touch:b",primary).Down;
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);
-                wheelPressed=wheel.Down;wheelHeld=wheel.Held;wheelReleased=wheel.Up;
+                wheelPressed=wheel.Down;wheelHeld=wheel.Held||stickClick.Held;wheelReleased=wheel.Up;
                 menuDepth=primaryStick.y;
                 laser.enabled=!Session.HasSystemPause&&Quest.PointerTracked;
                 laser.SetPosition(0,ray.GetPoint(ControllerVisuals.EmitterDistance));laser.SetPosition(1,ray.GetPoint(2));
@@ -284,8 +289,12 @@ namespace Frontier.Runtime
             bool armedAttack=Session.AttackMoveMode;
             bool armedAbility=Session.PendingAbility!=null;
             bool mode=Session.HasTargetingMode||Session.CanSetRallyPoint;
-            bool sameTarget=actionEntity==entity&&actionResource==resource&&(entity>0||actionPoint.Distance(point)<=1.5f);
-            bool nearby=actionPoint.Distance(point)<=1.5f;
+            // Small hand movements must not become different orders just because
+            // the table is zoomed out or contains more map cells.
+            float tolerance=Quest!=null&&Quest.Active&&Board!=null
+                ?Mathf.Max(1.5f,AttackTapAimTolerance/Mathf.Max(.0001f,Board.CellScale)):1.5f;
+            bool nearby=actionPoint.Distance(point)<=tolerance;
+            bool sameTarget=actionEntity==entity&&actionResource==resource&&(entity>0||nearby);
             bool previousGone=actionEntity>0&&Session.View!=null&&!System.Array.Exists(Session.View.entities,e=>e.id==actionEntity&&!e.remembered&&e.health>0);
             bool previousEnemyAlive=actionEntity>0&&Session.View!=null&&System.Array.Exists(Session.View.entities,
                 e=>e.id==actionEntity&&e.owner!=Session.View.player&&!e.remembered&&e.health>0);
@@ -294,8 +303,8 @@ namespace Frontier.Runtime
             // the same attack gesture. Two distinct living enemies remain separate.
             // Keep a quick ground click after a direct attack on a living enemy as
             // Move: that is the retreat half of deliberate hit-and-run micro.
-            if(nearby&&(actionConfirmedTarget||previousGone||(actionEntity==0&&actionResource==0)
-                ||(entity==0&&resource==0&&!previousEnemyAlive)))sameTarget=true;
+            if(nearby&&(actionConfirmedTarget||previousGone
+                ||(!previousEnemyAlive&&(actionResource==0||resource==0))))sameTarget=true;
             bool twice=!mode&&lastActionPress>=0&&now>=lastActionPress&&now-lastActionPress<=AttackDoubleTapWindow&&
                 actionSequence>0&&actionAdd==add&&sameTarget&&actionSelection.SetEquals(Session.Selection);
             int replace=twice&&add?actionSequence:0;

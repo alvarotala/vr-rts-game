@@ -137,6 +137,25 @@ namespace Frontier.Editor
                             var before=worker.position;for(int tick=0;tick<4;tick++)session.Match.Step();
                             Check(worker.position.Distance(before)>.001f&&worker.order==CommandKind.AttackMove,"The issued attack advances simulation without another confirmation");
 
+                            foreach(var destination in new[]{new Point(point.x+5,point.y),new Point(point.x+5,point.y+5),point})
+                            {
+                                Aim(destination);Frame(action);Frame();Frame(action);Frame();
+                                Check(worker.order==CommandKind.AttackMove&&worker.destination.Distance(destination)<.01f&&Pulse(destination,true),
+                                    "Rapid repeated A/X pairs attack each new destination without resetting controls ("+useLeft+", remapped "+remapped+")");
+                            }
+                            float originalZoom=board.Zoom;board.Zoom=.5f;Refresh();Call(input,"ClearPointer");
+                            var drifted=new Point(point.x+2,point.y);
+                            Aim(point);Frame();Frame(action);Frame();Aim(drifted);Frame(action);Frame();
+                            Check(worker.order==CommandKind.AttackMove&&worker.destination.Distance(drifted)<.01f&&Pulse(drifted,true),
+                                "Touch Update accepts a fast pair with physical aim drift on the small board ("+useLeft+", remapped "+remapped+")");
+                            board.Zoom=originalZoom;Refresh();
+
+                            void Aim(Point destination)
+                            {
+                                tracking.transform.position=board.Content.TransformPoint(new Vector3(destination.x,board.HeightAt(destination),destination.y))+Vector3.up
+                                    -tracking.transform.rotation*OVRInput.GetLocalControllerPosition(hand);
+                            }
+
                             void Frame(OVRInput.RawButton buttons=OVRInput.RawButton.None)
                             {
                                 controller.previousState=controller.currentState;controller.currentState=default;controller.currentState.Buttons=(uint)buttons;

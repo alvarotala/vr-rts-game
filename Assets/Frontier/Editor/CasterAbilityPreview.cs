@@ -99,7 +99,10 @@ namespace Frontier.Editor
                     caster.energy=0;Refresh();wheel.ProcessUnified(wheelRay,direction,false,false,false,false,100.30f);
                     Check(wheel.HighlightedId=="ability:"+heal.id&&wheel.Items[index].Detail.Contains("1 ready"),"Live wheel updates readiness without moving selection: "+faction);
                     wheel.ProcessUnified(wheelRay,direction,true,true,false,false,100.35f);Refresh();
-                    Check(!wheel.IsOpen&&session.PendingAbility==heal&&Close(board.PointerColor,BoardView.HealingAbilityColor),"Wheel arms green healing cursor: "+faction);
+                    Check(wheel.IsOpen&&session.PendingAbility==heal,"Wheel keeps Selection open with healing armed: "+faction);
+                    wheel.ProcessUnified(wheelRay,Vector2.zero,false,false,true,false,100.40f);
+                    wheel.ProcessUnified(wheelRay,Vector2.zero,false,false,false,false,101.25f);Refresh();
+                    Check(!wheel.IsOpen&&session.PendingAbility==heal&&Close(board.PointerColor,BoardView.HealingAbilityColor),"Releasing the stick closes Selection and keeps the green healing cursor armed: "+faction);
                     soldier.health=session.Catalog[soldier.definition].health-20;board.Pointer=soldier.position;Refresh();Capture(faction+"-heal-target");
                     var groundRay=new Ray(board.Content.TransformPoint(new Vector3(soldier.position.x,0,soldier.position.y))+Vector3.up,Vector3.down);
                     Call(input,"PointBoard",groundRay,true,false,false,false);Call(input,"PointBoard",groundRay,false,true,false,false);
