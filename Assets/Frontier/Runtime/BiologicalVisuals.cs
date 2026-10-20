@@ -20,7 +20,7 @@ namespace Frontier.Runtime
             : role == "caster" ? new Vector3(0, .82f, .24f) : new Vector3(0, .32f, .25f);
         public static float BadgeHeight(string role) => role == "caster" ? 1.5f : role == "ranged" ? 1.12f : role == "melee" ? 1.15f : role == "siege" ? 1.12f : .8f;
 
-        public static Mesh Unit(Archetype type, bool animatedWorker, bool animatedCombat)
+        public static Mesh Unit(Archetype type, bool animatedWorker, bool animatedCombat, bool collapsed = false)
         {
             var b = new Builder(); string role = type.role;
             if (role == "worker")
@@ -91,23 +91,39 @@ namespace Frontier.Runtime
                 }
                 Eyes(b, new Vector3(0, .78f, .29f), .18f);
             }
+            // The abdomen settles between folded legs instead of rolling the entire
+            // insect onto its back. Keep topology identical for a cached pose blend.
+            var collapseRotation = Quaternion.Euler(role == "caster" ? 40 : role == "ranged" ? 24 : role == "melee" ? 15 : 6, 0, 3);
+            var collapsePivot = new Vector3(0, .27f, -.12f);
+            Vector3 Collapse(Vector3 point) => collapsePivot + collapseRotation * (point - collapsePivot) - Vector3.up * (role == "siege" ? .15f : .17f);
+            if (collapsed) b.Transform(Collapse);
             if (!animatedWorker && !animatedCombat)
                 for (int pair = 0; pair < LegPairs(type); pair++) for (int side = -1; side <= 1; side += 2)
-                    Leg(b, LegPosition(type, pair, side), LegRotation(pair, side));
-            if (!animatedCombat && role != "worker") Weapon(b, role, WeaponPosition(role));
+                    Leg(b, collapsed ? Collapse(LegPosition(type, pair, side)) : LegPosition(type, pair, side), LegRotation(pair, side), collapsed);
+            if (!animatedCombat && role != "worker")
+            {
+                int first = b.VertexCount;
+                Weapon(b, role, WeaponPosition(role));
+                if (collapsed) b.Transform(Collapse, first);
+            }
             return b.Finish("Living unit / " + type.id);
         }
         public static Mesh CombatPart(Archetype type, bool leg)
         {
             var b = new Builder(); if (leg) Leg(b, Vector3.zero, Quaternion.identity); else Weapon(b, type.role, Vector3.zero);
-            return b.Finish("Living limb / " + type.id, type.collisionRadius / .45f);
+            return b.Finish("Living limb / " + type.id, UnitVisuals.ModelScale(type));
         }
-        private static void Leg(Builder b, Vector3 origin, Quaternion rotation)
+        private static void Leg(Builder b, Vector3 origin, Quaternion rotation, bool folded = false)
         {
             Vector3 P(float x, float y, float z) => origin + rotation * new Vector3(x, y, z);
-            b.Tube(P(0, 0, 0), P(0, .06f, .28f), .065f, .045f, 0, Shell);
-            b.Lobe(P(0, .06f, .28f), Vector3.one * .11f, 1, Soft);
-            b.Tube(P(0, .06f, .28f), P(.025f, -.32f, .49f), .047f, .008f, 1, Bone);
+            // Front and rear hips reach different heights as the abdomen settles.
+            // Fold each knee toward a shared contact plane; a low front hip must
+            // not push its foot underground and lever the whole corpse back up.
+            var knee = folded ? P(0, Mathf.Max(-.025f, .065f - origin.y), .16f) : P(0, .06f, .28f);
+            var foot = folded ? P(.025f, .015f - origin.y, .06f) : P(.025f, -.32f, .49f);
+            b.Tube(P(0, 0, 0), knee, .065f, .045f, 0, Shell);
+            b.Lobe(knee, Vector3.one * .11f, 1, Soft);
+            b.Tube(knee, foot, .047f, .008f, 1, Bone);
         }
         private static void Weapon(Builder b, string role, Vector3 origin)
         {
@@ -241,8 +257,11 @@ namespace Frontier.Runtime
         private sealed class Builder
         {
             private readonly List<Vector3> vertices = new List<Vector3>();
+            public int VertexCount => vertices.Count;
             private readonly List<Color> colors = new List<Color>();
             private readonly List<int>[] triangles = { new List<int>(), new List<int>(), new List<int>() };
+            public void Transform(System.Func<Vector3, Vector3> transform, int first = 0)
+            { for (int i = first; i < vertices.Count; i++) vertices[i] = transform(vertices[i]); }
             private void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, int material, Color color)
             {
                 int n = vertices.Count; vertices.AddRange(new[] { a, b, c, d }); for (int i = 0; i < 4; i++) colors.Add(color);

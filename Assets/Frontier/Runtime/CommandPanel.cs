@@ -20,21 +20,25 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide }
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
         public bool IsDragging => moving;
-        private MenuPage returnPage=MenuPage.Main;
+        private readonly Stack<MenuPage> menuHistory=new Stack<MenuPage>();
         private int actionIndex;
         private Target pressed, hovered;
         private float pressedAt;
         private float nextText;
+        private string lastMenuMessage;
+        private uint lastMenuMessageVersion;
+        private float menuMessageUntil;
         private RectTransform moveHandle, resetHandle;
         private Image moveImage, resetImage;
         private bool moving, customPosition, positionInitialized;
         private bool lobbyPositionInitialized;
-        private Vector3 lobbyPosition;
+        private Vector3 lobbyPosition, lastLobbyEyePosition;
+        private Quaternion lastLobbyEyeRotation;
         private bool UsesLobbyPosition=>Quest!=null&&Session!=null&&Quest.Active&&!Session.Running;
         private float grabDistance;
         private Vector3 grabOffset, boardOffset;
@@ -66,6 +70,7 @@ namespace Frontier.Runtime
             CreateActionHelp();
             CreateControlGuide();
             CreateHotkeys();
+            CreateReferenceGuide();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -113,9 +118,17 @@ namespace Frontier.Runtime
                     lobbyPositionInitialized=false;moving=false;CancelPointerInteraction();
                     root.gameObject.SetActive(false);return false;
                 }
+                var eye=Quest.Camera.transform;
+                // A valid first pose can still be corrected by Quest localization or
+                // recentering without a tracking-lost event. Recover from that jump;
+                // ordinary head movement keeps the menu fixed in the room.
+                if(lobbyPositionInitialized&&(Vector3.Distance(lastLobbyEyePosition,eye.position)>.75f
+                    ||Quaternion.Angle(lastLobbyEyeRotation,eye.rotation)>60
+                    ||(!moving&&Vector3.Distance(lobbyPosition,eye.position)>3.25f)))
+                {lobbyPositionInitialized=false;moving=false;CancelPointerInteraction();}
+                lastLobbyEyePosition=eye.position;lastLobbyEyeRotation=eye.rotation;
                 if(!lobbyPositionInitialized)
                 {
-                    var eye=Quest.Camera.transform;
                     var forward=Vector3.ProjectOnPlane(eye.forward,Vector3.up);
                     if(forward.sqrMagnitude<.01f)forward=Vector3.Cross(eye.right,Vector3.up);
                     if(forward.sqrMagnitude<.01f)forward=Vector3.forward;
@@ -182,6 +195,8 @@ namespace Frontier.Runtime
         }
         private void UpdateMenuText()
         {
+            if(lastMenuMessage!=Session.Message||lastMenuMessageVersion!=Session.MessageVersion)
+            {lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=Time.unscaledTime+8;}
             harvesting.text="";harvesting.color=accent;
             status.text=Session.Message;
             switch(Page)
@@ -189,28 +204,37 @@ namespace Frontier.Runtime
                 case MenuPage.Main:
                     headline.text="FRONTIER / COMMAND";economy.text="MAIN MENU";
                     selection.text="Lead your faction from a tabletop battlefield. Play offline against the AI.";
-                    status.text="Choose New Match to begin.";break;
+                    status.text=Board.Placed?"Your saved play space is ready. Adjust it in Settings if needed.":"Place your battlefield when you start a match, or prepare it in Settings.";break;
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
-                    harvesting.text=Board.Placed?"BOARD READY":"BOARD PLACEMENT WILL OPEN WHEN YOU START";
-                    harvesting.text+=Session.Difficulty=="hard"?" · Fast economy · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Builds and scouts · Attacks from 5 min.":" · Reinforcements and spells · Attacks from 3:30.";break;
+                    harvesting.text=Board.Placed?"BOARD READY":"PLACE BOARD WHEN STARTING";
+                    harvesting.text+=Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.";
+                    status.text="Both factions start equally. Controls and play space are in Settings.";break;
                 case MenuPage.Settings:
-                    headline.text="SETTINGS";economy.text="CONTROLS / SOUND / PLAY SPACE";
-                    selection.text=Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.";break;
+                    headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
+                    selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":"Prepare your battlefield and choose where it sits in your room.";
+                    status.text=settingsTab==SettingsTab.PlaySpace?(Board.Placed?"Board position saved. Reposition it whenever you change play space.":"No board position set. Placement will open before the match starts."):"Preferences are shared before and during a match, and saved on this device.";break;
                 case MenuPage.Hotkeys:
                     headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
                     selection.text=hotkeysTouch?"Active hand only. Menus: Trigger / "+Bindings.MenuConfirmName+" · "+Bindings.MenuBackName+" to go back.":"Edit gameplay inputs. Menus always use left-click and Escape to go back.";
                     status.text=hotkeyMessage;break;
                 case MenuPage.Pause:
                     headline.text="MATCH PAUSED";economy.text=Session.Map.title;
-                    selection.text=Board.BaseTargeting?"Base selection: aim at the ground under a unit. Foreground models do not block it."
-                        :"Body selection is active. Try Bases to reach units behind buildings or minerals.";
-                    status.text="Returning to the main menu ends the current match.";break;
+                    selection.text=$"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · {DifficultyLabel} AI";
+                    status.text="Take your time. The match stays paused while you browse guides and settings.";break;
+                case MenuPage.Guides:
+                    headline.text="GUIDES";economy.text=MenuOrigin+" / GUIDES";
+                    selection.text="Learn the controls, compare units and plan your base.";
+                    status.text="Unit and structure data show base values, before match upgrades.";break;
+                case MenuPage.UnitsGuide:case MenuPage.StructuresGuide:
+                    headline.text=Page==MenuPage.UnitsGuide?"UNIT GUIDE":"STRUCTURE GUIDE";economy.text="GUIDES / "+(Page==MenuPage.UnitsGuide?"UNITS":"STRUCTURES");
+                    selection.text="Choose a faction and an entry to inspect its role and base stats.";
+                    status.text="Base values before upgrades. Browsing does not change your match setup.";break;
                 case MenuPage.Guide:
                     headline.text="CONTROL GUIDE";economy.text="COMMANDS / GESTURES";
                     selection.text="Choose a category to review its controls.";
-                    status.text="Your match stays paused. Back returns to the pause menu.";break;
+                    status.text=Session.Running?"Your match stays paused. Back returns to Guides.":"Review controls before playing. Back returns to Guides.";break;
                 case MenuPage.LeaveConfirmation:
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
                     selection.text="Leave this match and return to the main menu? Match progress will be lost.";
@@ -221,7 +245,7 @@ namespace Frontier.Runtime
                     selection.text="Play again with the same setup or return to the main menu.";
                     status.text="Choose Rematch for a fresh start.";break;
             }
-            if(Quest.Placing)status.text=Session.Message;
+            if(Quest.Placing||Quest.StartPending||((Page==MenuPage.Settings||Page==MenuPage.MatchSetup)&&Time.unscaledTime<menuMessageUntil))status.text=Session.Message;
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
         {
@@ -249,78 +273,34 @@ namespace Frontier.Runtime
             LayoutPage();
             BuildControlGuide();
             BuildHotkeys();
-            if(Page==MenuPage.Main)
-            {
-                Add("New Match",()=>Show(MenuPage.MatchSetup),primary:true);
-                Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
-                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));return;
-            }
-            if(Page==MenuPage.MatchSetup)
-            {
-                Add("Faction: "+ShortFaction(Session.Faction),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
-                Add("Opponent: "+ShortFaction(Session.EnemyFaction),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
-                Add("AI: "+DifficultyLabel,()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":Session.Difficulty=="normal"?"hard":"easy";Rebuild();});
-                Add("Map: "+Session.Map.title,()=>{Session.LoadMap(Session.MapId=="rift"?"training":"rift");Board.Rebuild();Rebuild();});
-                Add("Place board",()=>PlaceRequested?.Invoke());
-                Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
-                Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
-                Add("Detect surfaces",()=>Quest.LoadRoom());
-                Add("START MATCH",Quest.RequestStartMatch,primary:true);
-                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));Add("Back",Back);return;
-            }
-            if(Page==MenuPage.Settings)
-            {
-                Add("Hand: "+Bindings.HandName,ToggleControllerHand);
-                Add("Reposition board",()=>PlaceRequested?.Invoke());
-                Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
-                Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
-                Add("Detect surfaces",()=>Quest.LoadRoom());
-                Add("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%",()=>{AudioFeedback.CycleMusicVolume();Rebuild();});
-                Add("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%",()=>{AudioFeedback.CycleEffectsVolume();Rebuild();});
-                Add("Back",Back);return;
-            }
+            BuildReferenceGuide();
+            if(BuildMenuPage())return;
             if(Page==MenuPage.Hotkeys)
             {
                 Add("Back",Back);
                 if(!HotkeyModalOpen)Add("Restore device defaults",RequestHotkeyReset);
                 return;
             }
-            if(Page==MenuPage.Pause)
-            {
-                Add("Resume match",()=>Show(MenuPage.Actions),primary:true);
-                Add("Selection: "+(Board.BaseTargeting?"Bases":"Bodies"),()=>{Board.SetBaseTargeting(!Board.BaseTargeting);Rebuild();});
-                Add("Control guide",()=>OpenSubmenu(MenuPage.Guide));
-                Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
-                Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));
-                Add("Return to main menu",()=>Show(MenuPage.LeaveConfirmation));return;
-            }
-            if(Page==MenuPage.Guide){Add("Back",Back);return;}
-            if(Page==MenuPage.LeaveConfirmation)
-            {
-                Add("Keep playing",()=>Show(MenuPage.Actions),primary:true);
-                Add("Leave match",()=>Session.LeaveMatch());return;
-            }
-            if(Page==MenuPage.Result)
-            {
-                Add("Rematch",Quest.RequestStartMatch,primary:true);
-                Add("Main menu",()=>Session.LeaveMatch());return;
-            }
+            if(Page==MenuPage.Guide||IsReferencePage){Add("Back",Back);return;}
             BuildMatchActions();
         }
         private void Show(MenuPage page)
         {
+            if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.Result)menuHistory.Clear();
+            if(page==MenuPage.Settings&&Page!=MenuPage.Hotkeys)settingsTab=SettingsTab.Controls;
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
             {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
             if(page!=MenuPage.Hotkeys)DismissHotkeyModal();
             if(page!=MenuPage.MatchSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
+            lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=0;
             ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
             Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result);
             Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(default,default,false);
             Board.SetVisible(ShowsBoard);Rebuild();
         }
-        private void OpenSubmenu(MenuPage page){returnPage=Page;Show(page);}
+        private void OpenSubmenu(MenuPage page){menuHistory.Push(Page);Show(page);}
         private void ToggleControllerHand()
         {
             Bindings.SelectHand(!Bindings.LeftHand);Bindings.Save();CancelPointerInteraction();
@@ -333,7 +313,8 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.MatchSetup:Show(MenuPage.Main);break;
-                case MenuPage.Settings:case MenuPage.Hotkeys:case MenuPage.Guide:Show(returnPage);break;
+                case MenuPage.Settings:case MenuPage.Hotkeys:case MenuPage.Guides:case MenuPage.Guide:case MenuPage.UnitsGuide:case MenuPage.StructuresGuide:
+                    Show(menuHistory.Count>0?menuHistory.Pop():Page==MenuPage.Hotkeys?MenuPage.Settings:Page==MenuPage.Guide||IsReferencePage?MenuPage.Guides:Session.Running?MenuPage.Pause:MenuPage.Main);break;
                 case MenuPage.Actions:Show(MenuPage.Pause);break;
                 case MenuPage.Pause:Show(MenuPage.Actions);break;
                 case MenuPage.LeaveConfirmation:Show(MenuPage.Pause);break;
@@ -343,7 +324,7 @@ namespace Frontier.Runtime
         public void ToggleMenu()
         {
             if(HotkeyModalOpen){CancelHotkeyChange();return;}
-            if(Page==MenuPage.Hotkeys||Page==MenuPage.Guide){Back();return;}
+            if(Page==MenuPage.Settings||Page==MenuPage.Hotkeys||Page==MenuPage.Guides||Page==MenuPage.Guide||IsReferencePage){Back();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             if(!Session.Running){Back();return;}
             if(Session.Match.Winner!=-1)return;

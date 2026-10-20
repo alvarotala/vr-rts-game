@@ -25,6 +25,10 @@ namespace Frontier.Runtime
             ? (Session.PendingAbility.effect=="heal"?HealingAbilityColor:DamageAbilityColor)
             : Session != null && Session.AttackPointerActive ? AttackPointerColor : NormalPointerColor;
         private Transform terrainRoot;
+        private GridMap terrainGrid;
+        private TerrainRegion[] terrainRamps;
+        private DesertScenery desertScenery;
+        private FogVisuals fogVisuals;
         private MeshCollider terrainCollider;
         private Matrix4x4 raycastTransform;
         private readonly Dictionary<int, Transform> entities = new Dictionary<int, Transform>();
@@ -110,6 +114,8 @@ namespace Frontier.Runtime
             weapons?.Dispose();
             abilityEffects?.Dispose();
             deathEffects?.Dispose();
+            fogVisuals?.Dispose();
+            desertScenery?.Dispose();
             harvestingMarkers?.Dispose();
             workerVisuals?.Dispose();
             creepVisuals?.Dispose();
@@ -132,6 +138,8 @@ namespace Frontier.Runtime
             weapons?.Dispose();weapons=null;firing.Clear();
             abilityEffects?.Dispose();abilityEffects=null;
             deathEffects?.Dispose();deathEffects=null;
+            fogVisuals?.Dispose();fogVisuals=null;
+            desertScenery?.Dispose();desertScenery=null;
             harvestingMarkers?.Dispose();harvestingMarkers=null;
             workerVisuals?.Dispose();workerVisuals=null;
             creepVisuals?.Dispose();creepVisuals=null;
@@ -153,28 +161,34 @@ namespace Frontier.Runtime
             creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
             orderQueueVisuals=new OrderQueueVisuals(Content);
             resourceVisuals.BindVapor(Content,fog,Session.Map.width,Session.Map.height);
-            var grid=new GridMap(Session.Map);
+            var grid=terrainGrid=new GridMap(Session.Map);
+            terrainRamps=new TerrainRegion[grid.Count];
+            foreach(var region in Session.Map.terrain.Where(r=>r.ramp))
+                for(int y=region.y;y<region.y+region.height;y++)for(int x=region.x;x<region.x+region.width;x++)terrainRamps[grid.Index(x,y)]=region;
+            bool desert=Session.Map.theme=="desert";
+            ground.SetColor("_BaseColor",desert?new Color(.72f,.48f,.24f):new Color(.16f,.31f,.31f));
+            ground.SetFloat("_Desert",desert?1:0);ground.SetFloat("_Grid",desert?.3f:1);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
             for(int y=0;y<grid.Height;y++)for(int x=0;x<grid.Width;x++)
             {
-                int i=grid.Index(x,y);float h=Height(grid,i);
-                Color c=!grid.Walkable[i]?new Color(.35f,.39f,.45f):grid.Ramp[i]?new Color(.75f,.72f,.45f):grid.Elevation[i]>0?new Color(.8f,.88f,.77f):Color.white;
-                float VertexHeight(float vx,float vy)
-                {
-                    if(!grid.Ramp[i])return h;
-                    var ramp=Session.Map.terrain.Last(r=>r.ramp&&x>=r.x&&x<r.x+r.width&&y>=r.y&&y<r.y+r.height);
-                    float t=ramp.rampAxis=="x"?(vx-ramp.x)/ramp.width:(vy-ramp.y)/ramp.height;
-                    return (ramp.rampDirection>0?t:1-t)*1.5f;
-                }
+                int i=grid.Index(x,y);
+                Color c=desert?(!grid.Walkable[i]?new Color(.69f,.53f,.39f):grid.Ramp[i]?new Color(1.09f,.98f,.8f):grid.Elevation[i]>0?new Color(1.16f,1.04f,.84f):Color.white)
+                    :!grid.Walkable[i]?new Color(.35f,.39f,.45f):grid.Ramp[i]?new Color(.75f,.72f,.45f):grid.Elevation[i]>0?new Color(.8f,.88f,.77f):Color.white;
+                float VertexHeight(float vx,float vy)=>SurfaceHeight(i,vx,vy);
                 AddQuad(new Vector3(x,VertexHeight(x,y),y),new Vector3(x,VertexHeight(x,y+1),y+1),new Vector3(x+1,VertexHeight(x+1,y+1),y+1),new Vector3(x+1,VertexHeight(x+1,y),y),c);
-                if(h>0)
+                // Only exposed edges need cliff faces. Neighbor samples use the same
+                // ramp surface as the collider and units, without internal walls.
+                void Edge(float ax,float ay,float bx,float by,int nx,int ny)
                 {
-                    AddQuad(new Vector3(x,0,y),new Vector3(x,h,y),new Vector3(x+1,h,y),new Vector3(x+1,0,y),c*.7f);
-                    AddQuad(new Vector3(x+1,0,y+1),new Vector3(x+1,h,y+1),new Vector3(x,h,y+1),new Vector3(x,0,y+1),c*.7f);
-                    AddQuad(new Vector3(x,0,y+1),new Vector3(x,h,y+1),new Vector3(x,h,y),new Vector3(x,0,y),c*.7f);
-                    AddQuad(new Vector3(x+1,0,y),new Vector3(x+1,h,y),new Vector3(x+1,h,y+1),new Vector3(x+1,0,y+1),c*.7f);
+                    int neighbor=grid.Inside(nx,ny)?grid.Index(nx,ny):-1;
+                    float a=VertexHeight(ax,ay),b=VertexHeight(bx,by);
+                    float lowA=neighbor<0?0:SurfaceHeight(neighbor,ax,ay),lowB=neighbor<0?0:SurfaceHeight(neighbor,bx,by);
+                    if(a<=lowA+.001f&&b<=lowB+.001f)return;
+                    AddQuad(new Vector3(ax,Mathf.Min(a,lowA),ay),new Vector3(ax,a,ay),new Vector3(bx,b,by),new Vector3(bx,Mathf.Min(b,lowB),by),c*(desert?.82f:.7f));
                 }
+                Edge(x,y,x+1,y,x,y-1);Edge(x+1,y+1,x,y+1,x,y+1);
+                Edge(x,y+1,x,y,x-1,y);Edge(x+1,y,x+1,y+1,x+1,y);
             }
             void AddQuad(Vector3 a,Vector3 b,Vector3 c,Vector3 d,Color tint)
             {int n=vertices.Count;vertices.AddRange(new[]{a,b,c,d});triangles.AddRange(new[]{n,n+1,n+2,n,n+2,n+3});foreach(var v in new[]{a,b,c,d}){uv.Add(new Vector2(v.x/grid.Width,v.z/grid.Height));colors.Add(tint);}}
@@ -182,8 +196,11 @@ namespace Frontier.Runtime
             terrainRoot.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;terrainRoot.gameObject.AddComponent<MeshRenderer>().sharedMaterial=ground;
             terrainCollider=terrainRoot.gameObject.AddComponent<MeshCollider>();terrainCollider.sharedMesh=mesh;
             raycastTransform=Matrix4x4.zero;
-            foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
+            if(desert)desertScenery=new DesertScenery(this,fog,grid);
+            else foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
+            fogVisuals=new FogVisuals(this,fog,desert?new Color(.44f,.32f,.21f):new Color(.14f,.23f,.29f));
+            fogVisuals.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
         private void FaceMoveOrder(int id,Point destination) => pendingMoveFacing[id]=destination;
@@ -195,6 +212,7 @@ namespace Frontier.Runtime
             {
                 weapons?.Clear();
                 abilityEffects?.Clear();
+                fogVisuals?.Hide();
                 harvestingMarkers?.Hide();
                 workerVisuals?.Hide();
                 orderQueueVisuals?.Hide();
@@ -221,6 +239,7 @@ namespace Frontier.Runtime
         private void LateUpdate()
         {
             UpdateTransform(); UpdateFog(); UpdatePointer();
+            fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,Session.View?.tick/(float)Simulation.TickRate??0);
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
             workerVisuals.Begin(this,Time.unscaledDeltaTime);
@@ -389,6 +408,13 @@ namespace Frontier.Runtime
             if (entities.TryGetValue(id, out var visual)) { rotation = visual.localRotation; return true; }
             rotation = Quaternion.identity; return false;
         }
+        internal bool TryUnitDeathPose(int id,out Vector3 position,out Quaternion rotation,out Vector3 bodyPosition,out Quaternion bodyRotation)
+        {
+            position=bodyPosition=Vector3.zero;rotation=bodyRotation=Quaternion.identity;
+            if(!entities.TryGetValue(id,out var visual)||!parts.TryGetValue(visual,out var cached))return false;
+            position=visual.localPosition;rotation=visual.localRotation;
+            bodyPosition=cached.model.localPosition;bodyRotation=cached.model.localRotation;return true;
+        }
         private Transform MakeEntity(Archetype type,int owner)
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
@@ -416,9 +442,16 @@ namespace Frontier.Runtime
             for(int i=0;i<fogColors.Length;i++){byte v=Session.View==null?(byte)255:Session.View.visibility[i]==2?(byte)255:Session.View.visibility[i]==1?(byte)75:(byte)0;fogColors[i]=new Color32(v,v,v,255);}
             fog.SetPixels32(fogColors);fog.Apply(false);
         }
-        private static float Height(GridMap map,int cell) => map.SurfaceLevel[cell]*1.5f;
+        private float TerrainRise=>Session.Map.theme=="desert"?3f:1.5f;
+        private float SurfaceHeight(int cell,float x,float y)
+        {
+            if(!terrainGrid.Ramp[cell])return terrainGrid.SurfaceLevel[cell]*TerrainRise;
+            var ramp=terrainRamps[cell];
+            float t=ramp.rampAxis=="x"?(x-ramp.x)/ramp.width:(y-ramp.y)/ramp.height;
+            return (ramp.rampDirection>0?t:1-t)*TerrainRise;
+        }
         public float HeightAt(Point point)
-        {if(Session.Match==null)return 0;int c=Session.Match.Map.Cell(point);return c<0?0:Height(Session.Match.Map,c);}
+        {if(terrainGrid==null)return 0;int c=terrainGrid.Cell(point);return c<0?0:SurfaceHeight(c,point.x,point.y);}
         private void UpdatePointer()
         {
             if(ground==null)return;

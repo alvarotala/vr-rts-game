@@ -91,8 +91,8 @@ namespace Frontier.Editor
                 var panel=console.AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;Call(panel,"Start");preview.AddSingleGO(console);
                 var input=fixture.AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Quest=quest;input.Panel=panel;
                 keyboard=InputSystem.AddDevice<Keyboard>();mouse=InputSystem.AddDevice<Mouse>();
-                Refresh();Click("Hotkeys");
-                Check(!session.Running&&panel.Page==CommandPanel.MenuPage.Hotkeys,"Hotkeys opens before a match");Capture("01-desktop-bindings");
+                Refresh();Click("Settings");Click("Controls");Click("Hotkeys");
+                Check(!session.Running&&panel.Page==CommandPanel.MenuPage.Hotkeys,"Hotkeys opens from unified Settings before a match");Capture("01-desktop-bindings");
                 Click("Change: order");Neutral();panel.CaptureHotkeyInput(Miss());
                 Keys(Key.Q);panel.CaptureHotkeyInput(Miss());
                 Check(panel.Bindings.Get(false,"order")=="key:Q"&&HotkeyBindings.Load().Get(false,"order")=="key:Q","Captured keyboard input applies and persists immediately: "+panel.Bindings.Get(false,"order")+" / "+Field<string>(panel,"hotkeyMessage")+" / ready="+Field<bool>(panel,"hotkeyCaptureReady")+" / key="+HotkeyInput.Pressed(false)+" / held="+keyboard.qKey.isPressed);
@@ -120,9 +120,9 @@ namespace Frontier.Editor
                 Check(Field<Text[]>(panel,"hotkeyBindings")[0].text.StartsWith("A on map"),"Reference follows the customized Touch selection input");
                 Click("Restore device defaults");Capture("04-restore-defaults");Click("Confirm change");Drain();
                 Check(panel.Bindings.Name(true,"select")=="Trigger"&&panel.Bindings.Get(false,"order")=="key:Q","UI reset preserves the other device profile");
-                Click("Back");Click("Settings");Click("Hand: Right");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Settings,"Hotkeys returns to its parent Settings page");Click("Controls");Click("Hand: Right");
                 Check(quest.ActiveController==OVRInput.Controller.LTouch&&HotkeyBindings.Load().LeftHand,"Selected hand persists and controls the pointer's controller source");
-                Capture("06-left-settings");Click("Back");Click("Hotkeys");
+                Capture("06-left-settings");Click("Hotkeys");
                 Check(Field<Text>(panel,"hotkeysDevice").text.Contains("Left Touch")&&
                     Field<Text[]>(panel,"hotkeyBindings")[1].text.StartsWith("X ")&&Field<Text[]>(panel,"hotkeyBindings")[3].text.StartsWith("Y "),"Hotkeys shows only the active left hand with X/Y labels");
                 Check(!panel.GetComponentsInChildren<RectTransform>().Any(t=>t.name=="Quest Touch"||t.name=="Mouse / Keyboard"),"Inactive device tabs are absent");
@@ -132,24 +132,25 @@ namespace Frontier.Editor
                 Check(panel.Bindings.LeftHand&&panel.Bindings.Name(true,"order")=="X","Restoring bindings keeps the chosen hand");
                 Click("Hotkeys: Board");
                 Check(Field<Text[]>(panel,"hotkeyBindings")[1].text.StartsWith("Left stick"),"Reference instructions follow the active stick");
-                Click("Back");Click("Settings");Click("Hand: Left");Click("Back");Click("Hotkeys");
+                Click("Back");Click("Controls");Click("Hand: Left");Click("Hotkeys");
                 Check(panel.Bindings.Name(true,"order")=="A"&&quest.ActiveController==OVRInput.Controller.RTouch,"Switching back restores right-side button names without changing bindings");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
-                Click("Back");Click("New Match");Click("Hotkeys");Click("Back");
-                Check(panel.Page==CommandPanel.MenuPage.MatchSetup,"Pre-match setup returns to the same setup");
+                Click("Back");Click("Back");Click("New Match");
+                Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&!panel.GetComponentsInChildren<RectTransform>().Any(t=>t.gameObject.activeInHierarchy&&(t.name=="Hotkeys"||t.name=="Settings")),"Pre-match setup keeps configuration in the shared Settings menu");
                 board.Placed=true;Click("START MATCH");var match=session.Match;
                 var worker=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");session.Select(worker.id,false);session.Group(0,true);
-                Click("Pause");Click("Settings");int handTick=match.Tick;Click("Hand: Right");match.Step();
+                Click("Pause");Click("Settings");Click("Controls");int handTick=match.Tick;Click("Hand: Right");match.Step();
                 Check(session.IsPaused&&match.Tick==handTick&&panel.Bindings.LeftHand,"Changing hands from pause keeps the same match paused");
-                Click("Back");Click("Hotkeys");int tick=match.Tick;int minerals=session.View.minerals;
+                Click("Hotkeys");int tick=match.Tick;int minerals=session.View.minerals;
                 Click("Change: select");Neutral();panel.CaptureHotkeyInput(Miss());Keys(Key.E);panel.CaptureHotkeyInput(Miss());Drain();
                 for(int i=0;i<30;i++)match.Step();
                 Check(session.IsPaused&&match.Tick==tick&&session.View.minerals==minerals&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Editing during pause preserves simulation, resources, selection and groups");
                 Capture("05-paused-bindings");Click("Back");
+                Check(panel.Page==CommandPanel.MenuPage.Settings&&session.IsPaused,"Hotkeys Back returns to Settings without resuming");Click("Back");
                 Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Back returns to pause without resuming");
-                Click("Control guide");
+                Click("Guides");Click("Control guide");
                 Check(Field<Text[]>(panel,"controlGuideGestures")[0].text.StartsWith("E on map"),"Pause guide displays current bindings");
-                Click("Back");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Guides&&session.IsPaused,"Control guide returns through its hub while paused");Click("Back");
                 Click("Resume match");
                 Check(session.Match==match&&!session.IsPaused&&panel.AcceptsGameInput,"Resume continues the original match");
 

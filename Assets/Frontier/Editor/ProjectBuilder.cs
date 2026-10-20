@@ -88,19 +88,25 @@ namespace Frontier.Editor
                 EditorSceneManager.SaveScene(scene,ScenePath);
             }
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
+            RetainRuntimeShaders();
+            EditorUtility.SetDirty(xr);EditorUtility.SetDirty(android);EditorUtility.SetDirty(android.Manager);EditorUtility.SetDirty(openxr);EditorUtility.SetDirty(pipeline);
+            AssetDatabase.SaveAssets();AssetDatabase.Refresh();
+            Debug.Log("FRONTIER_CONFIGURED");
+        }
+        public static void RetainRuntimeShaders()
+        {
             // Shader.Find assets must be explicitly retained in player builds.
             var graphics=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
             var shaders=graphics.FindProperty("m_AlwaysIncludedShaders");
-            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Frontier/Remains","Universal Render Pipeline/Unlit","UI/Default"})
+            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Frontier/Remains","Frontier/Fog","Universal Render Pipeline/Unlit","UI/Default"})
             {
                 var shader=Shader.Find(name);if(shader==null)throw new BuildFailedException("Shader not found: "+name);
                 bool found=false;for(int i=0;i<shaders.arraySize;i++)if(shaders.GetArrayElementAtIndex(i).objectReferenceValue==shader)found=true;
                 if(!found){int i=shaders.arraySize;shaders.InsertArrayElementAtIndex(i);shaders.GetArrayElementAtIndex(i).objectReferenceValue=shader;}
             }
             graphics.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(xr);EditorUtility.SetDirty(android);EditorUtility.SetDirty(android.Manager);EditorUtility.SetDirty(openxr);EditorUtility.SetDirty(pipeline);
-            AssetDatabase.SaveAssets();AssetDatabase.Refresh();
-            Debug.Log("FRONTIER_CONFIGURED");
+            AssetDatabase.SaveAssets();
+            Debug.Log("FRONTIER_SHADERS_RETAINED");
         }
         [MenuItem("Frontier/Build Quest APK")]
         public static void BuildQuest()

@@ -116,10 +116,10 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.Highlighted == -1 && f.Wheel.IsOpen, "Centering clears the highlight without confirming");
                     f.Choose("back"); f.Confirm();
                     f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == null, "Back reaches the root with no action on down");
-                    f.Frame(); f.Frame(elapsed: .65f);
-                    f.Check(f.Wheel.IsOpen, "A brief centered pause leaves the wheel available");
-                    f.Frame(elapsed: .20f);
-                    f.Check(!f.Wheel.IsOpen, "The centered wheel closes after its idle timeout"); f.Drain();
+                    f.Frame(); f.Frame(elapsed: .3f);
+                    f.Check(f.Wheel.IsOpen, "A 0.3-second centered pause leaves the wheel available");
+                    f.Frame(elapsed: .15f);
+                    f.Check(!f.Wheel.IsOpen, "The centered wheel closes after 0.4 seconds"); f.Drain();
                     f.Check(f.Wheel.HintVisible, "Closing restores the compact hint");
 
                     f.OpenSelection();

@@ -67,10 +67,10 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.Items.Select(a => a.Id).SequenceEqual(trainingSlots) && f.Wheel.DirectionFor(trainId) == trainingDirection && f.Wheel.HighlightedId == trainId,
                         "Starting production preserves all sectors and the held highlight without adding Cancel");
                     f.Capture(faction + "-repeat-production");
-                    f.Frame(trainingDirection, up: true); f.Frame(); f.Frame(elapsed: .6f);
-                    f.Check(f.Wheel.IsOpen, "A brief neutral pause after production leaves the wheel available");
-                    f.Frame(elapsed: .25f);
-                    f.Check(!f.Wheel.IsOpen && f.Wheel.HintVisible, "Releasing the stick closes Selection after the existing neutral delay"); f.Drain();
+                    f.Frame(trainingDirection, up: true); f.Frame(); f.Frame(elapsed: .3f);
+                    f.Check(f.Wheel.IsOpen, "A 0.3-second neutral pause after production leaves the wheel available");
+                    f.Frame(elapsed: .15f);
+                    f.Check(!f.Wheel.IsOpen && f.Wheel.HintVisible, "Releasing the stick closes Selection after the shorter 0.4-second delay"); f.Drain();
                     CancelFromPanel(f); CancelFromPanel(f); CancelFromPanel(f);
                     f.Check(hq.queue.Count == 0 && f.Session.View.minerals == minerals, "The main panel still cancels and refunds each queued order");
                     f.Session.Match.Players[0].minerals = 0; f.Refresh(); f.OpenSelection(); f.Choose("train:" + worker.definition); f.Confirm();

@@ -54,7 +54,7 @@ namespace Frontier.Runtime
                     new Command("orders.stop","Stop","Stop action","Clear current and queued orders and brake. Units can still engage nearby enemies."),
                     new Command("orders.hold","Hold Position","Hold Position action","Clear orders and keep units in place. Attack in range without chasing; resist allied pushes.")),
                 new Topic("Menus",
-                    new Command("menus.actions",touch?"Open unified wheel":"Open unit actions",touch?"Tilt "+stick+" from center":"Select units or a building",touch?wheel+" shows/hides controller hints. Center for 0.8 s to close the wheel.":"Use the selected item's actions. Workers have Build; producers have Train and Research."),
+                    new Command("menus.actions",touch?"Open unified wheel":"Open unit actions",touch?"Tilt "+stick+" from center":"Select units or a building",touch?wheel+" shows/hides controller hints. Center for 0.4 s to close the wheel.":"Use the selected item's actions. Workers have Build; producers have Train and Research."),
                     new Command("menus.choose-action",touch?"Choose a wheel category":"Choose a menu action",touch?"Up Groups · Right Selection · Left Orders":"Point at an action button",touch?"Tilt to enter. Keep the stick tilted across levels; press Trigger for each step.":"Available actions follow your selection. Hover to preview the button before clicking."),
                     new Command("menus.execute-action","Execute an action",touch?"Trigger in the wheel":"Left-click the action",touch?"Selection stays open: press Trigger again to repeat or choose another action. Release the stick to hide.":"Execute the highlighted action. Building and Attack Move then need a point on the map."),
                     new Command("menus.back-action",touch?"Back in the wheel":"Cancel a pending action",touch?"Down + Trigger / "+bindings.MenuBackName:back,touch?bindings.MenuBackName+" goes back or closes the root. Down returns from actions; in Groups it chooses group 3.":"Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus."),
@@ -67,7 +67,7 @@ namespace Frontier.Runtime
                     new Command("groups.choose","Choose a group",touch?"1 up · 2 right · 3 down · 4 left":"Group 1 / 2 / 3 / 4 buttons",touch?"Tilt to choose. Trigger recalls; Stick click assigns your selection.":"The four buttons show how many members are currently assigned."),
                     new Command("groups.confirm-recall","Confirm recall",touch?"Trigger on a group":"Tap a Group button","Recall the group's surviving members. Empty groups show an empty message."),
                     new Command("groups.replace","Replace a group",touch?"Wheel up > group > Stick click":bindings.Name(false,"save")+" + "+groups,touch?"Press the stick to replace this group with your selection. No hold or release needed.":"Replace ALL previous members with your current selection. This does not merge selections."),
-                    new Command("groups.cancel","Cancel group choice",touch?bindings.MenuBackName:"Release mouse outside the Group button",touch?"Return to the root without recalling or saving. Centering for 0.8 s closes the wheel.":"A button press released outside its target does not recall or replace a group."),
+                    new Command("groups.cancel","Cancel group choice",touch?bindings.MenuBackName:"Release mouse outside the Group button",touch?"Return to the root without recalling or saving. Centering for 0.4 s closes the wheel.":"A button press released outside its target does not recall or replace a group."),
                     new Command("groups.panel-save","Save from the panel","Hold a Group button (over 0.65 s)","Replace that group's members with your current selection. Tap instead to recall it."),
                     new Command("groups.lifetime","Group lifetime","Applies to all four groups","Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups.")),
                 new Topic("Production",
@@ -83,7 +83,7 @@ namespace Frontier.Runtime
                     new Command("board.move-menu","Move the menu","Hold Trigger / "+bindings.MenuConfirmName+" on MOVE MENU + drag","Place the menu wherever it is comfortable. This does not move the battlefield."),
                     new Command("board.menu-distance","Adjust menu distance",bindings.HandName+" stick up / down while dragging menu","Bring the grabbed menu closer or move it farther away."),
                     new Command("board.reset-menu","Recover the menu","Reset position button","Before a match: bring the menu in front of you. During a match: reset above the board."),
-                    new Command("board.reposition","Reposition the board","Settings > Reposition board","Enter placement. The confirmed battlefield stays fixed while you walk around it."),
+                    new Command("board.reposition","Reposition the board","Settings > Play space > Reposition board","Enter placement. The confirmed battlefield stays fixed while you walk around it."),
                     new Command("board.place","Place the board","Point at a surface + "+select,"Confirm the board position. Table / Floor and Detect surfaces provide placement options."),
                     new Command("board.size-rotation","Placement size / rotation",bindings.HandName+" stick while placing","Up / down changes size; left / right rotates. These axes do not navigate the map during play."),
                     new Command("board.height","Placement height",shift+" + "+stick+" up / down","Adjust the board's height during placement. The other controller is unused."),
@@ -95,7 +95,7 @@ namespace Frontier.Runtime
                     new Command("board.reset-menu","Recover the menu",bindings.Name(false,"menu")+" / Reset position","Return the menu above the board."),
                     new Command("board.move-menu","Move the menu","Drag MOVE MENU with left mouse button","Move the console without changing the board position."),
                     new Command("board.menu-distance","Adjust menu distance","Mouse wheel while dragging menu","Bring the grabbed console closer or move it farther away."),
-                    new Command("board.place","Place or reposition the board","Settings / New Match > Place board","Point and use "+select+" to confirm. Table / Floor set the manual height."),
+                    new Command("board.place","Place or reposition the board","Settings > Play space > Reposition board","Point and use "+select+" to confirm. Table / Floor set the manual height."),
                     new Command("board.cancel-placement","Cancel board placement",back+" / "+pause+" while placing","Restore the previous board position and size."))
             };
         }

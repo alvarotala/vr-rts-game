@@ -21,7 +21,7 @@ namespace Frontier.Runtime
         public int Highlighted { get; private set; } = -1;
         public string HighlightedId => Highlighted < 0 || Highlighted >= items.Count ? null : items[Highlighted].Id;
         public IReadOnlyList<SelectionAction> Items => items;
-        public const float NeutralCloseDelay = .8f;
+        public const float NeutralCloseDelay = .4f;
         private readonly List<SelectionAction> items = new List<SelectionAction>();
         private readonly List<RadialSector> sectors = new List<RadialSector>();
         private readonly List<Text> sectorLabels = new List<Text>();

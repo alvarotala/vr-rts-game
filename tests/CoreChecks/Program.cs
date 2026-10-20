@@ -8,12 +8,19 @@ T Read<T>(string path) => JsonSerializer.Deserialize<T>(File.ReadAllText(Path.Co
 var catalog = new Catalog(Read<CatalogDefinition>("Assets/Frontier/Resources/catalog.json"));
 var map = Read<MapDefinition>("Assets/Frontier/Resources/Maps/rift.json");
 var training = Read<MapDefinition>("Assets/Frontier/Resources/Maps/training.json");
+var desert = Read<MapDefinition>("Assets/Frontier/Resources/Maps/desert.json");
 int checks = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); checks++; Console.WriteLine("PASS: " + name); }
 void Throws(Action action, string name) { try { action(); } catch (ArgumentException) { Check(true, name); return; } Check(false, name); }
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--desert-map-only"))
+{
+    DesertMapChecks.Run(catalog,desert,map,Check);
+    Console.WriteLine($"{checks} desert map checks passed.");
+    return;
+}
 if(args.Contains("--construction-clearance-only"))
 {
     ConstructionClearanceChecks.Run(catalog, Check);
@@ -76,6 +83,7 @@ if(args.Contains("--harvesting-only"))
 }
 
 FactionParityChecks.Run(catalog,new[]{map,training},Check);
+DesertMapChecks.Run(catalog,desert,map,Check);
 Check(new GridMap(map).Count == 16384 && new GridMap(training).Count == 2304, "both authored maps validate");
 ResourceLayoutChecks.Run(catalog, new[]{map, training}, Check);
 var roundtrip = JsonSerializer.Deserialize<MapDefinition>(JsonSerializer.Serialize(map, json), json);

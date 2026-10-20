@@ -17,6 +17,7 @@ namespace Frontier.Runtime
         public bool Running { get; private set; }
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
         public string Message { get; private set; } = "Choose New Match to begin.";
+        public uint MessageVersion { get; private set; }
         public event Action Changed;
         public event Action NewMatch;
         public event Action MatchClosed;
@@ -56,6 +57,7 @@ namespace Frontier.Runtime
             if (asset == null) throw new ArgumentException("Map not found: " + id);
             Map = JsonUtility.FromJson<MapDefinition>(asset.text); _ = new GridMap(Map); MapId = id;
         }
+        public void CycleMap()=>LoadMap(MapId=="rift"?"training":MapId=="training"?"desert":"rift");
         public void StartMatch()
         {
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
@@ -107,7 +109,7 @@ namespace Frontier.Runtime
         public void Pause(string reason, bool paused)
         { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null) Match.Paused = IsPaused; Changed?.Invoke(); }
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
-        public void Announce(string text) { Message = text; messageUntil = Time.unscaledTime + 6; }
+        public void Announce(string text) { Message = text; MessageVersion=unchecked(MessageVersion+1); messageUntil = Time.unscaledTime + 6; }
         public void Select(int id, bool additive, int resourceId = 0)
         {
             if (!additive) Selection.Clear();

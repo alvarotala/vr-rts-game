@@ -36,6 +36,7 @@ namespace Frontier.Core
     {
         public int schemaVersion = 1;
         public string id, title;
+        public string theme = "temperate";
         public int width = 128, height = 128;
         public TerrainRegion[] terrain = Array.Empty<TerrainRegion>();
         public SpawnDefinition[] spawns = Array.Empty<SpawnDefinition>();

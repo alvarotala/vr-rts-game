@@ -28,6 +28,10 @@ namespace Frontier.Runtime
         private Transform anchorRoot;
         private float manualHeight=.75f;
         private bool useScene=true,busy,restoring,pendingStart;
+        private bool restoredPlacement,checkingSavedBoard,savedPoseSample;
+        private Vector3 savedBoardOffset;
+        private float savedPoseSince;
+        private const float SavedBoardDistance=3f, SavedPoseSettleTime=.75f;
         public bool StartPending => pendingStart;
         private Transform placementParent;
         private Vector3 placementPosition;
@@ -86,6 +90,7 @@ namespace Frontier.Runtime
             manager.shouldBoundaryVisibilityBeSuppressed=passthrough!=null&&passthrough.isActiveAndEnabled
                 &&!passthrough.hidden&&passthrough.textureOpacity>=.99f
                 &&manager.isInsightPassthroughEnabled&&OVRManager.IsInsightPassthroughInitialized();
+            CheckSavedBoard(HeadTracked,Time.unscaledTime,SavePath);
         }
         private void OnDisable(){headPoseUpdated=false;if(manager!=null)manager.shouldBoundaryVisibilityBeSuppressed=false;}
         private void HeadPoseUpdated(OVRCameraRig cameraRig)=>headPoseUpdated=true;
@@ -108,6 +113,8 @@ namespace Frontier.Runtime
         public void RequestStartMatch()
         {
             if(restoring){pendingStart=true;Session.Announce("Restoring your saved board…");return;}
+            if(restoredPlacement&&!Placing&&Camera!=null&&SavedBoardIsDistant(Board.transform.position-Camera.transform.position))checkingSavedBoard=true;
+            if(checkingSavedBoard&&!Placing){pendingStart=true;Session.Announce("Checking your saved board position…");return;}
             if(Board.Placed&&!Placing){pendingStart=false;Session.StartMatch();return;}
             BeginPlacement();pendingStart=Placing;
         }
@@ -142,7 +149,7 @@ namespace Frontier.Runtime
             if(!hit){var plane=new Plane(Vector3.up,new Vector3(0,manualHeight,0));if(plane.Raycast(ray,out float d)&&d<5){point=ray.GetPoint(d);hit=true;}}
             if(!hit)return;
             Board.transform.position=point+Vector3.up*.005f;
-            if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");if(pendingStart){pendingStart=false;Session.StartMatch();}}
+            if(confirm){restoredPlacement=checkingSavedBoard=savedPoseSample=false;Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");if(pendingStart){pendingStart=false;Session.StartMatch();}}
         }
         public Ray PointerRay()
         {
@@ -184,10 +191,48 @@ namespace Frontier.Runtime
                 if(generation!=anchorGeneration||Placing)return;
                 anchorRoot=new GameObject("Restored board anchor").transform;anchor=anchorRoot.gameObject.AddComponent<OVRSpatialAnchor>();unbound.BindTo(anchor);
                 Board.transform.SetParent(anchorRoot,false);Board.transform.localPosition=Vector3.zero;Board.transform.localRotation=Quaternion.identity;
-                Board.Width=Mathf.Clamp(saved.width,.6f,2);Board.Placed=true;Session.Announce("Previous board placement restored.");
+                Board.Width=Mathf.Clamp(saved.width,.6f,2);BeginSavedBoardCheck();
             }
             catch(Exception e){Debug.LogWarning(e);}
             finally{restoring=false;if(pendingStart&&this!=null)RequestStartMatch();}
+        }
+        private void BeginSavedBoardCheck()
+        {
+            restoredPlacement=checkingSavedBoard=true;savedPoseSample=false;Board.Placed=false;
+        }
+        private static bool SavedBoardIsDistant(Vector3 offset)
+            =>new Vector2(offset.x,offset.z).magnitude>SavedBoardDistance||Mathf.Abs(offset.y)>2.5f;
+        private void CheckSavedBoard(bool headTracked,float now,string savePath)
+        {
+            if(!restoredPlacement||Session.Running||Placing||!headTracked||Session.HasSystemPause
+                ||(anchor!=null&&!anchor.Localized))
+            {savedPoseSample=false;return;}
+            var offset=Board.transform.position-Camera.transform.position;
+            // Wait for both anchor and head coordinates to settle. Never erase a
+            // nearby board based on the rig's temporary startup origin.
+            if(!savedPoseSample||Vector3.Distance(offset,savedBoardOffset)>.25f)
+            {savedPoseSample=true;savedBoardOffset=offset;savedPoseSince=now;return;}
+            if(now-savedPoseSince<SavedPoseSettleTime)return;
+            if(SavedBoardIsDistant(offset))
+            {
+                restoredPlacement=checkingSavedBoard=savedPoseSample=false;anchorGeneration++;
+                Board.transform.SetParent(null,true);Board.Placed=false;
+                var previous=anchor;var previousRoot=anchorRoot;anchor=null;anchorRoot=null;
+                try{if(File.Exists(savePath))File.Delete(savePath);}
+                catch(Exception e){Debug.LogWarning("Could not forget saved board placement: "+e.Message);}
+                if(previous!=null)EraseForgottenAnchor(previous);
+                else if(previousRoot!=null)Destroy(previousRoot.gameObject);
+                Session.Announce("You moved away from the saved board. Place it again before starting.");
+            }
+            else if(checkingSavedBoard)
+            {checkingSavedBoard=false;Board.Placed=true;Session.Announce("Previous board placement restored.");}
+            if(pendingStart)RequestStartMatch();
+        }
+        private async void EraseForgottenAnchor(OVRSpatialAnchor previous)
+        {
+            try{await previous.EraseAnchorAsync();}
+            catch(Exception e){Debug.LogWarning("Could not erase the previous board anchor: "+e.Message);}
+            finally{if(previous!=null)Destroy(previous.gameObject);}
         }
         private void TrackingLost(){headPoseUpdated=false;Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Tracking lost. Restore tracking and confirm the board placement.");}
         private void TrackingAcquired(){if(anchor!=null&&anchor.Localized){Board.Placed=true;Session.Pause("tracking",false);}else{Session.Pause("tracking",false);if(Session.Running)BeginPlacement();}}

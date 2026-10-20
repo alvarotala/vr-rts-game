@@ -8,10 +8,10 @@ namespace Frontier.Runtime
     public sealed class UnitVisuals
     {
         private readonly Dictionary<string,Mesh> meshes=new Dictionary<string,Mesh>();
-        // Hammer's low hull needs more visual mass than infantry. Keep its rig,
-        // muzzle and remains on the same scale, independently of simulation balance.
+        // Both artillery units need more visual mass than infantry. Keep their rigs,
+        // muzzles and remains on the same scale, independently of simulation balance.
         public static float ModelScale(Archetype type)
-            => type.collisionRadius / .45f * (type.faction == "industrial" && type.role == "siege" ? 1.8f : 1f);
+            => type.collisionRadius / .45f * (type.role == "siege" ? 1.8f : 1f);
         public static string RoleName(string role)
         {
             switch(role)

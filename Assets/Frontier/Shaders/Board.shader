@@ -6,6 +6,7 @@ Shader "Frontier/Board"
         _FogTex("Visibility", 2D) = "white" {}
         _UseFog("Fog", Float) = 0
         _Grid("Grid", Float) = 0
+        _Desert("Desert sand", Float) = 0
         _SelectionBounds("Selection bounds", Vector) = (0,0,0,0)
         _SelectionWidth("Selection width", Float) = 0
         _HoverArea("Hover center, radius, square", Vector) = (0,0,0,0)
@@ -40,7 +41,7 @@ Shader "Frontier/Board"
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float topSurface:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseColor; float _UseFog; float _Grid;
+            float4 _BaseColor; float _UseFog; float _Grid; float _Desert;
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea; float4 _PointerColor; float4 _PointerDotColor;
@@ -81,6 +82,19 @@ Shader "Frontier/Board"
                 color=lerp(color,half3(1,.82,.52),saturate(_DamageAmount));
                 if(_UseFog>.5)
                 {
+                    if(_Desert>.5)
+                    {
+                        float2 sand=input.uv*_FrontierBounds.zw;
+                        float broad=TissueNoise(sand*.075),drift=TissueNoise(sand*.22);
+                        // Wind-combed sand and broad deposits give the open paths
+                        // texture while the mesh supplies actual plateaus and ramps.
+                        float ripple=.5+.5*sin(sand.x*2.6+sand.y*.92+drift*4.5);
+                        float relief=.87+broad*.2+(ripple-.5)*.07;
+                        color*=relief;
+                        color=lerp(color,color*half3(1.12,.91,.72),smoothstep(.48,.75,broad)*.36);
+                        if(input.topSurface<.5)
+                            color*=.9+.1*sin(TransformWorldToObject(input.world).y*8);
+                    }
                     half creep=SAMPLE_TEXTURE2D(_CreepTex,sampler_CreepTex,input.uv).r;
                     if(creep>.01 && input.topSurface>.5)
                     {

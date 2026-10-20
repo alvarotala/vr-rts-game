@@ -39,14 +39,38 @@ namespace Frontier.Editor
                 Invoke(panel,"Start");preview.AddSingleGO(console);Refresh();
                 Check(panel.Page==CommandPanel.MenuPage.Main&&!session.Running&&session.Match==null,"Startup opens main menu without a match");
                 Check(!board.Content.gameObject.activeSelf&&!panel.AcceptsGameInput,"Main menu hides board and blocks game input");
-                Check(Has("New Match")&&Has("Settings")&&Has("Hotkeys")&&!Has("START MATCH"),"Main menu has dedicated navigation");
+                Check(Has("New Match")&&Has("Guides")&&Has("Settings")&&!Has("Hotkeys")&&!Has("START MATCH"),"Main menu has match, guides and unified settings navigation");
                 Capture("01-main");
+                Click("Guides");
+                Check(panel.Page==CommandPanel.MenuPage.Guides&&Has("Control guide")&&Has("Units")&&Has("Structures"),"Main menu opens all guide categories");Capture("01-guides");
+                foreach(var entry in new[]{("Control guide",CommandPanel.MenuPage.Guide),("Units",CommandPanel.MenuPage.UnitsGuide),("Structures",CommandPanel.MenuPage.StructuresGuide)})
+                {
+                    Click(entry.Item1);
+                    Check(panel.Page==entry.Item2&&!session.Running&&session.Match==null&&!panel.AcceptsGameInput,"Reading "+entry.Item1+" before a match leaves gameplay inactive");
+                    Capture("01-guide-"+entry.Item1.ToLowerInvariant().Replace(" ","-"));
+                    Click("Back");Check(panel.Page==CommandPanel.MenuPage.Guides,"Guide detail Back returns to its category hub");
+                }
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Guides Back returns to the original main menu");
                 Click("Settings");Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Settings work before a match without creating a pause");
-                Check(Has("Hand: Right")&&Field<Text>(panel,"selection").text.Contains("Right controller active"),"Settings identify the sole active hand");
+                Check(Has("Controls")&&Has("Audio")&&Has("Play space"),"Settings organizes controls, sound and board placement into tabs");
+                Click("Controls");
+                Check(Has("Hand: Right")&&Has("Hotkeys")&&Has("Selection: Bodies")&&quest.ActiveController==OVRInput.Controller.RTouch,"Controls identify the active hand and share targeting and hotkey settings");
                 Click("Hand: Right");Check(Has("Hand: Left")&&quest.ActiveController==OVRInput.Controller.LTouch,"Settings switches to the left hand");
                 Click("Hand: Left");Capture("02-settings");
+                Click("Audio");
+                Check(Has("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%")&&Has("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%")&&!Has("Hotkeys"),"Audio tab exposes current volume settings without unrelated controls");Capture("02-settings-audio");
+                Click("Play space");
+                Check(Has("Reposition board")&&Has("Table / height 75 cm")&&Has("Floor / height 0")&&Has("Detect surfaces")&&!Has("Hand: Right"),"Play space collects the board placement controls");Capture("02-settings-play-space");
+                Click("Detect surfaces");
+                Check(!quest.Active&&!quest.Placing&&!session.Running&&Field<Text>(panel,"status").text==session.Message&&session.Message.Contains("manual plane"),"Detect surfaces shows its desktop result in the Settings footer");Capture("02-settings-surface-feedback");
+                typeof(CommandPanel).GetField("menuMessageUntil",Private).SetValue(panel,Time.unscaledTime-1);Refresh();
+                Check(Field<Text>(panel,"status").text!=session.Message,"Temporary settings notices expire");
+                Click("Detect surfaces");
+                Check(Field<Text>(panel,"status").text==session.Message,"Repeating the same operation renews identical result text");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Settings return to main menu");
-                Click("Hotkeys");
+                Click("Settings");Click("Play space");Click("Detect surfaces");
+                Check(Field<Text>(panel,"status").text==session.Message,"Identical operation feedback returns after reopening Settings");Click("Back");
+                Click("Settings");Click("Controls");Click("Hotkeys");
                 Check(panel.Page==CommandPanel.MenuPage.Hotkeys&&!Field<bool>(panel,"hotkeysTouch"),"Dedicated Hotkeys page defaults to the connected desktop input");
                 Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy,"Hotkeys is a separate reference, not the pause tutorial cards");
                 Check(!Has("Quest Touch")&&!Has("Mouse / Keyboard"),"Hotkeys exposes no inactive-device tabs");
@@ -56,20 +80,37 @@ namespace Frontier.Editor
                 Check(Field<int>(panel,"hotkeysPage")==0,"Switching device resets pagination");
                 Check(!session.Running&&!session.IsPaused&&!panel.AcceptsGameInput,"Browsing Hotkeys before a match never starts a match or enables game input");
                 ExportDefaults();
-                panel.Back();Refresh();Click("New Match");
+                panel.Back();Refresh();Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Hotkeys Back returns to Settings before the main menu");
+                Click("Back");Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
+                Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: The Rift")&&Has("START MATCH")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Place board")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match contains only match choices, start and Back");
+                Click("Map: The Rift");Check(session.MapId=="training","Map selection still reaches Training Ground");
+                Click("Map: Training Grounds");Check(session.MapId=="desert"&&session.Map.width==160&&session.Map.height==160&&session.Map.theme=="desert","Map selection reaches Amber Wastes with its desert theme");Capture("05-desert-setup");
+                Click("Map: Amber Wastes");Check(session.MapId=="rift","Map selection cycles through all three maps");
                 Click("AI: Normal");Check(session.Difficulty=="hard"&&Has("AI: Hard")&&Field<Text>(panel,"harvesting").text.Contains("2:30"),"Setup offers Hard with its earlier attack description");Capture("05-hard");
                 Click("AI: Hard");Check(session.Difficulty=="easy"&&Has("AI: Easy")&&Field<Text>(panel,"harvesting").text.Contains("5 min"),"Hard cycles to Easy");
                 Click("AI: Easy");Check(session.Difficulty=="normal"&&Has("AI: Normal")&&Field<Text>(panel,"harvesting").text.Contains("3:30"),"Easy cycles to Normal");Click("AI: Normal");
+                typeof(QuestBridge).GetField("restoring",Private).SetValue(quest,true);Click("START MATCH");
+                Check(quest.StartPending&&!quest.Placing&&!session.Running&&Field<Text>(panel,"status").text=="Restoring your saved board…","A pending start keeps restoration feedback visible without starting placement or a match");
+                typeof(CommandPanel).GetField("menuMessageUntil",Private).SetValue(panel,Time.unscaledTime-1);Refresh();
+                Check(Field<Text>(panel,"status").text=="Restoring your saved board…","Restoration feedback remains visible while start is pending after temporary notices expire");
+                panel.Back();Refresh();typeof(QuestBridge).GetField("restoring",Private).SetValue(quest,false);
+                Check(panel.Page==CommandPanel.MenuPage.Main&&!quest.StartPending&&!quest.Placing&&!session.Running,"Back cancels a start waiting for board restoration");
+                Click("New Match");Check(session.Difficulty=="hard","Cancelling a pending start preserves the selected difficulty");
                 Click("START MATCH");Check(!session.Running&&quest.Placing&&quest.StartPending,"Start opens missing placement before creating a match");
                 panel.Back();Refresh();Check(!quest.Placing&&!quest.StartPending&&!session.Running,"Cancelling first placement returns to setup without starting a match");
                 board.Placed=true;var placedPosition=new Vector3(.2f,.75f,.1f);board.transform.position=placedPosition;
                 var placedRotation=Quaternion.Euler(0,25,0);board.transform.rotation=placedRotation;float placedWidth=board.Width;
-                Click("Place board");Check(quest.Placing&&!board.Placed,"Placement starts from setup");
+                string setupFaction=session.Faction,setupOpponent=session.EnemyFaction,setupMap=session.MapId,setupDifficulty=session.Difficulty;
+                Click("Back");Click("Settings");Click("Play space");
+                Click("Reposition board");Check(quest.Placing&&!board.Placed,"Placement starts from the shared Play space settings");
                 board.transform.position+=Vector3.right;board.Width=2;
                 panel.Back();Refresh();
                 Check(!quest.Placing&&board.Placed&&!session.IsPaused,"Cancel placement restores readiness and removes only placement pause");
                 Check(board.transform.parent==fixture.transform&&board.transform.position==placedPosition&&board.transform.rotation==placedRotation&&board.Width==placedWidth,"Cancel placement restores the board transform and parent");
+                Check(panel.Page==CommandPanel.MenuPage.Settings,"Cancel placement returns to the caller's settings page");
+                Click("Back");Click("New Match");
+                Check(session.Faction==setupFaction&&session.EnemyFaction==setupOpponent&&session.MapId==setupMap&&session.Difficulty==setupDifficulty,"Visiting shared settings preserves the chosen match setup");
                 Capture("05-setup");
                 session.Pause("tracking",true);Click("START MATCH");
                 Check(session.Running&&panel.Page==CommandPanel.MenuPage.Actions&&session.IsPaused&&!panel.AcceptsGameInput,"Starting preserves tracking pause");
@@ -79,15 +120,18 @@ namespace Frontier.Editor
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Invoke(panel,"Rebuild");Refresh();
                 Check(!Has("Full map")&&Has("Pause"),"Quest HUD removes the obsolete map reset action");Capture("06-actions-touch");
                 Click("Pause");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Expanded Quest pause button works with the pointer");
-                Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy&&!Has("Help: Selection")&&Has("Control guide")&&Has("Resume match"),"Pause shows a guide entry without tutorial cards or hidden tab targets");
-                Check(!board.BaseTargeting&&Has("Selection: Bodies")&&Field<RectTransform>(panel,"root").sizeDelta.y==526,"Pause stays compact and preserves body targeting by default");
+                Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy&&!Has("Help: Selection")&&Has("Guides")&&Has("Settings")&&Has("Resume match")&&Has("Return to main menu"),"Pause presents only resume, guides, settings and leave navigation");
+                Check(!board.BaseTargeting&&!Has("Selection: Bodies")&&!Has("Hotkeys")&&!Has("Control guide"),"Pause keeps detailed controls in their shared submenus");
+                Check(Field<RectTransform>(panel,"root").sizeDelta.y==690,"Pause uses the shared menu height");
                 int pausedTick=session.Match.Tick;var beforeSelection=session.Selection.ToArray();int minerals=session.View.minerals;
+                Capture("07-pause-touch");Click("Settings");Click("Controls");
                 Click("Selection: Bodies");
                 Check(board.BaseTargeting&&PlayerPrefs.GetInt(BoardView.BaseTargetingKey)==1&&Has("Selection: Bases"),"Base targeting is opt-in and saved on this device");
                 Check(session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection),"Changing targeting does not resume or change the selection");
-                Capture("07-pause-touch");
+                Capture("07-paused-controls");
                 Click("Selection: Bases");Check(!board.BaseTargeting&&PlayerPrefs.GetInt(BoardView.BaseTargetingKey)==0,"Body targeting can be restored from the same button");
-                Click("Control guide");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Shared controls return to the same paused match");
+                Click("Guides");Click("Control guide");
                 Check(panel.Page==CommandPanel.MenuPage.Guide&&Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy&&!Has("Resume match"),"Guide opens as its own submenu");
                 foreach(string topic in new[]{"Selection","Orders","Menus","Groups","Production","Board"})
                 {
@@ -96,9 +140,16 @@ namespace Frontier.Editor
                     Capture("07-guide-touch-"+topic.ToLowerInvariant());
                 }
                 Check(session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Guide cards never change selection or resources");
-                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused&&!Has("Help: Selection"),"Guide Back returns to pause and removes its targets");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Guides&&session.IsPaused&&!Has("Help: Selection"),"Guide Back returns to its hub and removes detail targets");
+                foreach(var entry in new[]{("Units",CommandPanel.MenuPage.UnitsGuide),("Structures",CommandPanel.MenuPage.StructuresGuide)})
+                {
+                    Click(entry.Item1);for(int i=0;i<3;i++)session.Match.Step();
+                    Check(panel.Page==entry.Item2&&session.IsPaused&&session.Match.Tick==pausedTick&&!panel.AcceptsGameInput&&session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Reading "+entry.Item1+" preserves the paused match and selection");
+                    Click("Back");Check(panel.Page==CommandPanel.MenuPage.Guides&&session.IsPaused,"Catalog Back returns to Guides without resuming");
+                }
                 Click("Control guide");panel.ToggleMenu();Refresh();
-                Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"The menu shortcut also returns from Guide without resuming");
+                Check(panel.Page==CommandPanel.MenuPage.Guides&&session.IsPaused,"The menu shortcut also returns from Guide to its hub without resuming");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Guides Back returns to the original pause menu");
                 Click("Resume match");Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy,"Resuming hides the guide and removes its targets");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);Invoke(panel,"Rebuild");Refresh();
                 Check(Has("Full map")&&Has("Pause"),"Desktop retains its development view controls");
@@ -109,7 +160,7 @@ namespace Frontier.Editor
                 Check(session.IsPaused&&match.Tick==tick&&!panel.AcceptsGameInput,"Pause stops simulation and blocks game input");Capture("07-pause");
                 Click("Settings");Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"In-match settings return to pause");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);
-                Click("Hotkeys");Check(Field<bool>(panel,"hotkeysTouch"),"Opening from Quest pause defaults to Touch even after desktop preview");
+                Click("Settings");Click("Controls");Click("Hotkeys");Check(Field<bool>(panel,"hotkeysTouch"),"Opening through Quest pause settings defaults to Touch even after desktop preview");
                 int hotkeysTick=match.Tick;var hotkeysSelection=session.Selection.ToArray();int hotkeysMinerals=session.View.minerals;string buildMode=session.BuildDefinition;
                 Click("Hotkeys: Groups");Click("Next");Click("Previous");
                 for(int i=0;i<30;i++)match.Step();
@@ -117,7 +168,8 @@ namespace Frontier.Editor
                 panel.Point(rowRay,true,false);panel.Point(rowRay,false,true);Refresh();
                 Check(match.Tick==hotkeysTick&&session.IsPaused&&!panel.AcceptsGameInput&&session.Selection.SetEquals(hotkeysSelection)&&session.View.minerals==hotkeysMinerals&&session.BuildDefinition==buildMode&&session.GroupSize(0)==1,"Hotkey browsing and clicking read-only rows preserve pause, selection, resources, build mode and groups");
                 Capture("07-paused-hotkeys");panel.Back();Refresh();
-                Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused&&!Field<RectTransform>(panel,"hotkeys").gameObject.activeInHierarchy,"B / Back returns Hotkeys to pause and hides all reference targets");
+                Check(panel.Page==CommandPanel.MenuPage.Settings&&session.IsPaused&&!Field<RectTransform>(panel,"hotkeys").gameObject.activeInHierarchy,"B / Back returns Hotkeys to Settings and hides all reference targets");
+                Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Settings retains Pause as its caller after visiting Hotkeys");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
                 Click("Return to main menu");Check(panel.Page==CommandPanel.MenuPage.LeaveConfirmation&&session.Running,"Leaving an active match asks before losing progress");Capture("08-leave-confirmation");
                 Click("Keep playing");Check(session.Match==match&&!session.IsPaused&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Cancel leaving resumes the same match and selection");

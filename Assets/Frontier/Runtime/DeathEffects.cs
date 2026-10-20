@@ -18,11 +18,20 @@ namespace Frontier.Runtime
         private sealed class Model
         {
             public Vector3[] vertices, normals;
+            public Vector3[] collapsedVertices, collapsedNormals;
             public Color[] colors;
             public int[] triangles;
+            public Bounds bounds;
+        }
+        private struct Pose
+        {
+            public Vector3 position, bodyPosition;
+            public Quaternion rotation, bodyRotation;
+            public int tick;
         }
         private readonly Dictionary<string, Model> cache = new Dictionary<string, Model>();
-        private readonly Dictionary<int, (Quaternion rotation, int tick)> poses = new Dictionary<int, (Quaternion, int)>();
+        private readonly Dictionary<int, Pose> poses = new Dictionary<int, Pose>();
+        private Vector3[] posedVertices = System.Array.Empty<Vector3>();
         private readonly List<int> expired = new List<int>();
         private readonly List<Vector3> vertices = new List<Vector3>(), normals = new List<Vector3>();
         private readonly List<Color> colors = new List<Color>();
@@ -75,12 +84,17 @@ namespace Frontier.Runtime
                 if (!poses.TryGetValue(death.unit, out var pose))
                 {
                     var direction = new Vector3(death.direction.x, 0, death.direction.y);
-                    var facing = board.TryUnitRotation(death.unit, out var rotation) ? rotation :
-                        direction.sqrMagnitude > .0001f ? Quaternion.LookRotation(direction) : Quaternion.Euler(0, death.unit * 137.5f % 360, 0);
-                    pose = (facing, death.tick); poses[death.unit] = pose;
+                    pose = new Pose { tick = death.tick, bodyRotation = Quaternion.identity };
+                    if (!board.TryUnitDeathPose(death.unit, out pose.position, out pose.rotation, out pose.bodyPosition, out pose.bodyRotation))
+                    {
+                        pose.position = new Vector3(death.position.x, board.HeightAt(death.position), death.position.y);
+                        pose.rotation = direction.sqrMagnitude > .0001f ? Quaternion.LookRotation(direction) : Quaternion.Euler(0, death.unit * 137.5f % 360, 0);
+                        pose.bodyPosition = Vector3.zero; pose.bodyRotation = Quaternion.identity;
+                    }
+                    poses[death.unit] = pose;
                 }
                 ActiveCount++;
-                AddBody(board, death, type, model, pose.rotation, age);
+                AddBody(board, death, type, model, pose, age);
             }
             mesh.Clear();
             if (vertices.Count > 0)
@@ -95,7 +109,15 @@ namespace Frontier.Runtime
             string key = type.id + (own ? "/own" : "/enemy");
             if (cache.TryGetValue(key, out var model)) return model;
             var source = models.Get(type, remains: true);
-            model = new Model { vertices = source.vertices, normals = source.normals, colors = source.colors, triangles = source.triangles };
+            model = new Model { vertices = source.vertices, normals = source.normals, colors = source.colors, triangles = source.triangles, bounds = source.bounds };
+            if (type.faction == "biological")
+            {
+                var collapsed = BiologicalVisuals.Unit(type, false, false, collapsed: true);
+                model.collapsedVertices = collapsed.vertices; model.collapsedNormals = collapsed.normals;
+                float scale = UnitVisuals.ModelScale(type);
+                for (int i = 0; i < model.collapsedVertices.Length; i++) model.collapsedVertices[i] *= scale;
+                Release(collapsed);
+            }
             var palette = new[] { own ? new Color(.2f, .8f, 1) : new Color(1, .36f, .23f),
                 type.faction == "biological" ? Color.white : new Color(.12f, .17f, .22f), UnitVisuals.Accent(type.role) };
             for (int submesh = 0; submesh < source.subMeshCount; submesh++)
@@ -107,27 +129,39 @@ namespace Frontier.Runtime
             cache.Add(key, model); return model;
         }
 
-        private void AddBody(BoardView board, DeathEvent death, Archetype type, Model model, Quaternion facing, float age)
+        private void AddBody(BoardView board, DeathEvent death, Archetype type, Model model, Pose pose, float age)
         {
+            bool biological = type.faction == "biological";
             bool wreck = type.faction == "industrial" && (type.role == "worker" || type.role == "scout" || type.role == "siege");
             float fall = Mathf.SmoothStep(0, 1, age / FallSeconds);
             float fade = 1 - Mathf.SmoothStep(0, 1, (age - FadeStart) / (Lifetime - FadeStart));
             float side = (death.unit & 1) == 0 ? 1 : -1;
-            var rotation = facing * Quaternion.AngleAxis((wreck ? 110 : 88) * fall, new Vector3(side, 0, .35f).normalized);
-            var slide = facing * new Vector3(side * .12f, 0, .25f) * UnitVisuals.ModelScale(type) * fall;
-            var origin = new Vector3(death.position.x, board.HeightAt(death.position), death.position.y) + slide;
-            // Keep the entire tilted body above its local ground, including ramps.
-            float lift = 0;
-            foreach (var vertex in model.vertices)
+            var liveRotation = pose.rotation * pose.bodyRotation;
+            var direction = liveRotation * Vector3.forward; direction.y = 0;
+            var facing = direction.sqrMagnitude > .0001f ? Quaternion.LookRotation(direction) : pose.rotation;
+            var origin = Vector3.Lerp(pose.position, new Vector3(death.position.x, board.HeightAt(death.position), death.position.y), fall)
+                + pose.rotation * pose.bodyPosition * (1 - fall);
+            var rotation = Quaternion.Slerp(liveRotation, GroundTilt(board, death.position, UnitVisuals.ModelScale(type)) * facing, fall);
+            // Vehicles settle on their chassis. Upright soldiers tip from the rear
+            // ground contact, with no sideways slide or arbitrary diagonal spin.
+            var tumble = biological ? Quaternion.identity : Quaternion.Euler((wreck ? -4 : -83) * fall, 0, side * (wreck ? 5 : 6) * fall);
+            var contact = wreck || biological ? Vector3.zero : new Vector3(0, model.bounds.min.y, model.bounds.min.z);
+            if (posedVertices.Length < model.vertices.Length) posedVertices = new Vector3[model.vertices.Length];
+            float support = float.NegativeInfinity;
+            for (int i = 0; i < model.vertices.Length; i++)
             {
-                var point = rotation * vertex;
-                lift = Mathf.Max(lift, board.HeightAt(new Point(origin.x + point.x, origin.z + point.z)) - origin.y - point.y);
+                var vertex = biological ? Vector3.Lerp(model.vertices[i], model.collapsedVertices[i], fall) : model.vertices[i];
+                var point = rotation * (contact + tumble * (vertex - contact)); posedVertices[i] = point;
+                support = Mathf.Max(support, board.HeightAt(new Point(origin.x + point.x, origin.z + point.z)) - origin.y - point.y);
             }
-            origin.y += lift + .025f;
+            // Allow a hovering body to settle down as well as lifting away from a
+            // slope. Every pose has an actual contact instead of floating on a pivot.
+            origin.y += Mathf.Lerp(Mathf.Max(0, support), support, fall) + .012f * fall;
             int start = vertices.Count;
             for (int i = 0; i < model.vertices.Length; i++)
             {
-                vertices.Add(origin + rotation * model.vertices[i]); normals.Add(rotation * model.normals[i]);
+                var normal = biological ? Vector3.Lerp(model.normals[i], model.collapsedNormals[i], fall).normalized : model.normals[i];
+                vertices.Add(origin + posedVertices[i]); normals.Add(rotation * tumble * normal);
                 var color = model.colors[i];
                 color = Color.Lerp(color, new Color(color.grayscale * .62f, color.grayscale * .62f, color.grayscale * .62f), fall * .55f);
                 color.a = fade; colors.Add(color);
@@ -147,6 +181,16 @@ namespace Frontier.Runtime
                     Shard(center + travel, .07f * scale * (1 - progress * .6f), color);
                 }
             }
+        }
+
+        private static Quaternion GroundTilt(BoardView board, Point position, float scale)
+        {
+            float radius = Mathf.Max(.5f, scale * .35f);
+            float left = board.HeightAt(new Point(position.x - radius, position.y)), right = board.HeightAt(new Point(position.x + radius, position.y));
+            float back = board.HeightAt(new Point(position.x, position.y - radius)), front = board.HeightAt(new Point(position.x, position.y + radius));
+            var normal = new Vector3(left - right, 2 * radius, back - front).normalized;
+            // A cliff edge is not a surface on which to stand a corpse vertically.
+            return Quaternion.RotateTowards(Quaternion.identity, Quaternion.FromToRotation(Vector3.up, normal), 35);
         }
 
         private void Shard(Vector3 center, float size, Color color)

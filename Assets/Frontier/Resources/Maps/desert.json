@@ -1,0 +1,1062 @@
+{
+  "schemaVersion": 1,
+  "id": "desert",
+  "title": "Amber Wastes",
+  "theme": "desert",
+  "width": 160,
+  "height": 160,
+  "terrain": [
+    {
+      "x": 28,
+      "y": 94,
+      "width": 38,
+      "height": 38,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 94,
+      "y": 28,
+      "width": 38,
+      "height": 38,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 54,
+      "y": 14,
+      "width": 32,
+      "height": 36,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 74,
+      "y": 110,
+      "width": 32,
+      "height": 36,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 64,
+      "y": 64,
+      "width": 32,
+      "height": 32,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 72,
+      "y": 56,
+      "width": 16,
+      "height": 48,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 56,
+      "y": 72,
+      "width": 48,
+      "height": 16,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": true,
+      "ramp": false
+    },
+    {
+      "x": 24,
+      "y": 108,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 128,
+      "y": 40,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 62,
+      "y": 100,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 90,
+      "y": 48,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 40,
+      "y": 90,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": 1
+    },
+    {
+      "x": 108,
+      "y": 62,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": -1
+    },
+    {
+      "x": 48,
+      "y": 128,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": -1
+    },
+    {
+      "x": 100,
+      "y": 24,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": 1
+    },
+    {
+      "x": 50,
+      "y": 32,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 102,
+      "y": 116,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 82,
+      "y": 24,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 70,
+      "y": 124,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 64,
+      "y": 10,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": 1
+    },
+    {
+      "x": 84,
+      "y": 142,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": -1
+    },
+    {
+      "x": 62,
+      "y": 46,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": -1
+    },
+    {
+      "x": 86,
+      "y": 106,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": 1
+    },
+    {
+      "x": 52,
+      "y": 74,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": 1
+    },
+    {
+      "x": 100,
+      "y": 74,
+      "width": 8,
+      "height": 12,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "x",
+      "rampDirection": -1
+    },
+    {
+      "x": 74,
+      "y": 52,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": 1
+    },
+    {
+      "x": 74,
+      "y": 100,
+      "width": 12,
+      "height": 8,
+      "elevation": 1,
+      "walkable": true,
+      "buildable": false,
+      "ramp": true,
+      "rampAxis": "y",
+      "rampDirection": -1
+    },
+    {
+      "x": 5,
+      "y": 56,
+      "width": 6,
+      "height": 7,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 149,
+      "y": 97,
+      "width": 6,
+      "height": 7,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 42,
+      "y": 70,
+      "width": 5,
+      "height": 9,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 113,
+      "y": 81,
+      "width": 5,
+      "height": 9,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 15,
+      "y": 98,
+      "width": 6,
+      "height": 9,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 139,
+      "y": 53,
+      "width": 6,
+      "height": 9,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 24,
+      "y": 38,
+      "width": 7,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 129,
+      "y": 117,
+      "width": 7,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 104,
+      "y": 10,
+      "width": 8,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 48,
+      "y": 144,
+      "width": 8,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 8,
+      "y": 136,
+      "width": 8,
+      "height": 8,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 144,
+      "y": 16,
+      "width": 8,
+      "height": 8,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 10,
+      "y": 118,
+      "width": 5,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 145,
+      "y": 36,
+      "width": 5,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 118,
+      "y": 140,
+      "width": 7,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 35,
+      "y": 15,
+      "width": 7,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 77,
+      "y": 77,
+      "width": 6,
+      "height": 6,
+      "elevation": 1,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    }
+  ],
+  "spawns": [
+    {
+      "player": 0,
+      "x": 18,
+      "y": 18
+    },
+    {
+      "player": 1,
+      "x": 138,
+      "y": 138
+    }
+  ],
+  "resources": [
+    {
+      "id": "camp0.mineral0",
+      "kind": "mineral",
+      "x": 12,
+      "y": 23,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral0",
+      "kind": "mineral",
+      "x": 147,
+      "y": 136,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral1",
+      "kind": "mineral",
+      "x": 15,
+      "y": 26,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral1",
+      "kind": "mineral",
+      "x": 144,
+      "y": 133,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral2",
+      "kind": "mineral",
+      "x": 18,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral2",
+      "kind": "mineral",
+      "x": 141,
+      "y": 132,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral3",
+      "kind": "mineral",
+      "x": 21,
+      "y": 27,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral3",
+      "kind": "mineral",
+      "x": 138,
+      "y": 132,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral4",
+      "kind": "mineral",
+      "x": 24,
+      "y": 26,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral4",
+      "kind": "mineral",
+      "x": 135,
+      "y": 133,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.mineral5",
+      "kind": "mineral",
+      "x": 27,
+      "y": 23,
+      "amount": 1800
+    },
+    {
+      "id": "camp1.mineral5",
+      "kind": "mineral",
+      "x": 132,
+      "y": 136,
+      "amount": 1800
+    },
+    {
+      "id": "camp0.catalyst0",
+      "kind": "catalyst",
+      "x": 11,
+      "y": 17,
+      "amount": 2400
+    },
+    {
+      "id": "camp1.catalyst0",
+      "kind": "catalyst",
+      "x": 148,
+      "y": 142,
+      "amount": 2400
+    },
+    {
+      "id": "camp0.catalyst1",
+      "kind": "catalyst",
+      "x": 28,
+      "y": 17,
+      "amount": 2400
+    },
+    {
+      "id": "camp1.catalyst1",
+      "kind": "catalyst",
+      "x": 131,
+      "y": 142,
+      "amount": 2400
+    },
+    {
+      "id": "camp2.mineral0",
+      "kind": "mineral",
+      "x": 16,
+      "y": 67,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral0",
+      "kind": "mineral",
+      "x": 143,
+      "y": 92,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral1",
+      "kind": "mineral",
+      "x": 19,
+      "y": 70,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral1",
+      "kind": "mineral",
+      "x": 140,
+      "y": 89,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral2",
+      "kind": "mineral",
+      "x": 22,
+      "y": 71,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral2",
+      "kind": "mineral",
+      "x": 137,
+      "y": 88,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral3",
+      "kind": "mineral",
+      "x": 25,
+      "y": 71,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral3",
+      "kind": "mineral",
+      "x": 134,
+      "y": 88,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral4",
+      "kind": "mineral",
+      "x": 28,
+      "y": 70,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral4",
+      "kind": "mineral",
+      "x": 131,
+      "y": 89,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.mineral5",
+      "kind": "mineral",
+      "x": 31,
+      "y": 67,
+      "amount": 1800
+    },
+    {
+      "id": "camp3.mineral5",
+      "kind": "mineral",
+      "x": 128,
+      "y": 92,
+      "amount": 1800
+    },
+    {
+      "id": "camp2.catalyst0",
+      "kind": "catalyst",
+      "x": 15,
+      "y": 61,
+      "amount": 2400
+    },
+    {
+      "id": "camp3.catalyst0",
+      "kind": "catalyst",
+      "x": 144,
+      "y": 98,
+      "amount": 2400
+    },
+    {
+      "id": "camp2.catalyst1",
+      "kind": "catalyst",
+      "x": 32,
+      "y": 61,
+      "amount": 2400
+    },
+    {
+      "id": "camp3.catalyst1",
+      "kind": "catalyst",
+      "x": 127,
+      "y": 98,
+      "amount": 2400
+    },
+    {
+      "id": "camp4.mineral0",
+      "kind": "mineral",
+      "x": 40,
+      "y": 115,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral0",
+      "kind": "mineral",
+      "x": 119,
+      "y": 44,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral1",
+      "kind": "mineral",
+      "x": 43,
+      "y": 118,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral1",
+      "kind": "mineral",
+      "x": 116,
+      "y": 41,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral2",
+      "kind": "mineral",
+      "x": 46,
+      "y": 119,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral2",
+      "kind": "mineral",
+      "x": 113,
+      "y": 40,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral3",
+      "kind": "mineral",
+      "x": 49,
+      "y": 119,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral3",
+      "kind": "mineral",
+      "x": 110,
+      "y": 40,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral4",
+      "kind": "mineral",
+      "x": 52,
+      "y": 118,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral4",
+      "kind": "mineral",
+      "x": 107,
+      "y": 41,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.mineral5",
+      "kind": "mineral",
+      "x": 55,
+      "y": 115,
+      "amount": 1800
+    },
+    {
+      "id": "camp5.mineral5",
+      "kind": "mineral",
+      "x": 104,
+      "y": 44,
+      "amount": 1800
+    },
+    {
+      "id": "camp4.catalyst0",
+      "kind": "catalyst",
+      "x": 39,
+      "y": 109,
+      "amount": 2400
+    },
+    {
+      "id": "camp5.catalyst0",
+      "kind": "catalyst",
+      "x": 120,
+      "y": 50,
+      "amount": 2400
+    },
+    {
+      "id": "camp4.catalyst1",
+      "kind": "catalyst",
+      "x": 56,
+      "y": 109,
+      "amount": 2400
+    },
+    {
+      "id": "camp5.catalyst1",
+      "kind": "catalyst",
+      "x": 103,
+      "y": 50,
+      "amount": 2400
+    },
+    {
+      "id": "camp6.mineral0",
+      "kind": "mineral",
+      "x": 64,
+      "y": 35,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral0",
+      "kind": "mineral",
+      "x": 95,
+      "y": 124,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.mineral1",
+      "kind": "mineral",
+      "x": 67,
+      "y": 38,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral1",
+      "kind": "mineral",
+      "x": 92,
+      "y": 121,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.mineral2",
+      "kind": "mineral",
+      "x": 70,
+      "y": 39,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral2",
+      "kind": "mineral",
+      "x": 89,
+      "y": 120,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.mineral3",
+      "kind": "mineral",
+      "x": 73,
+      "y": 39,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral3",
+      "kind": "mineral",
+      "x": 86,
+      "y": 120,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.mineral4",
+      "kind": "mineral",
+      "x": 76,
+      "y": 38,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral4",
+      "kind": "mineral",
+      "x": 83,
+      "y": 121,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.mineral5",
+      "kind": "mineral",
+      "x": 79,
+      "y": 35,
+      "amount": 1800
+    },
+    {
+      "id": "camp7.mineral5",
+      "kind": "mineral",
+      "x": 80,
+      "y": 124,
+      "amount": 1800
+    },
+    {
+      "id": "camp6.catalyst0",
+      "kind": "catalyst",
+      "x": 63,
+      "y": 29,
+      "amount": 2400
+    },
+    {
+      "id": "camp7.catalyst0",
+      "kind": "catalyst",
+      "x": 96,
+      "y": 130,
+      "amount": 2400
+    },
+    {
+      "id": "camp6.catalyst1",
+      "kind": "catalyst",
+      "x": 80,
+      "y": 29,
+      "amount": 2400
+    },
+    {
+      "id": "camp7.catalyst1",
+      "kind": "catalyst",
+      "x": 79,
+      "y": 130,
+      "amount": 2400
+    }
+  ],
+  "decoration": [
+    {
+      "id": "rock",
+      "x": 7,
+      "y": 59,
+      "rotation": 0
+    },
+    {
+      "id": "rock",
+      "x": 152,
+      "y": 100,
+      "rotation": 180
+    },
+    {
+      "id": "rock",
+      "x": 44,
+      "y": 74,
+      "rotation": 37
+    },
+    {
+      "id": "rock",
+      "x": 115,
+      "y": 85,
+      "rotation": 217
+    },
+    {
+      "id": "rock",
+      "x": 17,
+      "y": 102,
+      "rotation": 74
+    },
+    {
+      "id": "rock",
+      "x": 142,
+      "y": 57,
+      "rotation": 254
+    },
+    {
+      "id": "rock",
+      "x": 27,
+      "y": 40,
+      "rotation": 111
+    },
+    {
+      "id": "rock",
+      "x": 132,
+      "y": 119,
+      "rotation": 291
+    },
+    {
+      "id": "rock",
+      "x": 107,
+      "y": 12,
+      "rotation": 148
+    },
+    {
+      "id": "rock",
+      "x": 52,
+      "y": 147,
+      "rotation": 328
+    },
+    {
+      "id": "rock",
+      "x": 11,
+      "y": 139,
+      "rotation": 5
+    },
+    {
+      "id": "rock",
+      "x": 148,
+      "y": 20,
+      "rotation": 185
+    },
+    {
+      "id": "rock",
+      "x": 12,
+      "y": 120,
+      "rotation": 42
+    },
+    {
+      "id": "rock",
+      "x": 147,
+      "y": 39,
+      "rotation": 222
+    },
+    {
+      "id": "rock",
+      "x": 121,
+      "y": 142,
+      "rotation": 79
+    },
+    {
+      "id": "rock",
+      "x": 38,
+      "y": 17,
+      "rotation": 259
+    },
+    {
+      "id": "rock",
+      "x": 78,
+      "y": 79,
+      "rotation": 22
+    },
+    {
+      "id": "rock",
+      "x": 81,
+      "y": 80,
+      "rotation": 202
+    }
+  ]
+}
