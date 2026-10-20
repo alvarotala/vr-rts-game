@@ -13,4 +13,5 @@
   <ItemGroup><Compile Include="FactionParityChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="GroupProductionChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="DeathEventChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="ConstructionClearanceChecks.cs"/></ItemGroup>
 </Project>

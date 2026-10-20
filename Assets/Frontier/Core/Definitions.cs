@@ -222,6 +222,7 @@ namespace Frontier.Core
         public float energy;
         public List<AbilityCooldown> abilityCooldowns = new List<AbilityCooldown>();
         public bool complete = true;
+        public bool awaitingClearance;
         public int remaining, lastDamageTick = -1000, attackReadyTick;
         public CommandKind order = CommandKind.Stop;
         public int target, resourceId, cargo;
@@ -249,6 +250,8 @@ namespace Frontier.Core
         [NonSerialized] internal Point yieldOrigin, yieldDirection;
         [NonSerialized] internal bool moveGoal, settled, braking;
         [NonSerialized] internal int resumeMoveTick;
+        [NonSerialized] internal int clearingSite;
+        [NonSerialized] internal Point clearanceGoal;
         [NonSerialized] internal bool depositing;
         [NonSerialized] internal UnitOrder castResume;
         [NonSerialized] internal string castingAbility;
@@ -277,7 +280,7 @@ namespace Frontier.Core
         public float health, progress;
         public float energy;
         public AbilityCooldown[] abilityCooldowns = Array.Empty<AbilityCooldown>();
-        public bool complete, remembered;
+        public bool complete, remembered, awaitingClearance;
         public CommandKind order;
         // Own workers only. Presentation must not inspect the authoritative match.
         public int cargo;

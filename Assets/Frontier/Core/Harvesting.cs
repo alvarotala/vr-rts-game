@@ -15,7 +15,7 @@ namespace Frontier.Core
         private bool WorkerIsWorking(EntityState worker)
         {
             // Match Travel's arrival/braking gate; waiting in traffic is not working.
-            if (Tick < worker.yieldUntil || worker.velocity.Distance(default) > Type(worker).deceleration / TickRate + .001f) return false;
+            if (worker.clearingSite != 0 || Tick < worker.yieldUntil || worker.velocity.Distance(default) > Type(worker).deceleration / TickRate + .001f) return false;
             if (worker.order == CommandKind.Gather)
             {
                 if (worker.depositing || worker.cargo >= 8) return false;
@@ -24,7 +24,7 @@ namespace Frontier.Core
                     && (resource.kind != "catalyst" || Extractor(worker.owner, resource));
             }
             if (worker.order != CommandKind.Build && worker.order != CommandKind.Repair) return false;
-            if (!Entities.TryGetValue(worker.target, out var target) || target.health <= 0) return false;
+            if (!Entities.TryGetValue(worker.target, out var target) || target.health <= 0 || target.awaitingClearance) return false;
             if (worker.position.Distance(Center(target)) > Type(target).footprint * .75f + 1.2f) return false;
             return worker.order == CommandKind.Build ? !target.complete : target.complete && target.health < Type(target).health && Players[worker.owner].minerals > 0;
         }

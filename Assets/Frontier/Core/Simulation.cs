@@ -141,9 +141,17 @@ namespace Frontier.Core
             if (!validation.accepted) return validation;
             var type = Catalog[command.definition]; int player = worker.owner;
             Point position = new Point((float)Math.Floor(command.position.x), (float)Math.Floor(command.position.y));
+            var clearance = PlanConstructionClearance(player, position, type.footprint);
+            if (clearance == null) return Reject("Your units need room to leave the construction area.");
             Pay(player, type.minerals, type.catalyst);
-            var building = Spawn(player, type.id, position); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
+            var building = Spawn(player, type.id, position, clearance.Count == 0); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
             ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
+            if (clearance.Count > 0)
+            {
+                building.awaitingClearance = true; constructionSites.Add(building);
+                Map.ReserveConstruction(position, type.footprint, building.id);
+                foreach (var item in clearance) ClearConstructionSite(item.unit, building, item.goal);
+            }
             return Accept();
         }
         private CommandResult ValidateBuildingOrder(GameCommand command, EntityState worker, bool deferred)
@@ -163,7 +171,7 @@ namespace Frontier.Core
             if (type.role == "extractor")
             { if (covered.Length != 1 || covered[0].kind != "catalyst") return Reject("The extractor must cover a catalyst deposit."); }
             else if (covered.Length > 0) return Reject("Resources block that location.");
-            if (!deferred && Entities.Values.Any(e => !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Units block that location.");
+            if (!deferred && Entities.Values.Any(e => e.owner != player && !Type(e).building && e.health>0 && OverlapsFootprint(e.position,Type(e).collisionRadius,position,type.footprint))) return Reject("Enemy units block that location.");
             var center = new Point(position.x + type.footprint / 2f, position.y + type.footprint / 2f);
             if (paths.Find(worker.position, center, type.footprint * .75f + 1.2f) == null) return Reject("The worker cannot reach that location.");
             return Accept();
@@ -237,6 +245,7 @@ namespace Frontier.Core
             foreach (var e in Entities.Values) if (!Type(e).building) { int c = Map.Cell(e.position); if (c >= 0) unitCells[c]++; }
             var active = Entities.Values.OrderBy(e => e.id).ToArray();
             BeginMovementStep(active);
+            UpdateConstructionClearance();
             for(int index=0;index<active.Length;index++)
             {
                 var e=active[(index+Tick%active.Length)%active.Length];
@@ -246,6 +255,7 @@ namespace Frontier.Core
                 if (type.energyMax > 0) e.energy = Math.Min(type.energyMax, Math.Max(0, e.energy) + type.energyRegen / TickRate);
                 if (Catalog.Faction(type.faction).regenerates && Tick - e.lastDamageTick > 120) e.health = Math.Min(type.health, e.health + type.health * .00015f);
                 if (type.building) { AdvanceProduction(e); if (type.damage > 0) Fight(e, false); continue; }
+                if (e.clearingSite != 0) { Travel(e, e.clearanceGoal, .08f, false); continue; }
                 if (e.order == CommandKind.Cast)
                 { AdvanceCast(e); if (e.order == CommandKind.Stop) AdvanceUnitOrders(e); continue; }
                 if(e.yieldUntil>Tick)
@@ -277,16 +287,24 @@ namespace Frontier.Core
             bool a = Buildings(0) > 0, b = Buildings(1) > 0;
             if (!a || !b) Winner = !a && !b ? 2 : a ? 0 : 1;
         }
-        private EntityState Spawn(int player, string definition, Point position)
+        private EntityState Spawn(int player, string definition, Point position, bool occupy = true)
         {
             var type = Catalog[definition];
             var e = new EntityState { id = nextId++, owner = player, definition = definition, position = position, health = type.health, energy = type.energyMax };
             Entities.Add(e.id, e);
-            if (type.building) Map.Occupy(position, type.footprint, e.id);
+            if (type.building) { if (occupy) Map.Occupy(position, type.footprint, e.id); }
             else { int c = Map.Cell(position); if (c >= 0) unitCells[c]++; e.stepOrigin=position;mobiles.Add(e); }
             return e;
         }
-        private void Remove(EntityState e) { if (Type(e).building) Map.Occupy(e.position, Type(e).footprint, 0); Entities.Remove(e.id); }
+        private void Remove(EntityState e)
+        {
+            if (Type(e).building)
+            {
+                if (e.awaitingClearance) ReleaseConstructionClearance(e);
+                else Map.Occupy(e.position, Type(e).footprint, 0);
+            }
+            Entities.Remove(e.id);
+        }
         private void Pay(int player, int minerals, int catalyst) { Players[player].minerals -= minerals; Players[player].catalyst -= catalyst; }
         private static bool Finite(Point p) => !float.IsNaN(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.x) && !float.IsInfinity(p.y);
         private static bool InsideFootprint(Point p, Point origin, int size) => p.x >= origin.x && p.x < origin.x + size && p.y >= origin.y && p.y < origin.y + size;

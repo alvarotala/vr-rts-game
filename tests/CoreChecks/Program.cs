@@ -14,6 +14,12 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--construction-clearance-only"))
+{
+    ConstructionClearanceChecks.Run(catalog, Check);
+    Console.WriteLine($"{checks} construction clearance checks passed.");
+    return;
+}
 if(args.Contains("--deaths-only"))
 {
     DeathEventChecks.Run(catalog, map, Check);
@@ -234,6 +240,7 @@ CasterChecks.Run(catalog,map,Check);
 ProductionChecks.Run(catalog,map,Check);
 GroupProductionChecks.Run(catalog,map,Check);
 CommandQueueChecks.Run(catalog,Check);
+ConstructionClearanceChecks.Run(catalog,Check);
 RallyPointChecks.Run(catalog,Check);
 HarvestingChecks.Run(catalog,map,Check);
 HarvestingChecks.Depletion(catalog,new[]{map,training},Check);

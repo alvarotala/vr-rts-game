@@ -28,11 +28,13 @@ namespace Frontier.Core
         { unit.path=null;unit.blockedTicks=0;unit.progressDistance=float.MaxValue;unit.repathAt=0;unit.yieldUntil=0;unit.yieldFor=0;unit.yieldSearchAt=0;unit.trafficPriority=0;unit.trafficMass=0;unit.moveGoal=false;unit.settled=false;unit.braking=false;unit.resumeMoveTick=0; }
         private long TrafficPriority(EntityState unit)=>unit.trafficPriority>0?unit.trafficPriority:(long)unit.id<<32;
         private float TrafficMass(EntityState unit)=>unit.trafficMass>0?unit.trafficMass:Type(unit).collisionMass;
-        private static bool HasTravelOrder(EntityState unit)=>unit.order==CommandKind.Move||unit.order==CommandKind.AttackMove
+        private static bool HasTravelOrder(EntityState unit)=>unit.clearingSite!=0||unit.order==CommandKind.Move||unit.order==CommandKind.AttackMove
             ||(unit.path!=null&&unit.order!=CommandKind.Stop&&unit.order!=CommandKind.Hold);
-        private static Point TrafficDestination(EntityState unit)=>unit.order==CommandKind.Move||unit.order==CommandKind.AttackMove?unit.destination:unit.pathGoal;
+        private static Point TrafficDestination(EntityState unit)=>unit.clearingSite!=0?unit.clearanceGoal:
+            unit.order==CommandKind.Move||unit.order==CommandKind.AttackMove?unit.destination:unit.pathGoal;
         private bool HasTrafficPriority(EntityState first,EntityState second)
         {
+            if ((first.clearingSite != 0) != (second.clearingSite != 0)) return first.clearingSite != 0;
             long a=TrafficPriority(first),b=TrafficPriority(second);
             if(first.yieldUntil>Tick&&first.yieldPriority==b)return false;
             if(second.yieldUntil>Tick&&second.yieldPriority==a)return true;
@@ -289,11 +291,19 @@ namespace Frontier.Core
         }
         private void RequestYield(EntityState blocker,EntityState priority,Point waypoint)
         {
-            if(blocker.order==CommandKind.Hold||blocker.yieldUntil>Tick||Tick<blocker.yieldSearchAt)return;
+            if(blocker.clearingSite!=0||(blocker.order==CommandKind.Hold&&priority.clearingSite==0)||blocker.yieldUntil>Tick||Tick<blocker.yieldSearchAt)return;
             var direction=Point.Towards(default,new Point(waypoint.x-priority.position.x,waypoint.y-priority.position.y),1);
             float along=(blocker.position.x-priority.position.x)*direction.x+(blocker.position.y-priority.position.y)*direction.y;
             if(along<0)return;
             blocker.yieldSearchAt=Tick+20+blocker.id%7;
+            // A packed army may need its outer row to step aside too, even on Hold.
+            // Keep this exception scoped to an accepted construction site.
+            if (priority.clearingSite != 0 && Entities.TryGetValue(priority.clearingSite, out var site))
+            {
+                var exit = ConstructionExit(blocker, site.position, Type(site).footprint, new List<(EntityState, Point)>());
+                if (exit.HasValue) ClearConstructionSite(blocker, site, exit.Value);
+                return;
+            }
             float radius=Type(blocker).collisionRadius;
             float clearance=radius+Type(priority).collisionRadius+.05f;
             int distanceLimit=priority.blockedTicks>=12?32:8;

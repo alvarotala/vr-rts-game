@@ -30,9 +30,10 @@ namespace Frontier.Core
         }
         private void AdvanceConstruction(EntityState building)
         {
+            if (building.awaitingClearance) return;
             var type = Type(building);
             bool active = building.remaining < type.duration && Catalog.Faction(type.faction).grows;
-            if (!active) active = Entities.Values.Any(w => w.owner == building.owner && w.health > 0 && w.complete && Type(w).role == "worker"
+            if (!active) active = Entities.Values.Any(w => w.owner == building.owner && w.health > 0 && w.complete && w.clearingSite == 0 && Type(w).role == "worker"
                 && w.order == CommandKind.Build && w.target == building.id && w.position.Distance(Center(building)) <= type.footprint * .75f + 1.3f);
             if (!active) return;
             building.remaining--; building.health = Math.Min(type.health, building.health + type.health * .85f / type.duration);
@@ -41,6 +42,7 @@ namespace Frontier.Core
         private void Construct(EntityState worker)
         {
             if (!Entities.TryGetValue(worker.target, out var building) || building.complete) { ResumeGather(worker); return; }
+            if (building.awaitingClearance) { Brake(worker); return; }
             if (Travel(worker, Center(building), Type(building).footprint * .75f + 1.2f) && Catalog.Faction(Players[worker.owner].faction).grows)
             { if (building.remaining == Type(building).duration) building.remaining--; ResumeGather(worker); }
         }
@@ -142,6 +144,7 @@ namespace Frontier.Core
                 if (entity.owner != player && !Visible(player, Center(entity))) continue;
                 var item = Observe(entity);
                 if (entity.owner == player) { item.target = entity.target; item.destination = entity.destination;
+                    item.awaitingClearance = entity.awaitingClearance;
                     item.energy = entity.energy;
                     item.abilityCooldowns = entity.abilityCooldowns.Select(c => new AbilityCooldown { ability = c.ability, readyTick = c.readyTick }).ToArray();
                     if (Type(entity).role == "worker")

@@ -66,8 +66,12 @@ static class NavigationChecks
 
         sim=Fixture();a=Unit(sim,19.8f,20.5f);Run(sim,4,"foundation vision");
         int beforeBuild=sim.Players[0].minerals;
-        check(!sim.Submit(new GameCommand{player=0,kind=CommandKind.Build,entities=new[]{a.id},definition="industrial.supply",position=new Point(20,20)}).accepted
-            &&sim.Players[0].minerals==beforeBuild,"foundation cannot trap the edge of a unit body or spend resources");
+        check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Build,entities=new[]{a.id},definition="industrial.supply",position=new Point(20,20)}).accepted
+            &&sim.Players[0].minerals==beforeBuild-catalog["industrial.supply"].minerals
+            &&sim.Map.CanStand(a.position,sim.Type(a).collisionRadius),"foundation reserves safely when only the edge of an allied body overlaps");
+        Run(sim,200,"foundation clearance");
+        check(sim.Map.Occupant[sim.Map.Index(20,20)]!=0&&sim.Map.CanStand(a.position,sim.Type(a).collisionRadius),
+            "edge obstruction walks clear before foundation blocks terrain");
 
         foreach(string faction in new[]{"industrial","biological"})
         {

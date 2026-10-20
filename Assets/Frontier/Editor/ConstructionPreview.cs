@@ -65,7 +65,15 @@ namespace Frontier.Editor
                     Click("Build " + supply.name);
                     Check(SelectedButtons() == 1 && Selected(supply.name) && !Selected(barracks.name), "Switching blueprint moves the persistent highlight " + faction);
                     CapturePanel(faction + "-supply-selected");
+                    var blocker = session.Match.Entities.Values.First(e => e.owner == 0 && !session.Catalog[e.definition].building && e.id != worker.id);
+                    blocker.position = new Point(20.5f, 14.5f); blocker.order = CommandKind.Hold;
                     Check(session.Context(new Point(20, 14), 0, 0) > 0, "Selected blueprint places through the normal command path " + faction);
+                    var foundation = session.Match.Entities.Values.Single(e => e.definition == supply.id && !e.complete);
+                    Check(foundation.awaitingClearance && session.Match.View(0).entities.First(e => e.id == foundation.id).awaitingClearance,
+                        "Runtime placement accepts own obstruction and publishes clearance " + faction);
+                    for (int tick = 0; tick < 300 && foundation.awaitingClearance; tick++) session.Match.Step();
+                    Check(!foundation.awaitingClearance && blocker.order == CommandKind.Hold && session.Match.Map.CanStand(blocker.position, session.Catalog[blocker.definition].collisionRadius),
+                        "Runtime obstruction walks clear and keeps its order " + faction);
                     RefreshPanel();
                     Check(session.BuildDefinition == null && SelectedButtons() == 0 && session.Message == supply.name + " construction ordered.", "Successful placement clears the highlight and placement prompt " + faction);
                     SelectionActions.For(session).Items.First(a => a.Id == "build:" + barracks.id).Execute(); RefreshPanel();
@@ -90,6 +98,11 @@ namespace Frontier.Editor
                     Check(Marker(1000).Find("Construction percent").GetComponent<Text>().text == "20%" && Marker(1001).Find("Construction percent").GetComponent<Text>().text == "65%", "Labels display actual progress " + faction);
                     Check(Marker(1000).Find("Availability").GetComponent<Text>().text == "NO RESOURCE DELIVERY YET", "Unfinished base explains why workers cannot deposit " + faction);
                     CaptureBoard(faction + "-construction-stages");
+                    actors[0].progress = 0; actors[0].awaitingClearance = true; Publish(); Invoke(board, "LateUpdate");
+                    Check(Marker(1000).Find("Construction status").GetComponent<Text>().text == "CLEARING AREA", "Reserved site explains why construction is waiting " + faction);
+                    CaptureBoard(faction + "-clearing-area");
+                    actors[0].awaitingClearance = false; Publish(); Invoke(board, "LateUpdate");
+                    Check(Marker(1000).Find("Construction status").GetComponent<Text>().text == "UNDER CONSTRUCTION", "Cleared site restores normal construction label " + faction);
                     actors[0].progress = .999f; Publish(); Invoke(board, "LateUpdate");
                     Check(Marker(1000).Find("Construction percent").GetComponent<Text>().text == "99%", "Incomplete building never claims 100 percent " + faction);
                     actors[0].complete = true; actors[0].progress = 1; Publish(); Invoke(board, "LateUpdate");

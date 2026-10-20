@@ -22,7 +22,7 @@ namespace Frontier.Runtime
         private sealed class Marker
         {
             public RectTransform rect;
-            public Text count;
+            public Text count, title;
             public RectTransform progress;
             public bool construction;
             public LineRenderer stem;
@@ -56,6 +56,7 @@ namespace Frontier.Runtime
                     if (marker == null) markers[building.id] = marker = Create(building.id, gas, construction, role == "hq");
                     if (construction)
                     {
+                        marker.title.text = building.awaitingClearance ? "CLEARING AREA" : "UNDER CONSTRUCTION";
                         float progress = Mathf.Clamp01(building.progress);
                         marker.count.text = Mathf.Min(99, Mathf.FloorToInt(progress * 100)) + "%";
                         marker.progress.sizeDelta = new Vector2(196 * progress, 7);
@@ -119,7 +120,7 @@ namespace Frontier.Runtime
             }
             var stem = new GameObject("Attachment").AddComponent<LineRenderer>(); stem.transform.SetParent(rect, false);
             stem.sharedMaterial = stemMaterial; stem.positionCount = 2; stem.useWorldSpace = true; stem.widthMultiplier = .0006f;
-            return new Marker { rect = rect, count = count, stem = stem, progress = progress, construction = construction };
+            return new Marker { rect = rect, count = count, title = title, stem = stem, progress = progress, construction = construction };
         }
         private Text Text(Transform parent, string name, Vector2 position, Vector2 size, int fontSize)
         {

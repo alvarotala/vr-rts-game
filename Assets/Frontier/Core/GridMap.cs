@@ -9,7 +9,7 @@ namespace Frontier.Core
         public readonly bool[] Walkable, Buildable, Ramp;
         public readonly byte[] Elevation;
         public readonly float[] SurfaceLevel;
-        public readonly int[] Occupant;
+        public readonly int[] Occupant, ConstructionReservation;
         public int Version { get; private set; }
         public int Width => Definition.width;
         public int Height => Definition.height;
@@ -24,7 +24,7 @@ namespace Frontier.Core
             definition.terrain = definition.terrain ?? Array.Empty<TerrainRegion>();
             definition.decoration = definition.decoration ?? Array.Empty<DecorationDefinition>();
             Walkable = new bool[Count]; Buildable = new bool[Count]; Ramp = new bool[Count];
-            Elevation = new byte[Count]; SurfaceLevel = new float[Count]; Occupant = new int[Count];
+            Elevation = new byte[Count]; SurfaceLevel = new float[Count]; Occupant = new int[Count]; ConstructionReservation = new int[Count];
             for (int i = 0; i < Count; i++) Walkable[i] = Buildable[i] = true;
             foreach (var region in definition.terrain ?? Array.Empty<TerrainRegion>())
             {
@@ -55,7 +55,7 @@ namespace Frontier.Core
             if (!Inside(x0, y0) || !Inside(x0 + size - 1, y0 + size - 1)) return false;
             byte level = Elevation[Index(x0, y0)];
             for (int y = y0; y < y0 + size; y++) for (int x = x0; x < x0 + size; x++)
-            { int i = Index(x, y); if (!Buildable[i] || !Walkable[i] || Ramp[i] || Occupant[i] != 0 || Elevation[i] != level) return false; }
+            { int i = Index(x, y); if (!Buildable[i] || !Walkable[i] || Ramp[i] || Occupant[i] != 0 || ConstructionReservation[i] != 0 || Elevation[i] != level) return false; }
             return true;
         }
         public bool CanStand(Point point, float radius)
@@ -89,6 +89,11 @@ namespace Frontier.Core
         {
             for (int y = (int)point.y; y < (int)point.y + size; y++) for (int x = (int)point.x; x < (int)point.x + size; x++) Occupant[Index(x, y)] = id;
             Version++;
+        }
+        // A reserved foundation prevents overlapping builds while units can still walk out.
+        public void ReserveConstruction(Point point, int size, int id)
+        {
+            for (int y = (int)point.y; y < (int)point.y + size; y++) for (int x = (int)point.x; x < (int)point.x + size; x++) ConstructionReservation[Index(x, y)] = id;
         }
         public List<int> Neighbors(int cell, bool ignoreBuildings = false)
         {
