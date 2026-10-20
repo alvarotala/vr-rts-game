@@ -350,9 +350,10 @@ namespace Frontier.Runtime
         private void Place(RectTransform view, Ray pointer, float scale)
         {
             // Keep both layers at the ray's base, with the controller's full rotation
-            // (including wrist roll). Head movement must not push or turn the wheel.
+            // (including wrist roll), plus a 45-degree upward reading tilt.
+            // Head movement must not push or turn the wheel.
             var rotation = Quest.TrackingSpace != null ? Quest.PointerRotation() : Quaternion.LookRotation(pointer.direction, Vector3.up);
-            view.SetPositionAndRotation(pointer.origin + rotation * new Vector3(0, .025f, 0), rotation);
+            view.SetPositionAndRotation(pointer.origin + rotation * new Vector3(0, .025f, 0), rotation * Quaternion.Euler(45, 0, 0));
             view.localScale = Vector3.one * scale;
         }
 

@@ -87,7 +87,7 @@ namespace Frontier.Editor
                     session.Match.Entities.Remove(workers[0].id);Refresh();Check(!Plan().gameObject.activeInHierarchy,"Destroyed selected unit leaves no stale plan");
                     session.LeaveMatch();Refresh();Check(!Plan().gameObject.activeInHierarchy,"Leaving the match clears order overlays");
                 }
-                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Pause});Refresh();
+                session.StartMatch();typeof(CommandPanel).GetMethod("Show",Private).Invoke(panel,new object[]{CommandPanel.MenuPage.Guide});Refresh();
                 Check(Field<Text[]>(panel,"controlGuideGestures")[4].text.Contains("double "+panel.Bindings.Name(true,"select"))
                     &&Field<Text[]>(panel,"controlGuideDescriptions")[3].text.Contains("0.5 s"),"The current Selection guide describes double selection and stationary deselection");
                 typeof(CommandPanel).GetField("controlGuideTopic",Private).SetValue(panel,1);Invoke(panel,"Rebuild");Refresh();

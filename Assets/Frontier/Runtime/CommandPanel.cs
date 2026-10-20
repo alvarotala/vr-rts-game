@@ -20,7 +20,7 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide }
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
@@ -160,10 +160,10 @@ namespace Frontier.Runtime
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
-                    harvesting.text=Board.Placed?"BOARD READY":"PLACE YOUR BOARD BEFORE STARTING";
+                    harvesting.text=Board.Placed?"BOARD READY":"BOARD PLACEMENT WILL OPEN WHEN YOU START";
                     harvesting.text+=Session.Difficulty=="hard"?" · Fast economy · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Builds and scouts · Attacks from 5 min.":" · Reinforcements and spells · Attacks from 3:30.";break;
                 case MenuPage.Settings:
-                    headline.text="SETTINGS";economy.text="CONTROLS / PLAY SPACE";
+                    headline.text="SETTINGS";economy.text="CONTROLS / SOUND / PLAY SPACE";
                     selection.text=Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.";break;
                 case MenuPage.Hotkeys:
                     headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
@@ -171,8 +171,13 @@ namespace Frontier.Runtime
                     status.text=hotkeyMessage;break;
                 case MenuPage.Pause:
                     headline.text="MATCH PAUSED";economy.text=Session.Map.title;
-                    selection.text="Your match is paused. Browse the control guide below or resume when ready.";
+                    selection.text=Board.BaseTargeting?"Base selection: aim at the ground under a unit. Foreground models do not block it."
+                        :"Body selection is active. Try Bases to reach units behind buildings or minerals.";
                     status.text="Returning to the main menu ends the current match.";break;
+                case MenuPage.Guide:
+                    headline.text="CONTROL GUIDE";economy.text="COMMANDS / GESTURES";
+                    selection.text="Choose a category to review its controls.";
+                    status.text="Your match stays paused. Back returns to the pause menu.";break;
                 case MenuPage.LeaveConfirmation:
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
                     selection.text="Leave this match and return to the main menu? Match progress will be lost.";
@@ -227,7 +232,7 @@ namespace Frontier.Runtime
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
                 Add("Detect surfaces",()=>Quest.LoadRoom());
-                Add("START MATCH",()=>{if(Board.Placed&&!Quest.Placing)Session.StartMatch();else Session.Announce("Confirm the board placement first.");},primary:true);
+                Add("START MATCH",Quest.RequestStartMatch,primary:true);
                 Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));Add("Back",Back);return;
             }
             if(Page==MenuPage.Settings)
@@ -236,7 +241,10 @@ namespace Frontier.Runtime
                 Add("Reposition board",()=>PlaceRequested?.Invoke());
                 Add("Table / height 75 cm",()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
                 Add("Floor / height 0",()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
-                Add("Detect surfaces",()=>Quest.LoadRoom());Add("Back",Back);return;
+                Add("Detect surfaces",()=>Quest.LoadRoom());
+                Add("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%",()=>{AudioFeedback.CycleMusicVolume();Rebuild();});
+                Add("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%",()=>{AudioFeedback.CycleEffectsVolume();Rebuild();});
+                Add("Back",Back);return;
             }
             if(Page==MenuPage.Hotkeys)
             {
@@ -247,10 +255,13 @@ namespace Frontier.Runtime
             if(Page==MenuPage.Pause)
             {
                 Add("Resume match",()=>Show(MenuPage.Actions),primary:true);
+                Add("Selection: "+(Board.BaseTargeting?"Bases":"Bodies"),()=>{Board.SetBaseTargeting(!Board.BaseTargeting);Rebuild();});
+                Add("Control guide",()=>OpenSubmenu(MenuPage.Guide));
                 Add("Settings",()=>OpenSubmenu(MenuPage.Settings));
                 Add("Hotkeys",()=>OpenSubmenu(MenuPage.Hotkeys));
                 Add("Return to main menu",()=>Show(MenuPage.LeaveConfirmation));return;
             }
+            if(Page==MenuPage.Guide){Add("Back",Back);return;}
             if(Page==MenuPage.LeaveConfirmation)
             {
                 Add("Keep playing",()=>Show(MenuPage.Actions),primary:true);
@@ -258,7 +269,7 @@ namespace Frontier.Runtime
             }
             if(Page==MenuPage.Result)
             {
-                Add("Rematch",()=>Session.StartMatch(),primary:true);
+                Add("Rematch",Quest.RequestStartMatch,primary:true);
                 Add("Main menu",()=>Session.LeaveMatch());return;
             }
             BuildMatchActions();
@@ -268,6 +279,7 @@ namespace Frontier.Runtime
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
             {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
             if(page!=MenuPage.Hotkeys)DismissHotkeyModal();
+            if(page!=MenuPage.MatchSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
             ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
@@ -288,7 +300,7 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.MatchSetup:Show(MenuPage.Main);break;
-                case MenuPage.Settings:case MenuPage.Hotkeys:Show(returnPage);break;
+                case MenuPage.Settings:case MenuPage.Hotkeys:case MenuPage.Guide:Show(returnPage);break;
                 case MenuPage.Actions:Show(MenuPage.Pause);break;
                 case MenuPage.Pause:Show(MenuPage.Actions);break;
                 case MenuPage.LeaveConfirmation:Show(MenuPage.Pause);break;
@@ -298,7 +310,7 @@ namespace Frontier.Runtime
         public void ToggleMenu()
         {
             if(HotkeyModalOpen){CancelHotkeyChange();return;}
-            if(Page==MenuPage.Hotkeys){Back();return;}
+            if(Page==MenuPage.Hotkeys||Page==MenuPage.Guide){Back();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             if(!Session.Running){Back();return;}
             if(Session.Match.Winner!=-1)return;
@@ -386,7 +398,7 @@ namespace Frontier.Runtime
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
             UpdateActionHelp();
             if(up&&pressed!=null)
-            {var p=pressed;pressed=null;HideActionHelp();if(hit==p){if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
+            {var p=pressed;pressed=null;HideActionHelp();if(hit==p){Session.GetComponent<AudioFeedback>()?.Navigation(true);if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
             // Empty areas also consume the ray, preventing orders through the panel.
             return pressed!=null||Hit(root,ray,out _);
         }

@@ -307,6 +307,8 @@ Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resou
 
 `Frontier.Editor.ResourcePickingPreview.Render` comprueba la resolución de cristal/suelo, interacción con trabajadores cercanos, clic con temblor y órdenes de recolección; renderiza los dos mapas a distintos tamaños. Ejecutar con `unity run . --log-file TestResults/unity-mineral-picking.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ResourcePickingPreview.Render`. Las imágenes quedan en `TestResults/ResourcePicking/`. `EdgeSelectionPreview.Render` y `HarvestingPreview.RenderHud` cubren las regresiones de selección y panel. Ninguno genera APK ni ejecutable desktop.
 
+La misma prueba compara Bodies y Bases con rayos oblicuos bloqueados por un mineral o edificio, selección real con gatillo, órdenes contextuales, huellas, niebla, agotamiento y recorte. `MenuFlowPreview.Render` comprueba el selector persistente en pausa, el submenú Control guide y el retorno sin reanudar. Ambos conservan y restauran la preferencia de selección del dispositivo.
+
 ### Cuadrícula de selección
 
 `SelectionGridPreview.Render` verifica rayos y gestos del panel para ambas facciones: selección individual, doble clic limitado al conjunto y a la definición, selección en otras páginas, eliminación mantenida, cancelación y alias A. Incluye el máximo de 60 unidades y 20 edificios, recorrido de las cuatro páginas y capturas y ausencia de superposición con producción. `SelectionGridPreview.RunValidation` añade las regresiones de grupos, rueda, entrada de órdenes/rally, menús y producción. No construye un jugador:
@@ -314,3 +316,14 @@ Para inspeccionar los modelos de recursos, ejecutar **Frontier → Preview resou
 ```sh
 unity run . --log-file TestResults/unity-selection-grid.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.SelectionGridPreview.RunValidation
 ```
+
+## Comodidad de controles y audio
+
+`Frontier.Editor.ComfortAudioPreview.Run` prepara los prefabs Touch Plus usando los modelos del SDK, comprueba inicio con colocación diferida, retención/cancelación/restauración, geometría y mano activa del mando, música sin clipping y unión del bucle, sonidos de órdenes, límites de voces, deduplicación, pausa y volúmenes independientes. Conserva las preferencias de volumen previas. Ejecuta además `UnifiedWheelPreview`, `MenuFlowPreview` y `AttackPointerPreview`, incluidas entrada/colas y rueda de acciones. Las pruebas de entrada incluyen doble orden a los 0,5 s y rechazo de conversión a los 0,6 s.
+
+```sh
+unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-comfort-audio.log --no-tail -- \
+  -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ComfortAudioPreview.Run
+```
+
+Las vistas de mandos y la música WAV quedan en `TestResults/ComfortAudio`. El audio se genera con código propio; las mallas, texturas y animaciones del mando siguen siendo assets del SDK de Meta. Esta validación no sustituye escuchar la mezcla, comprobar la postura de la muñeca y restaurar un ancla en un Quest físico.

@@ -51,7 +51,7 @@ namespace Frontier.Editor
                     Check(worker.activeOrderSequence==active,"Appending preserves the active movement order");
                     Click(new Point(second.x+.15f,second.y),10.2f,true);
                     Check(worker.pendingOrders.Count==1&&worker.pendingOrders[0].kind==CommandKind.AttackMove,"Double A converts only its queued waypoint into Attack Move");
-                    Click(third,10.3f,true);Click(third,10.8f,true);
+                    Click(third,10.3f,true);Click(third,11f,true);
                     Check(worker.pendingOrders.Count==3&&worker.pendingOrders.Skip(1).All(o=>o.kind==CommandKind.Move),"Two slow presses remain separate queued moves");
 
                     Reset();Click(first,20,false);
@@ -60,6 +60,13 @@ namespace Frontier.Editor
                     Check(worker.order==CommandKind.AttackMove&&worker.pendingOrders.Count==0,"Double A without Grip replaces movement with Attack Move");
                     Click(second,20.2f,false);
                     Check(worker.order==CommandKind.Move,"A third tap begins a fresh gesture");
+
+                    Reset();Click(first,22,false);Click(first,22.5f,false);
+                    Check(worker.order==CommandKind.AttackMove,"A relaxed half-second double press attacks immediately");
+                    Reset();Click(first,23,false);Click(first,23.6f,false);
+                    Check(worker.order==CommandKind.Move,"Presses beyond 0.55 seconds remain independent moves");
+                    Reset();session.Send(CommandKind.Stop);Click(first,24,true);Click(first,24.5f,true);
+                    Check(worker.order==CommandKind.AttackMove&&worker.pendingOrders.Count==0,"A relaxed double press with Grip converts the first order without duplicates");
 
                     var enemyType=session.Catalog.Role(session.EnemyFaction,"worker");
                     var enemy=new EntityState{id=1001,owner=1,definition=enemyType.id,position=new Point(20.5f,12.5f),health=enemyType.health};

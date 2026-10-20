@@ -9,6 +9,7 @@ namespace Frontier.Runtime
     {
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
+        private ControllerVisuals controllerVisuals;
         private OVRInput.Controller hapticController=OVRInput.Controller.None;
         private bool wheelReleasePending;
         private OVRInput.Controller inputController=OVRInput.Controller.None;
@@ -24,6 +25,7 @@ namespace Frontier.Runtime
         private const float DeselectHoldTime=.5f;
         private float dragThreshold=1.5f;
         private const float DoubleTapWindow=.35f;
+        public const float AttackDoubleTapWindow=.55f;
         private float lastActionPress=-1,lastSelectPress=-1;
         private int actionSequence,actionEntity,actionResource,selectEntity;
         private Point actionPoint;
@@ -33,12 +35,14 @@ namespace Frontier.Runtime
         private void Start()
         {
             Panel.PlaceRequested=Quest.BeginPlacement;Session.Feedback+=Haptic;
+            controllerVisuals=new ControllerVisuals(transform);
             var go=new GameObject("Pointer ray");laser=go.AddComponent<LineRenderer>();laser.sharedMaterial=new Material(Shader.Find("Universal Render Pipeline/Unlit"));laser.sharedMaterial.color=new Color(.3f,.95f,.94f);laser.positionCount=2;laser.widthMultiplier=.002f;laser.enabled=Quest.Active;
         }
         private void LateUpdate()
         {
             // Read after input routing so pointer mode changes appear in this frame.
             if(laser!=null&&Board!=null)laser.sharedMaterial.color=Board.PointerColor;
+            controllerVisuals?.Update(Quest,Board.PointerColor);
         }
         private void Update()
         {
@@ -53,6 +57,7 @@ namespace Frontier.Runtime
                 // Buttons, axes and the pointer always come from the chosen hand.
                 var primary=Quest.ActiveController;
                 if(inputController!=primary)ChangeInputController(primary);
+                if(!Quest.PointerTracked){laser.enabled=false;ResetWheelRouting();ClearPointer();controllerReleasePending=true;return;}
                 ray=Quest.PointerRay();
                 var select=HotkeyInput.Read(gameplay?bindings.Get(true,"select"):"touch:trigger",primary);
                 var action=HotkeyInput.Read(gameplay?bindings.Get(true,"order"):"touch:a",primary);
@@ -63,8 +68,8 @@ namespace Frontier.Runtime
                 primaryStick=OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,primary);
                 wheelPressed=wheel.Down;wheelHeld=wheel.Held;wheelReleased=wheel.Up;
                 menuDepth=primaryStick.y;
-                laser.enabled=true;
-                laser.SetPosition(0,ray.origin);laser.SetPosition(1,ray.GetPoint(2));
+                laser.enabled=!Session.HasSystemPause&&Quest.PointerTracked;
+                laser.SetPosition(0,ray.GetPoint(ControllerVisuals.EmitterDistance));laser.SetPosition(1,ray.GetPoint(2));
             }
             else
             {
@@ -88,7 +93,7 @@ namespace Frontier.Runtime
             {ResetWheelRouting();CancelPanelInput();ClearPointer();return;}
             ValidateMapGestures(add);
             if(Quest.Placing)
-            {ResetWheelRouting();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);return;}
+            {ResetWheelRouting();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);if(!Quest.Placing)controllerReleasePending=Quest.Active;return;}
             var menuSelect=HotkeyInput.Read(Quest.Active?"touch:trigger":"mouse:left",Quest.ActiveController);
             var menuAction=Quest.Active?HotkeyInput.Read("touch:a",Quest.ActiveController):default;
             bool uiPointerInput=menuSelect.Down||menuSelect.Up||menuSelect.Held||menuAction.Down||menuAction.Up||menuAction.Held||panelButton!=PanelButton.None||Panel.IsDragging;
@@ -187,11 +192,11 @@ namespace Frontier.Runtime
                 // level pulse. A held direction and description refresh stay silent.
                 if(Wheel.IsOpen)
                 {
-                    if(!wasOpen||Wheel.Page!=previousPage)PulseHaptic(.28f,.055f);
-                    else if(!triggerDown&&Wheel.HighlightedId!=null&&Wheel.HighlightedId!=previousItem)PulseHaptic(.12f,.025f);
+                    if(!wasOpen||Wheel.Page!=previousPage){PulseHaptic(.28f,.055f);Session.GetComponent<AudioFeedback>()?.Navigation(true);}
+                    else if(!triggerDown&&Wheel.HighlightedId!=null&&Wheel.HighlightedId!=previousItem){PulseHaptic(.12f,.025f);Session.GetComponent<AudioFeedback>()?.Navigation(false);}
                 }
                 ClearPointer();CancelPanelInput();wheelReleasePending=true;
-                if(laser!=null)laser.enabled=!Wheel.IsOpen;
+                if(laser!=null)laser.enabled=!Wheel.IsOpen&&!Session.HasSystemPause&&Quest.PointerTracked;
                 return true;
             }
             return false;
@@ -291,7 +296,7 @@ namespace Frontier.Runtime
             // Move: that is the retreat half of deliberate hit-and-run micro.
             if(nearby&&(actionConfirmedTarget||previousGone||(actionEntity==0&&actionResource==0)
                 ||(entity==0&&resource==0&&!previousEnemyAlive)))sameTarget=true;
-            bool twice=!mode&&lastActionPress>=0&&now>=lastActionPress&&now-lastActionPress<=DoubleTapWindow&&
+            bool twice=!mode&&lastActionPress>=0&&now>=lastActionPress&&now-lastActionPress<=AttackDoubleTapWindow&&
                 actionSequence>0&&actionAdd==add&&sameTarget&&actionSelection.SetEquals(Session.Selection);
             int replace=twice&&add?actionSequence:0;
             bool confirmed=actionConfirmedTarget;
@@ -347,8 +352,8 @@ namespace Frontier.Runtime
         }
         private void OnApplicationFocus(bool focused)
         {if(!focused){StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
-        private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;}
+        private void OnDisable(){controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;controllerVisuals?.Dispose();if(laser!=null){if(Application.isPlaying){Destroy(laser.sharedMaterial);Destroy(laser.gameObject);}else{DestroyImmediate(laser.sharedMaterial);DestroyImmediate(laser.gameObject);}}}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

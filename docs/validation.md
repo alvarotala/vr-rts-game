@@ -1,5 +1,29 @@
 # Registro de validación
 
+## Selección por bases y guía separada — fuentes, sin nuevo APK — 20 de octubre de 2026
+
+La pausa incorpora **Selection: Bodies / Bases**, con Bodies como valor inicial y persistencia local. Bases resuelve sobre el suelo y evita que el cuerpo de un mineral o edificio intercepte la unidad situada detrás. Conserva la selección de huellas y recursos, y comparte objetivo con hover y órdenes. **Control guide** abre un submenú; Back y el atajo de menú vuelven a la pausa compacta sin reanudar.
+
+- `ResourcePickingPreview.Render`: **114 comprobaciones / 10 vistas**, con ambos mapas, rayos oblicuos a través de mineral y edificio, gatillo, restitución del modo anterior, órdenes contextuales, niebla, agotamiento y recorte.
+- `MenuFlowPreview.Render`: **304 comprobaciones / 42 vistas**, incluido modo inicial, preferencia guardada/reversible, pausa compacta, guía separada, seis categorías y regreso con Back/atajo conservando la pausa. Ambos fixtures restauran la preferencia de selección anterior.
+- `OrderQueueValidationBatch.Run` completo aprobado en Unity **6000.3.26f1**, salida 0: `TestResults/unity-base-selection-batch.log`. Repite las pruebas anteriores y aprueba puntero **92**, entrada/colas **172**, rueda **452**, líneas de órdenes **68**, rally **76**, orientación **32**, selección desde bordes **33**, cancelación **168**, ayuda **140**, cola de producción **90**, además de recolección.
+- Inspeccionadas las vistas de pausa y guía: navegación legible, tarjetas separadas y sin solapamientos. `git diff --check` pasa. Registros individuales: `TestResults/unity-base-targeting.log` y `TestResults/unity-base-menu-flow.log`.
+
+Validación en Editor con entrada sintética. No se generó un APK ni se probó en Quest físico.
+
+## Comodidad, mando visible y audio — fuentes, sin nuevo APK — 19 de octubre de 2026
+
+La ventana de doble A/X pasa de 0,35 a 0,55 s, conservando la respuesta inmediata del primer toque y la selección a 0,35 s. Hint y rueda aplican una inclinación local de 45° hacia arriba. El mando activo muestra el Touch Plus del SDK con materiales URP, escala física original y botones animados; el láser nace de un emisor del modelo. La aplicación deja de cargar superficies o abrir colocación al adquirir seguimiento en el menú. Start Match usa el tablero confirmado o espera restauración; si falta, pide colocarlo y comienza al confirmar, con cancelación disponible.
+
+Se incorporan quince efectos sintetizados originales y música estéreo instrumental de 40 s, con controles persistentes separados de Music/Effects. El combate usa eventos de PlayerView, tres inicios por vista y doce voces reutilizadas. Pausa, interrupciones, deduplicación y límites evitan repetir o acumular ráfagas. La cámara de Quest recibe AudioListener si no lo tenía.
+
+- `ComfortAudioPreview.Run` aprobado en Unity **6000.3.26f1**, salida 0: `TestResults/unity-comfort-audio-final.log`. **47 comprobaciones nuevas**, dos vistas del mando y exportación WAV: flujo de inicio/colocación y cancelación durante restauración, retención del tablero, mano y escala del modelo, emisor, ausencia de colliders, ocultación, muestras finitas sin clipping y unión del bucle, sonidos distintos, límites de combate, pausa y volúmenes.
+- Regresiones aprobadas: **586 comprobaciones de rueda / 20 vistas**, **297 de menús / 41 vistas**, **92 de puntero / 12 vistas**, **172 de entrada/colas** y **452 de acciones / 18 vistas**. Incluyen doble orden a los 0,5 s, separación a los 0,6 s, conversión con grip sin duplicar y pose inclinada en ambas manos/facciones.
+- Tras proteger el láser al cerrar la rueda durante una interrupción, se repite `UnifiedWheelPreview.Render`: **586 comprobaciones / 20 vistas**, salida 0 (`TestResults/unity-comfort-wheel-final.log`). `git diff --check` pasa.
+- Inspeccionadas `ComfortAudio/right-controller.png` y `UnifiedWheel/industrial-right-hand-groups.png`: modelo de mando, origen del láser y rueda inclinada. Música disponible en `TestResults/ComfortAudio/quiet-orbit.wav`. Los modelos conservan referencias al SDK de Meta; no se descargaron assets externos.
+
+No se generó APK ni ejecutable desktop. Estas pruebas usan Editor y seguimiento sintético; no validan el ajuste físico del modelo, la comodidad, el balance audible en el visor ni la restauración real de anclas de Quest. La mezcla y la música son una primera versión para probar en el dispositivo.
+
 ## Órdenes directas y destinos visibles — fuentes, sin nuevo APK — 19 de octubre de 2026
 
 Se conserva la ejecución inmediata existente de A y doble A/X, y se elimina el rojo temporal del cursor después de aceptar un ataque, que podía confundirse con una confirmación pendiente. Cada Move/Attack/Attack Move aceptado deja un pulso expansivo de 1,2 segundos en el punto ordenado, cian para mover y rojo para atacar. El cursor rojo queda reservado para seleccionar un destino desde el menú. Todas las unidades propias seleccionadas muestran su destino activo con líneas punteadas de color, incluso sin cola; los pasos futuros siguen numerándose para una unidad representativa.

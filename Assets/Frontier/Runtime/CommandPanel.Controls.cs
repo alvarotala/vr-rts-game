@@ -15,7 +15,7 @@ namespace Frontier.Runtime
 
         private void CreateControlGuide()
         {
-            controlGuide=Section(root,"Control guide",new Vector2(30,-390),new Vector2(1040,554),new Color(.035f,.08f,.12f));
+            controlGuide=Section(root,"Control guide cards",new Vector2(30,-216),new Vector2(1040,554),new Color(.035f,.08f,.12f));
             Label(controlGuide,"CONTROL GUIDE",new Vector2(16,-10),new Vector2(450,26),21,accent);
             controlGuideDevice=Label(controlGuide,"",new Vector2(470,-10),new Vector2(554,26),16,Color.white,TextAnchor.MiddleRight);
             for(int i=0;i<controlGuideTabs.Length;i++)
@@ -37,7 +37,7 @@ namespace Frontier.Runtime
 
         private void BuildControlGuide()
         {
-            bool visible=Page==MenuPage.Pause;
+            bool visible=Page==MenuPage.Guide;
             controlGuide.gameObject.SetActive(visible);if(!visible)return;
             var topics=DefaultControlCatalog.For(Quest.Active,Bindings);controlGuideTopic=Mathf.Clamp(controlGuideTopic,0,topics.Count-1);
             controlGuideDevice.text=Quest.Active?Bindings.HandName.ToUpperInvariant()+" TOUCH · "+Bindings.OtherHandName+" unused":"MOUSE / KEYBOARD";

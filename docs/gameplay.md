@@ -4,11 +4,11 @@ Los controles indicados a continuación son los predeterminados y se pueden pers
 
 ## Empezar una partida
 
-Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Hotkeys**. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
+Al abrir el juego aparece el menú principal con **New Match**, **Settings** y **Hotkeys**, sin pedir colocar el tablero ni permiso de superficies. Si hay un ancla guardada, se intenta restaurar en segundo plano. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 
-Desde **New Match**, elegir facción, rival, dificultad y mapa. En Quest, usar **Place board** y confirmar con el gatillo. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el joystick derecho modifica tamaño y orientación; sostener el grip derecho permite ajustar altura con ese mismo joystick.
+Desde **New Match**, elegir facción, rival, dificultad y mapa. **START MATCH** inicia directamente si el tablero ya está colocado; si falta, abre la colocación y la partida comienza al confirmar con el gatillo. Cancelar vuelve a la preparación sin iniciar. Si todavía se está restaurando el ancla, espera ese resultado antes de pedir una nueva ubicación. **Place board** permite ajustar la ubicación manualmente antes de empezar. **Detect surfaces** solicita el acceso a la habitación cuando se elige. Si la habitación no está registrada o se deniega el permiso, usar **Table** o **Floor** y ajustar el plano manualmente. Durante la colocación, el joystick derecho modifica tamaño y orientación; sostener el grip derecho permite ajustar altura con ese mismo joystick.
 
-Usar **START MATCH** cuando el tablero esté confirmado. Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
+Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis trabajadores iniciales comienzan a recolectar. Seleccionar uno permite construir; seleccionar un edificio permite producir o investigar. Un extractor debe cubrir un depósito violeta. Se gana destruyendo todos los edificios enemigos.
 
 ### Dificultad de la IA
 
@@ -40,7 +40,9 @@ La navegación de los menús conserva **gatillo/A y B** con el mando derecho, **
 
 Dentro de una partida, **Pause**, **B** con la rueda cerrada y sin una acción pendiente, o **Espacio** abren la pausa; **Resume match** continúa. También se puede abrir **Settings** y **Hotkeys** sin que avance la simulación. **Return to main menu → Leave match** termina la partida y devuelve al inicio; **Keep playing** cancela la salida. Al finalizar por victoria o derrota, aparecen **Rematch** y **Main menu**, sin opción de reanudar una partida terminada.
 
-La pausa muestra directamente **CONTROL GUIDE**, con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. Cada tarjeta explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, rueda unificada, guardado dentro de Groups, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida. **Hotkeys** comparte el catálogo de esta guía en sus seis categorías de consulta. Abre mostrando el dispositivo activo y **Back/B** regresa al menú de origen, conservando la pausa. La lista completa para revisión está en [hotkeys predeterminados](hotkeys.md). La guía y las categorías de referencia muestran las asignaciones actuales; **Edit bindings** vuelve al editor.
+La pausa ofrece **Selection: Bodies / Bases**. **Bodies** conserva el apuntado actual y es el valor inicial. **Bases** usa el punto del suelo: permite seleccionar una unidad detrás de un edificio o mineral sin que su cuerpo intercepte el rayo. Los edificios usan su huella real, las unidades su base y los recursos conservan ayuda de apuntado. El resaltado y las órdenes contextuales usan el mismo objetivo. La elección se guarda en el dispositivo y se puede revertir desde ese botón.
+
+**Pause → Control guide** abre una pantalla propia con seis categorías: **Selection**, **Orders**, **Menus**, **Groups**, **Production** y **Board**. La pausa principal muestra únicamente navegación y la opción de selección. Cada tarjeta de la guía explica el comando, el botón/gesto y su efecto. Se incluyen selección múltiple, colas, Attack Move, Stop/Hold, rueda unificada, guardado dentro de Groups, producción, cancelaciones, Rally Points y colocación. Cambiar de categoría con gatillo/A no ejecuta comandos ni reanuda la partida; **Back/B** vuelve a pausa. **Hotkeys** comparte el catálogo de esta guía en sus seis categorías de consulta. Abre mostrando el dispositivo activo y **Back/B** regresa al menú de origen, conservando la pausa. La lista completa para revisión está en [hotkeys predeterminados](hotkeys.md). La guía y las categorías de referencia muestran las asignaciones actuales; **Edit bindings** vuelve al editor.
 
 Volver al inicio limpia selección, grupos, órdenes pendientes y estado de la partida, conservando facciones/mapa elegidos y la colocación física del tablero. Las pausas por seguimiento, foco o visor continúan vigentes hasta que el sistema las libere. Mientras hay un menú de partida abierto no se pueden dar órdenes al tablero.
 
@@ -176,7 +178,7 @@ Mantener **grip + gatillo durante 0,5 segundos** sobre una unidad ya seleccionad
 
 ### Rueda unificada
 
-El hint y la rueda abierta son pequeños y quedan junto al inicio del rayo. Acompañan la posición y orientación de la mano, incluido el giro de muñeca.
+El hint y la rueda abierta son pequeños y quedan junto al inicio del rayo, **inclinados 45° hacia arriba** para leerlos desde arriba. Acompañan la posición y orientación de la mano, incluido el giro de muñeca. El mando activo muestra un modelo **Touch Plus** con botones y stick animados; el láser nace de su emisor. Se oculta al perder seguimiento o foco y no aparece en desktop.
 
 El mando activo da un pulso suave al cambiar de opción y uno más marcado al abrir la rueda o cambiar de nivel, incluido retroceder. Mantener la misma opción o centrar el stick no repite la vibración.
 
@@ -210,7 +212,7 @@ Las unidades nuevas reciben una orden Move al desplegarse, usando el destino vig
 
 **Grip + A** agrega una orden al final del plan de cada unidad seleccionada. Si está quieta, empieza de inmediato; si está ocupada, conserva su trabajo actual. Repetir A en otro lugar agrega otro destino. Una orden válida sin grip reemplaza el plan; **Stop** y **Hold Position** lo limpian inmediatamente.
 
-**Doble A** hace Attack Move sobre terreno o ataque directo sobre un enemigo visible, inmediatamente en el punto del cursor y sin confirmar con gatillo. Con grip también se encola. El primer A responde inmediatamente; el segundo convierte esa misma orden en ataque, sin dejar un Move extra. Las pulsaciones deben estar separadas por un máximo de 0,35 segundos y apuntar al mismo objetivo o a un punto cercano (hasta 1,5 celdas). Dos ubicaciones diferentes siguen siendo dos órdenes. Cambiar selección, soltar grip, entrar al menú/rueda o pausar descarta el doble clic pendiente.
+**Doble A** hace Attack Move sobre terreno o ataque directo sobre un enemigo visible, inmediatamente en el punto del cursor y sin confirmar con gatillo. Con grip también se encola. El primer A responde inmediatamente; el segundo convierte esa misma orden en ataque, sin dejar un Move extra. Las pulsaciones deben estar separadas por un máximo de **0,55 segundos** y apuntar al mismo objetivo o a un punto cercano (hasta 1,5 celdas). Dos ubicaciones diferentes siguen siendo dos órdenes. Cambiar selección, soltar grip, entrar al menú/rueda o pausar descarta el doble clic pendiente.
 
 Cada orden aceptada de movimiento o ataque deja un **pulso animado de 1,2 segundos en el punto ordenado**: cian para Move y rojo para Attack/Attack Move. Permanece allí aunque muevas el cursor o apuntes fuera del tablero; al desaparecer, las unidades siguen ejecutando la orden. Una nueva orden reemplaza esa confirmación. El cursor y el rayo rojos se reservan para elegir un destino pendiente desde el panel o la rueda.
 
@@ -262,3 +264,9 @@ Los edificios también se identifican por **silueta, altura y símbolo**, ademá
 | Defensa | Sentinel / Stinger | Torre estrecha con cañón o aguijón | Mira clara |
 
 Los símbolos forman parte del modelo y se leen desde arriba, sin añadir carteles flotantes a la partida. Las torres se orientan hacia donde disparan. Los recuerdos bajo niebla conservan la silueta y el símbolo en tonos apagados, sin colores activos ni señales de impacto.
+
+## Sonido
+
+La música de fondo es una composición electrónica instrumental suave, con un bucle estéreo de 40 segundos. Baja durante la pausa y acompaña también los menús. **Settings → Music / Effects** ajusta ambos volúmenes por separado, incluido silencio; se guardan en el dispositivo.
+
+Hay sonidos distintos para selección, movimiento, ataque, rechazo, navegación y confirmación de rueda/menú, comienzo y resultado de partida, unidades/construcciones listas e investigación terminada. El combate usa efectos de armas industriales, orgánicas, cuerpo a cuerpo, artillería y habilidades, situados en el tablero. Solo se oyen eventos disponibles en la visión del jugador; las batallas grandes limitan las voces para evitar saturación. Quitar el visor o perder foco silencia la reproducción; pausar detiene los efectos de combate sin repetirlos al volver.

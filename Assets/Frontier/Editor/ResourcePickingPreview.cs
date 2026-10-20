@@ -20,8 +20,11 @@ namespace Frontier.Editor
             Directory.CreateDirectory("TestResults/ResourcePicking");
             var preview=new PreviewRenderUtility();var fixture=new GameObject("Resource picking session");var boardObject=new GameObject("Resource picking board");
             var bounds=Shader.GetGlobalVector("_FrontierBounds");var matrix=Shader.GetGlobalMatrix("_FrontierWorldToBoard");int checks=0,captures=0;
+            bool hadBasePreference=PlayerPrefs.HasKey(BoardView.BaseTargetingKey);
+            int basePreference=PlayerPrefs.GetInt(BoardView.BaseTargetingKey);
             try
             {
+                PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Invoke(session,"Awake");
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;Invoke(board,"Start");preview.AddSingleGO(boardObject);
                 var quest=fixture.AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
@@ -62,6 +65,26 @@ namespace Frontier.Editor
                             var origin=center+board.transform.up*.08f+direction*.4f;var ray=new Ray(origin,center-origin);
                             Check(board.RayToMap(ray,out var projected)&&projected.Distance(patch.position)>3.5f,"Oblique ray projects well beyond the mineral's old ground target");
                             Send(ray);Check(board.HoveredResource==patch.id&&board.Hovered==0,"Crystal volume can be targeted from side "+side+" at board width "+width);
+                            if(width==1.2f&&side==0)
+                            {
+                                worker.position=projected;Refresh();board.Rebuild();Invoke(board,"LateUpdate");
+                                Send(ray);Check(board.HoveredResource==patch.id,"Body mode reproduces a mineral blocking the worker behind it");
+                                board.SetBaseTargeting(true);
+                                Check(board.Hovered==0&&board.HoveredResource==0&&!board.Pointer.HasValue,"Switching targeting clears stale pointer feedback");
+                                Send(ray);Check(board.Hovered==worker.id&&board.HoveredResource==0,"Base mode reaches the worker behind the crystal");
+                                session.Selection.Clear();Send(ray,down:true);Send(ray,up:true);
+                                Check(session.Selection.SetEquals(new[]{worker.id}),"Trigger selects the worker whose base is behind a crystal");
+                                Invoke(board,"LateUpdate");Capture(map+"-base-through-mineral",worker.position);
+                                session.View.entities.First(e=>e.id==worker.id).remembered=true;Send(ray);
+                                Check(board.Hovered!=worker.id,"Base targeting cannot select a remembered entity");Refresh();
+                                worker.position=new Point(5,5);Refresh();board.Rebuild();Invoke(board,"LateUpdate");
+                                Send(ray);Check(board.Hovered==0&&board.HoveredResource==0,"Base mode leaves ground behind the crystal empty when no unit is there");
+                                Send(Top(patch.position));Check(board.HoveredResource==patch.id,"Minerals remain targetable at their ground base");
+                                Send(Top(patch.position),order:true);
+                                Check(worker.order==CommandKind.Gather,"Context orders use the same base target as the hover");
+                                board.SetBaseTargeting(false);Send(ray);
+                                Check(board.HoveredResource==patch.id,"Disabling base mode restores crystal body targeting");
+                            }
                             if(width==1.2f&&side==0){Invoke(board,"LateUpdate");Capture(map+"-oblique",patch.position);}
                             if(width==.6f&&side==0){Invoke(board,"LateUpdate");Capture(map+"-compact",patch.position);}
                         }
@@ -82,6 +105,7 @@ namespace Frontier.Editor
                     Check(board.ResourceAt(new Point(patch.position.x+2,patch.position.y))==0,"Assistance cannot select a resource clipped outside the board");
                     board.Fit();Invoke(board,"LateUpdate");Send(Top(patch.position));board.SetVisible(false);
                     Check(board.HoveredResource==0,"Hiding the board clears the resource target");board.SetVisible(true);
+                    CheckBuildingBase();
                     session.LeaveMatch();Check(board.HoveredResource==0,"Leaving the match clears the resource target");
 
                     Ray Top(Point point)
@@ -90,6 +114,36 @@ namespace Frontier.Editor
                         return new Ray(world+board.transform.up*.4f,-board.transform.up);
                     }
                     void Refresh()=>typeof(GameSession).GetProperty("View").SetValue(session,session.Match.View(0));
+                    void CheckBuildingBase()
+                    {
+                        board.Width=1.2f;
+                        var hq=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
+                        int footprint=session.Catalog[hq.definition].footprint;
+                        hq.position=new Point(patch.position.x-footprint*.5f,patch.position.y-footprint*.5f);
+                        worker.position=new Point(patch.position.x,hq.position.y+footprint+.7f);
+                        Refresh();board.Rebuild();Invoke(board,"LateUpdate");
+                        var target=board.Content.TransformPoint(new Vector3(worker.position.x,board.HeightAt(worker.position),worker.position.y));
+                        var foreground=board.Content.TransformPoint(new Vector3(patch.position.x,board.HeightAt(hq.position)+1,patch.position.y));
+                        var ray=new Ray(target+(foreground-target)*6,target-foreground);
+                        Check(board.RayToMap(ray,out var projected)&&projected.Distance(worker.position)<.05f,"Building fixture points at the worker's ground base");
+                        Send(ray);Check(board.Hovered==hq.id,"Body mode reproduces a building blocking the worker behind it");
+                        board.SetBaseTargeting(true);Send(ray);
+                        Check(board.Hovered==worker.id&&board.HoveredResource==0,"Base mode reaches the worker behind the building");
+                        session.Selection.Clear();Invoke(input,"ClearPointer");Send(ray,down:true);Send(ray,up:true);
+                        Check(session.Selection.SetEquals(new[]{worker.id}),"Trigger selects the worker behind the building");
+                        Invoke(board,"LateUpdate");Capture(map+"-base-through-building",worker.position);
+                        Send(Top(patch.position));Check(board.Hovered==hq.id&&board.HoveredResource==0,"Building footprint remains selectable in base mode");
+                        var remembered=session.View.entities.First(e=>e.id==hq.id);remembered.remembered=true;
+                        int cell=(int)patch.position.y*session.Map.width+(int)patch.position.x;
+                        session.View.visibility[cell]=0;Send(Top(patch.position));
+                        Check(board.Hovered==0&&board.HoveredResource==0,"Base targeting excludes remembered buildings and unexplored minerals");
+                        Refresh();patch.remaining=0;Refresh();remembered=session.View.entities.First(e=>e.id==hq.id);remembered.remembered=true;
+                        Send(Top(patch.position));Check(board.HoveredResource==0,"Base mode excludes depleted deposits");
+                        board.Zoom=4;board.Pan=new Vector2(worker.position.x+session.Map.width*.125f+.1f-session.Map.width*.5f,worker.position.y-session.Map.height*.5f);
+                        Invoke(board,"LateUpdate");var edge=new Point(worker.position.x+.3f,worker.position.y);
+                        Send(Top(edge));Check(board.Hovered!=worker.id,"Unit selection assistance cannot reach a base clipped outside the board");
+                        board.SetBaseTargeting(false);board.Fit();
+                    }
                 }
                 Debug.Log($"FRONTIER_RESOURCE_PICKING passed: {checks} checks, {captures} views; no player build");
                 void Send(Ray ray,bool down=false,bool up=false,bool order=false)=>send.Invoke(input,new object[]{ray,down,up,order,false});
@@ -113,6 +167,8 @@ namespace Frontier.Editor
             }
             finally
             {
+                if(hadBasePreference)PlayerPrefs.SetInt(BoardView.BaseTargetingKey,basePreference);else PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
+                PlayerPrefs.Save();
                 Object.DestroyImmediate(boardObject);Object.DestroyImmediate(fixture);preview.Cleanup();
                 Shader.SetGlobalVector("_FrontierBounds",bounds);Shader.SetGlobalMatrix("_FrontierWorldToBoard",matrix);
             }

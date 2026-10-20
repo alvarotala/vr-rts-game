@@ -14,6 +14,8 @@ namespace Frontier.Runtime
         public float Width = 1.2f, Zoom = 1;
         public Vector2 Pan;
         public bool Placed;
+        public const string BaseTargetingKey="frontier.input.base-targeting.v1";
+        public bool BaseTargeting { get; private set; }
         public int Hovered;
         public int HoveredResource;
         public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
@@ -77,6 +79,7 @@ namespace Frontier.Runtime
         public float Depth => Width * Session.Map.height / Session.Map.width;
         private void Start()
         {
+            BaseTargeting=PlayerPrefs.GetInt(BaseTargetingKey,0)!=0;
             hoverProperties=new MaterialPropertyBlock();
             impactProperties=new MaterialPropertyBlock();
             impactProperties.SetFloat("_Ring",1);
@@ -493,6 +496,7 @@ namespace Frontier.Runtime
         }
         public void ResolvePointerTarget(Ray ray,Point point,Vector3 terrainHit,out int entityId,out int resourceId)
         {
+            if(BaseTargeting){ResolveBaseTarget(point,out entityId,out resourceId);return;}
             entityId=EntityAt(point);resourceId=ResourceAt(point);
             if(Session.View==null)return;
             // The terrain intersection can be well behind a crystal when viewed from
@@ -526,6 +530,50 @@ namespace Frontier.Runtime
             bool inside=type.building?point.x>=candidate.position.x&&point.y>=candidate.position.y&&point.x<=candidate.position.x+type.footprint&&point.y<=candidate.position.y+type.footprint
                 :candidate.position.Distance(point)<=type.collisionRadius+.15f;
             if(inside)resourceId=0;else entityId=0;
+        }
+        public void SetBaseTargeting(bool enabled)
+        {
+            BaseTargeting=enabled;
+            PlayerPrefs.SetInt(BaseTargetingKey,enabled?1:0);PlayerPrefs.Save();
+            Hovered=0;Pointer=null;
+        }
+        private void ResolveBaseTarget(Point point,out int entityId,out int resourceId)
+        {
+            entityId=0;resourceId=0;
+            if(Session.View==null||!VisibleBase(point))return;
+            int directUnit=0,nearUnit=0,building=0;
+            float directDistance=float.MaxValue,nearDistance=float.MaxValue,buildingDistance=float.MaxValue;
+            foreach(var entity in Session.View.entities)
+            {
+                if(entity.remembered)continue;
+                var type=Session.Catalog[entity.definition];
+                if(type.building)
+                {
+                    // Use the footprint, not the oversized circular selection halo.
+                    if(point.x<entity.position.x||point.y<entity.position.y||point.x>entity.position.x+type.footprint||point.y>entity.position.y+type.footprint)continue;
+                    float distance=new Point(entity.position.x+type.footprint*.5f,entity.position.y+type.footprint*.5f).Distance(point);
+                    if(distance<buildingDistance){building=entity.id;buildingDistance=distance;}
+                }
+                else
+                {
+                    if(!VisibleBase(entity.position))continue;
+                    float distance=entity.position.Distance(point);
+                    if(distance<=type.collisionRadius+.15f&&distance<directDistance){directUnit=entity.id;directDistance=distance;}
+                    if(distance<1.6f&&distance<nearDistance){nearUnit=entity.id;nearDistance=distance;}
+                }
+            }
+            // A unit's base wins over nearby assistance. A building only wins inside
+            // its footprint; foreground geometry never participates in this mode.
+            entityId=directUnit!=0?directUnit:building;
+            if(entityId!=0)return;
+            resourceId=ResourceAt(point);
+            if(resourceId==0)entityId=nearUnit;
+        }
+        private bool VisibleBase(Point point)
+        {
+            if(point.x<0||point.y<0||point.x>=Session.Map.width||point.y>=Session.Map.height)return false;
+            return Mathf.Abs(point.x-Session.Map.width*.5f-Pan.x)<=Session.Map.width*.5f/Zoom
+                &&Mathf.Abs(point.y-Session.Map.height*.5f-Pan.y)<=Session.Map.height*.5f/Zoom;
         }
         private bool HitBody(Renderer renderer,float padding,Ray ray,float maximum,out float distance)
         {

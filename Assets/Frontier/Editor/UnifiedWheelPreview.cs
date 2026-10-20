@@ -271,7 +271,7 @@ namespace Frontier.Editor
                         var offset = view.position - f.Ray.origin;
                         f.Check(offset.magnitude < .04f && Mathf.Abs(Vector3.Dot(offset, f.Ray.direction)) < .005f,
                             hand + " " + field + " stays at the ray base without forward reach");
-                        f.Check(Quaternion.Angle(view.rotation, rotation) < .1f, hand + " " + field + " follows pitch, yaw and wrist roll");
+                        f.Check(Quaternion.Angle(view.rotation, rotation * Quaternion.Euler(45, 0, 0)) < .1f, hand + " " + field + " keeps its 45-degree upward tilt while following the hand");
                         float width = view.rect.width * view.lossyScale.x;
                         f.Check(width < (hint ? .10f : .19f) && width > (hint ? .07f : .15f), hand + " " + field + " has compact physical dimensions");
                         var position = view.position; var orientation = view.rotation;

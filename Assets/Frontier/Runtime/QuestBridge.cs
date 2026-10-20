@@ -14,6 +14,7 @@ namespace Frontier.Runtime
         public BoardView Board;
         public HotkeyBindings Bindings { get; set; }
         public OVRInput.Controller ActiveController=>Bindings?.TouchController??OVRInput.Controller.RTouch;
+        public bool PointerTracked=>!Active||Application.isEditor||(OVRInput.GetControllerPositionTracked(ActiveController)&&OVRInput.GetControllerOrientationTracked(ActiveController));
         public Camera Camera { get; private set; }
         public bool Active { get; private set; }
         public bool Placing { get; private set; }
@@ -25,7 +26,8 @@ namespace Frontier.Runtime
         private OVRSpatialAnchor anchor;
         private Transform anchorRoot;
         private float manualHeight=.75f;
-        private bool useScene=true,busy;
+        private bool useScene=true,busy,restoring,pendingStart;
+        public bool StartPending => pendingStart;
         private Transform placementParent;
         private Vector3 placementPosition;
         private Quaternion placementRotation;
@@ -57,6 +59,7 @@ namespace Frontier.Runtime
                 Camera.fieldOfView=60;Camera.nearClipPlane=.02f;Camera.farClipPlane=40;Camera.backgroundColor=new Color(.018f,.031f,.055f);Camera.clearFlags=CameraClearFlags.SolidColor;
             }
             Camera.tag="MainCamera";
+            if(Camera.GetComponent<AudioListener>()==null)Camera.gameObject.AddComponent<AudioListener>();
         }
         private void Start()
         {
@@ -68,7 +71,7 @@ namespace Frontier.Runtime
                 if(forward.sqrMagnitude<.1f)forward=Vector3.forward;
                 var center=Camera.transform.position+forward*1.25f;center.y=.75f;
                 Board.transform.SetPositionAndRotation(center,Quaternion.LookRotation(forward));
-                if(OVRManager.display!=null)OVRManager.display.displayFrequency=72;Restore();LoadRoom();
+                if(OVRManager.display!=null)OVRManager.display.displayFrequency=72;Restore();
             }
         }
         public void SetManualHeight(float height){manualHeight=height;useScene=false;}
@@ -97,10 +100,18 @@ namespace Frontier.Runtime
             }
             catch(Exception e){Debug.LogWarning(e);Session.Announce("Could not load room data. Use manual placement.");}
         }
+        public void CancelStartRequest()=>pendingStart=false;
+        public void RequestStartMatch()
+        {
+            if(restoring){pendingStart=true;Session.Announce("Restoring your saved board…");return;}
+            if(Board.Placed&&!Placing){pendingStart=false;Session.StartMatch();return;}
+            BeginPlacement();pendingStart=Placing;
+        }
         public void BeginPlacement()
         {
             if(Placing)return;
             if(busy){Session.Announce("Wait for the anchor to finish saving.");return;}
+            anchorGeneration++;
             placementParent=Board.transform.parent;placementPosition=Board.transform.position;placementRotation=Board.transform.rotation;
             placementWidth=Board.Width;wasPlaced=Board.Placed;
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
@@ -111,7 +122,7 @@ namespace Frontier.Runtime
         public void CancelPlacement()
         {
             if(!Placing)return;
-            Placing=false;Board.transform.SetParent(placementParent,true);
+            pendingStart=false;Placing=false;Board.transform.SetParent(placementParent,true);
             Board.transform.SetPositionAndRotation(placementPosition,placementRotation);Board.Width=placementWidth;Board.Placed=wasPlaced;
             Session.Pause("placement",false);Session.Announce(wasPlaced?"Previous board placement kept.":"Place the board before starting a match.");
         }
@@ -127,7 +138,7 @@ namespace Frontier.Runtime
             if(!hit){var plane=new Plane(Vector3.up,new Vector3(0,manualHeight,0));if(plane.Raycast(ray,out float d)&&d<5){point=ray.GetPoint(d);hit=true;}}
             if(!hit)return;
             Board.transform.position=point+Vector3.up*.005f;
-            if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");}
+            if(confirm){Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");if(pendingStart){pendingStart=false;Session.StartMatch();}}
         }
         public Ray PointerRay()
         {
@@ -158,7 +169,7 @@ namespace Frontier.Runtime
         private async void Restore()
         {
             if(!File.Exists(SavePath))return;
-            int generation=anchorGeneration;
+            restoring=true;int generation=anchorGeneration;
             try
             {
                 var saved=JsonUtility.FromJson<BoardPlacement>(File.ReadAllText(SavePath));
@@ -171,10 +182,11 @@ namespace Frontier.Runtime
                 Board.transform.SetParent(anchorRoot,false);Board.transform.localPosition=Vector3.zero;Board.transform.localRotation=Quaternion.identity;
                 Board.Width=Mathf.Clamp(saved.width,.6f,2);Board.Placed=true;Session.Announce("Previous board placement restored.");
             }
-            catch(Exception e){Debug.LogWarning(e);Session.Announce("Place the board on your table or floor again.");}
+            catch(Exception e){Debug.LogWarning(e);}
+            finally{restoring=false;if(pendingStart&&this!=null)RequestStartMatch();}
         }
         private void TrackingLost(){Board.Placed=false;Session.Pause("tracking",true);Session.Announce("Tracking lost. Restore tracking and confirm the board placement.");}
-        private void TrackingAcquired(){if(anchor!=null&&anchor.Localized){Board.Placed=true;Session.Pause("tracking",false);}else BeginPlacement();}
+        private void TrackingAcquired(){if(anchor!=null&&anchor.Localized){Board.Placed=true;Session.Pause("tracking",false);}else{Session.Pause("tracking",false);if(Session.Running)BeginPlacement();}}
         private void Unmounted()=>Session.Pause("headset",true);
         private void Mounted()=>Session.Pause("headset",false);
         private void FocusLost()=>Session.Pause("vrfocus",true);
