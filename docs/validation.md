@@ -1,5 +1,27 @@
 # Registro de validación
 
+## Hints laterales con líneas y rueda cercana orientada a la vista — fuentes, sin nuevo APK — 20 de octubre de 2026
+
+Los cuatro hints pasan a una columna al costado exterior del mando, con flechas de dirección y seis trazos finos conectados al stick. La columna y sus líneas cambian de lado según la mano, sin invertir letras ni flechas. La rueda abierta baja de 6 a 2,5 cm sobre la referencia del stick; su normal gira hasta 35° hacia la posición de los ojos. La cámara no desplaza el anclaje y girar la cabeza sin trasladarla no hace girar la rueda.
+
+- `ComfortAudioPreview.RenderControllerWheel` aprobado en Unity **6000.3.26f1**, salida 0: `TestResults/unity-side-callouts.log`.
+- **55 comprobaciones de mando/colocación/audio y cuatro vistas**, incluidos los hints laterales en ambos modelos y la rueda cercana inclinada hacia la cámara.
+- **628 comprobaciones de rueda y 20 vistas**, incluidos gráficos sin raycast, flechas, reflejo de la columna, distancia física, inclinación limitada, movimientos de cámara, navegación, vibración y cancelaciones.
+- Inspeccionadas las vistas `ComfortAudio/right-controller.png`, `left-controller.png`, `right-controller-wheel.png` y `UnifiedWheel/industrial-right-hand-groups.png`. `git diff --check` pasa.
+
+Validación en Editor con poses sintéticas; la comodidad debe confirmarse en Quest físico.
+
+## Hints sobre el stick y rueda paralela al mando — fuentes, sin nuevo APK — 20 de octubre de 2026
+
+Se elimina la rueda pequeña: quedan cuatro textos con contorno alrededor del stick, sin fondo, sectores ni cruz. La referencia viene de la pose neutral del stick de cada prefab Touch Plus. Los hints quedan sobre la tapa y la rueda abierta conserva su tamaño, elevada 6 cm sobre esa referencia y paralela a la superficie del mando. Ambas capas siguen la mano sin orientarse hacia la cámara ni inclinarse con la animación del stick. Se corrige además el material izquierdo: el preparador toma la textura del cuerpo y no la del indicador de batería, cuyo orden entre hijos difiere entre manos.
+
+- `ComfortAudioPreview.RenderControllerWheel` aprobado en Unity **6000.3.26f1**, salida 0: `TestResults/unity-stick-controller-final.log`.
+- **53 comprobaciones de mando/colocación/audio y cuatro vistas**: ambos modelos, textura de color correspondiente, hints centrados sobre el stick visible y rueda elevada en el mismo plano.
+- **584 comprobaciones de rueda y 20 vistas**: solo cuatro textos en reposo, geometría y orientación de ambas manos en cada sección, independencia de la cabeza, navegación continua, asignación de grupos, vibración y cancelaciones.
+- Inspeccionadas `ComfortAudio/right-controller.png`, `left-controller.png` y `right-controller-wheel.png`. `git diff --check` pasa.
+
+La comprobación usa Editor y poses sintéticas. Comodidad y legibilidad final requieren probar el Quest físico.
+
 ## Selección por bases y guía separada — fuentes, sin nuevo APK — 20 de octubre de 2026
 
 La pausa incorpora **Selection: Bodies / Bases**, con Bodies como valor inicial y persistencia local. Bases resuelve sobre el suelo y evita que el cuerpo de un mineral o edificio intercepte la unidad situada detrás. Conserva la selección de huellas y recursos, y comparte objetivo con hover y órdenes. **Control guide** abre un submenú; Back y el atajo de menú vuelven a la pausa compacta sin reanudar.
@@ -111,7 +133,7 @@ No se generó APK ni ejecutable desktop. Las entradas y capturas son de Editor; 
 
 El mando activo muestra un hint compacto durante la partida. Inclinar el joystick desde el centro abre la raíz: arriba Groups, derecha Selection, izquierda Unit orders y abajo Close. El gatillo entra o confirma; mantener la dirección conserva la rueda y centrar durante 0,8 segundos sin acción la oculta. Al cambiar de nivel se requiere centrar antes de elegir. Clic del joystick y doble grip dejan de abrir menús; volver al centro no recupera grupos. Dentro de Groups, gatillo recupera y clic sostenido + dirección + soltar guarda; B/Y vuelve a la raíz. Patrullar sigue pendiente.
 
-La rueda comparte comandos con la consola: construcción, producción, investigación, rally, órdenes y habilidades. Cambiar selección, pausar, perder foco/seguimiento, mover el panel, recolocar el tablero o cambiar de mano invalida los gestos pendientes. Se consume la confirmación hasta liberar los botones antes de aceptar destinos sobre el terreno. Los perfiles de hotkeys mantienen los remaps compatibles; si guardar usaba gatillo o B/Y, ese par se intercambia con Stick click para reservar la navegación física.
+La rueda comparte comandos con la consola: construcción, producción, investigación, rally, órdenes y habilidades. Cambiar selección, pausar, perder foco/seguimiento, mover el panel, recolocar el tablero o cambiar de mano invalida los gestos pendientes. Se consume la confirmación hasta liberar los botones antes de aceptar destinos sobre el terreno. Los perfiles de hotkeys mantienen los remaps compatibles; `wheel` ahora alterna los hints; si antes usaba gatillo o B/Y, ese par se intercambia con Stick click para reservar la navegación física.
 
 - **2089 comprobaciones de Editor aprobadas**, sin sumar las repeticiones internas de la suite de colas. Registro: `TestResults/unity-unified-wheel-final.log`, Unity **6000.3.26f1**, salida 0. El batch cubre navegación (190), acciones (512), grupos (544), hotkeys (96), menús (296), colas (166), rally (126), controles de caster (79), sus modelos (29), efectos (15) y puntero de ataque (36).
 - La prueba de `CommanderInput.Update` usa estados OVR sintéticos en ambas manos: selección remapeada a Grip con inclinación simultánea, mantenimiento y liberación, retorno al centro, apertura posterior y recuperación por gatillo físico. También se comprueban migración de perfiles, rechazos sin modificar bindings, neutral entre niveles, cambios de contexto y consumo de las confirmaciones antes de volver al mapa.
@@ -749,3 +771,85 @@ Attack Move desde el panel y la rueda mantiene rojas la mira del tablero y el ra
 - **312 comprobaciones de Unity y 26 vistas aprobadas**: `AttackPointerPreview` (36 / 8 vistas), `QueuedInputChecks` (124) y `ActionWheelPreview` (152 / 18 vistas). Incluyen el clic real del panel, la entrada sintética de doble A y gatillo, el cierre de la rueda sin ejecutar sobre el mapa y la confirmación posterior con A. Registro: `TestResults/unity-attack-pointer.log`.
 - Inspeccionadas las capturas `TestResults/AttackPointer/industrial-normal.png` y `industrial-double-a.png`: la mira pasa de guías cian con centro blanco a guías y centro rojos, conservando el borde oscuro. Las pruebas comprueban también el material del rayo del mando.
 - Unity 6000.3.26f1 / CLI 1.0.0-beta.13; compilación de scripts y render del shader aprobados. `git diff --check` sin errores. No se generó APK ni ejecutable desktop; la señal y su duración requieren comprobación con el mando físico en Quest.
+
+
+## Hints de todos los botones y clic del stick — 20 de octubre de 2026
+
+Los hints laterales incluyen las cuatro direcciones, gatillo, A/X, B/Y, grip y clic del stick, con líneas al mando y textos según los hotkeys actuales. El clic alterna toda la ayuda; mantenerlo o soltarlo no repite el cambio. Ocultar los hints permite seguir abriendo la rueda. El antiguo gesto de asignar manteniendo el stick queda eliminado: se asigna desde abajo → Assign group → grupo → gatillo.
+
+- `unity-controller-hints.log`: `FRONTIER_COMFORT_AUDIO passed` (57 comprobaciones, 4 vistas) y `FRONTIER_UNIFIED_WHEEL passed` (660 comprobaciones, 20 vistas). Incluyen anclajes distintos para cada botón, texto sin recorte, visibilidad tras cerrar/pausar y navegación con ayuda oculta.
+- `unity-hint-hotkeys.log`: `FRONTIER_HOTKEYS passed` (122), `FRONTIER_MENU_FLOW passed` (304), `FRONTIER_QUEUED_INPUT passed` (172) y `FRONTIER_CONTROL_GROUPS passed` (590). Entrada sintética por `CommanderInput.Update` en ambas manos, clic y remap a A/X, actualización de etiquetas y protección contra asignación por el antiguo gesto. La prueba de guía se actualizó para entrar al submenú antes de revisar sus textos.
+- Inspeccionadas `TestResults/ComfortAudio/right-controller.png` y `left-controller.png`. Scripts compilados y `git diff --check` aprobado. Validación local en Editor; sin nuevo APK ni prueba física de legibilidad/comodidad en Quest.
+
+
+## Edificios directamente en Selection — 20 de octubre de 2026
+
+Se eliminó el nivel intermedio Build/Back. Con uno o varios trabajadores, Selection muestra los siete edificios y Back vuelve a la raíz. La dirección sostenida resalta un edificio al entrar; una nueva pulsación de gatillo lo elige y la colocación requiere una confirmación posterior sobre el mapa.
+
+- `UnifiedWheelValidationBatch.Run` aprobado con salida 0: `TestResults/unity-direct-selection.log`. Pasan rueda unificada (642 comprobaciones), hotkeys con entrada sintética para ambas manos (120) y acciones de rueda para ambas facciones (450), además de las regresiones de grupos, menús, colas, rally, ataque y habilidades.
+- Inspeccionada `TestResults/UnifiedWheel/industrial-direct-selection.png`: siete opciones directas, Back y textos completos. Guía actualizada a Worker → Selection → edificio. `git diff --check` aprobado. Validación de Editor; sin nuevo APK ni prueba física en Quest.
+
+
+## Una sola rueda de grupos — 20 de octubre de 2026
+
+Groups se abre desde arriba y ofrece ambas acciones sobre el mismo grupo: gatillo recupera; pulsar el stick físico asigna inmediatamente la selección actual. Desaparecen Assign group, el hint inferior y la acción de abajo en la raíz. Dentro de Groups abajo sigue eligiendo el grupo 3. Asignar cierra la rueda y conserva la visibilidad de los hints; fuera de Groups el hotkey de hints sigue siendo editable.
+
+- `UnifiedWheelValidationBatch.Run` aprobado, salida 0: `TestResults/unity-single-groups.log`. Rueda (570 comprobaciones), hotkeys (126), grupos (496) y acciones (442), más regresiones de menús, colas, rally, ataque y habilidades.
+- Se comprueban los cuatro grupos, selección de varios trabajadores y edificios, asignación con selección vacía, pulsación inmediata sin esperar liberación, centro sin asignación, gatillo solo para recuperar, pérdida de foco/seguimiento y cambio de selección. Entrada real del router con OVR sintético para ambas manos, incluso con hints en A/X y selección en stick; mantener y soltar la asignación no produce selección ni órdenes sobre el mapa.
+- Inspeccionadas `TestResults/UnifiedWheel/industrial-direct-groups.png` y `industrial-root.png`: ayuda Trigger/Stick click en una misma rueda y tres accesos cardinales sin Assign. `git diff --check` aprobado. Validación de Editor, sin nuevo APK ni prueba física en Quest.
+- Vistas del mando actualizadas: `unity-single-groups-controller.log`, 57 comprobaciones y cuatro capturas aprobadas. Inspeccionado `TestResults/ComfortAudio/right-controller.png`, con tres hints direccionales y sin acceso inferior.
+
+
+## Menú de inicio frente al visor — 20 de octubre de 2026
+
+El menú previo a la partida en Quest usa su propia posición en mundo, a 1,25 m frente al visor, después de recibir una pose rastreada. Ignora el desplazamiento guardado de la consola de partida y no se mueve cuando se restaura o recoloca el tablero. Settings y preparación conservan esa ubicación; arrastrar o restablecer el menú inicial no modifica las preferencias de la consola en partida. Recuperar foco, volver de suspensión o ponerse el visor de nuevo antes de jugar recalcula la posición frente al usuario.
+
+- `StartupMenuPreview.Run` aprobado, salida 0: `TestResults/unity-startup-menu.log`. 32 comprobaciones específicas y tres vistas, más 304 de menús y 57 de colocación/mando/audio.
+- Tablero simulado a más de 20 m, ancla restaurada tardíamente, tamaño distinto, ausencia inicial de seguimiento, apertura nueva desde otra pose, pausa/foco/visor, acceso real a Settings → Reposition board, cancelación, arrastre lejos del mapa y Reset position. Se conservan el ancla, tamaño, preferencia de consola en partida y comportamiento desktop; sin ancla se sigue solicitando colocación únicamente al iniciar match.
+- Inspeccionadas `TestResults/StartupMenu/01-restored-board-start.png` y `03-fresh-start-new-position.png`, renderizadas con las poses de cámara reales del escenario. `git diff --check` aprobado. Pruebas de Editor con poses sintéticas, sin nuevo APK ni validación física en Quest.
+
+
+## Selection persistente y cancelación solo en el tablero — 20 de octubre de 2026
+
+Selection permanece abierta después de una confirmación correcta. Cada nueva pulsación de Trigger ejecuta una orden; mantener el gatillo no repite. Soltar el stick conserva el cierre por inactividad de 0,8 s. Cancel / refund se filtra exclusivamente en la rueda y sus hints, de modo que iniciar o vaciar producción no altera los sectores. La consola conserva cancelación y reembolsos, incluido cancelar construcción.
+
+- `TestResults/unity-repeat-selection.log`: pasaron navegación (570), hotkeys con OVR sintético para ambas manos (126), menús (304), colas (172), grupos (496) y rally (126). El batch se detuvo en una expectativa antigua de cierre automático al armar una habilidad; se actualizó esa prueba al cierre por stick.
+- Continuación aprobada, salida 0, mediante `CasterAbilityPreview.Render`: `TestResults/unity-repeat-selection-actions.log`. Habilidades (83), presentación de casters (29), efectos (15), puntero de ataque (92), colas (172) y acciones de rueda (456 comprobaciones, 20 vistas).
+- Ambas facciones: tres pulsaciones sin soltar la dirección producen exactamente tres unidades y tres cobros; sostener Trigger no agrega órdenes; los sectores y el resaltado sobreviven a colas que empiezan o se vacían. Dos investigaciones pueden encolarse en la misma rueda. Se comprueba el cierre tras soltar stick, recuperación después de recursos insuficientes, confirmación sin filtrarse al mapa y cancelación mediante clics reales del panel. Clear rally sigue disponible y elimina su resaltado cuando desaparece.
+- Inspeccionadas `TestResults/ActionWheel/industrial-repeat-production.png` y `biological-construction-panel.png`: rueda sin Cancel y botón de cancelación conservado en el tablero. Guía y documentación sincronizadas; `git diff --check` aprobado. Validación en Editor, sin nuevo APK ni prueba física en Quest.
+
+
+## Caída, restos y desvanecimiento de unidades — 20 de octubre de 2026
+
+Las bajas móviles producen un evento proyectado de muerte. Caen durante 0,5 s, permanecen como cuerpos hasta los 3,5 s y se disuelven hasta desaparecer a los 6 s. Trabajadores, scouts y artillería industriales añaden pequeños fragmentos. Los restos no participan en simulación, colisiones, selección ni capacidad de ejército. La pérdida de visión y la cancelación de construcción no producen cadáveres.
+
+- `bash scripts/check-core.sh --deaths-only`: 24 comprobaciones aprobadas en `TestResults/death-core-checks.log`, incluidas bajas mediante ataques reales y privacidad en ambas facciones. `--combat-only`: 180 comprobaciones aprobadas en `TestResults/death-combat-checks.log`.
+- `DeathVisualPreview.Run`, salida 0: `TestResults/unity-death-visuals.log`, `FRONTIER_DEATH_VISUALS passed: 18 checks, 7 views`. Prueba los doce modelos, permanencia/disolución, pausa mediante tiempo visual congelado, niebla, selección, límites de 64 cuerpos/90.000 vértices, reutilización sin objetos por muerte, shader y limpieza.
+- Inspeccionadas `TestResults/Deaths/00-alive.png`, `death-080.png` y `death-475.png`: modelos vivos, cuerpos caídos sin insignias y disolución gradual. `git diff --check` aprobado. Sin nuevo APK ni prueba física de Quest; el rendimiento en el visor queda por medir.
+
+
+## Tanque Hammer más grande — 20 de octubre de 2026
+
+Escala visual 1,8× para el Hammer industrial, aplicada al modelo completo, torreta y animación, salida de disparos, aro de selección y restos. No cambia el catálogo ni el balance de simulación.
+
+- `DeathVisualPreview.Run`: salida 0, 18 comprobaciones y siete vistas en `TestResults/unity-larger-tank.log`. Inspeccionada `TestResults/Deaths/00-alive.png`: Hammer claramente más voluminoso que Bastion y Lancer.
+- `SoldierVisualPreview.Render`: salida 0 en `TestResults/unity-larger-tank-combat.log`. Animación (32 comprobaciones), armas (15), orientación (32) y presentación de impactos aprobadas, incluidas torreta, retroceso, origen de disparos, reutilización y ambas facciones.
+- `git diff --check` aprobado. Validación de Editor; sin APK nuevo ni prueba física en Quest.
+
+
+## Doble A rápido y ataques repetidos — 20 de octubre de 2026
+
+Se mantiene la regla elegida por el usuario: cada Attack Move requiere dos pulsaciones; un A individual sigue dando Move. La ventana de 0,55 s no tiene intervalo mínimo. Se corrigen dos causas de pérdida del gesto: desplazamiento físico pequeño sobre un tablero alejado y cambio de un cuerpo aliado a otro entre pulsaciones. Quest usa un margen de 3,5 cm, con mínimo de 1,5 celdas; no se cambia el muestreo físico de OVR.
+
+- Reproducción anterior a la corrección: `TestResults/unity-rapid-attack-repro.log`. El tiempo de pulsaciones 0 / 16 / 40 / 100 / 500 ms se reconocía, pero el desplazamiento de 2,5 cm sobre el tablero reducido fallaba.
+- `AttackPointerPreview.Render` aprobado, salida 0, en `TestResults/unity-rapid-attack.log`: puntero/entrada real del router (124 comprobaciones), colas e interpretación del gesto (200), acciones de rueda (456). Las pruebas usan OVR sintético para ambas manos, A/X y la orden reasignada a grip; varias parejas consecutivas redirigen Attack Move a distintos destinos y conservan el pulso rojo. Se mantienen los casos de una pulsación, tercer toque, pausa, cambio de selección/modificador, foco enemigo, retirada, muerte del objetivo y colas sin duplicados.
+- `git diff --check` aprobado. Evidencia de Editor con entrada sintética; sin nuevo APK ni comprobación física de la cadencia del botón en Quest.
+
+## Construcción con unidades propias en la zona — 20 de octubre de 2026
+
+La orden reserva y cobra la obra una sola vez. Las unidades propias que interfieren, incluido el constructor y unidades en Hold, salen mediante la navegación y física normales; conservan órdenes, carga y colas. La huella se vuelve sólida y empieza el progreso cuando queda libre. Un grupo apretado puede pedir espacio a sus filas exteriores. Cancelar o destruir una obra pendiente libera la reserva y el desplazamiento temporal. Los enemigos y las restricciones de terreno, recursos y edificios siguen bloqueando la colocación; sin salida accesible se rechaza antes de cobrar. El indicador propio muestra **CLEARING AREA** durante la espera.
+
+- `bash scripts/check-core.sh --construction-clearance-only`: 60 comprobaciones en `TestResults/construction-clearance-core.log`, ambas facciones. Incluye constructor dentro, tanques, grupos de 16 y 56 unidades, Hold, colas de movimiento y construcción, recolección/carga, pausa, cancelación/destrucción, nuevos ocupantes, enemigos, privacidad y falta de salida. La prueba de navegación anterior que exigía rechazar una unidad propia en el borde se actualizó para comprobar salida segura y cobro único.
+- `bash scripts/check-core.sh`: salida 0, **1773 comprobaciones aprobadas** en `TestResults/construction-clearance-regression.log`, con navegación, colisiones, combate, economía, IA, producción y colas.
+- `ConstructionPreview.Render`: salida 0, **52 comprobaciones aprobadas** en `TestResults/unity-construction-clearance.log`. Colocación real desde el menú sobre una unidad propia, conservación de Hold y transición del indicador en ambas facciones. Inspeccionada `TestResults/Construction/industrial-clearing-area.png`.
+- `git diff --check` aprobado. Validación de núcleo y Editor; sin nuevo APK ni prueba física en Quest.
