@@ -83,23 +83,23 @@ namespace Frontier.Editor
                     Check(panel.Point(pendingRay,true,false),"Pending item can be pressed before changing to a building group");
                     int techOrders=tech.queue.Count,hqOrders=hq.queue.Count;
                     session.Select(hq.id,true);Refresh();
-                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")=="2 buildings",
-                        "Multiple producers show an explicit group summary");
-                    Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text==(techOrders+hqOrders).ToString(),
-                        "Group summary totals the real queues and their combined capacity");
-                    Check(Text("productionHint")=="SELECT ONE BUILDING TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
+                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")=="Firepower I",
+                        "Multiple producers show their actual production orders");
+                    Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text==session.Catalog.Role(faction,"siege").name,
+                        "Group fills subsequent slots with actual orders and totals combined capacity");
+                    Check(Text("productionHint")=="2 BUILDINGS · SELECT ONE TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
                         "Group production cards do not expose ambiguous cancel targets");
                     panel.Point(pendingRay,false,true);Refresh();
                     Check(tech.queue.Count==techOrders&&hq.queue.Count==hqOrders,"Changing selection invalidates a pressed individual queue item");
                     Capture(faction+"-group");
                     session.Pause("tracking",true);Refresh();
-                    Check(Text("productionState")=="PAUSED","Building group production displays the paused state");session.Pause("tracking",false);
+                    Check(Text("productionState").Contains("PAUSED"),"Building group production displays the paused state");session.Pause("tracking",false);
                     var foundation=AddBuilding("barracks",1003,new Point(28,12));foundation.complete=false;Refresh();
                     session.Select(barracks.id,false);session.Select(foundation.id,true);Refresh();
-                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")=="1 building"&&
+                    Check(QueueShown()&&Text("productionTitle")=="GROUP PRODUCTION"&&Text("productionName")==session.Catalog[barracks.queue[0].definition].name&&
                         Text("productionCount")==$"{barracks.queue.Count} / 5",
-                        "A completed barracks and unfinished barracks show the available producer's activity as a group summary");
-                    Check(Text("productionHint")=="SELECT ONE BUILDING TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
+                        "A completed barracks and unfinished barracks show the available producer's actual queue");
+                    Check(Text("productionHint")=="1 BUILDING · SELECT ONE TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
                         "One eligible producer in a larger building selection never exposes individual cancellation");
                     session.Select(supply.id,true);Refresh();
                     Check(QueueShown()&&Text("productionCount")==$"{barracks.queue.Count} / 5"&&Text("productionTitle")=="GROUP PRODUCTION",
@@ -126,8 +126,8 @@ namespace Frontier.Editor
                     var groupActions=SelectionActions.For(session).Items;
                     Check(groupActions.Count==9&&groupActions.Any(a=>a.Id=="clear-rally-point"),
                         "All four producer roles expose six train actions, two upgrades and rally clearing");
-                    Check(Text("productionState")=="ONE PER CLICK · SHORTEST WAIT"&&Text("productionHint")=="SELECT ONE BUILDING TO CANCEL",
-                        "Producer group visibly explains one order per click and dispatch without suggesting group cancellation");
+                    Check(Text("productionState").Contains("TRAINING")&&Text("productionHint")=="4 BUILDINGS · SELECT ONE TO CANCEL",
+                        "Producer group shows current production without suggesting group cancellation");
                     Canvas.ForceUpdateCanvases();
                     var actionArea=Field<RectTransform>(panel,"actions");
                     var actionCards=actionArea.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null).ToArray();
@@ -152,9 +152,70 @@ namespace Frontier.Editor
 
                     // Isolate deployment feedback with a real finished order and occupied perimeter.
                     hq.queue.Clear();tech.queue.Clear();barracks.queue.Clear();session.Select(barracks.id,false);session.Select(tech.id,true);Refresh();
-                    Check(Text("productionCount")=="0 / 10"&&Text("productionProgress")=="0 working · 2 idle"&&
-                        Field<Text[]>(panel,"queuedNames").Select(t=>t.text).SequenceEqual(new[]{"0","2","0","0"}),
-                        "An idle producer group keeps the summary visible with exact zero counts");
+                    Check(Text("productionCount")=="0 / 10"&&Text("productionName")=="Queue empty"&&Text("productionState")=="IDLE"&&
+                        Field<Text[]>(panel,"queuedNames").All(t=>t.text=="Empty"),
+                        "An idle producer group clears all five slots and its active state");
+
+                    // Real training orders in two and three barracks fill every card,
+                    // instead of replacing the second card with a total-order counter.
+                    var second=AddBuilding("barracks",1005,new Point(30,12));
+                    var third=AddBuilding("barracks",1006,new Point(36,12));
+                    var groupSupply=AddBuilding("supply",1007,new Point(34,8));
+                    session.Select(barracks.id,false);
+                    foreach(string role in new[]{"scout","melee","ranged"})Click("Train "+session.Catalog.Role(faction,role).name);
+                    Refresh();session.Select(second.id,false);
+                    foreach(string role in new[]{"melee","scout"})Click("Train "+session.Catalog.Role(faction,role).name);
+                    session.Select(barracks.id,true);Refresh();
+                    Check(ShownNames().SequenceEqual(new[]{"scout","melee","melee","scout","ranged"}.Select(r=>session.Catalog.Role(faction,r).name)),
+                        "Two barracks show both active units first, followed by each building's pending orders without merging duplicates");
+                    Check(Text("productionCount")=="5 / 10"&&Field<Text[]>(panel,"queuedPositions")[3].text=="5",
+                        "Exactly five group orders fill all five slots without an overflow count");
+                    Check(Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · 0%"&&Field<Text[]>(panel,"queuedKinds")[1].text=="B1 · QUEUED",
+                        "Group cards distinguish a second active producer from pending production");
+                    Capture(faction+"-group-five");
+                    for(int i=0;i<3;i++)Click("Train "+session.Catalog.Role(faction,"ranged").name);
+                    Check(barracks.queue.Count+second.queue.Count==8&&Text("productionCount")=="8 / 10"&&
+                        ShownNames().All(n=>n!="Empty")&&Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +3 MORE",
+                        "Two barracks retain five real order cards and show only additional orders in the last card");
+                    Capture(faction+"-group-overflow");
+                    session.Select(third.id,false);
+                    foreach(string role in new[]{"scout","ranged","scout","ranged"})Click("Train "+session.Catalog.Role(faction,role).name);
+                    session.Select(second.id,true);session.Select(barracks.id,true);Refresh();
+                    Check(ShownNames().Take(3).SequenceEqual(new[]{"scout","melee","scout"}.Select(r=>session.Catalog.Role(faction,r).name))&&
+                        Text("productionCount")=="12 / 15"&&Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +7 MORE",
+                        "Three barracks show all three active orders before pending orders and keep the correct overflow total");
+                    Check(Field<Text[]>(panel,"queuedKinds")[1].text=="B3 · 0%"&&
+                        Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
+                        "Third active order identifies its building and aggregate cards never cancel unrelated orders");
+                    second.queue[0].remaining=second.queue[0].total/2;Refresh();
+                    Check(Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · 50%"&&
+                        Mathf.Abs(Field<Image[]>(panel,"queuedProgress")[0].rectTransform.rect.width-68)<.1f&&
+                        Field<Image[]>(panel,"queuedProgress")[2].rectTransform.rect.width==0,
+                        "Small active cards show their own progress while waiting orders have no active progress bar");
+                    session.Pause("tracking",true);Refresh();
+                    Check(Text("productionState").Contains("PAUSED")&&Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · PAUSED",
+                        "Pausing marks both primary and secondary active production cards");
+                    session.Pause("tracking",false);Refresh();
+                    int groupCount=barracks.queue.Count+second.queue.Count+third.queue.Count;
+                    barracks.queue[0].remaining=1;session.Match.Step();
+                    Check(session.Send(CommandKind.Train,session.Catalog.Role(faction,"scout").id),"Group replacement order accepted after completing a unit");Refresh();
+                    Check(barracks.queue.Count+second.queue.Count+third.queue.Count==groupCount&&Text("productionName")==session.Catalog.Role(faction,"melee").name&&
+                        Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +7 MORE",
+                        "Completing and replacing a group order updates its card even when total queue length is unchanged");
+                    for(int i=0;i<3;i++)Click("Train "+session.Catalog.Role(faction,"scout").name);
+                    Check(Text("productionCount")=="15 / 15 · FULL"&&Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +10 MORE",
+                        "Three full barracks keep all five cards and a two-digit additional-order count");
+                    Canvas.ForceUpdateCanvases();
+                    Check(Field<Text[]>(panel,"queuedPositions").Concat(Field<Text[]>(panel,"queuedKinds")).All(Fits)&&Fits(Field<Text>(panel,"productionHint")),
+                        "Overflow count, building state and group hint fit their card labels");
+                    Capture(faction+"-three-barracks-full");
+                    session.Select(second.id,false);Refresh();
+                    Check(Field<Text[]>(panel,"queuedPositions")[3].text=="5"&&Field<Image[]>(panel,"queuedProgress").All(p=>p.rectTransform.rect.width==0)&&
+                        Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==second.queue.Count,
+                        "Returning from overflow to one barracks removes group progress and restores all individual cancellation targets");
+                    foreach(var extra in new[]{second,third,groupSupply})
+                    {session.Match.Entities.Remove(extra.id);session.Match.Map.Occupy(extra.position,session.Catalog[extra.definition].footprint,0);}
+                    barracks.queue.Clear();
                     session.Select(barracks.id,false);Refresh();
                     Click("Train "+session.Catalog.Role(faction,"scout").name);
                     int size=session.Catalog[barracks.definition].footprint;
@@ -184,6 +245,7 @@ namespace Frontier.Editor
 
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;}
                 string Text(string field)=>Field<Text>(panel,field).text;
+                string[] ShownNames()=>new[]{Text("productionName")}.Concat(Field<Text[]>(panel,"queuedNames").Select(t=>t.text)).ToArray();
                 bool QueueShown()=>Field<RectTransform>(panel,"productionStrip").gameObject.activeInHierarchy;
                 bool Inside(RectTransform parent,RectTransform child)
                 {

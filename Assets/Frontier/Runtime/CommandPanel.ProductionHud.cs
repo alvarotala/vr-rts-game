@@ -12,6 +12,7 @@ namespace Frontier.Runtime
         private Image productionFill, productionAccent, productionCard;
         private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4], queuedPositions=new Text[4];
         private readonly Image[] queuedCards=new Image[4];
+        private readonly Image[] queuedProgress=new Image[4];
         private readonly Target[] productionTargets=new Target[5];
         private readonly RectTransform[] cancelHints=new RectTransform[5];
         private static readonly Color QueueIdleTint=new Color(.52f,.65f,.72f);
@@ -39,6 +40,7 @@ namespace Frontier.Runtime
                 queuedCards[i]=card.GetComponent<Image>();
                 queuedPositions[i]=Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
                 queuedNames[i]=Label(card,"",new Vector2(12,-30),new Vector2(136,52),21,Color.white);
+                queuedProgress[i]=Section(card,"Production progress",new Vector2(12,-82),new Vector2(0,3),accent).GetComponent<Image>();
                 queuedKinds[i]=Label(card,"",new Vector2(12,-87),new Vector2(136,22),14,QueueIdleTint);
                 cancelHints[i+1]=CreateCancelHint(card,160);
             }
@@ -116,8 +118,28 @@ namespace Frontier.Runtime
             var queue=producer.queue;
             productionCount.text=$"{queue.Length} / 5"+(queue.Length>=5?" · FULL":"");
             productionCount.color=queue.Length>=5?WarningTint:Color.white;
+            UpdateCurrentProduction(queue.FirstOrDefault());
+            for(int i=0;i<4;i++)
+            {
+                queuedPositions[i].text=(i+2).ToString();
+                bool occupied=i+1<queue.Length;
+                var item=occupied?queue[i+1]:null;
+                queuedNames[i].text=occupied?QueueLabel(item.definition):"Empty";
+                queuedNames[i].color=occupied?Color.white:QueueIdleTint;
+                queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
+                queuedKinds[i].color=QueueIdleTint;
+                queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
+                queuedProgress[i].rectTransform.sizeDelta=new Vector2(0,3);
+            }
+            UpdateProductionHover();
+        }
+
+        private static float QueueProgress(ProductionOrder order)=>order.total>0?Mathf.Clamp01(1-order.remaining/(float)order.total):1;
+
+        private void UpdateCurrentProduction(ProductionOrder current,int producerNumber=0)
+        {
             var tint=accent;
-            if(queue.Length==0)
+            if(current==null)
             {
                 productionState.text="IDLE";productionName.text="Queue empty";
                 productionProgress.text="Choose a Train or Research action";
@@ -125,8 +147,7 @@ namespace Frontier.Runtime
             }
             else
             {
-                var current=queue[0];
-                float progress=current.total>0?Mathf.Clamp01(1-current.remaining/(float)current.total):1;
+                float progress=QueueProgress(current);
                 int seconds=Mathf.CeilToInt(Mathf.Max(0,current.remaining)/(float)Simulation.TickRate);
                 productionName.text=QueueLabel(current.definition);
                 productionState.text=current.research?"1 · RESEARCHING":"1 · TRAINING";
@@ -146,43 +167,42 @@ namespace Frontier.Runtime
                 }
                 productionFill.rectTransform.sizeDelta=new Vector2(320*progress,12);
             }
+            if(producerNumber>0&&current!=null)productionState.text+=" · B"+producerNumber;
+            if(producerNumber>0&&current==null&&Session.IsPaused){productionState.text="PAUSED";tint=WarningTint;}
             productionAccent.color=productionFill.color=productionState.color=tint;
-            for(int i=0;i<4;i++)
-            {
-                queuedPositions[i].text=(i+2).ToString();
-                bool occupied=i+1<queue.Length;
-                var item=occupied?queue[i+1]:null;
-                queuedNames[i].text=occupied?QueueLabel(item.definition):"Empty";
-                queuedNames[i].color=occupied?Color.white:QueueIdleTint;
-                queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
-                queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
-            }
-            UpdateProductionHover();
         }
 
         private void UpdateGroupProductionHud(VisibleEntity[] producers)
         {
             int queued=producers.Sum(e=>e.queue.Length),capacity=producers.Length*5;
-            int idle=producers.Count(e=>e.queue.Length==0),full=producers.Count(e=>e.queue.Length>=5);
-            int waiting=producers.Count(e=>e.queue.Length>0&&!e.queue[0].research&&e.queue[0].remaining<=0);
+            int full=producers.Count(e=>e.queue.Length>=5);
             productionTitle.text="GROUP PRODUCTION";
-            productionHint.text="SELECT ONE BUILDING TO CANCEL";
+            productionHint.text=producers.Length+(producers.Length==1?" BUILDING":" BUILDINGS")+" · SELECT ONE TO CANCEL";
             productionCount.text=$"{queued} / {capacity}"+(full==producers.Length?" · FULL":"");
             productionCount.color=full==producers.Length?WarningTint:Color.white;
-            productionState.text=Session.IsPaused?"PAUSED":"ONE PER CLICK · SHORTEST WAIT";
-            productionName.text=producers.Length+(producers.Length==1?" building":" buildings");
-            productionProgress.text=$"{producers.Length-idle} working · {idle} idle";
-            productionFill.rectTransform.sizeDelta=new Vector2(0,12);
-            productionAccent.color=productionState.color=Session.IsPaused?WarningTint:accent;
-            string[] labels={"QUEUED","IDLE","FULL","WAITING"};
-            int[] values={queued,idle,full,waiting};
-            string[] kinds={"orders","buildings","queues","deployment"};
+            // Show parallel work first, then each producer's pending orders in FIFO
+            // order. Every visible slot is an actual order, including duplicates.
+            var visible=new (ProductionOrder order,int producer,int depth)[5];int count=0;
+            for(int depth=0;depth<5&&count<visible.Length;depth++)
+                for(int p=0;p<producers.Length&&count<visible.Length;p++)
+                    if(depth<producers[p].queue.Length)visible[count++]=(producers[p].queue[depth],p+1,depth);
+            UpdateCurrentProduction(visible[0].order,count>0?visible[0].producer:1);
             for(int i=0;i<4;i++)
             {
-                queuedPositions[i].text=labels[i];queuedNames[i].text=values[i].ToString();
-                queuedNames[i].color=Color.white;queuedKinds[i].text=kinds[i];queuedCards[i].color=button;
+                var item=visible[i+1];bool occupied=item.order!=null,active=occupied&&item.depth==0;
+                float progress=active?QueueProgress(item.order):0;
+                bool waiting=active&&item.order.remaining<=0&&!item.order.research;
+                var tint=active?(Session.IsPaused||waiting?WarningTint:accent):QueueIdleTint;
+                queuedPositions[i].text=i==3&&queued>5?$"5 · +{queued-5} MORE":(i+2).ToString();
+                queuedNames[i].text=occupied?QueueLabel(item.order.definition):"Empty";
+                queuedNames[i].color=occupied?Color.white:QueueIdleTint;
+                string state=!active?"QUEUED":Session.IsPaused?"PAUSED":waiting?"READY":$"{Mathf.FloorToInt(progress*100)}%";
+                queuedKinds[i].text=occupied?$"B{item.producer} · {state}":"Available slot";
+                queuedKinds[i].color=tint;
+                queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
+                queuedProgress[i].rectTransform.sizeDelta=new Vector2(136*progress,3);queuedProgress[i].color=tint;
             }
-            // This is an aggregate, so none of its cards identifies a cancellable order.
+            // Group cancellation remains an explicit single-building operation.
             UpdateProductionHover();
         }
     }
