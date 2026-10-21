@@ -53,7 +53,7 @@ namespace Frontier.Runtime
             var commands=topics[controlGuideTopic].Commands;
             controlGuidePages=Mathf.Max(1,(commands.Count+controlGuideCards.Length-1)/controlGuideCards.Length);
             controlGuidePage=Mathf.Clamp(controlGuidePage,0,controlGuidePages-1);
-            if(controlGuidePages>1)controlGuideDevice.text+=$" · PAGE {controlGuidePage+1}/{controlGuidePages}";
+            if(controlGuidePages>1)((LocalizedText)controlGuideDevice).Append($" · PAGE {controlGuidePage+1}/{controlGuidePages}");
             for(int i=0;i<controlGuideCards.Length;i++)
             {
                 int index=controlGuidePage*controlGuideCards.Length+i;

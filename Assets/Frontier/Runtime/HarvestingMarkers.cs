@@ -124,7 +124,7 @@ namespace Frontier.Runtime
         }
         private Text Text(Transform parent, string name, Vector2 position, Vector2 size, int fontSize)
         {
-            var text = new GameObject(name, typeof(RectTransform)).AddComponent<Text>(); text.transform.SetParent(parent, false);
+            var text = new GameObject(name, typeof(RectTransform)).AddComponent<LocalizedText>(); text.transform.SetParent(parent, false);
             text.rectTransform.anchoredPosition = position; text.rectTransform.sizeDelta = size;
             text.font = font; text.fontSize = fontSize; text.alignment = TextAnchor.MiddleCenter; text.raycastTarget = false;
             text.horizontalOverflow = HorizontalWrapMode.Overflow; text.verticalOverflow = VerticalWrapMode.Truncate; return text;

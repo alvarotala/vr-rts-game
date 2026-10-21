@@ -48,6 +48,9 @@ En The Rift y Amber Wastes busca y ocupa depósitos de otras zonas: Easy y Norma
 | **Audio** | Volumen de **Music** y **Effects** por separado. |
 | **Visuals** | Densidad de niebla: 0 %, 25 %, 50 %, 75 % o 100 %. 0 % quita la neblina visual; el terreno conserva su opacidad en todos los niveles. |
 | **Play space** | **Reposition board** y **Detect surfaces**. La altura se ajusta durante la colocación. |
+| **Language / Idioma** | **Sistema**, **English** o **Español**. Se aplica al instante y se guarda en el dispositivo. |
+
+El idioma inicial sigue al sistema: español si está disponible y, para idiomas aún no incluidos, inglés. **Configuración → Idioma → Sistema** vuelve a seguir el idioma del dispositivo al abrir la app. El selector también está disponible en pausa y conserva la partida y la selección actuales.
 
 **Settings → Controls → Hotkeys** abre **Edit bindings** únicamente para el dispositivo activo: el mando Touch elegido en Quest o mouse/teclado en desktop. Elegí **Change**, soltá los controles y pulsá la nueva tecla o botón. Se guarda automáticamente en este dispositivo y se conserva al reiniciar el juego. Si la entrada ya está asignada, **Swap bindings** intercambia ambas funciones después de confirmar.
 
@@ -103,7 +106,7 @@ Las tarjetas de construcción y entrenamiento incluyen una miniatura del modelo 
 
 Al elegir una estructura, su botón conserva un borde ámbar y **SELECTED** aunque se retire el puntero. **PLACING · nombre** indica si se está colocando una barraca, relay u otro edificio. El resaltado cambia al elegir otra estructura y se limpia al colocarla o cancelar, tanto desde el panel como desde la rueda.
 
-Mantener el cursor sobre una acción durante **1,5 segundos** muestra su **FIELD GUIDE** en la tarjeta lateral: nombre, función del edificio o unidad, costo, tiempo y requisitos cuando corresponda. También explica órdenes, mejoras y cancelaciones. La ayuda reemplaza temporalmente la ficha de selección, sin tapar botones, recursos ni producción; desaparece al cambiar de acción, retirar el cursor, pulsar, cambiar la selección o salir del panel. Todo el texto del juego permanece en inglés.
+Mantener el cursor sobre una acción durante **1,5 segundos** muestra su **FIELD GUIDE** en la tarjeta lateral: nombre, función del edificio o unidad, costo, tiempo y requisitos cuando corresponda. También explica órdenes, mejoras y cancelaciones. La ayuda reemplaza temporalmente la ficha de selección, sin tapar botones, recursos ni producción; desaparece al cambiar de acción, retirar el cursor, pulsar, cambiar la selección o salir del panel. Su texto sigue el idioma elegido en Configuración.
 
 En los menús de Quest, **A funciona como el gatillo**: pulsar y soltar sobre un botón lo activa; soltar afuera cancela. Mantener A permite guardar grupos y arrastrar el menú. Si se usan ambos botones juntos, solo se ejecuta una acción. Las pulsaciones iniciadas en el menú se consumen allí, incluso si el cursor termina sobre el mapa.
 
@@ -268,7 +271,7 @@ Al **morir**, las unidades caen al suelo en aproximadamente medio segundo desde 
 
 Al **disparar**, las unidades se orientan hacia el objetivo real y aparece un destello en el arma, un proyectil con estela y chispas al llegar. Las armas industriales usan trazadoras doradas; las biológicas, proyectiles verdes más gruesos; la artillería dibuja un arco elevado y un impacto más amplio. Trabajadores y combatientes cercanos muestran un golpe corto. Las torres también muestran sus disparos. Una estela tenue conserva brevemente la conexión entre atacante y destino, incluso si el golpe destruyó al objetivo. Son efectos visuales: no cambian daño, cadencia ni tiempo de resolución del combate. Se recortan al tablero y a la visión actual, y se detienen durante la pausa.
 
-El juego se presenta íntegramente en inglés; la incorporación de otros idiomas queda pendiente para una etapa posterior.
+La interfaz está disponible en inglés y español: menús, ayuda, controles, avisos, tutorial, nombres visibles del contenido, historial y espectador. El idioma se elige en **Configuración → Idioma**; por defecto sigue al sistema. Los catálogos admiten idiomas adicionales sin cambiar la simulación ni las partidas guardadas; ver [idiomas](localization.md).
 
 ## Contenido
 

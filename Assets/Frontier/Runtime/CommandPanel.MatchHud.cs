@@ -163,7 +163,7 @@ namespace Frontier.Runtime
                 selectionRole.text="SELECTED COMPOSITION";
                 var types=selected.GroupBy(e=>e.definition).OrderByDescending(g=>g.Count()).ToArray();
                 selectionDetails.text=string.Join("\n",types.Take(5).Select(g=>$"{g.Count()} × {Session.Catalog[g.Key].name}"));
-                if(types.Length>5)selectionDetails.text+=$"\n+ {types.Skip(5).Sum(g=>g.Count())} other items";
+                if(types.Length>5)((LocalizedText)selectionDetails).Append($"\n+ {types.Skip(5).Sum(g=>g.Count())} other items");
                 TopLeft(selectionDetails.rectTransform,new Vector2(16,-107),new Vector2(288,118));
             }
             else
@@ -241,9 +241,9 @@ namespace Frontier.Runtime
                 return;
             }
             orderPlanSteps.text="1. "+PlanOrderLabel(representative.order)+"  →  "+string.Join("  →  ",representative.pendingOrders.Take(3).Select((order,index)=>(index+2)+". "+PlanOrderLabel(order.kind)));
-            if(representative.pendingOrders.Length>3)orderPlanSteps.text+=$"  →  +{representative.pendingOrders.Length-3} more";
+            if(representative.pendingOrders.Length>3)((LocalizedText)orderPlanSteps).Append($"  →  +{representative.pendingOrders.Length-3} more");
             orderPlanHint.text=$"Waypoints: {Session.Catalog[representative.definition].name} #{representative.id} · Cyan: Move · Red: Attack · Green: Work";
-            if(representative.pendingOrders.Length>=OrderQueueVisuals.MaximumWaypoints)orderPlanHint.text+=$" · First {OrderQueueVisuals.MaximumWaypoints} shown";
+            if(representative.pendingOrders.Length>=OrderQueueVisuals.MaximumWaypoints)((LocalizedText)orderPlanHint).Append($" · First {OrderQueueVisuals.MaximumWaypoints} shown");
         }
         private static string PlanOrderLabel(CommandKind order)
         {

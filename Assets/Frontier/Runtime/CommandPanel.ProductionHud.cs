@@ -174,7 +174,7 @@ namespace Frontier.Runtime
                 }
                 productionFill.rectTransform.sizeDelta=new Vector2(320*progress,12);
             }
-            if(producerNumber>0&&current!=null)productionState.text+=" · B"+producerNumber;
+            if(producerNumber>0&&current!=null)((LocalizedText)productionState).Append(" · B"+producerNumber);
             if(producerNumber>0&&current==null&&Session.IsPaused){productionState.text="PAUSED";tint=WarningTint;}
             productionAccent.color=productionFill.color=productionState.color=tint;
         }

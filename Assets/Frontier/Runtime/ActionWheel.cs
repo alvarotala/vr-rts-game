@@ -566,13 +566,13 @@ namespace Frontier.Runtime
                 {
                     string buttonName=HotkeyBindings.Display(hintInputs[i],hintLeft==true);
                     string actionName=i==0?"Hold: enlarge board":i==1?"Cancel placement":i==2?"Place board":i==3?"Hold: shrink board":"Show / hide hints";
-                    buttonHints[i].text=buttonName+(i==4?"\n":" · ")+actionName;continue;
+                    ((LocalizedText)buttonHints[i]).SetKey(i==4?"{0}\n{1}":"{0} · {1}",buttonName,actionName);continue;
                 }
                 if(replay)
                 {
                     string buttonName=HotkeyBindings.Display(hintInputs[i],hintLeft==true);
                     string actionName=i==0?"Use replay panel":i==1?"Exit replay\nGrip: zoom out":i==2?"Play / pause\nGrip: zoom in":i==3?"Hold + stick: pan": "Show / hide hints";
-                    buttonHints[i].text=buttonName+(i==4?"\n":" · ")+actionName;continue;
+                    ((LocalizedText)buttonHints[i]).SetKey(i==4?"{0}\n{1}":"{0} · {1}",buttonName,actionName);continue;
                 }
                 string id = HotkeyBindings.Definitions(true).First(d => bindings.Get(true, d.Id) == hintInputs[i]).Id;
                 string action = id == "select" ? "Select / place\nHold: drag · Double: same type" :
@@ -580,7 +580,7 @@ namespace Frontier.Runtime
                     id == "add" ? "Hold: add / queue" :
                     id == "back" ? "Cancel / pause" : "Show / hide hints";
                 string button = HotkeyBindings.Display(hintInputs[i], hintLeft == true);
-                buttonHints[i].text = button + (i == 4 ? "\n" : " · ") + action;
+                ((LocalizedText)buttonHints[i]).SetKey(i==4?"{0}\n{1}":"{0} · {1}",button,action);
             }
         }
 
@@ -608,7 +608,7 @@ namespace Frontier.Runtime
         }
         private Text Label(Transform parent, string text, Vector2 position, Vector2 size, int fontSize, Color color)
         {
-            var label = Rect("Label", parent, position, size).gameObject.AddComponent<Text>(); label.font = font; label.text = text;
+            var label = Rect("Label", parent, position, size).gameObject.AddComponent<LocalizedText>(); label.font = font; label.text = text;
             label.fontSize = fontSize; label.alignment = TextAnchor.MiddleCenter; label.color = color; label.raycastTarget = false;
             label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Truncate; return label;
         }

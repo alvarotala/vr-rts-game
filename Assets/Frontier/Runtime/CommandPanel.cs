@@ -173,7 +173,7 @@ namespace Frontier.Runtime
                 string remaining=resource.remaining<0?"?":resource.remaining.ToString();
                 int optimum=resource.remaining==0?0:Harvesting.OptimalWorkers(resource.kind);
                 harvesting.text=$"{name} · {Saturation(resource.assignedWorkers,optimum)} · Remaining: {remaining}";
-                if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)harvesting.text+=" · Requires a completed extractor";
+                if(resource.kind=="catalyst"&&resource.extractorId==0&&resource.remaining!=0)((LocalizedText)harvesting).Append(" · Requires a completed extractor");
             }
             else if(building!=null&&Session.Catalog[building.definition].role=="hq")
             {
@@ -206,11 +206,11 @@ namespace Frontier.Runtime
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
                     harvesting.text=Board.Placed?"BOARD READY":"BOARD NOT PLACED";
-                    harvesting.text+=Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.";
+                    ((LocalizedText)harvesting).Append(Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.");
                     status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
-                    selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":"Prepare your battlefield and choose where it sits in your room.";
+                    selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":settingsTab==SettingsTab.Language?"Choose your interface language. System follows this device.":"Prepare your battlefield and choose where it sits in your room.";
                     status.text=settingsTab==SettingsTab.PlaySpace?(Board.Placed?"Board position saved. Reposition it whenever you change play space.":"No board position set. Placement will open before the match starts."):"Preferences are shared before and during a match, and saved on this device.";break;
                 case MenuPage.Hotkeys:
                     headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
@@ -455,7 +455,7 @@ namespace Frontier.Runtime
             Label(rect,label,new Vector2(8,0),size-new Vector2(16,0),18,accent,TextAnchor.MiddleCenter);return rect;
         }
         private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAnchor alignment=TextAnchor.MiddleLeft)
-        {var go=new GameObject("Label",typeof(RectTransform),typeof(Text));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.raycastTarget=false;return text;}
+        {var go=new GameObject("Label",typeof(RectTransform),typeof(LocalizedText));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.raycastTarget=false;return text;}
         private static void TopLeft(RectTransform rect,Vector2 position,Vector2 size){rect.anchorMin=rect.anchorMax=new Vector2(0,1);rect.pivot=new Vector2(0,1);rect.anchoredPosition=position;rect.sizeDelta=size;}
     }
 }

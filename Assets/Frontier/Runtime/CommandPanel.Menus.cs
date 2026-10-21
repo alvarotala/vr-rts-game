@@ -6,7 +6,7 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private enum SettingsTab { Controls, Audio, Visuals, PlaySpace }
+        private enum SettingsTab { Controls, Audio, Visuals, PlaySpace, Language }
         private SettingsTab settingsTab;
         private string MenuOrigin=>Session.Running?"PAUSE":"MAIN MENU";
         private static readonly Color MenuMuted=new Color(.69f,.8f,.85f);
@@ -78,13 +78,13 @@ namespace Frontier.Runtime
 
         private void BuildSettingsPage()
         {
-            var names=new[]{"Controls","Audio","Visuals","Play space"};
+            var names=new[]{"Controls","Audio","Visuals","Play space","Language"};
             for(int i=0;i<names.Length;i++)
             {
                 var tab=(SettingsTab)i;bool active=settingsTab==tab;
-                var rect=Section(actions,names[i],new Vector2(i*264,0),new Vector2(248,48),active?new Color(.075f,.27f,.3f):button);
-                Label(rect,names[i],Vector2.zero,new Vector2(248,48),21,active?accent:Color.white,TextAnchor.MiddleCenter);
-                if(active)Section(rect,"Selected",new Vector2(0,-45),new Vector2(248,3),accent);
+                var rect=Section(actions,names[i],new Vector2(i*211,0),new Vector2(196,48),active?new Color(.075f,.27f,.3f):button);
+                Label(rect,names[i],Vector2.zero,new Vector2(196,48),20,active?accent:Color.white,TextAnchor.MiddleCenter);
+                if(active)Section(rect,"Selected",new Vector2(0,-45),new Vector2(196,3),accent);
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
@@ -113,6 +113,20 @@ namespace Frontier.Runtime
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
                 Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-284),new Vector2(996,30),18,MenuMuted);
+            }
+            else if(settingsTab==SettingsTab.Language)
+            {
+                Label(actions,"Language",new Vector2(22,-76),new Vector2(996,36),26,Color.white);
+                Label(actions,"Use your system language or choose one for this device. Changes apply immediately.",new Vector2(22,-122),new Vector2(996,48),18,MenuMuted);
+                // One selector enumerates the installed catalogs, with no fixed language limit.
+                string choice=Localization.Preference==Localization.SystemPreference?"System · "+Localization.CurrentName:Localization.CurrentName;
+                MenuCard("Language: "+choice,"Select to change · System follows the device language.",new Vector2(0,-188),new Vector2(1040,108),()=>
+                {
+                    var options=new System.Collections.Generic.List<string>{Localization.SystemPreference};
+                    foreach(var language in Localization.Languages)options.Add(language.code);
+                    Localization.SetPreference(options[(options.IndexOf(Localization.Preference)+1)%options.Count]);
+                    Rebuild();UpdateMenuText();
+                });
             }
             else
             {
