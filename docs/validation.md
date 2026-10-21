@@ -1030,3 +1030,12 @@ Abajo entra directamente a Quick select con Idle workers resaltado; arriba dentr
 - Regresiones: rueda unificada **724 / 22 vistas**, grupos **496 / 10**, acciones **466 / 20**, menús **356 / 55**. Salida 0 en `TestResults/unity-quick-selection-final.log`; la guía permite llegar a las nuevas entradas y volver sin reanudar la partida.
 - Inspeccionadas la rueda de dos opciones, el hint completo y la página de guía en `TestResults/QuickSelection`, `TestResults/UnifiedWheel` y `TestResults/Menus`. Referencias Markdown/CSV actualizadas desde el catálogo exportado. `git diff --check` aprobado.
 - Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Validación de Editor con entrada sintética; sin APK ni prueba física en Quest.
+
+## Replay congelado durante seek — 21 de octubre de 2026
+
+Los saltos conservan la última escena y las proyecciones de ambos jugadores mientras se reconstruye la simulación. El tablero omite animación/efectos y el panel reutiliza economía/producción hasta publicar el destino. El cálculo añade un presupuesto cooperativo de 2 ms por fotograma, comprobado entre pasos, órdenes y checkpoints; cada operación individual sigue siendo indivisible. Cámara, navegación, transporte y progreso continúan disponibles, y ±15 segundos acumula sobre el destino pendiente.
+
+- `ReplayValidation.Run`: **1.255 comprobaciones**, salida 0 y marcador `FRONTIER_REPLAY_VALIDATION passed` en `TestResults/unity-replay-seek-freeze.log`.
+- Motor **33**, entrada **57 / 2 vistas**, sesión **30**, panel de espectador **528 / 7 vistas**, historial **251 / 7 vistas**, menús **356 / 55 vistas**. Se comprueban presupuesto agotado, comandos simultáneos, reconstrucción exacta, inmovilidad de poses y contadores entre lotes, retargeting, reinicio visual único, pausas, retroceso, interrupción del visor y salida durante un seek. Los archivos de grabación permanecen intactos.
+- Inspeccionado `TestResults/Spectator/07-seeking-frozen.png`: estadísticas congeladas, destino y transporte visibles; texto y controles dentro del panel. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin cambios de reglas ni formato de grabación. Sin APK ni medición de FPS en Quest físico; el presupuesto no garantiza la duración de un paso/checkpoint individual.

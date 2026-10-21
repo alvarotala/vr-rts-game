@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using Frontier.Core;
 using UnityEngine;
 
@@ -71,20 +72,21 @@ namespace Frontier.Runtime
             SeekTarget=target;Seeking=!Ended;
         }
         public void Restart()=>Seek(0);
-        public void Advance(float seconds,int maxSteps=120)
+        public void Advance(float seconds,int maxSteps=120,double maxMilliseconds=double.PositiveInfinity)
         {
-            if(Error!=null||Ended||maxSteps<=0||paused&&!Seeking)return;
+            if(Error!=null||Ended||maxSteps<=0||maxMilliseconds<=0||double.IsNaN(maxMilliseconds)||paused&&!Seeking)return;
+            double deadline=Stopwatch.GetTimestamp()+maxMilliseconds*Stopwatch.Frequency/1000;
             int stepBudget=Math.Min(maxSteps,240),steps=0,operations=stepBudget*8+64;
             if(!Seeking&&seconds>0&&!float.IsNaN(seconds)&&!float.IsInfinity(seconds))
                 tickCredit=Math.Min(stepBudget,tickCredit+Math.Min(seconds,.25f)*Simulation.TickRate*speed);
             try
             {
-                while(Error==null&&!Ended)
+                while(Error==null&&!Ended&&Stopwatch.GetTimestamp()<deadline)
                 {
-                    if(!ProcessCurrentTick(ref operations))return;
+                    if(!ProcessCurrentTick(ref operations,deadline))return;
                     if(Error!=null||Ended)return;
                     if(Seeking&&Tick>=SeekTarget){Seeking=false;tickCredit=0;return;}
-                    if(steps>=stepBudget||!Seeking&&tickCredit<1)return;
+                    if(steps>=stepBudget||!Seeking&&tickCredit<1||Stopwatch.GetTimestamp()>=deadline)return;
                     if(Match.Winner!=-1){Fail("The simulation ended before the recorded timeline.");return;}
                     int previous=Tick;Match.Step();
                     StateRevision++;
@@ -96,9 +98,10 @@ namespace Frontier.Runtime
         }
         // A checkpoint is ordered after its segment's commands, but before the next segment's
         // commands even if they share the same tick. Flattening by tick alone loses this boundary.
-        private bool ProcessCurrentTick(ref int operations)
+        private bool ProcessCurrentTick(ref int operations,double deadline)
         {
-            while(operations>0)
+            // Yield between atomic commands/checkpoints too: a dense tick can have no steps.
+            while(operations>0&&Stopwatch.GetTimestamp()<deadline)
             {
                 if(segmentIndex==segments.Length)
                 {

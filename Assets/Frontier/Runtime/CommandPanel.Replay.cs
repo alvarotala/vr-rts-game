@@ -24,6 +24,7 @@ namespace Frontier.Runtime
         private bool replayScrubbing,replayScrubResume;
         private int replayScrubTick;
         private ReplayPlayback replayScrubSource;
+        private PlayerView replayPanelView;
         public bool AcceptsReplayInput=>Page==MenuPage.Replay&&Session.IsReplay&&!Session.HasSystemPause&&!Quest.Placing;
 
         private Target ReplayButton(string name,string title,float x,float y,float width,Action click,out Text label)
@@ -35,6 +36,7 @@ namespace Frontier.Runtime
         private void BuildReplayPanel()
         {
             if(!Session.IsReplay)return;
+            replayPanelView=null;
             for(int p=0;p<2;p++)
             {
                 var tint=p==0?MatchReportGraph.PlayerColor:MatchReportGraph.OpponentColor;
@@ -68,7 +70,7 @@ namespace Frontier.Runtime
                 {
                     var rect=Section(navigation,title,new Vector2(x,0),new Vector2(100,34),button);
                     Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,Color.white,TextAnchor.MiddleCenter);
-                    targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>{replayProductionPage[player]+=delta;UpdateReplayPanel();}});
+                    targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>{replayProductionPage[player]+=delta;replayPanelView=null;UpdateReplayPanel();}});
                 }
                 PageButton("Previous",0,-1);PageButton("Next",380,1);
                 replayProductionPageLabel[p]=Label(navigation,"",new Vector2(108,0),new Vector2(264,34),16,MenuMuted,TextAnchor.MiddleCenter);
@@ -79,9 +81,9 @@ namespace Frontier.Runtime
             Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),new Color(.065f,.14f,.18f));
             replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),new Color(.12f,.36f,.39f));
             replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),accent);
-            ReplayButton("Replay back 15s","−15 seconds",0,642,170,()=>Session.SeekReplay(Session.Replay.Tick-Simulation.TickRate*15),out _);
+            ReplayButton("Replay back 15s","−15 seconds",0,642,170,()=>Session.SeekReplay(ReplayTransportTick-Simulation.TickRate*15),out _);
             ReplayButton("Replay play / pause","Pause",182,642,220,Session.ToggleReplayPause,out replayPauseLabel);
-            ReplayButton("Replay forward 15s","+15 seconds",414,642,170,()=>Session.SeekReplay(Session.Replay.Tick+Simulation.TickRate*15),out _);
+            ReplayButton("Replay forward 15s","+15 seconds",414,642,170,()=>Session.SeekReplay(ReplayTransportTick+Simulation.TickRate*15),out _);
             ReplayButton("Replay restart","Restart",596,642,200,()=>Session.SeekReplay(0),out _);
             ReplayButton("Replay full map","Full map",808,642,232,()=>Board.Fit(),out _);
             Label(actions,"SPEED",new Vector2(0,-708),new Vector2(100,48),18,MenuMuted);
@@ -99,18 +101,22 @@ namespace Frontier.Runtime
             public int active,queued;
             public float progress;
         }
+        private int ReplayTransportTick=>Session.Replay.Seeking?Session.Replay.SeekTarget:Session.Replay.Tick;
         private void UpdateReplayPanel()
         {
             if(!Session.IsReplay||replayTime==null)return;
-            var match=Session.Match;
-            for(int p=0;p<2;p++)
+            // The same published snapshots drive the board and the economy. Never read
+            // the mutable simulation while it is reconstructing an intermediate seek tick.
+            bool refresh=!ReferenceEquals(replayPanelView,Session.View);replayPanelView=Session.View;
+            for(int p=0;refresh&&p<2;p++)
             {
                 // Omniscient data belongs exclusively to recorded spectator sessions.
-                var entities=match.Entities.Values.Where(e=>e.owner==p&&e.health>0).ToArray();
-                int workers=entities.Count(e=>match.Type(e).role=="worker"),army=entities.Count(e=>!match.Type(e).building&&match.Type(e).role!="worker");
-                replayMinerals[p].text=Stat(match.Players[p].minerals);replayGas[p].text=Stat(match.Players[p].catalyst);
+                var view=Session.ReplayPlayerViews[p];
+                var entities=view.entities.Where(e=>e.owner==p&&e.health>0).ToArray();
+                int workers=entities.Count(e=>Session.Catalog[e.definition].role=="worker"),army=entities.Count(e=>!Session.Catalog[e.definition].building&&Session.Catalog[e.definition].role!="worker");
+                replayMinerals[p].text=Stat(view.minerals);replayGas[p].text=Stat(view.catalyst);
                 replayWorkers[p].text="Workers  "+workers;replayArmy[p].text="Army  "+army;
-                replaySupply[p].text=$"Supply {match.Units(p)+match.Reserved(p)} / {match.Capacity(p)}    ·    Structures {entities.Count(e=>match.Type(e).building&&e.complete)}";
+                replaySupply[p].text=$"Supply {view.supply} / {view.capacity}    ·    Structures {entities.Count(e=>Session.Catalog[e.definition].building&&e.complete)}";
                 var groups=new Dictionary<string,ReplayProductionGroup>();
                 void Add(string key,string name,bool active,float progress)
                 {
@@ -119,10 +125,10 @@ namespace Frontier.Runtime
                 }
                 foreach(var entity in entities)
                 {
-                    var type=match.Type(entity);
+                    var type=Session.Catalog[entity.definition];
                     if(type.building&&!entity.complete)
-                        Add("B:"+type.id,"Build · "+type.name,true,1-entity.remaining/(float)Math.Max(1,type.duration));
-                    for(int q=0;q<entity.queue.Count;q++)
+                        Add("B:"+type.id,"Build · "+type.name,true,entity.progress);
+                    for(int q=0;q<entity.queue.Length;q++)
                     {
                         var order=entity.queue[q];
                         Add((order.research?"R:":"T:")+order.definition,(order.research?"Research · ":"Train · ")+QueueLabel(order.definition),q==0,1-order.remaining/(float)Math.Max(1,order.total));

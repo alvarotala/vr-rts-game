@@ -227,7 +227,7 @@ namespace Frontier.Runtime
         }
         private void RefreshView()
         {
-            if(IsReplay){RefreshReplayView();return;}
+            if(IsReplay){if(!Replay.Seeking)RefreshReplayView();return;}
             UpdateArchive();
             var previous=View;View=Match.View(0);ValidateAbilitySelection();
             foreach(var entity in View.entities)

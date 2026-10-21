@@ -6,6 +6,8 @@ namespace Frontier.Runtime
 {
     public sealed partial class GameSession
     {
+        // Cooperative work on the main thread, leaving time for VR rendering and input.
+        private const double ReplaySeekMilliseconds=2;
         public ReplayPlayback Replay {get;private set;}
         public bool IsReplay=>Replay!=null;
         public bool LastClosedWasReplay {get;private set;}
@@ -41,14 +43,14 @@ namespace Frontier.Runtime
         public void ToggleReplayPause()
         {
             if(!IsReplay||HasSystemPause||Replay.Error!=null)return;
-            if(Replay.Ended){Replay.Seek(0);Replay.Paused=false;SyncReplay(true);}
+            if(Replay.Ended){Replay.Seek(0);Replay.Paused=false;}
             else Replay.Paused=!Replay.Paused;
             Changed?.Invoke();
         }
         public void SeekReplay(int tick)
         {
             if(!IsReplay||HasSystemPause||Replay.Error!=null)return;
-            Replay.Seek(tick);SyncReplay(true);Changed?.Invoke();
+            Replay.Seek(tick);Changed?.Invoke();
         }
         public void SetReplaySpeed(float speed)
         {if(!IsReplay||HasSystemPause)return;Replay.Speed=speed;Changed?.Invoke();}
@@ -57,8 +59,10 @@ namespace Frontier.Runtime
         {
             if(pauseReasons.Count>0)return;
             long revision=Replay.StateRevision;bool seeking=Replay.Seeking;var before=Match;
-            Replay.Advance(seconds);
-            if(revision!=Replay.StateRevision||seeking!=Replay.Seeking||before!=Replay.Match)
+            Replay.Advance(seconds,maxMilliseconds:seeking?ReplaySeekMilliseconds:double.PositiveInfinity);
+            // Keep the last published projections and all presentation objects until the
+            // requested tick is ready. Transport progress reads Replay directly.
+            if(!Replay.Seeking&&(revision!=Replay.StateRevision||seeking||before!=Replay.Match))
             {SyncReplay(before!=Replay.Match||seeking&&!Replay.Seeking);Changed?.Invoke();}
         }
         private void SyncReplay(bool reset)

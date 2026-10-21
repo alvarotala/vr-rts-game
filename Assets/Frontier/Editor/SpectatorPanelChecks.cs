@@ -50,11 +50,22 @@ namespace Frontier.Editor
                 Capture("02-spectator-playing");Click("Replay play / pause");
                 Check(session.Replay.Paused&&panel.AcceptsReplayInput,"Pause leaves the transport and spectator controls available");
                 Click("Replay speed 2");Check(session.Replay.Speed==2,"Ray control sets playback speed while paused");
-                Click("Replay forward 15s");FinishSeek();Check(session.Replay.Tick==Simulation.TickRate*15&&session.Replay.Paused,"Forward transport seeks exactly fifteen seconds without unpausing");
+                Click("Replay forward 15s");Click("Replay forward 15s");
+                Check(session.Replay.SeekTarget==Simulation.TickRate*30,"Repeated forward presses accumulate against the requested destination while seeking");
+                Click("Replay back 15s");FinishSeek();Check(session.Replay.Tick==Simulation.TickRate*15&&session.Replay.Paused,"Forward transport seeks exactly fifteen seconds without unpausing");
                 Click("Replay back 15s");FinishSeek();Check(session.Replay.Tick==0,"Backward transport seeks exactly fifteen seconds");
                 Click("Replay speed 0.5");Check(session.Replay.Speed==.5f,"Half speed is selectable with the ray");
                 Click("Replay speed 4");Check(session.Replay.Speed==4,"Four-times speed is selectable with the ray");
-                Scrub(.5f);FinishSeek();Check(session.Replay.Tick==Simulation.TickRate*32&&session.Replay.Paused,"Dragging the timeline seeks precisely and preserves pause");
+                Scrub(.5f);
+                string[] frozenCounters=EconomyText();int batches=0;bool countersFrozen=true;
+                while(session.Replay.Seeking&&batches++<10000)
+                {
+                    Invoke(session,"AdvanceReplay",0f);Refresh();
+                    if(session.Replay.Seeking)countersFrozen&=EconomyText().SequenceEqual(frozenCounters)&&Field<Text>(panel,"replayState").text.StartsWith("SEEKING")&&panel.AcceptsReplayInput;
+                    if(batches==1)Capture("07-seeking-frozen");
+                }
+                Check(countersFrozen&&batches>1,"Economy and production remain frozen while seek progress and controls stay available");
+                FinishSeek();Check(session.Replay.Tick==Simulation.TickRate*32&&session.Replay.Paused,"Dragging the timeline seeks precisely and preserves pause");
                 Check(Field<Text[]>(panel,"replayWorkers")[0].text!="Workers  6","Spectator counters refresh after seeking");
                 Click("Replay play / pause");Scrub(.25f);FinishSeek();Check(session.Replay.Tick==Simulation.TickRate*16&&!session.Replay.Paused,"Timeline temporarily freezes playback then resumes the previous playing state");
                 Click("Replay play / pause");Scrub(1);FinishSeek();Refresh();
@@ -80,7 +91,7 @@ namespace Frontier.Editor
                     }
                     session.Match.Players[p].minerals=12345+p;session.Match.Players[p].catalyst=6789+p;
                 }
-                Refresh();Capture("04-production-full");
+                Invoke(session,"RefreshReplayView");Refresh();Capture("04-production-full");
                 var navigation=Field<RectTransform[]>(panel,"replayProductionNavigation");
                 Check(navigation.All(n=>n.gameObject.activeInHierarchy),"Production overflow exposes independent paging controls for each player");
                 Check(Field<Text[]>(panel,"replayMinerals")[0].text=="12,345"&&Field<Text[]>(panel,"replayGas")[1].text=="6,790","Both resource banks remain legible with large values");
@@ -97,7 +108,8 @@ namespace Frontier.Editor
 
                 void Check(bool value,string message){if(!value)throw new Exception(message);checks++;Debug.Log("SPECTATOR_PANEL_PASS: "+message);}
                 void Refresh(){Set(panel,"nextText",0f);Invoke(panel,"LateUpdate");}
-                void FinishSeek(){for(int i=0;i<100&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",0f);Refresh();Check(!session.Replay.Seeking&&session.Replay.Error==null,"Timeline reaches a verified recorded tick");}
+                string[] EconomyText()=>Field<Text[]>(panel,"replayMinerals").Concat(Field<Text[]>(panel,"replayGas")).Concat(Field<Text[]>(panel,"replayWorkers")).Concat(Field<Text[]>(panel,"replayArmy")).Concat(Field<Text[]>(panel,"replaySupply")).Concat(Field<Text[]>(panel,"replayProductionTitle")).Concat(Field<Text[,]>(panel,"replayProductionCounts").Cast<Text>()).Concat(Field<Text[,]>(panel,"replayProductionProgress").Cast<Text>()).Select(t=>t.text).ToArray();
+                void FinishSeek(){for(int i=0;i<10000&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",0f);Refresh();Check(!session.Replay.Seeking&&session.Replay.Error==null,"Timeline reaches a verified recorded tick");}
                 void Click(string name){Refresh();ClickRect(panel.GetComponentsInChildren<RectTransform>().First(r=>r.name==name&&r.gameObject.activeInHierarchy));Refresh();}
                 void ClickRect(RectTransform rect){string name=rect.name;var point=rect.TransformPoint(rect.rect.center);var ray=new Ray(point-rect.forward,rect.forward);Check(panel.Point(ray,true,false)&&panel.Point(ray,false,true),"Ray selects "+name);}
                 void Scrub(float fraction)

@@ -57,22 +57,42 @@ namespace Frontier.Editor
                 session.ToggleReplayPause();Invoke(session,"AdvanceReplay",.25f);
                 Check(session.IsPaused&&session.Match.Tick==tick&&!session.Match.Paused,"Transport pause freezes playback without changing the simulation's command acceptance");
                 board.Zoom=2;board.Pan=new Vector2(4,-3);var terrain=board.Content.Find("Terrain");
+                Invoke(board,"LateUpdate");
+                var frozenView=session.View;var frozenPlayers=session.ReplayPlayerViews;
+                var poses=board.Content.GetComponentsInChildren<Transform>(true).Select(t=>(t,position:t.localPosition,rotation:t.localRotation,scale:t.localScale,active:t.gameObject.activeSelf)).ToArray();
                 session.SeekReplay(Simulation.TickRate*25);
-                for(int i=0;i<100&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",.25f);
+                Check(resets==0&&ReferenceEquals(session.View,frozenView)&&session.View.entities.All(e=>board.TryEntityTop(e.id,out _)),"Starting seek retains the published scene without hiding its units");
+                Invoke(session,"AdvanceReplay",.25f);
+                Check(session.Replay.Seeking&&session.Replay.Tick>tick&&ReferenceEquals(session.View,frozenView),"Seek performs bounded work without publishing intermediate simulation ticks");
+                session.SeekReplay(Simulation.TickRate*20);session.SeekReplay(Simulation.TickRate*25);
+                bool frozen=true;int seekFrames=0;
+                while(session.Replay.Seeking&&seekFrames++<10000)
+                {
+                    Invoke(board,"LateUpdate");
+                    frozen&=ReferenceEquals(session.View,frozenView)&&ReferenceEquals(session.ReplayPlayerViews,frozenPlayers)&&resets==0
+                        &&poses.All(p=>p.t!=null&&p.t.localPosition==p.position&&p.t.localRotation==p.rotation&&p.t.localScale==p.scale&&p.t.gameObject.activeSelf==p.active);
+                    Invoke(session,"AdvanceReplay",.25f);
+                }
+                Check(frozen&&seekFrames>0&&resets==1,"All drawn poses and both economy snapshots freeze across retargeted seek batches, then reset exactly once");
                 Check(session.Replay.Tick==Simulation.TickRate*25&&session.Replay.Paused&&session.View.tick==session.Replay.Tick,"Seek reaches the exact target and preserves the user's paused state");
                 Invoke(board,"LateUpdate");
-                session.SeekReplay(Simulation.TickRate*5);for(int i=0;i<100&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",.25f);
-                Check(session.Match==session.Replay.Match&&session.View.tick==Simulation.TickRate*5&&resets>=2,"Backward seek replaces the world, refreshes views and resets transient visuals");
+                frozenView=session.View;session.SeekReplay(Simulation.TickRate*5);
+                Check(ReferenceEquals(session.View,frozenView)&&session.Match!=session.Replay.Match&&resets==1,"Backward seek keeps the displayed world until reconstruction is complete");
+                for(int i=0;i<10000&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",.25f);
+                Check(session.Match==session.Replay.Match&&session.View.tick==Simulation.TickRate*5&&resets==2,"Backward seek replaces the world, refreshes views and resets transient visuals once");
                 Check(board.Zoom==2&&board.Pan==new Vector2(4,-3)&&board.Content.Find("Terrain")==terrain,"Seeking preserves spectator framing and reuses the terrain mesh");
                 Invoke(board,"LateUpdate");
                 Check(session.View.entities.All(e=>board.TryEntityTop(e.id,out _)),"Backward seeking reuses pooled visuals and renders every current entity without stale references");
                 session.ToggleReplayPause();session.Pause("headset",true);tick=session.Match.Tick;
                 Invoke(session,"AdvanceReplay",.25f);Check(session.Match.Tick==tick&&!session.Replay.Paused,"Headset pause stops playback and preserves the requested transport state");
                 session.Pause("headset",false);Invoke(session,"AdvanceReplay",.25f);Check(session.Match.Tick>tick,"Playback resumes when headset pause clears");
-                session.SeekReplay(session.Replay.EndTick);for(int i=0;i<100&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",.25f);
+                session.SeekReplay(session.Replay.EndTick);for(int i=0;i<10000&&session.Replay.Seeking;i++)Invoke(session,"AdvanceReplay",.25f);
                 Check(session.Replay.Ended&&session.IsReplay&&session.Running&&session.Match.Winner==0,"End of replay retains spectator mode and its final world");
                 Check(session.Replay.Error==null&&JsonUtility.ToJson(session.Match.Snapshot())==JsonUtility.ToJson(recorded.Snapshot()),"Session playback reaches the verified recorded world without divergence");
-                session.Pause("headset",true);session.StopReplay();
+                frozenView=session.View;session.SeekReplay(0);session.Pause("headset",true);tick=session.Replay.Tick;
+                Invoke(session,"AdvanceReplay",.25f);
+                Check(session.Replay.Seeking&&session.Replay.Tick==tick&&ReferenceEquals(session.View,frozenView),"Headset interruption suspends pending seek work without discarding the displayed final world");
+                session.StopReplay();
                 Check(!session.Running&&!session.IsReplay&&session.Match==null&&session.View==null&&session.LastClosedWasReplay&&session.IsPaused,"Exit closes only replay state while preserving external pause reasons");
                 Check(ReferenceEquals(session.Catalog,originalCatalog)&&ReferenceEquals(session.Map,originalMap)&&session.Faction=="biological"&&session.EnemyFaction=="industrial"&&session.Difficulty=="easy","Exit restores new-match preferences and current game catalog");
                 Check(files.SequenceEqual(Directory.GetFiles(root,"*",SearchOption.AllDirectories).OrderBy(p=>p))&&hashes.SequenceEqual(files.Select(p=>MatchArchiveStore.Hash(File.ReadAllText(p)))),"Playback, seeking and exit never alter or append to the archive");

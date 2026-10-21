@@ -88,6 +88,7 @@ namespace Frontier.Runtime
             foreach(var voice in voices)voice.volume=EffectsVolume*.32f;
             var view=Session.View;
             if(view==null||!Session.Running)return;
+            if(Session.IsReplay&&Session.Replay.Seeking){StopBattle();return;}
             if(Session.IsPaused)
             {StopBattle();ConsumeEvents(view);SeedView();return;}
             if(ReferenceEquals(lastView,view))return;

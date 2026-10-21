@@ -58,6 +58,12 @@ namespace Frontier.Editor
                 int endTick=replay.Tick;replay.Paused=false;replay.Advance(.25f);Check(replay.Tick==endTick&&replay.Paused,"the end cannot advance past recorded data");
                 replay.Restart();DrainSeek(replay,3);Check(replay.Tick==0&&!replay.Ended&&replay.Paused,"restart reconstructs the beginning without forcing playback");
                 replay.Paused=false;replay.Advance(.1f);Check(replay.Tick==2,"a restarted replay can play again");
+                replay.Seek(replay.EndTick);long timedRevision=replay.StateRevision;before=replay.Tick;
+                replay.Advance(0,240,0);
+                Check(replay.Tick==before&&replay.StateRevision==timedRevision&&replay.Seeking,"An exhausted elapsed-time budget performs no simulation work");
+                int timedFrames=0;
+                while(replay.Seeking&&timedFrames++<10000)replay.Advance(0,120,2);
+                Check(replay.Ended&&replay.Error==null&&timedFrames>1&&JsonUtility.ToJson(replay.Match.Snapshot())==JsonUtility.ToJson(match.Snapshot()),"Two-millisecond seek batches yield across frames and reproduce the exact final world");
 
                 var bad=Clone("incompatible");var header=Read<MatchArchiveHeader>(bad,"header.json");header.replayRulesVersion++;Write(bad,"header.json",header);
                 Check(Rejects(()=>new ReplayPlayback(bad,bad.Inspect(info.Id))),"incompatible simulation rules fail before playback begins");
@@ -96,6 +102,8 @@ namespace Frontier.Editor
                 burst.Submit(new GameCommand{player=0,kind=CommandKind.Surrender});burstWriter.Finish();
                 var bounded=new ReplayPlayback(shortStore,shortStore.List().Single());
                 Check(bounded.Seeking&&!bounded.Ended&&bounded.Tick==0,"a large same-tick command burst is not processed in one unbounded load");
+                long exhaustedRevision=bounded.StateRevision;bounded.Advance(0,240,double.Epsilon);
+                Check(bounded.StateRevision==exhaustedRevision&&bounded.Seeking,"An elapsed deadline also yields before processing a same-tick command burst");
                 long revision=bounded.StateRevision;bounded.Advance(0,1);
                 Check(bounded.StateRevision>revision&&bounded.Tick==0&&bounded.Seeking,"same-tick command batches publish state changes without advancing the clock");
                 DrainSeek(bounded,1);Check(bounded.Ended&&bounded.Error==null,"bounded command batches eventually reproduce a same-tick final result");

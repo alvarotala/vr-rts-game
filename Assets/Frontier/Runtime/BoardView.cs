@@ -255,7 +255,11 @@ namespace Frontier.Runtime
         }
         private void LateUpdate()
         {
-            UpdateTransform(); UpdateFog(); UpdatePointer();
+            UpdateTransform();
+            // Keep the last drawn scene during reconstruction, including interpolated poses
+            // and effects. Board navigation and the headset camera remain independent.
+            if(Session.IsReplay&&Session.Replay.Seeking)return;
+            UpdateFog(); UpdatePointer();
             fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,Session.View?.tick/(float)Simulation.TickRate??0);
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}

@@ -366,7 +366,7 @@ El contrato de grabación, compatibilidad y controles está en [match-history.md
 unity run . --log-file TestResults/unity-replay-validation.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ReplayValidation.Run
 ```
 
-La reproducción reconstruye desde el inicio al retroceder y distribuye los saltos largos entre fotogramas. No serializar `Snapshot()` como si fuera estado restaurable; omite estado interno de simulación. Cambios incompatibles del núcleo requieren incrementar `Simulation.ReplayRulesVersion`. El renderizado omnisciente no debe sustituir a `View(player)` en partidas normales ni alimentar al estratega.
+La reproducción reconstruye desde el inicio al retroceder y distribuye los saltos largos entre fotogramas con un presupuesto cooperativo de 2 ms, además del límite de pasos/comandos. Durante el seek, tablero y economía conservan sus últimas proyecciones; solo se publican al llegar al destino y se reinician los efectos una vez. La barra de progreso y los controles siguen activos. No serializar `Snapshot()` como si fuera estado restaurable; omite estado interno de simulación. Cambios incompatibles del núcleo requieren incrementar `Simulation.ReplayRulesVersion`. El renderizado omnisciente no debe sustituir a `View(player)` en partidas normales ni alimentar al estratega.
 
 ## Colocación y altura del tablero
 
