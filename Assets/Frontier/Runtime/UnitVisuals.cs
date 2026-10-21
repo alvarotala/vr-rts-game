@@ -11,7 +11,7 @@ namespace Frontier.Runtime
         // Hammer's narrow chassis needs a larger multiplier to match Bombardier's
         // broad body/legs. Keep rigs, muzzles and remains on the same visual scale.
         public static float ModelScale(Archetype type)
-            => type.collisionRadius / .45f * (type.role == "siege" ? type.faction == "industrial" ? 3.2f : 1.8f : 1f);
+            => type.collisionRadius / .45f * (type.role == "siege" ? type.faction == "industrial" ? 1.6f : .9f : 1f);
         public static string RoleName(string role)
         {
             switch(role)
@@ -103,9 +103,9 @@ namespace Frontier.Runtime
                     }
                     height=.88f;break;
             }
-            // The enlarged chassis should remain visible from above. Keep its role
+            // The chassis should remain visible from above. Keep its role
             // marker the same size as Bombardier's, just above the turret.
-            if(!animatedWorker&&!remains)b.Badge(type.role,type.role=="siege"?.78f:height+.12f,type.role=="siege"?1.8f/3.2f:1);
+            if(!animatedWorker&&!remains)b.Badge(type.role,type.role=="siege"?.78f:height+.12f,type.role=="siege"?.9f/1.6f:1);
             mesh=b.Finish(key,ModelScale(type));meshes.Add(key,mesh);return mesh;
         }
         public Mesh CombatPart(Archetype type, bool leg)
