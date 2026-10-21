@@ -46,7 +46,7 @@ En The Rift y Amber Wastes busca y ocupa depósitos de otras zonas: Easy y Norma
 | --- | --- |
 | **Controls** | Mano activa, **Hotkeys** y **Selection: Bodies / Bases**. |
 | **Audio** | Volumen de **Music** y **Effects** por separado. |
-| **Visuals** | Densidad de niebla: 0 %, 25 %, 50 %, 75 % o 100 %. 0 % quita la neblina visual. |
+| **Visuals** | Densidad de niebla: 0 %, 25 %, 50 %, 75 % o 100 %. 0 % quita la neblina visual; el terreno conserva su opacidad en todos los niveles. |
 | **Play space** | **Reposition board** y **Detect surfaces**. La altura se ajusta durante la colocación. |
 
 **Settings → Controls → Hotkeys** abre **Edit bindings** únicamente para el dispositivo activo: el mando Touch elegido en Quest o mouse/teclado en desktop. Elegí **Change**, soltá los controles y pulsá la nueva tecla o botón. Se guarda automáticamente en este dispositivo y se conserva al reiniciar el juego. Si la entrada ya está asignada, **Swap bindings** intercambia ambas funciones después de confirmar.

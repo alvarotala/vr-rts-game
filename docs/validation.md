@@ -994,3 +994,12 @@ Grip achica y Trigger agranda al mantenerlos; stick arriba/abajo ajusta altura y
 - `BoardPlacementPreview.RunBatch`: salida 0 en `TestResults/unity-placement-controls.log`. Colocación **68 comprobaciones / 2 vistas**, inicio **51 / 4 vistas**, restauración **25**, menús **350 / 54 paneles**, comodidad/audio **57 / 4 vistas**, rueda **710 / 22 vistas**. Verificados ambos mandos, cambios simultáneos de tamaño/altura, límites, stick en reposo, remaps, pausa, confirmación, cancelación y bloqueo de entradas sostenidas.
 - Inspeccionadas ambas capturas de `TestResults/BoardPlacement/` con los hints nuevos. `git diff --check` aprobado.
 - Unity Editor **6000.3.26f1**; entrada sintética y pasos de tiempo explícitos para movimiento continuo, sin escrituras de anchors, APK nuevo ni prueba física en Quest.
+
+## Densidad de niebla sin transparencia del tablero — 21 de octubre de 2026
+
+La mezcla de las capas de niebla utilizaba los mismos factores para color y alfa, reduciendo la opacidad de terreno ya opaco. Se separa la composición del alfa para conservar esa cobertura mientras la densidad sigue controlando únicamente el aspecto de la neblina.
+
+- Regresión reproducida antes del cambio con captura RGBA real, terreno activo y fondo transparente: con densidad de 25 %, el alfa mínimo del terreno del desierto era **189/255**. Fallo esperado en `TestResults/unity-fog-opacity-before.log`.
+- `FogPreview.Run` tras la corrección: **148 comprobaciones y 45 renders**, salida 0 en `TestResults/unity-fog-opacity-fixed.log`. Los tres mapas conservan **255/255** en todos los píxeles que eran opacos, con densidades 25/50/75/100 %, desde arriba y en ángulo, contra la referencia de 0 %. El exterior conserva transparencia; las zonas visibles conservan su color; la neblina sigue variando y la visibilidad de enemigos no cambia.
+- Las pruebas leen RGBA directamente del render target, evitando la captura estática RGB que no conserva alfa. Inspeccionados `TestResults/Fog/desert-opaque-25.png` y `desert-opaque-100.png`. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin APK ni validación del compositor en un Quest físico.

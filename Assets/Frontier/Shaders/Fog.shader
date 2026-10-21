@@ -14,7 +14,9 @@ Shader "Frontier/Fog"
         Pass
         {
             Tags { "LightMode"="UniversalForward" }
-            Blend SrcAlpha OneMinusSrcAlpha
+            // Blend mist color normally, but compose coverage separately. Squaring
+            // source alpha would make opaque terrain leak the Quest passthrough.
+            Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
             ZWrite Off
             Cull Off
             HLSLPROGRAM

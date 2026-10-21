@@ -82,6 +82,7 @@ namespace Frontier.Editor
                     Check(material.GetFloat("_FogTime") == 40, "The fog animation clock accepts a reproducible simulation time");
 
                     if (asset.name == "training") CheckPixels();
+                    CheckBoardOpacity();
                     board.SetVisible(false); fog.Update(true, 60);
                     Check(!fog.Root.gameObject.activeSelf, "Hidden boards suppress the fog even if an update requests visibility");
                     board.SetVisible(true); Refresh();
@@ -98,6 +99,32 @@ namespace Frontier.Editor
                     session.LeaveMatch(); board.SetVisible(true); Refresh();
                     Check(!Field<FogVisuals>(board, "fogVisuals").Root.gameObject.activeSelf, "Leaving a match removes fog from the next setup preview");
 
+                    void CheckBoardOpacity()
+                    {
+                        // RGB previews cannot reveal a passthrough leak. Read RGBA
+                        // with a transparent camera background and the real terrain.
+                        foreach(bool top in new[]{true,false})
+                        {
+                            CameraAt(top);preview.camera.backgroundColor=Color.clear;
+                            board.SetFogDensity(0);var baseline=SnapRgba();
+                            var solid=Enumerable.Range(0,baseline.Length).Where(i=>baseline[i].a==255).ToArray();
+                            Check(solid.Length>size*size/10&&baseline[0].a==0,asset.name+": RGBA baseline contains opaque terrain and transparent surroundings");
+                            foreach(float density in new[]{.25f,.5f,.75f,1f})
+                            {
+                                board.SetFogDensity(density);fog.Update(true,0);
+                                var pixels=SnapRgba(top?asset.name+"-opaque-"+Mathf.RoundToInt(density*100):null);
+                                int minimum=solid.Min(i=>(int)pixels[i].a);
+                                Check(minimum>=254,asset.name+": terrain stays opaque at "+density+" density, "+(top?"top":"oblique")+" view; minimum alpha="+minimum);
+                                Check(pixels[0].a==0,"Fog leaves the area outside the board transparent for passthrough");
+                                if(top)
+                                {
+                                    Check(BandDifference(baseline,pixels,0)>.001,"Density still changes the visible mist over unseen terrain");
+                                    Check(BandDifference(baseline,pixels,2)<.001,"Fog density does not change the visible terrain's colors");
+                                }
+                            }
+                        }
+                        board.SetFogDensity(1);
+                    }
                     void CheckPixels()
                     {
                         // Isolate fog from terrain color and decorations so opacity and
@@ -196,6 +223,23 @@ namespace Frontier.Editor
                         captures++; return image.GetPixels32();
                     }
                     finally { Object.DestroyImmediate(image); }
+                }
+                Color32[] SnapRgba(string name=null)
+                {
+                    preview.BeginPreview(new Rect(0,0,size,size),GUIStyle.none);
+                    RenderTexture source;
+                    try { preview.Render(true); }
+                    finally { source=(RenderTexture)preview.EndPreview(); }
+                    var target=RenderTexture.GetTemporary(size,size,0,RenderTextureFormat.ARGB32);
+                    var previous=RenderTexture.active;var image=new Texture2D(size,size,TextureFormat.RGBA32,false,true);
+                    try
+                    {
+                        Graphics.Blit(source,target);RenderTexture.active=target;
+                        image.ReadPixels(new Rect(0,0,size,size),0,0);image.Apply();
+                        if(name!=null)File.WriteAllBytes(output+"/"+name+".png",image.EncodeToPNG());
+                        captures++;return image.GetPixels32();
+                    }
+                    finally { RenderTexture.active=previous;RenderTexture.ReleaseTemporary(target);Object.DestroyImmediate(image); }
                 }
                 double PixelDifference(Color32 a, Color32 b) => (Math.Abs(a.r - b.r) + Math.Abs(a.g - b.g) + Math.Abs(a.b - b.b)) / 765.0;
                 void Check(bool condition, string message) { if (!condition) throw new Exception(message); checks++; Debug.Log("FOG_PASS: " + message); }
