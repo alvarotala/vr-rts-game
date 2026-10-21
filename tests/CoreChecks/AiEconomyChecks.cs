@@ -197,7 +197,7 @@ static class AiEconomyChecks
     public static void Expansion(Catalog catalog,MapDefinition map,MapDefinition training,Action<bool,string> check)
     {
         foreach(var arena in new[]{map,training})foreach(string faction in new[]{"industrial","biological"})
-        foreach(int player in arena==map?new[]{0,1}:new[]{0})
+        foreach(int player in new[]{0,1})
         {
             var sim=new Simulation(arena,catalog,player==0?faction:"industrial",player==1?faction:"biological");
             var bot=new Strategist(player,AiDifficulty.Hard,catalog,arena);
@@ -222,13 +222,9 @@ static class AiEconomyChecks
                     Console.WriteLine($"AI_MACRO {arena.id}/{faction}/p{player} t={sim.Tick/Simulation.TickRate}s bases={bases} workers={sim.Entities.Values.Count(e=>e.owner==player&&sim.Type(e).role=="worker")} army={sim.Entities.Values.Count(e=>e.owner==player&&!sim.Type(e).building&&sim.Type(e).role!="worker")} M={sim.Players[player].minerals} G={sim.Players[player].catalyst} rejected={rejected}");
             }
             string label=$"{arena.id}/{faction}/p{player}";
-            if(arena==map)
-            {
-                check(second>=0&&second<=420,"AI macro: completed second resource base by 7 minutes "+label+" actual="+second);
-                check(third>=0&&third<=720,"AI macro: completed third resource base by 12 minutes "+label+" actual="+third);
-                check(scouted>0,"AI macro: expansion construction follows real worker scouting "+label);
-            }
-            else check(sim.Entities.Values.Count(e=>e.owner==player&&sim.Type(e).role=="hq")==1,"AI macro: Training has no neutral deposits and does not waste budget on a false expansion "+label);
+            check(second>=0&&second<=420,"AI macro: completed second resource base by 7 minutes "+label+" actual="+second);
+            check(third>=0&&third<=720,"AI macro: completed third resource base by 12 minutes "+label+" actual="+third);
+            check(scouted>0,"AI macro: expansion construction follows real worker scouting "+label);
             check(sim.HasRole(player,"tech")&&sim.HasRole(player,"academy"),"AI macro: reaches advanced production while developing its economy "+label);
             check(rejected==0,"AI macro: economic orders accepted "+label+" rejected="+rejected+" first="+firstRejection);
         }

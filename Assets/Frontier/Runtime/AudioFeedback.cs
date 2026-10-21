@@ -20,7 +20,8 @@ namespace Frontier.Runtime
         private AudioSource ui,music;
         private readonly AudioSource[] voices=new AudioSource[VoiceLimit];
         private AudioClip[] clips;
-        private AudioClip score;
+        private AudioClip score,generatedScore;
+        private string scorePath;
         private readonly Dictionary<int,bool> owned=new Dictionary<int,bool>();
         private PlayerView lastView;
         private int lastAttack,lastAbility,lastCommand,researchCount,result=-1;
@@ -33,7 +34,7 @@ namespace Frontier.Runtime
             clips=new AudioClip[Enum.GetValues(typeof(SoundCue)).Length];
             for(int i=0;i<clips.Length;i++)clips[i]=SoundPalette.Effect((SoundCue)i);
             ui=Source("Interface audio",false);music=Source("Background score",false);
-            score=SoundPalette.Music();music.clip=score;music.loop=true;music.volume=0;music.Play();
+            music.loop=true;music.volume=0;SelectMusic();
             for(int i=0;i<voices.Length;i++)voices[i]=Source("Battle voice "+i,true);
             Session.ReplayReset+=ResetReplay;Session.Feedback+=Feedback;Session.NewMatch+=BeginMatch;Session.MatchClosed+=CloseMatch;
             SeedView();
@@ -45,9 +46,27 @@ namespace Frontier.Runtime
             source.rolloffMode=AudioRolloffMode.Linear;source.minDistance=.3f;source.maxDistance=5;source.priority=spatial?160:64;
             return source;
         }
-        private void BeginMatch(){lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();PlayUi(SoundCue.Start);}
+        private void BeginMatch(){SelectMusic();lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();PlayUi(SoundCue.Start);}
         private void ResetReplay(){lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();if(Session.View!=null)ConsumeEvents(Session.View);}
-        private void CloseMatch(){StopBattle();lastView=null;owned.Clear();result=-1;}
+        private void CloseMatch(){SelectMusic();StopBattle();lastView=null;owned.Clear();result=-1;}
+        private void SelectMusic()
+        {
+            // Read the active map itself: replay and online setup both replace it.
+            // Stable IDs also give archived maps their current soundtrack.
+            string id=Session.Map?.id;
+            string path=id=="training"?"Music/neon-loop":id=="rift"?"Music/forest-watch":id=="desert"?"Music/desser-alert":null;
+            if(score!=null&&path==scorePath)return;
+            var next=path==null?null:Resources.Load<AudioClip>(path);
+            if(next==null)
+            {
+                if(generatedScore==null)generatedScore=SoundPalette.Music();
+                next=generatedScore;
+            }
+            scorePath=path;
+            if(score==next)return;
+            music.Stop();score=next;music.clip=score;music.volume=0;music.Play();
+            if(Session.HasSystemPause)music.Pause();
+        }
         private void SeedView()
         {
             owned.Clear();lastView=Session.View;
@@ -79,6 +98,7 @@ namespace Frontier.Runtime
         private void LateUpdate()
         {
             if(music==null)return;
+            SelectMusic();
             ui.volume=EffectsVolume*.65f;
             bool muted=Session.HasSystemPause;
             if(muted!=systemMuted)
@@ -136,7 +156,8 @@ namespace Frontier.Runtime
         {
             if(Session!=null){Session.ReplayReset-=ResetReplay;Session.Feedback-=Feedback;Session.NewMatch-=BeginMatch;Session.MatchClosed-=CloseMatch;}
             if(ui!=null)ui.Stop();if(music!=null)music.Stop();StopBattle();
-            if(clips!=null)foreach(var clip in clips)Release(clip);Release(score);
+            // Imported map tracks belong to Resources; only procedural clips are ours.
+            if(clips!=null)foreach(var clip in clips)Release(clip);Release(generatedScore);
         }
         private static void Release(UnityEngine.Object value){if(value==null)return;if(Application.isPlaying)Destroy(value);else DestroyImmediate(value);}
     }

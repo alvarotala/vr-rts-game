@@ -42,6 +42,8 @@ namespace Frontier.Editor
                 Check(Localization.Text("Group 3 selected.")=="Grupo 3 seleccionado.","Group feedback keeps its number");
                 Check(Localization.Text("B · Back")=="B · Volver","Physical B button is never treated as a producer number");
                 Check(Localization.Text("0 queued orders")=="0 órdenes en cola"&&Localization.Text("1 queued order")=="1 orden en cola","Queued orders use natural singular and plural");
+                Check(Localization.Text("48 × 48 · 4 zones · 1v1\n16m/4g · Futuristic neon")=="48 × 48 · 4 zonas · 1v1\n16m/4g · Neón futurista","Map summary localizes labels while preserving real numeric values");
+                Check(Localization.Text("Map: Forest Watch")=="Mapa: Forest Watch","Map names remain the user's chosen titles");
                 Check(Localization.Text("unknown.future.key")=="unknown.future.key","Missing translations retain readable source");
                 var labelObject=new GameObject("Language binding",typeof(RectTransform),typeof(LocalizedText));
                 try
@@ -144,7 +146,7 @@ namespace Frontier.Editor
                 if(strict)
                 {
                     Check(clipped.Count==0,"All Spanish text fits its layout");
-                    var unchanged=new HashSet<string>{"Arsenal","Audio","Ctrl + 1 / 2 / 3 / 4","Escape","Gas","GAS","FRONTIER / COMMAND","APM"};
+                    var unchanged=new HashSet<string>{"Arsenal","Audio","Ctrl + 1 / 2 / 3 / 4","Escape","Gas","GAS","FRONTIER / COMMAND","APM","Neon Loop","Forest Watch","Desser Alert"};
                     Check(missing.All(unchanged.Contains),"Unchanged visible strings are only shared terms, key names and the game title");
                 }
                 Localization.SetPreference("en");if(strict){MenuFlowPreview.Render();ReplaySessionChecks.Run();SpectatorPanelChecks.Run();}

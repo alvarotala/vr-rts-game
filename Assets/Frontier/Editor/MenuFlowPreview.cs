@@ -92,7 +92,7 @@ namespace Frontier.Editor
                 panel.Back();Refresh();Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Hotkeys Back returns to Settings before the main menu");
                 Click("Back");Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
-                Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: The Rift")&&Has("START MATCH")&&Has("Position board")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match includes direct board placement beside Start without adding advanced settings");
+                Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: Forest Watch")&&Has("START MATCH")&&Has("Position board")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match includes direct board placement beside Start without adding advanced settings");
                 Click("Position board");
                 Check(quest.Placing&&!quest.StartPending&&!session.Running&&panel.Page==CommandPanel.MenuPage.MatchSetup,
                     "Direct placement stays in setup and does not request a match");
@@ -109,9 +109,12 @@ namespace Frontier.Editor
                 // Successful placement detaches the board; restore fixture ownership
                 // before the existing anchored-placement cancellation checks.
                 board.transform.SetParent(fixture.transform,true);board.Placed=false;
-                Click("Map: The Rift");Check(session.MapId=="training","Map selection still reaches Training Ground");
-                Click("Map: Training Grounds");Check(session.MapId=="desert"&&session.Map.width==160&&session.Map.height==160&&session.Map.theme=="desert","Map selection reaches Amber Wastes with its desert theme");Capture("05-desert-setup");
-                Click("Map: Amber Wastes");Check(session.MapId=="rift","Map selection cycles through all three maps");
+                CheckMapDescription("128 × 128 · 6 zones · 1v1\n24m/6g · Forest");Capture("05-forest-setup");
+                Click("Map: Forest Watch");Check(session.MapId=="training"&&session.Map.theme=="neon","Map selection reaches Neon Loop");
+                CheckMapDescription("48 × 48 · 4 zones · 1v1\n16m/4g · Futuristic neon");Capture("05-neon-setup");
+                Click("Map: Neon Loop");Check(session.MapId=="desert"&&session.Map.width==160&&session.Map.height==160&&session.Map.theme=="desert","Map selection reaches Desser Alert with its desert theme");
+                CheckMapDescription("160 × 160 · 8 zones · 1v1\n48m/16g · Desert");Capture("05-desert-setup");
+                Click("Map: Desser Alert");Check(session.MapId=="rift","Map selection cycles through all three maps");
                 Click("AI: Normal");Check(session.Difficulty=="hard"&&Has("AI: Hard")&&Field<Text>(panel,"harvesting").text.Contains("2:30"),"Setup offers Hard with its earlier attack description");Capture("05-hard");
                 Click("AI: Hard");Check(session.Difficulty=="easy"&&Has("AI: Easy")&&Field<Text>(panel,"harvesting").text.Contains("5 min"),"Hard cycles to Easy");
                 Click("AI: Easy");Check(session.Difficulty=="normal"&&Has("AI: Normal")&&Field<Text>(panel,"harvesting").text.Contains("3:30"),"Easy cycles to Normal");Click("AI: Normal");
@@ -219,7 +222,7 @@ namespace Frontier.Editor
                 Check(session.IsPaused&&match.Paused,"Leave preserves external pause and freezes old match");
                 Check(!board.Content.gameObject.activeSelf&&Field<System.Collections.IDictionary>(board,"entities").Count==0&&Field<System.Collections.IDictionary>(board,"resources").Count==0,"Leave clears old world visuals and hides board");
                 Check(board.Placed&&board.transform.position==placedPosition&&board.transform.rotation==placedRotation&&board.transform.parent==fixture.transform,"Leave retains physical board placement");Capture("09-returned-main");
-                session.Pause("headset",false);Click("New Match");Click("Faction: Consortium");Click("Map: The Rift");
+                session.Pause("headset",false);Click("New Match");Click("Faction: Consortium");Click("Map: Forest Watch");
                 Check(session.Faction=="biological"&&session.MapId=="training","A new setup can change faction and map");Click("START MATCH");
                 Check(session.Running&&session.Match!=match&&session.Match.Tick==0&&session.Match.Winner==-1&&session.Selection.Count==0&&!session.IsPaused,"Next match starts clean");
                 Check(session.View.entities.Any(e=>e.owner==0&&e.definition=="biological.hq"),"Next match uses the new faction");
@@ -287,6 +290,13 @@ namespace Frontier.Editor
                         }
                     }
                     File.WriteAllText("TestResults/Menus/default-controls.md",text.ToString());
+                }
+                void CheckMapDescription(string expected)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    var label=panel.GetComponentsInChildren<Text>().SingleOrDefault(t=>t.text==expected);
+                    Check(label!=null,"Map card shows consistent dimensions, resource zones, deposits and match format: "+session.Map.title);
+                    Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Both map detail lines fit the card: "+session.Map.title);
                 }
                 void Capture(string name)
                 {

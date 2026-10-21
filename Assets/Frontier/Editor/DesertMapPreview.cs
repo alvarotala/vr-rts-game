@@ -17,7 +17,7 @@ namespace Frontier.Editor
         private static void Invoke(object target,string method)=>target.GetType().GetMethod(method,Private).Invoke(target,null);
         private static T Field<T>(object target,string name)=>(T)target.GetType().GetField(name,Private).GetValue(target);
 
-        [MenuItem("Frontier/Validate and preview Amber Wastes")]
+        [MenuItem("Frontier/Validate and preview Desser Alert")]
         public static void Render()
         {
             const string output="TestResults/DesertMap";Directory.CreateDirectory(output);

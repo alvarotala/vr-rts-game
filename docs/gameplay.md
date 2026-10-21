@@ -14,9 +14,11 @@ Al comenzar se muestra el panel de acciones de unidades y edificios. Los seis tr
 
 ### Mapas
 
-El selector **Map** ofrece **Training Grounds** (48 × 48), **The Rift** (128 × 128) y **Amber Wastes** (160 × 160). Training Grounds reúne los dos campamentos iniciales; The Rift añade cuatro expansiones neutrales.
+El selector **Map** ofrece **Neon Loop** (48 × 48), **Forest Watch** (128 × 128) y **Desser Alert** (160 × 160). Neon Loop tiene cuatro zonas (dos iniciales y dos expansiones), Forest Watch seis (dos iniciales y cuatro expansiones) y Desser Alert ocho. Todas las tarjetas usan el mismo formato: tamaño, zonas, 1v1 y cantidades reales de depósitos `m/g`, seguidas de la temática. Neon Loop muestra `16m/4g`, Forest Watch `24m/6g` y Desser Alert `48m/16g`.
 
-**Amber Wastes** es un desierto con un 56,25 % más de superficie que The Rift. Tiene **ocho zonas de recursos en total: dos iniciales y seis expansiones**, cada una con **seis depósitos de minerales de 1800** y **dos de gas de 2400**. Las zonas dejan espacio plano para una base de 4 × 4 y extractores de 3 × 3. Cinco mesetas, veinte rampas de doce celdas de ancho y afloramientos de arenisca ofrecen rutas altas y bajas; las rocas decorativas permanecen dentro de terreno bloqueado y no cierran caminos transitables. El terreno, las rampas, los recursos y las posiciones iniciales conservan simetría de 180° para ambos jugadores.
+**Neon Loop** combina un suelo tecnológico oscuro con circuitos y anillos de neón. **Forest Watch** usa suelo de bosque y arboledas. **Desser Alert** conserva la arena, mesetas y areniscas, con cactus. Los elementos de vegetación permanecen en terreno bloqueado y respetan la niebla de guerra. Cada mapa reproduce en bucle la pista adjunta con su mismo nombre, y cambiar de mapa cambia también la música; el volumen sigue controlándose desde Settings → Audio.
+
+**Desser Alert** es un desierto con un 56,25 % más de superficie que Forest Watch. Tiene **ocho zonas de recursos en total: dos iniciales y seis expansiones**, cada una con **seis depósitos de minerales de 1800** y **dos de gas de 2400**. Las zonas dejan espacio plano para una base de 4 × 4 y extractores de 3 × 3. Cinco mesetas, veinte rampas de doce celdas de ancho y afloramientos de arenisca ofrecen rutas altas y bajas; las rocas decorativas permanecen dentro de terreno bloqueado y no cierran caminos transitables. El terreno, las rampas, los recursos y las posiciones iniciales conservan simetría de 180° para ambos jugadores.
 
 ### Dificultad de la IA
 
@@ -34,7 +36,7 @@ Los tres niveles producen más rápido, exploran antes y refuerzan sus ataques. 
 
 La producción aprovecha varios edificios a la vez y sigue entrenando unidades disponibles mientras desbloquea artillería y casters. La economía considera las asignaciones de recolección, las colas de producción y el presupuesto restante de cada decisión. La IA usa únicamente su visión, edificios recordados y datos públicos del mapa; puede defender sus bases, retirarse y reagruparse antes de volver a atacar.
 
-En The Rift y Amber Wastes busca y ocupa depósitos de otras zonas: Easy y Normal planean hasta dos bases y Hard hasta tres. Reserva recursos para construirlas y traslada trabajadores a las bases terminadas. Training Grounds solo tiene los dos conjuntos de recursos iniciales, por lo que no ofrece una expansión neutral. La recolección automática del jugador sigue limitada a los minerales de su base; los traslados de la IA son órdenes deliberadas.
+En los tres mapas busca y ocupa depósitos de otras zonas: Easy y Normal planean hasta dos bases y Hard hasta tres. Reserva recursos para construirlas y traslada trabajadores a las bases terminadas. Neon Loop ofrece dos expansiones neutrales y mantiene sus dos campamentos iniciales. La recolección automática del jugador sigue limitada a los minerales de su base; los traslados de la IA son órdenes deliberadas.
 
 **Todas las partidas empiezan con las mismas condiciones para ambos jugadores:** 400 minerales, cero gas, una base terminada, seis trabajadores, capacidad inicial de diez y ninguna mejora. La dificultad no cambia ingresos, costos, daño, salud ni los límites de las reglas. En los tres mapas, las posiciones de los trabajadores y sus depósitos iniciales también están reflejadas, para igualar la distancia de salida. Ambas facciones tienen las mismas reglas y estadísticas por rol; los objetivos de población de la tabla son decisiones de la IA, no límites impuestos al jugador.
 
@@ -261,7 +263,7 @@ Los **minerales** se pueden apuntar directamente sobre el cristal, incluso miran
 
 Al apuntar al mapa aparece un **punto blanco con líneas de mira turquesa** en la intersección del láser con el terreno. Está al ras del suelo y las rampas, mantiene su tamaño con el zoom de escritorio y se recorta en el borde del tablero. También funciona con el mouse. Sigue visible sobre niebla como referencia del cursor, sin revelar información; desaparece al salir del tablero, apuntar al panel o pausar.
 
-La **niebla de guerra** tiene tres capas suaves sobre el terreno, con movimiento lento y un tono arenoso en Amber Wastes. Es más densa en zonas nunca exploradas y más tenue donde ya hubo visión; las celdas visibles quedan completamente despejadas. Los edificios recordados conservan su última información conocida, mientras las unidades enemigas fuera de visión permanecen ocultas. La bruma no cambia las reglas de exploración y se detiene durante la pausa.
+La **niebla de guerra** tiene tres capas suaves sobre el terreno, con movimiento lento y un tono arenoso en Desser Alert. Es más densa en zonas nunca exploradas y más tenue donde ya hubo visión; las celdas visibles quedan completamente despejadas. Los edificios recordados conservan su última información conocida, mientras las unidades enemigas fuera de visión permanecen ocultas. La bruma no cambia las reglas de exploración y se detiene durante la pausa.
 
 Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno sobre el suelo: circular para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. Se muestra antes de seleccionar y se apaga al retirar el puntero, apuntar al menú o perder el foco. El disco de selección permanece en los objetos seleccionados. El contorno de hover sigue el terreno y las rampas, respeta el borde del tablero y no aparece sobre recuerdos enemigos bajo niebla de guerra.
 
@@ -280,9 +282,9 @@ La interfaz está disponible en inglés y español: menús, ayuda, controles, av
 - Ambas facciones tienen exactamente los mismos costos, tiempos, vida, movimiento, combate, suministro, visión y efectos de habilidades por rol. Comparten construcción atendida y reparación con trabajadores; no tienen regeneración pasiva de vida. Las diferencias de reglas quedan para una etapa de diseño y balance posterior.
 - Cada facción: trabajador, explorador, combate cercano, tirador, asedio y caster; siete edificios; dos mejoras y dos habilidades de caster.
 - Hasta 60 unidades móviles y 20 edificios por jugador.
-- **The Rift**, mapa simétrico de 128 × 128, con dos bases, cuatro expansiones, alturas y rampas.
-- **Training Grounds**, mapa de 48 × 48 con instrucciones contextuales.
-- **Amber Wastes**, desierto simétrico de 160 × 160, con ocho zonas de seis minerales y dos gases, cinco mesetas y veinte rampas anchas.
+- **Forest Watch**, bosque simétrico de 128 × 128, con dos bases, cuatro expansiones, alturas y rampas.
+- **Neon Loop**, mapa futurista de 48 × 48 con cuatro zonas de recursos e instrucciones contextuales.
+- **Desser Alert**, desierto simétrico de 160 × 160, con ocho zonas de seis minerales y dos gases, cinco mesetas y veinte rampas anchas.
 - IA **Easy**, **Normal** y **Hard**; admite los cuatro cruces de facciones. No usa un modelo de lenguaje ni acceso a internet.
 
 Las unidades tienen siluetas y símbolos de rol compartidos por ambas facciones: **herramienta amarilla** para trabajadores, **flechas verdes** para exploradores, **escudo crema** para combate cercano, **mira blanca** para tiradores, **tres proyectiles violetas** para artillería y **estrella violeta** para casters. Los trabajadores llevan carga y pinzas; la infantería cercana lleva escudo, los tiradores un arma larga y la artillería dos cañones o espinas. Los casters tienen una silueta erguida con corona abierta y un orbe. El casco y el borde del símbolo conservan el azul aliado y el rojo enemigo.

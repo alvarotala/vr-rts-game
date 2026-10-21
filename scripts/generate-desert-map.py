@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Author Amber Wastes deterministically; --check verifies the committed JSON."""
+"""Author Desser Alert deterministically; --check verifies the committed JSON."""
 import argparse
 import json
 from pathlib import Path
@@ -81,7 +81,7 @@ def generate():
                 resources.append(dict(id=f"camp{first+1}.{suffix}", kind=kind,
                                       x=SIZE-1-x, y=SIZE-1-y, amount=amount))
 
-    return dict(schemaVersion=1, id="desert", title="Amber Wastes", theme="desert",
+    return dict(schemaVersion=1, id="desert", title="Desser Alert", theme="desert",
                 width=SIZE, height=SIZE, terrain=terrain,
                 spawns=[dict(player=0, x=18, y=18), dict(player=1, x=138, y=138)],
                 resources=resources, decoration=decoration)
@@ -94,8 +94,8 @@ if __name__ == "__main__":
     encoded = json.dumps(generate(), indent=2)+"\n"
     if args.check:
         if not OUTPUT.exists() or OUTPUT.read_text() != encoded:
-            raise SystemExit("Amber Wastes differs from its authored generator")
-        print("Amber Wastes generation matches: 160x160, 8 camps, 48 minerals, 16 gas")
+            raise SystemExit("Desser Alert differs from its authored generator")
+        print("Desser Alert generation matches: 160x160, 8 camps, 48 minerals, 16 gas")
     else:
         OUTPUT.write_text(encoded)
         print(f"Wrote {OUTPUT}")

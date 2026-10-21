@@ -7650,6 +7650,31 @@
       "key": ". Keep a worker on site until complete.",
       "value": ". Mantén un trabajador en la obra hasta completarla.",
       "template": false
+    },
+    {
+      "key": "{0} × {1} · {2} zones · 1v1",
+      "value": "{0} × {1} · {2} zonas · 1v1",
+      "template": true
+    },
+    {
+      "key": "Futuristic neon",
+      "value": "Neón futurista",
+      "template": false
+    },
+    {
+      "key": "Forest",
+      "value": "Bosque",
+      "template": false
+    },
+    {
+      "key": "Desert",
+      "value": "Desierto",
+      "template": false
+    },
+    {
+      "key": "Temperate",
+      "value": "Templado",
+      "template": false
     }
   ]
 }

@@ -33,7 +33,7 @@ namespace Frontier.Runtime
                     if(size>.18f)Butte(cx,cz,size,size*1.2f,(float)random.NextDouble()*360,random);
                 }
             }
-            mesh=new Mesh{name="Amber Wastes sandstone",indexFormat=IndexFormat.UInt32};
+            mesh=new Mesh{name="Desser Alert sandstone",indexFormat=IndexFormat.UInt32};
             mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetColors(colors);mesh.SetUVs(0,uv);mesh.RecalculateNormals();mesh.RecalculateBounds();
             material=new Material(Shader.Find("Frontier/Board"));material.SetColor("_BaseColor",Color.white);
             material.SetFloat("_UseFog",1);material.SetTexture("_FogTex",visibility);

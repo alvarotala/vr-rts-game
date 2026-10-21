@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +11,17 @@ namespace Frontier.Runtime
         private SettingsTab settingsTab;
         private string MenuOrigin=>Session.Running?(Session.IsOnline?"MATCH MENU":"PAUSE"):"MAIN MENU";
         private static readonly Color MenuMuted=new Color(.69f,.8f,.85f);
+        private string MapDescription
+        {
+            get
+            {
+                var map=Session.Map;
+                int zones=map.resources.Select(r=>r.id.Split('.')[0]).Distinct().Count();
+                int minerals=map.resources.Count(r=>r.kind=="mineral"),gas=map.resources.Count(r=>r.kind=="catalyst");
+                string theme=map.theme=="neon"?"Futuristic neon":map.theme=="forest"?"Forest":map.theme=="desert"?"Desert":"Temperate";
+                return $"{map.width} × {map.height} · {zones} zones · 1v1\n{minerals}m/{gas}g · {theme}";
+            }
+        }
 
         // Shared spacing, typography and action hierarchy across all out-of-match pages.
         // Titles remain separate from descriptions so pointing targets are unambiguous.
@@ -50,7 +62,7 @@ namespace Frontier.Runtime
                     MenuCard("Faction: "+ShortFaction(Session.Faction),"Your army · Select to switch faction.",Vector2.zero,new Vector2(512,108),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                     MenuCard("Opponent: "+ShortFaction(Session.EnemyFaction),"Enemy army · Select to switch faction.",new Vector2(528,0),new Vector2(512,108),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
                     MenuCard("AI: "+DifficultyLabel,Session.Difficulty=="easy"?"More time to build and learn the controls.":Session.Difficulty=="hard"?"Fast economy and sustained pressure.":"Steady attacks, reinforcements and abilities.",new Vector2(0,-124),new Vector2(512,108),()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":Session.Difficulty=="normal"?"hard":"easy";Rebuild();});
-                    MenuCard("Map: "+Session.Map.title,Session.MapId=="desert"?"160 × 160 · Desert plateaus · 8 resource zones.":"Battlefield layout · Select to switch map.",new Vector2(528,-124),new Vector2(512,108),()=>{Session.CycleMap();Board.Rebuild();Rebuild();});
+                    MenuCard("Map: "+Session.Map.title,MapDescription,new Vector2(528,-124),new Vector2(512,108),()=>{Session.CycleMap();Board.Rebuild();Rebuild();});
                     MenuFooter("Back",Back,0,336);
                     MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
                     MenuFooter("START MATCH",Quest.RequestStartMatch,704,336,true);

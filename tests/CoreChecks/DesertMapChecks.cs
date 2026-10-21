@@ -7,8 +7,8 @@ static class DesertMapChecks
     public static void Run(Catalog catalog,MapDefinition map,MapDefinition rift,Action<bool,string> check)
     {
         var grid=new GridMap(map);
-        check(map.schemaVersion==1&&map.id=="desert"&&map.theme=="desert"&&map.width==160&&map.height==160
-            &&grid.Count>rift.width*rift.height,"Desert: Amber Wastes is a larger v1 desert map");
+        check(map.schemaVersion==1&&map.id=="desert"&&map.title=="Desser Alert"&&map.theme=="desert"&&map.width==160&&map.height==160
+            &&grid.Count>rift.width*rift.height,"Desert: Desser Alert is a larger v1 desert map");
         var groups=map.resources.GroupBy(r=>r.id.Split('.')[0]).ToArray();
         check(groups.Length==8&&map.resources.Length==64,"Desert: exactly eight resource zones, including both starts");
         for(int i=0;i<8;i++)

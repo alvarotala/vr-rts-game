@@ -7,6 +7,8 @@ Shader "Frontier/Board"
         _UseFog("Fog", Float) = 0
         _Grid("Grid", Float) = 0
         _Desert("Desert sand", Float) = 0
+        _Forest("Forest floor", Float) = 0
+        _Neon("Neon circuit floor", Float) = 0
         _SelectionBounds("Selection bounds", Vector) = (0,0,0,0)
         _SelectionWidth("Selection width", Float) = 0
         _HoverArea("Hover center, radius, square", Vector) = (0,0,0,0)
@@ -41,7 +43,7 @@ Shader "Frontier/Board"
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float topSurface:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseColor; float _UseFog; float _Grid; float _Desert;
+            float4 _BaseColor; float _UseFog; float _Grid; float _Desert; float _Forest; float _Neon;
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea; float4 _PointerColor; float4 _PointerDotColor;
@@ -94,6 +96,40 @@ Shader "Frontier/Board"
                         color=lerp(color,color*half3(1.12,.91,.72),smoothstep(.48,.75,broad)*.36);
                         if(input.topSurface<.5)
                             color*=.9+.1*sin(TransformWorldToObject(input.world).y*8);
+                    }
+                    if(_Forest>.5)
+                    {
+                        float2 forest=input.uv*_FrontierBounds.zw;
+                        float moss=TissueNoise(forest*.15),leaves=TissueNoise(forest*1.2);
+                        // Broad moss patches and restrained leaf litter leave units,
+                        // resource rings and construction previews easy to read.
+                        color*=.8+moss*.35+leaves*.1;
+                        color=lerp(color,color*half3(1.28,.88,.61),smoothstep(.58,.8,moss)*.5);
+                    }
+                    if(_Neon>.5 && input.topSurface>.5)
+                    {
+                        float2 circuit=input.uv*_FrontierBounds.zw;
+                        float2 panel=abs(frac(circuit/4)-.5);
+                        float seam=smoothstep(.475,.495,max(panel.x,panel.y));
+                        color*=1-seam*.3;
+                        // A continuous octagonal loop is inlaid into the floor.
+                        // These markings add no geometry or collision to army paths.
+                        float2 q=abs(input.uv-.5);
+                        float loop=max(max(q.x,q.y),(q.x+q.y)*.72);
+                        float edge=min(abs(loop-.327),abs(loop-.347));
+                        float aa=max(fwidth(loop),.0005);
+                        float rail=1-smoothstep(.0015,.0015+aa,edge);
+                        float glow=1-smoothstep(.002,.016,edge);
+                        half3 neon=lerp(half3(.04,.65,.78),half3(.65,.08,.65),smoothstep(.12,.6,abs(input.uv.x-input.uv.y)));
+                        color+=neon*(rail*.65+glow*.09);
+                        float2 trace=abs(frac((circuit+float2(2,0))/12)-.5);
+                        float path=min(trace.x,trace.y);
+                        float traceAa=max(fwidth(path),.001);
+                        float conductor=1-smoothstep(.008,.008+traceAa,path);
+                        color+=half3(.05,.28,.35)*conductor*.22;
+                        float center=length(input.uv-.5);
+                        float hub=1-smoothstep(.001,.001+max(fwidth(center),.0005),abs(center-.075));
+                        color+=half3(.37,.12,.53)*hub*.65;
                     }
                     half creep=SAMPLE_TEXTURE2D(_CreepTex,sampler_CreepTex,input.uv).r;
                     if(creep>.01 && input.topSurface>.5)

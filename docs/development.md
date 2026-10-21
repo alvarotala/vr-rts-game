@@ -349,7 +349,7 @@ unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-comfort-au
   -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ComfortAudioPreview.Run
 ```
 
-Las vistas de mandos y la música WAV quedan en `TestResults/ComfortAudio`. El audio se genera con código propio; las mallas, texturas y animaciones del mando siguen siendo assets del SDK de Meta. Esta validación no sustituye escuchar la mezcla, comprobar la postura de la muñeca y restaurar un ancla en un Quest físico.
+Las vistas de mandos y la música WAV quedan en `TestResults/ComfortAudio`. Los efectos y el bucle de respaldo se generan con código propio; la música de cada mapa procede de las pistas adjuntas importadas en `Resources/Music`; las mallas, texturas y animaciones del mando siguen siendo assets del SDK de Meta. Esta validación no sustituye escuchar la mezcla, comprobar la postura de la muñeca y restaurar un ancla en un Quest físico.
 
 
 `Frontier.Editor.StartupMenuPreview.Run` prueba el menú de inicio de Quest con poses sintéticas del visor y un tablero guardado a más de 20 m. Verifica espera de seguimiento, restauración tardía del ancla, entrada a Settings y recolocación/cancelación, arrastre cerca del usuario, Reset position, regreso tras foco/suspensión/visor y preservación del desplazamiento de consola durante partida. Genera tres vistas con pose real en `TestResults/StartupMenu` y ejecuta las regresiones de `MenuFlowPreview` y `ComfortAudioPreview`. Restaura la preferencia de posición previa y no genera APK.

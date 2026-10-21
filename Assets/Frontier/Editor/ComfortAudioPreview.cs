@@ -120,16 +120,23 @@ namespace Frontier.Editor
                 PlayerPrefs.SetFloat(AudioFeedback.MusicKey,.35f);PlayerPrefs.SetFloat(AudioFeedback.EffectsKey,.65f);
                 var audio=fixture.AddComponent<AudioFeedback>();audio.Session=session;audio.Board=board;Call(audio,"Start");
                 var score=Field<AudioClip>(audio,"score");var clips=Field<AudioClip[]>(audio,"clips");
-                Check(score.length>=39.9f&&score.channels==2,"The original background score is a forty-second stereo loop");
-                var samples=new float[score.samples*score.channels];score.GetData(samples,0);
-                Check(samples.All(v=>!float.IsNaN(v)&&Mathf.Abs(v)<=.81f)&&samples.Any(v=>Mathf.Abs(v)>.1f),"Music contains finite audible samples with headroom");
-                Check(Mathf.Abs(samples[0]-samples[samples.Length-2])<.001f&&Mathf.Abs(samples[1]-samples[samples.Length-1])<.001f,"Music loop joins without a sample discontinuity");
+                Check(score==Resources.Load<AudioClip>("Music/neon-loop")&&score.length>100&&score.channels==2,
+                    "Neon Loop uses the supplied stereo soundtrack");
+                var fallback=SoundPalette.Music();
+                try
+                {
+                    Check(fallback.length>=39.9f&&fallback.channels==2,"Custom maps retain the forty-second fallback score");
+                    var samples=new float[fallback.samples*fallback.channels];fallback.GetData(samples,0);
+                    Check(samples.All(v=>!float.IsNaN(v)&&Mathf.Abs(v)<=.81f)&&samples.Any(v=>Mathf.Abs(v)>.1f),"Fallback music contains finite audible samples with headroom");
+                    Check(Mathf.Abs(samples[0]-samples[samples.Length-2])<.001f&&Mathf.Abs(samples[1]-samples[samples.Length-1])<.001f,"Fallback loop joins without a sample discontinuity");
+                    WriteWave(output+"/quiet-orbit.wav",fallback);
+                }
+                finally{Object.DestroyImmediate(fallback);}
                 foreach(var clip in clips)
                 {
                     var data=new float[clip.samples];clip.GetData(data,0);
                     Check(data.Any(v=>Mathf.Abs(v)>.02f)&&data.All(v=>!float.IsNaN(v)&&Mathf.Abs(v)<1),clip.name+" is audible and does not clip");
                 }
-                WriteWave(output+"/quiet-orbit.wav",score);
                 var worker=session.View.entities.First(e=>e.owner==0&&!session.Catalog[e.definition].building);session.Select(worker.id,false);
                 Set(audio,"lastUi",-1f);session.Send(CommandKind.Move,position:new Point(22,15));Check(audio.LastCue==SoundCue.Move,"Move has its own accepted-order sound");
                 Set(audio,"lastUi",-1f);session.Send(CommandKind.AttackMove,position:new Point(22,15));Check(audio.LastCue==SoundCue.Attack,"Attack has a distinct order sound");

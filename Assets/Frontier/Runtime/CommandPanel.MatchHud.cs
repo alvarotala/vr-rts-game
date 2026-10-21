@@ -138,7 +138,7 @@ namespace Frontier.Runtime
             harvesting.fontSize=hud?17:18;
             TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425-queueSpace):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
             status.fontSize=replay?16:hud?18:20;
-            TopLeft(status.rectTransform,hud?new Vector2(24,-581-queueSpace):new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),hud?new Vector2(1052,40):new Vector2(1040,replay?48:44));
+            TopLeft(statusBanner,hud?new Vector2(24,-581-queueSpace):new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(hud?1052:1040,48));
             TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,guide?-786:controls?-866:reference?-840:-240),hud?new Vector2(684,240):new Vector2(1040,report?716:history?648:replay?756:controls||guide||reference?58:396));
         }
         private void UpdateMatchHud()
@@ -188,6 +188,7 @@ namespace Frontier.Runtime
             UpdateOrderPlanHud();
             UpdateRallyPointHud();
             status.text=Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
+            UpdateStatusStyle(!Session.IsPaused&&Session.MessageIsError);
         }
         private void UpdateCasterStatus(VisibleEntity[] selected)
         {

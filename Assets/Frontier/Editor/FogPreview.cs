@@ -60,7 +60,7 @@ namespace Frontier.Editor
                     if (session.Map.terrain.Any(t => t.elevation > 0))
                         Check(lower.Max(p => p.y) - lower.Min(p => p.y) > .75f, asset.name + ": mist follows raised terrain rather than forming a flat map-wide plane");
                     var tint = material.GetColor("_FogColor");
-                    Check(session.Map.theme == "desert" ? tint.r > tint.b : tint.b > tint.r, asset.name + ": fog tint matches the battlefield theme");
+                    Check(session.Map.theme == "desert" ? tint.r > tint.b : session.Map.theme == "forest" ? tint.g > tint.r && tint.g > tint.b : tint.b > tint.r, asset.name + ": fog tint matches the battlefield theme");
                     var visibility = Field<Texture2D>(board, "fog");
                     Check(material.GetTexture("_FogTex") == visibility && visibility.filterMode == FilterMode.Point, "Fog uses the existing filtered player visibility texture");
                     Check(visibility.GetPixel(0, 0).r == 0 && Mathf.Abs(visibility.GetPixel(session.Map.width / 2, 0).r - 75 / 255f) < .001f

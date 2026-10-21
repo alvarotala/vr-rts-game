@@ -17,6 +17,9 @@ namespace Frontier.Runtime
         private Canvas canvas;
         private RectTransform root, actions;
         private Text headline, economy, selection, harvesting, status;
+        private RectTransform statusBanner, statusAccent;
+        private Text statusIcon;
+        private static readonly Color ErrorTint=new Color(1,.38f,.36f,1);
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
@@ -61,11 +64,16 @@ namespace Frontier.Runtime
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
             selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
             harvesting=Label(root,"",new Vector2(30,-207),new Vector2(1040,28),18,accent);
-            status=Label(root,"",new Vector2(30,-473),new Vector2(1040,44),20,accent);
+            statusBanner=Section(root,"Status message",new Vector2(30,-473),new Vector2(1040,48),Color.clear);
+            statusAccent=Section(statusBanner,"Error accent",Vector2.zero,new Vector2(5,48),ErrorTint);
+            statusIcon=Label(statusBanner,"!",new Vector2(12,0),new Vector2(24,48),26,ErrorTint,TextAnchor.MiddleCenter);
+            statusIcon.fontStyle=FontStyle.Bold;
+            status=Label(statusBanner,"",Vector2.zero,new Vector2(1040,48),20,accent);
             actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
             CreateMatchHud();
             // Shared labels and action buttons sit above the HUD section backgrounds.
-            foreach(var label in new[]{headline,economy,selection,harvesting,status})label.transform.SetAsLastSibling();
+            foreach(var label in new[]{headline,economy,selection,harvesting})label.transform.SetAsLastSibling();
+            statusBanner.SetAsLastSibling();
             actions.SetAsLastSibling();
             CreateActionHelp();
             CreateControlGuide();
@@ -259,6 +267,17 @@ namespace Frontier.Runtime
                     harvesting.text="SAVED MATCH REPORT";status.text="Browsing this report does not start or change a match.";break;
             }
             if(Quest.Placing||Quest.StartPending||((Page==MenuPage.Main||Page==MenuPage.Settings||Page==MenuPage.MatchSetup||Page==MenuPage.History||Page==MenuPage.HistoryReport)&&Time.unscaledTime<menuMessageUntil))status.text=Session.Message;
+            UpdateStatusStyle(Session.MessageIsError&&((LocalizedText)status).Source==Session.Message);
+        }
+        private void UpdateStatusStyle(bool error)
+        {
+            statusBanner.GetComponent<Image>().color=error?new Color(.23f,.035f,.045f,1):Color.clear;
+            statusAccent.gameObject.SetActive(error);statusIcon.gameObject.SetActive(error);
+            status.fontStyle=error?FontStyle.Bold:FontStyle.Normal;
+            status.fontSize=error?22:Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
+            if(error)status.color=ErrorTint;
+            else if(Page!=MenuPage.Replay)status.color=accent;
+            TopLeft(status.rectTransform,new Vector2(error?46:0,0),new Vector2(statusBanner.sizeDelta.x-(error?60:0),statusBanner.sizeDelta.y));
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
         {

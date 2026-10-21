@@ -18,6 +18,7 @@ namespace Frontier.Runtime
         public string Faction = "industrial", EnemyFaction = "biological", Difficulty = "normal", MapId = "rift";
         public string Message { get; private set; } = "Choose New Match to begin.";
         public uint MessageVersion { get; private set; }
+        public bool MessageIsError { get; private set; }
         public event Action Changed;
         public event Action NewMatch;
         public event Action MatchClosed;
@@ -109,7 +110,10 @@ namespace Frontier.Runtime
                 RefreshView(); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == LocalPlayer));
                 if (Match.Winner != -1) Announce(Match.Winner == 0 ? "VICTORY · The territory is yours." : Match.Winner == 2 ? "DRAW" : "DEFEAT · Your colony has fallen.");
                 else if (MapId == "training" && Time.unscaledTime > messageUntil)
+                {
+                    MessageIsError = false;
                     Message = !Match.HasRole(0, "barracks") ? $"1 · Use a worker to build: {Catalog.Role(Faction, "barracks").name}." : Match.Units(0) < 10 ? $"2 · Select {Catalog.Role(Faction, "barracks").name} and train an army." : "3 · Use Attack Move to explore and destroy enemy buildings.";
+                }
                 Changed?.Invoke();
             }
         }
@@ -120,7 +124,7 @@ namespace Frontier.Runtime
         public void Pause(string reason, bool paused)
         { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null && !IsReplay) Match.Paused = IsPaused; Changed?.Invoke(); }
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
-        public void Announce(string text) { Message = text; MessageVersion=unchecked(MessageVersion+1); messageUntil = Time.unscaledTime + 6; }
+        public void Announce(string text, bool isError=false) { Message = text; MessageIsError=isError; MessageVersion=unchecked(MessageVersion+1); messageUntil = Time.unscaledTime + 6; }
         public void Select(int id, bool additive, int resourceId = 0)
         {
             if (!additive) Selection.Clear();
@@ -174,7 +178,7 @@ namespace Frontier.Runtime
         {
             if(!Running||IsPaused||IsReplay)return false;
             var ids=units.Select(e=>e.id).ToArray();
-            if(ids.Length==0){Announce(emptyMessage);Feedback?.Invoke(false);Changed?.Invoke();return false;}
+            if(ids.Length==0){Announce(emptyMessage,true);Feedback?.Invoke(false);Changed?.Invoke();return false;}
             CancelMode();SelectedResource=0;Selection.Clear();Selection.UnionWith(ids);
             Announce(ids.Length+" "+label+" selected.");Feedback?.Invoke(true);Changed?.Invoke();return true;
         }
@@ -183,7 +187,7 @@ namespace Frontier.Runtime
             if(View==null||index<0||index>=groups.Length)return;
             if (save) { groups[index].Clear(); groups[index].AddRange(Selection.Where(OwnGroupMember)); Announce("Group " + (index + 1) + " saved."); }
             else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (OwnGroupMember(id)) Selection.Add(id);
-                Announce("Group " + (index + 1) + (Selection.Count>0?" selected.":" is empty.")); }
+                Announce("Group " + (index + 1) + (Selection.Count>0?" selected.":" is empty."),Selection.Count==0); }
             ValidateAbilitySelection();Feedback?.Invoke(save||Selection.Count>0);Changed?.Invoke();
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
@@ -214,7 +218,7 @@ namespace Frontier.Runtime
             if(IsReplay)return false;
             var ability=Catalog.Ability(id);
             if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
-            {Announce(AbilityStatus(id));Feedback?.Invoke(false);Changed?.Invoke();return false;}
+            {Announce(AbilityStatus(id),true);Feedback?.Invoke(false);Changed?.Invoke();return false;}
             BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=id;
             Announce(ability.name+" · Choose a visible point. One caster will move into range and cast.");Changed?.Invoke();return true;
         }
@@ -304,9 +308,10 @@ namespace Frontier.Runtime
             var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence };
             if(IsOnline)return SendOnline(command);
             var result = Match.Submit(command);
-            if (!result.accepted) Announce(result.message);
+            if (!result.accepted) Announce(result.message,true);
             else
             {
+                if(MessageIsError)Announce("Order accepted.");
                 bool attacking = kind == CommandKind.Attack || kind == CommandKind.AttackMove;
                 if (attacking || kind == CommandKind.Move)
                 {

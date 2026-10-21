@@ -144,7 +144,7 @@ namespace Frontier.Runtime
         private bool SendOnline(GameCommand command)
         {
             if(remoteClient==null || pendingCommands.Count>=128 || !remoteClient.Send(command))
-            {Announce("Order could not be sent. Check the connection.");Feedback?.Invoke(false);return false;}
+            {Announce("Order could not be sent. Check the connection.",true);Feedback?.Invoke(false);return false;}
             pendingCommands.Add(command.sequence,command);
             // Selection/aim respond immediately; economy and combat wait for the server.
             MarkOnlineCommand(command);
@@ -158,7 +158,7 @@ namespace Frontier.Runtime
             if(!ack.accepted)
             {
                 if(LastCommandSequence==ack.sequence)LastCommandSequence=0;
-                Announce(ack.message);
+                Announce(ack.message,true);
             }
             else if(command.kind!=CommandKind.Move&&command.kind!=CommandKind.Attack&&command.kind!=CommandKind.AttackMove)
                 Announce("Order accepted.");

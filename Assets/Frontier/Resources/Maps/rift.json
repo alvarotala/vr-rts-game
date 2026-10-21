@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "rift",
-  "title": "The Rift",
+  "title": "Forest Watch",
   "width": 128,
   "height": 128,
   "terrain": [
@@ -121,6 +121,126 @@
       "x": 93,
       "y": 39,
       "width": 5,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 2,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 0,
+      "y": 126,
+      "width": 128,
+      "height": 2,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "width": 2,
+      "height": 124,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 126,
+      "y": 2,
+      "width": 2,
+      "height": 124,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 4,
+      "y": 44,
+      "width": 6,
+      "height": 16,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 118,
+      "y": 68,
+      "width": 6,
+      "height": 16,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 16,
+      "y": 68,
+      "width": 6,
+      "height": 14,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 106,
+      "y": 46,
+      "width": 6,
+      "height": 14,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 84,
+      "y": 8,
+      "width": 14,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 30,
+      "y": 114,
+      "width": 14,
+      "height": 6,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 56,
+      "y": 8,
+      "width": 16,
+      "height": 5,
+      "elevation": 0,
+      "walkable": false,
+      "buildable": false,
+      "ramp": false
+    },
+    {
+      "x": 56,
+      "y": 115,
+      "width": 16,
       "height": 5,
       "elevation": 0,
       "walkable": false,
@@ -377,5 +497,6 @@
       "y": 41,
       "rotation": 0
     }
-  ]
+  ],
+  "theme": "forest"
 }

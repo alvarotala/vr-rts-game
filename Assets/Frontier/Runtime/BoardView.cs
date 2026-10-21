@@ -30,6 +30,7 @@ namespace Frontier.Runtime
         private GridMap terrainGrid;
         private TerrainRegion[] terrainRamps;
         private DesertScenery desertScenery;
+        private ThemedScenery themedScenery;
         private FogVisuals fogVisuals;
         private MeshCollider terrainCollider;
         private Matrix4x4 raycastTransform;
@@ -119,6 +120,7 @@ namespace Frontier.Runtime
             deathEffects?.Dispose();
             fogVisuals?.Dispose();
             desertScenery?.Dispose();
+            themedScenery?.Dispose();
             harvestingMarkers?.Dispose();
             workerVisuals?.Dispose();
             creepVisuals?.Dispose();
@@ -143,6 +145,7 @@ namespace Frontier.Runtime
             deathEffects?.Dispose();deathEffects=null;
             fogVisuals?.Dispose();fogVisuals=null;
             desertScenery?.Dispose();desertScenery=null;
+            themedScenery?.Dispose();themedScenery=null;
             harvestingMarkers?.Dispose();harvestingMarkers=null;
             workerVisuals?.Dispose();workerVisuals=null;
             creepVisuals?.Dispose();creepVisuals=null;
@@ -168,15 +171,17 @@ namespace Frontier.Runtime
             terrainRamps=new TerrainRegion[grid.Count];
             foreach(var region in Session.Map.terrain.Where(r=>r.ramp))
                 for(int y=region.y;y<region.y+region.height;y++)for(int x=region.x;x<region.x+region.width;x++)terrainRamps[grid.Index(x,y)]=region;
-            bool desert=Session.Map.theme=="desert";
-            ground.SetColor("_BaseColor",desert?new Color(.72f,.48f,.24f):new Color(.16f,.31f,.31f));
-            ground.SetFloat("_Desert",desert?1:0);ground.SetFloat("_Grid",desert?.3f:1);
+            bool desert=Session.Map.theme=="desert",forest=Session.Map.theme=="forest",neon=Session.Map.theme=="neon";
+            ground.SetColor("_BaseColor",desert?new Color(.72f,.48f,.24f):forest?new Color(.24f,.34f,.18f):neon?new Color(.075f,.095f,.16f):new Color(.16f,.31f,.31f));
+            ground.SetFloat("_Desert",desert?1:0);ground.SetFloat("_Forest",forest?1:0);ground.SetFloat("_Neon",neon?1:0);
+            ground.SetFloat("_Grid",desert?.3f:forest?.25f:neon?.45f:1);
             terrainRoot=new GameObject("Terrain").transform;terrainRoot.SetParent(Content,false);
             var vertices=new List<Vector3>();var triangles=new List<int>();var colors=new List<Color>();var uv=new List<Vector2>();
             for(int y=0;y<grid.Height;y++)for(int x=0;x<grid.Width;x++)
             {
                 int i=grid.Index(x,y);
                 Color c=desert?(!grid.Walkable[i]?new Color(.69f,.53f,.39f):grid.Ramp[i]?new Color(1.09f,.98f,.8f):grid.Elevation[i]>0?new Color(1.16f,1.04f,.84f):Color.white)
+                    :forest?(!grid.Walkable[i]?new Color(.58f,.69f,.46f):grid.Ramp[i]?new Color(1.14f,1.01f,.73f):grid.Elevation[i]>0?new Color(1.05f,1.13f,.9f):Color.white)
                     :!grid.Walkable[i]?new Color(.35f,.39f,.45f):grid.Ramp[i]?new Color(.75f,.72f,.45f):grid.Elevation[i]>0?new Color(.8f,.88f,.77f):Color.white;
                 float VertexHeight(float vx,float vy)=>SurfaceHeight(i,vx,vy);
                 AddQuad(new Vector3(x,VertexHeight(x,y),y),new Vector3(x,VertexHeight(x,y+1),y+1),new Vector3(x+1,VertexHeight(x+1,y+1),y+1),new Vector3(x+1,VertexHeight(x+1,y),y),c);
@@ -200,9 +205,10 @@ namespace Frontier.Runtime
             terrainCollider=terrainRoot.gameObject.AddComponent<MeshCollider>();terrainCollider.sharedMesh=mesh;
             raycastTransform=Matrix4x4.zero;
             if(desert)desertScenery=new DesertScenery(this,fog,grid);
-            else foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
+            if(forest||desert)themedScenery=new ThemedScenery(this,fog,grid);
+            else if(!neon)foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
-            fogVisuals=new FogVisuals(this,fog,desert?new Color(.44f,.32f,.21f):new Color(.14f,.23f,.29f));
+            fogVisuals=new FogVisuals(this,fog,desert?new Color(.44f,.32f,.21f):forest?new Color(.19f,.28f,.18f):neon?new Color(.17f,.16f,.29f):new Color(.14f,.23f,.29f));
             fogVisuals.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
