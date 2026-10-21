@@ -12,6 +12,7 @@ namespace Frontier.Core
         private readonly List<(DeathEvent death, int observers)> recentDeaths = new List<(DeathEvent, int)>();
         private void RecordDeath(EntityState unit)
         {
+            RecordLoss(unit);
             if (Type(unit).building) return;
             int observers = 1 << unit.owner;
             for (int player = 0; player < 2; player++)
@@ -37,7 +38,7 @@ namespace Frontier.Core
                 && w.order == CommandKind.Build && w.target == building.id && w.position.Distance(Center(building)) <= type.footprint * .75f + 1.3f);
             if (!active) return;
             building.remaining--; building.health = Math.Min(type.health, building.health + type.health * .85f / type.duration);
-            if (building.remaining <= 0) { building.complete = true; Notice?.Invoke(building.owner, type.name + " ready."); }
+            if (building.remaining <= 0) { building.complete = true; RecordCompletion(building); FinishBuildOrder(building.owner,building.id,true,BuildOrderStatus.Completed); Notice?.Invoke(building.owner, type.name + " ready."); }
         }
         private void Construct(EntityState worker)
         {
@@ -54,13 +55,14 @@ namespace Frontier.Core
             if (order.research)
             {
                 if (order.definition == "attack") Players[producer.owner].attackLevel++; else Players[producer.owner].armorLevel++;
-                producer.queue.RemoveAt(0); Notice?.Invoke(producer.owner, "Research complete."); return;
+                producer.queue.RemoveAt(0); FinishBuildOrder(producer.owner,order.id,false,BuildOrderStatus.Completed); Notice?.Invoke(producer.owner, "Research complete."); return;
             }
             if (Units(producer.owner) >= Capacity(producer.owner)) return;
             float radius = Catalog[order.definition].collisionRadius;
             Point? exit = producer.hasRallyPoint ? FreeRallyExit(producer, radius) : FreeExit(producer, radius);
             if (!exit.HasValue) return;
             var spawned = Spawn(producer.owner, order.definition, exit.Value); producer.queue.RemoveAt(0);
+            RecordCompletion(spawned); FinishBuildOrder(producer.owner,order.id,false,BuildOrderStatus.Completed);
             if (producer.hasRallyPoint) RallyProducedUnit(producer, spawned);
             else if (Type(spawned).role == "worker") ResumeGather(spawned);
         }
@@ -87,6 +89,8 @@ namespace Frontier.Core
                 if (Travel(worker, Center(hq), Type(hq).footprint * .75f + 1))
                 {
                     if (worker.cargoKind == "catalyst") Players[worker.owner].catalyst += worker.cargo; else Players[worker.owner].minerals += worker.cargo;
+                    var counters=matchCounters[worker.owner];
+                    if(worker.cargoKind=="catalyst")counters.catalystCollected+=worker.cargo;else counters.mineralsCollected+=worker.cargo;
                     worker.cargo = 0; worker.depositing = false; worker.path = null;
                     if (worker.pendingOrders.Count > 0 && AdvanceUnitOrders(worker)) return;
                     if (resource != null) RebalanceGather(worker, resource);
@@ -102,7 +106,7 @@ namespace Frontier.Core
         {
             if (!Entities.TryGetValue(worker.target, out var target) || !target.complete || target.health >= Type(target).health) { ResumeGather(worker); return; }
             if (Travel(worker, Center(target), Type(target).footprint * .75f + 1.2f) && Tick % 4 == 0 && Players[worker.owner].minerals > 0)
-            { Players[worker.owner].minerals--; target.health = Math.Min(Type(target).health, target.health + 4); }
+            { Pay(worker.owner,1,0); target.health = Math.Min(Type(target).health, target.health + 4); }
         }
         private void UpdateVision()
         {

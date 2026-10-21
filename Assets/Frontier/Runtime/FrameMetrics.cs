@@ -17,7 +17,7 @@ namespace Frontier.Runtime
         private void Reset(){intervals.Clear();cpu.Clear();gpu.Clear();saved=false;}
         private void Update()
         {
-            if(!Session.Running||Session.IsPaused)return;
+            if(!Session.Running||Session.IsPaused||Session.IsReplay)return;
             if(Session.Match.Winner!=-1){if(!saved)Save();return;}
             if(Session.Match.Tick<100)return;
             intervals.Add(Time.unscaledDeltaTime*1000);

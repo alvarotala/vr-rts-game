@@ -32,6 +32,11 @@ namespace Frontier.Runtime
         private Point actionPoint;
         private bool actionAdd,selectAdd,actionConfirmedTarget;
         private Simulation gestureMatch;
+        private object replaySource;
+        private bool replayStickReady,replayMiddleDrag;
+        private bool placementInputActive,placementInputReady;
+        private int placementHeightDirection;
+        private float placementHeightHeldSince,placementHeightUpdatedAt;
         private readonly HashSet<int> actionSelection=new HashSet<int>(),selectSelection=new HashSet<int>();
         private void Start()
         {
@@ -51,22 +56,22 @@ namespace Frontier.Runtime
             if(Board.Content==null){ResetMapGestures();Wheel?.TickHint(default,false);return;}
             bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
             Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,wheelHeld=false,wheelReleased=false,triggerHeld=false,gripDown=false;
-            bool gameplay=Panel.AcceptsGameInput||Quest.Placing;
+            bool gameplay=Panel.AcceptsGameInput&&!Quest.Placing;
             var bindings=Panel.Bindings;
             if(Quest.Active)
             {
                 // Buttons, axes and the pointer always come from the chosen hand.
                 var primary=Quest.ActiveController;
                 if(inputController!=primary)ChangeInputController(primary);
-                if(!Quest.PointerTracked){laser.enabled=false;ResetWheelRouting();ClearPointer();controllerReleasePending=true;return;}
+                if(!Quest.PointerTracked){laser.enabled=false;ResetWheelRouting();ClearPointer();placementInputReady=false;placementHeightDirection=0;controllerReleasePending=true;return;}
                 ray=Quest.PointerRay();
                 var select=HotkeyInput.Read(gameplay?bindings.Get(true,"select"):"touch:trigger",primary);
                 var action=HotkeyInput.Read(gameplay?bindings.Get(true,"order"):"touch:a",primary);
-                var modifier=HotkeyInput.Read(bindings,true,"add");
+                var modifier=Session.IsReplay?HotkeyInput.Read("touch:grip",primary):HotkeyInput.Read(bindings,true,"add");
                 // Groups use physical stick click, just as wheel navigation uses
                 // physical Trigger/B. Outside Groups the hint hotkey remains editable.
                 var stickClick=HotkeyInput.Read("touch:stick",primary);
-                var wheel=Wheel!=null&&Wheel.InGroupMenu?stickClick:HotkeyInput.Read(bindings,true,"wheel");
+                var wheel=Session.IsReplay||Wheel!=null&&Wheel.InGroupMenu?stickClick:HotkeyInput.Read(bindings,true,"wheel");
                 down=select.Down;up=select.Up;triggerHeld=select.Held;
                 add=modifier.Held;gripDown=modifier.Down;order=action.Down;
                 cancel=HotkeyInput.Read(gameplay?bindings.Get(true,"back"):"touch:b",primary).Down;
@@ -88,6 +93,8 @@ namespace Frontier.Runtime
                 pan=new Vector2((HotkeyInput.Read(bindings,false,"pan-right").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-left").Held?1:0),
                     (HotkeyInput.Read(bindings,false,"pan-up").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-down").Held?1:0));
             }
+            if(placementInputActive&&!Quest.Placing)
+            {placementInputActive=placementInputReady=false;placementHeightDirection=0;controllerReleasePending=Quest.Active;ResetWheelRouting();CancelPanelInput();ClearPointer();}
             Wheel?.TickHint(ray,Quest.Active&&!controllerReleasePending);
             if(Quest.Active&&controllerReleasePending)
             {
@@ -98,7 +105,7 @@ namespace Frontier.Runtime
             {ResetWheelRouting();CancelPanelInput();ClearPointer();return;}
             ValidateMapGestures(add);
             if(Quest.Placing)
-            {ResetWheelRouting();CancelPanelInput();ClearPointer();if(cancel||toggleMenu)Quest.CancelPlacement();else Quest.PlaceRay(ray,add?primaryStick.y:0,add?Vector2.zero:primaryStick,down);if(!Quest.Placing)controllerReleasePending=Quest.Active;return;}
+            {RoutePlacement(ray,primaryStick,Time.unscaledTime,Time.unscaledDeltaTime);return;}
             var menuSelect=HotkeyInput.Read(Quest.Active?"touch:trigger":"mouse:left",Quest.ActiveController);
             var menuAction=Quest.Active?HotkeyInput.Read("touch:a",Quest.ActiveController):default;
             bool uiPointerInput=menuSelect.Down||menuSelect.Up||menuSelect.Held||menuAction.Down||menuAction.Up||menuAction.Held||panelButton!=PanelButton.None||Panel.IsDragging;
@@ -106,7 +113,7 @@ namespace Frontier.Runtime
             if(!Quest.Active&&Panel.Page!=CommandPanel.MenuPage.Hotkeys&&!interactingWithPanel&&!panelReleasePending)
             {
                 if(HotkeyInput.Read(bindings,false,"menu").Down)Panel.Recall();
-                if(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup)
+                if(Panel.AcceptsGameInput||Panel.AcceptsReplayInput||Panel.Page==CommandPanel.MenuPage.MatchSetup)
                 {if(HotkeyInput.Read(bindings,false,"fit").Down)Board.Fit();}
                 if(Panel.AcceptsGameInput)
                 {
@@ -114,6 +121,14 @@ namespace Frontier.Runtime
                     for(int i=0;i<GameSession.ControlGroupCount;i++)if(HotkeyInput.Read(bindings,false,"group"+(i+1)).Down)Session.Group(i,save);
                 }
             }
+            // Replay transport is a separate route: recorded state never receives live orders,
+            // group bindings or wheel navigation, including when playback is paused.
+            if(Session.IsReplay)
+            {
+                RouteReplay(ray,primaryStick,menuSelect,menuAction,wheelPressed,zoom,menuDepth);
+                return;
+            }
+            replaySource=null;replayStickReady=replayMiddleDrag=false;
             // Fixed console clicks keep priority over gameplay bindings and stick navigation.
             if((Wheel==null||!Wheel.IsOpen)&&uiPointerInput&&Panel.ContainsPointer(ray))
             {
@@ -142,6 +157,150 @@ namespace Frontier.Runtime
                 Board.Navigate(pan,zoom,zoom!=0?1:Time.unscaledDeltaTime);
             if(!Panel.AcceptsGameInput){ClearPointer();return;}
             PointBoard(ray,down,up,order,add);
+        }
+        private void RoutePlacement(Ray ray,Vector2 stick,float now,float delta)
+        {
+            ResetWheelRouting();CancelPanelInput();ClearPointer();
+            if(!placementInputActive){placementInputActive=true;placementInputReady=false;placementHeightDirection=0;}
+            if(Session.HasSystemPause)
+            {placementInputReady=false;placementHeightDirection=0;return;}
+            bool touch=Quest.Active;var controller=Quest.ActiveController;
+            // Drain the click which opened placement and any held controls from
+            // an interruption. Placement navigation is fixed, like menu input.
+            if(!placementInputReady)
+            {
+                placementInputReady=!HotkeyInput.AnyHeld(touch,controller)&&stick.magnitude<.25f;
+                Wheel?.TickHint(ray,touch);return;
+            }
+            var confirm=HotkeyInput.Read(touch?"touch:a":"mouse:left",controller);
+            if(HotkeyInput.Read(touch?"touch:b":"key:Escape",controller).Down)Quest.CancelPlacement();
+            else
+            {
+                if(touch&&HotkeyInput.Read("touch:stick",controller).Down)Wheel?.ToggleHints();
+                if(touch)
+                {
+                    float height=Mathf.Abs(stick.y)>.15f?stick.y:0;
+                    float rotation=Mathf.Abs(stick.x)>.15f?stick.x:0;
+                    float size=(HotkeyInput.Read("touch:trigger",controller).Held?1:0)-(HotkeyInput.Read("touch:grip",controller).Held?1:0);
+                    Quest.PlaceRay(ray,height,new Vector2(rotation,size),confirm.Down,delta);
+                }
+                else
+                {
+                    var raise=HotkeyInput.Read("key:PageUp");var lower=HotkeyInput.Read("key:PageDown");
+                    int direction=(raise.Held?1:0)-(lower.Held?1:0);
+                    if(direction!=placementHeightDirection)
+                    {
+                        placementHeightDirection=direction;placementHeightHeldSince=placementHeightUpdatedAt=now;
+                        if(direction!=0)Quest.AdjustPlacementHeight(direction*.025f);
+                    }
+                    else if(direction!=0)
+                    {
+                        float elapsed=Mathf.Clamp(now-Mathf.Max(placementHeightUpdatedAt,placementHeightHeldSince+.3f),0,.05f);
+                        Quest.AdjustPlacementHeight(direction*elapsed*.3f);placementHeightUpdatedAt=now;
+                    }
+                    Quest.PlaceRay(ray,0,Vector2.zero,confirm.Down,delta);
+                }
+            }
+            Wheel?.TickHint(ray,touch&&Quest.Placing);
+            if(!Quest.Placing){placementInputActive=placementInputReady=false;placementHeightDirection=0;controllerReleasePending=touch;}
+        }
+        private void RouteReplay(Ray ray,Vector2 stick,HotkeyInput.Signal select,HotkeyInput.Signal action,bool hintDown,float scroll,float depth)
+        {
+            ResetMapGestures();wheelTriggerHeld=false;
+            if(Wheel!=null&&Wheel.IsOpen)Wheel.Close();
+            if(!ReferenceEquals(replaySource,Session.Replay))
+            {replaySource=Session.Replay;replayStickReady=false;replayMiddleDrag=false;}
+            if(!Panel.AcceptsReplayInput)
+            {
+                replayStickReady=replayMiddleDrag=false;CancelPanelInput();ClearPointer();Wheel?.TickHint(ray,false);return;
+            }
+            bool touch=Quest.Active;
+            bool grip=touch&&HotkeyInput.Read("touch:grip",Quest.ActiveController).Held;
+            bool back=HotkeyInput.Read(touch?"touch:b":"key:Escape",Quest.ActiveController).Down;
+            bool play=touch?action.Down:HotkeyInput.Read("key:Space").Down;
+            if(back&&!grip){Panel.Back();CancelPanelInput();ClearPointer();Wheel?.TickHint(ray,false);return;}
+            if(!touch&&!Panel.IsDragging)
+            {
+                if(play)Session.ToggleReplayPause();play=false;
+                if(HotkeyInput.Read("key:LeftArrow").Down)SeekReplayBy(-15);
+                if(HotkeyInput.Read("key:RightArrow").Down)SeekReplayBy(15);
+                if(HotkeyInput.Read("key:UpArrow").Down)ChangeReplaySpeed(1);
+                if(HotkeyInput.Read("key:DownArrow").Down)ChangeReplaySpeed(-1);
+            }
+            bool uiEdge=select.Down||select.Up||select.Held||!grip&&(action.Down||action.Up||action.Held);
+            bool panelActive=panelButton!=PanelButton.None||Panel.IsDragging||uiEdge&&Panel.ContainsPointer(ray);
+            if(panelActive||panelReleasePending)
+            {
+                // A/X still confirms the menu under the laser. A gesture that began on
+                // the console owns its release and cannot become transport or zoom.
+                RoutePanel(ray,select.Down,select.Up,select.Held,!grip&&action.Down,action.Up,!grip&&action.Held,Panel.IsDragging?depth:0);
+                replayStickReady=false;replayMiddleDrag=false;ClearPointer();Wheel?.TickHint(ray,touch&&!Panel.IsDragging);return;
+            }
+            RoutePanel(ray,false,false,false,false,false,false,0);
+            Vector2 move=Vector2.zero;
+            if(!touch)
+            {
+                move=new Vector2((HotkeyInput.Read("key:D").Held?1:0)-(HotkeyInput.Read("key:A").Held?1:0),
+                    (HotkeyInput.Read("key:W").Held?1:0)-(HotkeyInput.Read("key:S").Held?1:0));
+                var mouse=Mouse.current;
+                if(mouse!=null)
+                {
+                    if(mouse.middleButton.wasPressedThisFrame)replayMiddleDrag=true;
+                    if(!mouse.middleButton.isPressed)replayMiddleDrag=false;
+                    if(replayMiddleDrag)
+                    {var delta=mouse.delta.ReadValue();Board.Navigate(new Vector2(-delta.x,-delta.y),0,.006f);}
+                }
+            }
+            ApplyReplayControls(stick,play,back,grip,hintDown,move,scroll,Time.unscaledDeltaTime,touch);
+            if(Panel.ContainsPointer(ray))ClearPointer();else PointReplayBoard(ray);
+            Wheel?.TickHint(ray,touch&&!controllerReleasePending);
+        }
+        // Explicit edges keep this testable without manufacturing OVR hardware frames.
+        private void ApplyReplayControls(Vector2 stick,bool play,bool back,bool grip,bool hintDown,Vector2 move,float zoom,float delta,bool touch)
+        {
+            if(!Panel.AcceptsReplayInput)return;
+            if(touch&&grip)
+            {
+                replayStickReady=false;
+                Board.Navigate(stick*.65f,0,delta);
+                if(play!=back&&(play||back))Board.Navigate(Vector2.zero,play ? .25f : -.25f,1);
+            }
+            else
+            {
+                if(play)Session.ToggleReplayPause();
+                if(touch)
+                {
+                    if(stick.magnitude<.25f)replayStickReady=true;
+                    else if(replayStickReady&&stick.magnitude>=.65f)
+                    {
+                        replayStickReady=false;
+                        if(Mathf.Abs(stick.x)>Mathf.Abs(stick.y))SeekReplayBy(stick.x>0?15:-15);
+                        else ChangeReplaySpeed(stick.y>0?1:-1);
+                    }
+                }
+            }
+            if(hintDown&&touch)Wheel?.ToggleHints();
+            if(!touch)Board.Navigate(move,zoom,zoom!=0?1:delta);
+        }
+        private void SeekReplayBy(int seconds)
+        {
+            var replay=Session.Replay;if(replay==null)return;
+            int tick=replay.Seeking?replay.SeekTarget:replay.Tick;
+            Session.SeekReplay(tick+seconds*Simulation.TickRate);PulseHaptic(.12f,.025f);
+        }
+        private void ChangeReplaySpeed(int direction)
+        {
+            var replay=Session.Replay;if(replay==null)return;
+            var speeds=new[]{.5f,1f,2f,4f};float next=replay.Speed;
+            if(direction>0){foreach(float speed in speeds)if(speed>replay.Speed+.01f){next=speed;break;}}
+            else for(int i=speeds.Length-1;i>=0;i--)if(speeds[i]<replay.Speed-.01f){next=speeds[i];break;}
+            Session.SetReplaySpeed(next);PulseHaptic(.12f,.025f);
+        }
+        private void PointReplayBoard(Ray ray)
+        {
+            if(!Board.RayToMap(ray,out var point,out var hit)){ClearPointer();return;}
+            Board.Pointer=point;Board.ResolvePointerTarget(ray,point,hit,out int entity,out int resource);Board.Hovered=entity;Board.HoveredResource=resource;
+            if(Quest.Active&&laser!=null)laser.SetPosition(1,hit);
         }
         private bool RoutePanel(Ray ray,bool triggerDown,bool triggerUp,bool triggerHeld,bool actionDown,bool actionUp,bool actionHeld,float depth)
         {
@@ -208,6 +367,7 @@ namespace Frontier.Runtime
         }
         private void ResetWheelRouting()
         {
+            replayStickReady=replayMiddleDrag=false;
             wheelTriggerHeld=false;Wheel?.Close();Wheel?.TickHint(default,false);
         }
         private void PointBoard(Ray ray,bool down,bool up,bool order,bool add)
@@ -337,6 +497,7 @@ namespace Frontier.Runtime
         private void ResetMapGestures(){ResetActionTap();ResetSelectTap();gestureMatch=null;}
         private void ChangeInputController(OVRInput.Controller controller)
         {
+            placementInputReady=false;placementHeightDirection=0;
             StopHaptic();
             inputController=controller;controllerReleasePending=true;
             ResetWheelRouting();
@@ -360,8 +521,8 @@ namespace Frontier.Runtime
             hapticController=OVRInput.Controller.None;hapticEnd=0;
         }
         private void OnApplicationFocus(bool focused)
-        {if(!focused){StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {if(!focused){placementInputReady=false;placementHeightDirection=0;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
+        private void OnDisable(){placementInputReady=false;placementHeightDirection=0;controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
         private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;controllerVisuals?.Dispose();if(laser!=null){if(Application.isPlaying){Destroy(laser.sharedMaterial);Destroy(laser.gameObject);}else{DestroyImmediate(laser.sharedMaterial);DestroyImmediate(laser.gameObject);}}}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}

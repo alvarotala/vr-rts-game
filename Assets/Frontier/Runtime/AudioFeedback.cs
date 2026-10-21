@@ -35,7 +35,7 @@ namespace Frontier.Runtime
             ui=Source("Interface audio",false);music=Source("Background score",false);
             score=SoundPalette.Music();music.clip=score;music.loop=true;music.volume=0;music.Play();
             for(int i=0;i<voices.Length;i++)voices[i]=Source("Battle voice "+i,true);
-            Session.Feedback+=Feedback;Session.NewMatch+=BeginMatch;Session.MatchClosed+=CloseMatch;
+            Session.ReplayReset+=ResetReplay;Session.Feedback+=Feedback;Session.NewMatch+=BeginMatch;Session.MatchClosed+=CloseMatch;
             SeedView();
         }
         private AudioSource Source(string name,bool spatial)
@@ -46,6 +46,7 @@ namespace Frontier.Runtime
             return source;
         }
         private void BeginMatch(){lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();PlayUi(SoundCue.Start);}
+        private void ResetReplay(){lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();if(Session.View!=null)ConsumeEvents(Session.View);}
         private void CloseMatch(){StopBattle();lastView=null;owned.Clear();result=-1;}
         private void SeedView()
         {
@@ -132,7 +133,7 @@ namespace Frontier.Runtime
         private void StopBattle(){foreach(var voice in voices)if(voice!=null)voice.Stop();}
         private void OnDestroy()
         {
-            if(Session!=null){Session.Feedback-=Feedback;Session.NewMatch-=BeginMatch;Session.MatchClosed-=CloseMatch;}
+            if(Session!=null){Session.ReplayReset-=ResetReplay;Session.Feedback-=Feedback;Session.NewMatch-=BeginMatch;Session.MatchClosed-=CloseMatch;}
             if(ui!=null)ui.Stop();if(music!=null)music.Stop();StopBattle();
             if(clips!=null)foreach(var clip in clips)Release(clip);Release(score);
         }

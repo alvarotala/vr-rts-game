@@ -32,23 +32,24 @@ def generate():
         if pair:
             terrain.append(mirror(value))
 
-    # Two pairs of broad expansion shelves and a stepped central mesa. The
-    # low ground remains connected around the shelves, so no single ramp gates
-    # the entire map. Both heights use the existing v1 rules (0 and 1).
-    region(28, 94, 38, 38)
-    region(54, 14, 32, 36)
-    region(64, 64, 32, 32, pair=False)
-    region(72, 56, 16, 48, pair=False)
-    region(56, 72, 48, 16, pair=False)
+    # Pull the inward edges back around the central mesa. The old shelves
+    # touched at 2x2 corners and pinched the low ground between nearby ramps.
+    # Camp sites remain unchanged; the gaps now read as deliberate passages.
+    # Both heights use the existing v1 rules (0 and 1).
+    region(28, 100, 38, 32)
+    region(54, 14, 28, 36)
+    region(68, 68, 24, 24, pair=False)
+    region(72, 62, 16, 36, pair=False)
+    region(62, 72, 36, 16, pair=False)
 
     # Every ramp is eight cells long with a twelve-cell-wide army entrance.
     # Regions overlap four cells of each shelf to join its surface smoothly.
     for x, y, width, height, axis, direction in [
-        (24, 108, 8, 12, "x", 1), (62, 100, 8, 12, "x", -1),
-        (40, 90, 12, 8, "y", 1), (48, 128, 12, 8, "y", -1),
-        (50, 32, 8, 12, "x", 1), (82, 24, 8, 12, "x", -1),
+        (24, 108, 8, 12, "x", 1), (62, 106, 8, 12, "x", -1),
+        (40, 96, 12, 8, "y", 1), (48, 128, 12, 8, "y", -1),
+        (50, 32, 8, 12, "x", 1), (78, 16, 8, 12, "x", -1),
         (64, 10, 12, 8, "y", 1), (62, 46, 12, 8, "y", -1),
-        (52, 74, 8, 12, "x", 1), (74, 52, 12, 8, "y", 1),
+        (58, 74, 8, 12, "x", 1), (74, 58, 12, 8, "y", 1),
     ]:
         region(x, y, width, height, buildable=False, ramp_axis=axis, direction=direction)
 

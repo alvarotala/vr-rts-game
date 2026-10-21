@@ -8,10 +8,10 @@ namespace Frontier.Runtime
     public sealed class UnitVisuals
     {
         private readonly Dictionary<string,Mesh> meshes=new Dictionary<string,Mesh>();
-        // Both artillery units need more visual mass than infantry. Keep their rigs,
-        // muzzles and remains on the same scale, independently of simulation balance.
+        // Hammer's narrow chassis needs a larger multiplier to match Bombardier's
+        // broad body/legs. Keep rigs, muzzles and remains on the same visual scale.
         public static float ModelScale(Archetype type)
-            => type.collisionRadius / .45f * (type.role == "siege" ? 1.8f : 1f);
+            => type.collisionRadius / .45f * (type.role == "siege" ? type.faction == "industrial" ? 3.2f : 1.8f : 1f);
         public static string RoleName(string role)
         {
             switch(role)
@@ -103,7 +103,9 @@ namespace Frontier.Runtime
                     }
                     height=.88f;break;
             }
-            if(!animatedWorker&&!remains)b.Badge(type.role,height+.12f);
+            // The enlarged chassis should remain visible from above. Keep its role
+            // marker the same size as Bombardier's, just above the turret.
+            if(!animatedWorker&&!remains)b.Badge(type.role,type.role=="siege"?.78f:height+.12f,type.role=="siege"?1.8f/3.2f:1);
             mesh=b.Finish(key,ModelScale(type));meshes.Add(key,mesh);return mesh;
         }
         public Mesh CombatPart(Archetype type, bool leg)
@@ -194,7 +196,7 @@ namespace Frontier.Runtime
                 var d=(b-a).normalized;var n=new Vector2(-d.y,d.x)*width*.5f;
                 Polygon(height,new[]{a+n,b+n,b-n,a-n},2);
             }
-            public void Badge(string role,float h)
+            public void Badge(string role,float h,float size=1)
             {
                 int start=vertices.Count;
                 Disc(h,.62f,0);Disc(h+.008f,.53f,1);h+=.016f;
@@ -217,7 +219,7 @@ namespace Frontier.Runtime
                         for(int i=-1;i<=1;i++){float x=i*.25f;Polygon(h,new[]{new Vector2(x-.07f,-.27f),new Vector2(x+.07f,-.27f),new Vector2(x+.07f,.16f),new Vector2(x,.32f),new Vector2(x-.07f,.16f)},2);}break;
                 }
                 // Stay inside the collision footprint, so crowded workers' badges never overlap.
-                for(int i=start;i<vertices.Count;i++){var v=vertices[i];vertices[i]=new Vector3(v.x*.7f,v.y,v.z*.7f);}
+                for(int i=start;i<vertices.Count;i++){var v=vertices[i];vertices[i]=new Vector3(v.x*.7f*size,v.y,v.z*.7f*size);}
             }
             public Mesh Finish(string name,float scale)
             {

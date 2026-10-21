@@ -80,6 +80,8 @@ unity run . --editor-version 6000.3.26f1 --log-file TestResults/unity-caster-abi
 
 `CasterAbilityPreview.Render` usa rayos y pulsaciones sintéticas contra las acciones reales: producción desde la academia, energía en selección mixta, habilitación desde panel/rueda, A/gatillo, segundo A rápido, área/rango, destinos bajo niebla, pausa, cancelación y cambio de selección. Guarda vistas en `TestResults/CasterControls`. También llama a `CasterVisualPreview.Render` para modelos de Conduit/Oracle y Resonance Lab/Spore Sanctum, `AbilityEffectsPreview.Render` para explosiones/curación y `AttackPointerPreview.Render` para las regresiones de ataque. Los resultados de una ejecución concreta se registran en [validación](validation.md); estos comandos y capturas de Editor no certifican mandos físicos, ergonomía ni rendimiento en Quest.
 
+`AbilityEffectsPreview.Render` también puede ejecutarse directamente para revisar únicamente las magias: cinco fases, vista superior, escenas con unidades de ambas facciones y rampas, en `TestResults/Abilities/`. `AbilityEffects` anima los eventos proyectados por tick, sin estado temporal acumulado: pausa y rebobinado reproducen la misma geometría/opacidad. Ion Burst usa descargas angulares; Spore Burst usa filamentos curvos y esporas. Repair Field combina un perímetro circular con pulso hexagonal y cruces; Mend combina espirales y semillas ascendentes. El daño dura 0,8 s y la curación 0,98 s, dentro del segundo que el núcleo conserva cada evento. Todos comparten malla/material, niebla y recorte, con máximo de 32 eventos y 768 vértices por evento; no se agregan objetos por lanzamiento ni cambian reglas de daño/curación.
+
 `RallyPointChecks` comprueba asignación, actualización y borrado por edificio, validación de productores, privacidad y despliegue de unidades con rutas/salidas bloqueadas. La batería de Editor para puntos de reunión incluye gestos, banderas, HUD y regresiones de producción y colas:
 
 ```sh
@@ -342,3 +344,34 @@ Las vistas de mandos y la música WAV quedan en `TestResults/ComfortAudio`. El a
 
 
 `Frontier.Editor.StartupMenuPreview.Run` prueba el menú de inicio de Quest con poses sintéticas del visor y un tablero guardado a más de 20 m. Verifica espera de seguimiento, restauración tardía del ancla, entrada a Settings y recolocación/cancelación, arrastre cerca del usuario, Reset position, regreso tras foco/suspensión/visor y preservación del desplazamiento de consola durante partida. Genera tres vistas con pose real en `TestResults/StartupMenu` y ejecuta las regresiones de `MenuFlowPreview` y `ComfortAudioPreview`. Restaura la preferencia de posición previa y no genera APK.
+
+## Informe posterior a la partida
+
+`Simulation.Report` se publica únicamente cuando hay victoria, derrota, empate o rendición. Las estadísticas y el historial rival no se agregan a `PlayerView`; el AI sigue recibiendo la misma información filtrada. La pantalla de resultado contiene Overview, Graphs y Build order, con navegación por el mismo puntero del resto de los menús. El informe se archiva en el dispositivo y se puede volver a abrir desde Match history en el menú principal, incluso después de cerrar la app. El formato y las bases para replays se describen en `docs/match-history.md`.
+
+- Overview compara trabajadores y ejército entrenados/perdidos/máximo simultáneo, estructuras terminadas/perdidas, minerales y gas entregados, gastos brutos, devoluciones, banco final, APM y mayor ráfaga de órdenes en una ventana móvil de un segundo. Las entidades iniciales no cuentan como producción.
+- APM efectivo: una llamada aceptada a `Submit` es una acción, incluso si manda a un grupo. La rendición, órdenes rechazadas, selección, ataques automáticos y ejecución posterior de órdenes ya encoladas no cuentan. El promedio usa tiempo de simulación; la gráfica usa una ventana móvil de 60 segundos, normalizada por el tiempo transcurrido durante el primer minuto. Pausar no agrega tiempo.
+- Graphs compara trabajadores, ejército, minerales/gas acumulados, minerales/gas disponibles y APM. Se registra el inicio, una muestra cada cinco segundos y el final exacto. Tras 2048 muestras se duplica el intervalo conservando el inicio; la gráfica limita los puntos dibujados. Los picos de población y ráfagas se miden en los eventos, independientemente de ese muestreo.
+- Build order conserva cada construcción iniciada y cada entrenamiento/investigación encolado, con tiempo, población usada/reservada y resultado: listo, cancelado, productor destruido o pendiente. La producción inicial está excluida; una orden de construcción diferida aparece cuando la construcción comienza realmente. Cada jugador tiene su propia lista paginada.
+
+Prueba del registro: `bash scripts/check-core.sh --match-report-only`. Prueba de menú y vistas: `Frontier.Editor.MatchReportPreview.Run` vía Unity CLI, con capturas en `TestResults/Reports/`. La prueba usa seis minutos de simulación de dos estrategas para comprobar las comparaciones, todas las gráficas, paginación de ambos bandos, revancha y partidas de duración cero. No valida comodidad o rendimiento en Quest físico.
+
+## Historial y espectador
+
+El contrato de grabación, compatibilidad y controles está en [match-history.md](match-history.md). `GameSession.Replay` abre una simulación independiente y bloquea órdenes de juego; `ReplayPlayback` verifica comandos/checkpoints, y `ObserverView` reúne ambas perspectivas solo para el reproductor. El panel de espectador conserva visibles economía, población y producción durante pausa, navegación y saltos.
+
+`Frontier.Editor.ReplayValidation.Run` valida motor, sesión, mando, panel, historial y menús. `RunPresentation` permite repetir sesión/panel/historial/menús después de un cambio visual. Los fixtures crean grabaciones en directorios temporales y comprueban que observarlas no modifica sus archivos. Las capturas quedan en `TestResults/Spectator/` y `TestResults/ReplayInput/`. Por ejemplo:
+
+```sh
+unity run . --log-file TestResults/unity-replay-validation.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.ReplayValidation.Run
+```
+
+La reproducción reconstruye desde el inicio al retroceder y distribuye los saltos largos entre fotogramas. No serializar `Snapshot()` como si fuera estado restaurable; omite estado interno de simulación. Cambios incompatibles del núcleo requieren incrementar `Simulation.ReplayRulesVersion`. El renderizado omnisciente no debe sustituir a `View(player)` en partidas normales ni alimentar al estratega.
+
+## Colocación y altura del tablero
+
+`Frontier.Editor.BoardPlacementPreview.Run` ejercita el `CommanderInput.Update` real con estados Touch de ambas manos: controles fijos, altura con stick, tamaño con Grip/Trigger, confirmación A/X y cancelación B/Y, botones retenidos al entrar/salir, pausa, cancelación, modelo y hints. Los ajustes continuos usan el mismo router con un delta explícito para probar avances dentro de un cuadro del Editor. Genera dos vistas en `TestResults/BoardPlacement/`, sin guardar anchors. `RunBatch` agrega las regresiones de menú inicial, restauración del tablero, flujo de menús, comodidad y rueda.
+
+```sh
+unity run . --log-file TestResults/unity-board-placement.log --no-tail -- -buildTarget StandaloneOSX -executeMethod Frontier.Editor.BoardPlacementPreview.RunBatch
+```

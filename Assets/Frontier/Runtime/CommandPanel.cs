@@ -20,9 +20,9 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay }
         public MenuPage Page { get; private set; } = MenuPage.Main;
-        public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsPaused&&Session.Match.Winner==-1;
+        public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.Running&&!Session.IsReplay&&!Session.IsPaused&&Session.Match.Winner==-1;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Quest.Placing;
         public bool IsDragging => moving;
         private readonly Stack<MenuPage> menuHistory=new Stack<MenuPage>();
@@ -82,7 +82,7 @@ namespace Frontier.Runtime
                 catch(ArgumentException){PlayerPrefs.DeleteKey(PlacementKey);}
             }
             Session.NewMatch+=OnMatchStarted;Session.MatchClosed+=OnMatchClosed;
-            Page=Session.Running?(Session.Match.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
+            Page=Session.IsReplay?MenuPage.Replay:Session.Running?(Session.Match.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
             Rebuild();
         }
         private void OnDestroy()
@@ -90,16 +90,16 @@ namespace Frontier.Runtime
             if(Session==null)return;
             Session.NewMatch-=OnMatchStarted;Session.MatchClosed-=OnMatchClosed;
         }
-        private void OnMatchStarted()=>Show(MenuPage.Actions);
-        private void OnMatchClosed()=>Show(MenuPage.Main);
+        private void OnMatchStarted(){shownReport=null;Show(Session.IsReplay?MenuPage.Replay:MenuPage.Actions);}
+        private void OnMatchClosed(){shownReport=null;if(Session.LastClosedWasReplay)OpenHistory();else Show(MenuPage.Main);}
         private void LateUpdate()
         {
             if(root==null)return;
             Board.SetVisible(ShowsBoard);
             if(!UpdatePosition(!UsesLobbyPosition||Quest.HeadTracked))return;
-            if(Session.Running&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
+            if(Session.Running&&!Session.IsReplay&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             TickSelectionClick(Time.unscaledTime);
-            string state=Page+":"+Quest.Active+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
@@ -196,7 +196,7 @@ namespace Frontier.Runtime
             if(lastMenuMessage!=Session.Message||lastMenuMessageVersion!=Session.MessageVersion)
             {lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=Time.unscaledTime+8;}
             harvesting.text="";harvesting.color=accent;
-            status.text=Session.Message;
+            status.text=Session.Message;status.color=accent;
             switch(Page)
             {
                 case MenuPage.Main:
@@ -211,7 +211,7 @@ namespace Frontier.Runtime
                     status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
-                    selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":"Prepare your battlefield and choose where it sits in your room.";
+                    selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":"Prepare your battlefield and choose where it sits in your room.";
                     status.text=settingsTab==SettingsTab.PlaySpace?(Board.Placed?"Board position saved. Reposition it whenever you change play space.":"No board position set. Placement will open before the match starts."):"Preferences are shared before and during a match, and saved on this device.";break;
                 case MenuPage.Hotkeys:
                     headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
@@ -235,15 +235,27 @@ namespace Frontier.Runtime
                     status.text=Session.Running?"Your match stays paused. Back returns to Guides.":"Review controls before playing. Back returns to Guides.";break;
                 case MenuPage.LeaveConfirmation:
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
-                    selection.text="Leave this match and return to the main menu? Match progress will be lost.";
+                    selection.text="Leave this match and return to the main menu? It will be recorded as abandoned.";
                     status.text="Choose Keep playing to resume the match.";break;
                 case MenuPage.Result:
                     headline.text=Session.Match.Winner==0?"VICTORY":Session.Match.Winner==2?"DRAW":"DEFEAT";
-                    economy.text="MATCH COMPLETE · "+Session.Map.title;
-                    selection.text="Play again with the same setup or return to the main menu.";
-                    status.text="Choose Rematch for a fresh start.";break;
+                    economy.text="MATCH COMPLETE · "+Session.Map.title+" · "+ReportTime(Session.Match.Tick);
+                    selection.text=$"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · {DifficultyLabel} AI";
+                    harvesting.text="POST-MATCH REPORT";
+                    status.text=Session.ArchiveStatus??"Both sides revealed after the match. Rematch starts a fresh report.";break;
+                case MenuPage.History:
+                    headline.text="MATCH HISTORY";economy.text="SAVED ON THIS DEVICE";
+                    selection.text="Watch a replay, or choose a match for statistics, graphs and build order.";
+                    harvesting.text=savedMatches.Length+" recorded matches";
+                    status.text=historyMessage??"Your matches stay available after closing the app.";break;
+                case MenuPage.Replay:UpdateReplayHeader();break;
+                case MenuPage.HistoryReport:
+                    var saved=archivedReport.Info;var h=saved.Header;
+                    headline.text=HistoryOutcome(saved).ToUpperInvariant();economy.text=h.mapTitle+" · "+ReportTime(archivedReport.Report.Tick)+" · "+HistoryDate(h.startedUtc);
+                    selection.text=$"{ShortFaction(h.faction)} vs {ShortFaction(h.enemyFaction)} · {h.difficulty} AI";
+                    harvesting.text="SAVED MATCH REPORT";status.text="Browsing this report does not start or change a match.";break;
             }
-            if(Quest.Placing||Quest.StartPending||((Page==MenuPage.Settings||Page==MenuPage.MatchSetup)&&Time.unscaledTime<menuMessageUntil))status.text=Session.Message;
+            if(Quest.Placing||Quest.StartPending||((Page==MenuPage.Settings||Page==MenuPage.MatchSetup||Page==MenuPage.History||Page==MenuPage.HistoryReport)&&Time.unscaledTime<menuMessageUntil))status.text=Session.Message;
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
         {
@@ -260,6 +272,7 @@ namespace Frontier.Runtime
         private void Rebuild()
         {
             if(actions==null)return;
+            CancelReplayScrub();
             // Hide the old controls immediately, including between pointer events in the same frame.
             for(int i=actions.childCount-1;i>=0;i--)
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
@@ -284,7 +297,7 @@ namespace Frontier.Runtime
         }
         private void Show(MenuPage page)
         {
-            if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.Result)menuHistory.Clear();
+            if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.Result||page==MenuPage.Replay)menuHistory.Clear();
             if(page==MenuPage.Settings&&Page!=MenuPage.Hotkeys)settingsTab=SettingsTab.Controls;
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
             {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
@@ -294,7 +307,7 @@ namespace Frontier.Runtime
             lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=0;
             ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
-            Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result);
+            Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result&&page!=MenuPage.Replay);
             Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(default,default,false);
             Board.SetVisible(ShowsBoard);Rebuild();
         }
@@ -317,12 +330,16 @@ namespace Frontier.Runtime
                 case MenuPage.Pause:Show(MenuPage.Actions);break;
                 case MenuPage.LeaveConfirmation:Show(MenuPage.Pause);break;
                 case MenuPage.Result:Session.LeaveMatch();break;
+                case MenuPage.History:archivedReport=null;shownReport=null;Show(MenuPage.Main);break;
+                case MenuPage.HistoryReport:Show(MenuPage.History);break;
+                case MenuPage.Replay:Session.StopReplay();break;
             }
         }
         public void ToggleMenu()
         {
+            if(Session.IsReplay){Session.ToggleReplayPause();return;}
             if(HotkeyModalOpen){CancelHotkeyChange();return;}
-            if(Page==MenuPage.Settings||Page==MenuPage.Hotkeys||Page==MenuPage.Guides||Page==MenuPage.Guide||IsReferencePage){Back();return;}
+            if(Page==MenuPage.History||Page==MenuPage.HistoryReport||Page==MenuPage.Settings||Page==MenuPage.Hotkeys||Page==MenuPage.Guides||Page==MenuPage.Guide||IsReferencePage){Back();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             if(!Session.Running){Back();return;}
             if(Session.Match.Winner!=-1)return;
@@ -343,6 +360,7 @@ namespace Frontier.Runtime
         public void Recall(){moving=false;CancelPointerInteraction();ResetPosition();Session.Announce(UsesLobbyPosition?"Menu reset in front of you.":"Menu reset above the board.");}
         public void CancelPointerInteraction()
         {
+            CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
             if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
@@ -403,6 +421,7 @@ namespace Frontier.Runtime
                 return true;
             }
             if(down&&onReset){Recall();return true;}
+            if(PointReplayTimeline(ray,down,up))return true;
             Target hit=null;
             foreach(var target in targets)
             {

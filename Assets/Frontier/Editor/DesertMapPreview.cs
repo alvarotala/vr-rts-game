@@ -42,6 +42,17 @@ namespace Frontier.Editor
                     Check(board.RayToMap(new Ray(origin,-board.transform.up),out var point,out var hit)
                         &&point.Distance(center)<.01f&&Math.Abs(board.Content.InverseTransformPoint(hit).y-board.HeightAt(center))<.01f,
                         "Pointer collision agrees with visible ramp surface "+ramp.x+","+ramp.y);
+                    bool seamless=true;
+                    int lanes=ramp.rampAxis=="x"?ramp.height:ramp.width;
+                    for(int lane=0;lane<lanes;lane++)foreach(bool high in new[]{false,true})
+                    {
+                        bool end=high==(ramp.rampDirection>0);
+                        float edge=ramp.rampAxis=="x"?ramp.x+(end?ramp.width:0):ramp.y+(end?ramp.height:0);
+                        float inside=edge+(end?-.001f:.001f),outside=edge+(end?.001f:-.001f);
+                        Point At(float axis)=>ramp.rampAxis=="x"?new Point(axis,ramp.y+lane+.5f):new Point(ramp.x+lane+.5f,axis);
+                        seamless&=Math.Abs(board.HeightAt(At(inside))-board.HeightAt(At(outside)))<.002f;
+                    }
+                    Check(seamless,"Both ramp ends meet terrain continuously across all twelve lanes "+ramp.x+","+ramp.y);
                 }
                 CameraAt(new Point(80,80),88,true);Capture("terrain-top",1600,1600);
                 CameraAt(new Point(80,80),75,false);Capture("terrain-angle",1600,1200);
@@ -58,6 +69,9 @@ namespace Frontier.Editor
                 CameraAt(new Point(80,80),75,false);Capture("survey-angle",1600,1200);
                 CameraAt(new Point(57,105),27,false);Capture("mesa-expansion",1400,1100);
                 CameraAt(new Point(80,80),30,false);Capture("central-mesa",1400,1100);
+                CameraAt(new Point(80,54),18,false);Capture("north-passage",1400,1100);
+                CameraAt(new Point(67,97),18,false);Capture("corner-passage",1400,1100);
+                CameraAt(new Point(88,32),18,false);Capture("outer-passage",1400,1100);
                 Check(session.Match.Tick==tick&&session.Match.Players[0].minerals==minerals&&session.Match.Entities.Count==entities,
                     "Map surveying leaves authoritative time, economy and entities unchanged");
 

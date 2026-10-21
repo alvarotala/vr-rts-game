@@ -24,11 +24,15 @@ namespace Frontier.Editor
             var fixture = new GameObject("Fog preview session"); var boardObject = new GameObject("Fog preview board");
             var preview = new PreviewRenderUtility(); int checks = 0, captures = 0;
             var previousBounds = Shader.GetGlobalVector("_FrontierBounds"); var previousMatrix = Shader.GetGlobalMatrix("_FrontierWorldToBoard");
+            bool hadDensity = PlayerPrefs.HasKey(BoardView.FogDensityKey);
+            float previousDensity = PlayerPrefs.GetFloat(BoardView.FogDensityKey, 1);
             try
             {
+                PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
                 var session = fixture.AddComponent<GameSession>(); if (session.Catalog == null) Call(session, "Awake");
                 session.LoadMap("training");
                 var board = boardObject.AddComponent<BoardView>(); board.Session = session; board.Viewer = preview.camera; Call(board, "Start");
+                Check(board.FogDensity == 1, "Fresh preferences retain the original full-density mist");
                 preview.AddSingleGO(boardObject);
                 var shader = Shader.Find("Frontier/Fog");
                 Check(shader != null && !ShaderUtil.ShaderHasError(shader), "Fog shader compiles with the URP stereo variants");
@@ -107,6 +111,20 @@ namespace Frontier.Editor
                             double unseen = BandDifference(baseline, first, 0), explored = BandDifference(baseline, first, 1), visible = BandDifference(baseline, first, 2);
                             Check(unseen > .015 && explored > .005 && unseen > explored * 1.3, "Rendered unseen mist is denser than explored mist: " + unseen.ToString("0.000") + " / " + explored.ToString("0.000"));
                             Check(visible < .001, "Currently visible cells receive no fog, including beside the visibility boundary");
+                            var originalVisibility = (byte[])session.View.visibility.Clone();
+                            board.SetFogDensity(.5f); fog.Update(true, 0); var half = Snap("density-50");
+                            double halfUnseen = BandDifference(baseline, half, 0), halfExplored = BandDifference(baseline, half, 1);
+                            Check(halfUnseen > .005 && halfUnseen < unseen * .85 && halfExplored > .001 && halfExplored < explored * .85,
+                                "Half density visibly reduces both unseen and explored mist");
+                            Check(material.GetFloat("_FogDensity") == .5f && PlayerPrefs.GetFloat(BoardView.FogDensityKey) == .5f,
+                                "Density updates the shader and device preference immediately");
+                            board.SetFogDensity(0); var off = Snap("density-0");
+                            Check(!root.gameObject.activeSelf && baseline.SequenceEqual(off), "Zero density disables the fog draw and renders exactly the no-mist baseline");
+                            Check(originalVisibility.SequenceEqual(session.View.visibility) && Field<System.Collections.IDictionary>(board, "entities").Count == 0,
+                                "Disabling visual mist preserves visibility and hidden enemy filtering");
+                            board.SetFogDensity(1); fog.Update(true, 0);
+                            Check(root.GetComponent<MeshFilter>().sharedMesh == mesh && root.GetComponent<MeshRenderer>().sharedMaterial == material
+                                && first.SequenceEqual(Snap()), "Restoring density reuses the same geometry and restores the original image");
                             fog.Update(true, 40); var later = Snap();
                             Check(BandDifference(first, later, 0) > .001, "Slow cloud drift changes the rendered mist without moving terrain");
                             fog.Update(true, 0); var repeated = Snap();
@@ -186,6 +204,8 @@ namespace Frontier.Editor
             {
                 Object.DestroyImmediate(boardObject); Object.DestroyImmediate(fixture); preview.Cleanup();
                 Shader.SetGlobalVector("_FrontierBounds", previousBounds); Shader.SetGlobalMatrix("_FrontierWorldToBoard", previousMatrix);
+                if (hadDensity) PlayerPrefs.SetFloat(BoardView.FogDensityKey, previousDensity); else PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
+                PlayerPrefs.Save();
             }
         }
     }

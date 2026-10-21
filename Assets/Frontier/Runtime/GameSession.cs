@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Frontier.Runtime
 {
-    public sealed class GameSession : MonoBehaviour
+    public sealed partial class GameSession : MonoBehaviour
     {
         public Simulation Match { get; private set; }
         public Catalog Catalog { get; private set; }
@@ -60,7 +60,11 @@ namespace Frontier.Runtime
         public void CycleMap()=>LoadMap(MapId=="rift"?"training":MapId=="training"?"desert":"rift");
         public void StartMatch()
         {
+            if(IsReplay)StopReplay();
+            LastClosedWasReplay=false;
+            CloseArchive();
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
+            StartArchive();
             bot = new Strategist(1, Difficulty == "hard" ? AiDifficulty.Hard : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
@@ -72,6 +76,9 @@ namespace Frontier.Runtime
         }
         public void LeaveMatch()
         {
+            if(IsReplay){StopReplay();return;}
+            LastClosedWasReplay=false;
+            CloseArchive();
             if (Match != null) Match.Paused = true;
             Running = false; Match = null; View = null; bot = null;
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
@@ -83,7 +90,9 @@ namespace Frontier.Runtime
         }
         private void Update()
         {
+            if(IsReplay){UpdateReplay();return;}
             if (!Running || Match == null) return;
+            UpdateArchive();
             Match.Paused = pauseReasons.Count > 0;
             if (Match.Paused || Match.Winner != -1) { accumulator = 0; return; }
             accumulator += Math.Min(Time.unscaledDeltaTime, .25f);
@@ -102,12 +111,12 @@ namespace Frontier.Runtime
                 Changed?.Invoke();
             }
         }
-        public bool IsPaused => pauseReasons.Count > 0;
+        public bool IsPaused => pauseReasons.Count > 0 || IsReplay && (Replay.Paused || Replay.Seeking || Replay.Ended || Replay.Error != null);
         // Menus and board placement still accept controller input. System interruptions
         // must hide hand-attached UI even when one of those local menus is also open.
         public bool HasSystemPause => pauseReasons.Any(reason => reason != "menu" && reason != "placement");
         public void Pause(string reason, bool paused)
-        { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null) Match.Paused = IsPaused; Changed?.Invoke(); }
+        { if (paused) pauseReasons.Add(reason); else pauseReasons.Remove(reason); if (Match != null && !IsReplay) Match.Paused = IsPaused; Changed?.Invoke(); }
         public void TogglePause() => Pause("menu", !pauseReasons.Contains("menu"));
         public void Announce(string text) { Message = text; MessageVersion=unchecked(MessageVersion+1); messageUntil = Time.unscaledTime + 6; }
         public void Select(int id, bool additive, int resourceId = 0)
@@ -161,9 +170,10 @@ namespace Frontier.Runtime
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { if(IsReplay)return; BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void ChooseAttackMove()
         {
+            if(IsReplay)return;
             BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null;
             Announce("Attack Move · Choose a point on the battlefield."); Changed?.Invoke();
         }
@@ -183,6 +193,7 @@ namespace Frontier.Runtime
         }
         public bool ChooseAbility(string id)
         {
+            if(IsReplay)return false;
             var ability=Catalog.Ability(id);
             if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
             {Announce(AbilityStatus(id));Feedback?.Invoke(false);Changed?.Invoke();return false;}
@@ -200,6 +211,8 @@ namespace Frontier.Runtime
         }
         private void RefreshView()
         {
+            if(IsReplay){RefreshReplayView();return;}
+            UpdateArchive();
             var previous=View;View=Match.View(0);ValidateAbilitySelection();
             foreach(var entity in View.entities)
                 if(entity.owner==View.player&&(entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove))
@@ -264,7 +277,7 @@ namespace Frontier.Runtime
         }
         public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0)
         {
-            if (Match == null) return false;
+            if (Match == null || IsReplay) return false;
             var selected = Selection.OrderBy(id=>id).ToArray();
             var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence });
             if (!result.accepted) Announce(result.message);
@@ -286,7 +299,7 @@ namespace Frontier.Runtime
             Feedback?.Invoke(result.accepted); RefreshView();
             Changed?.Invoke(); return result.accepted;
         }
-        private void OnApplicationFocus(bool focused) { if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
-        private void OnApplicationPause(bool paused) { if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }
+        private void OnApplicationFocus(bool focused) { if(!focused)UpdateArchive(true); if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
+        private void OnApplicationPause(bool paused) { if(paused)UpdateArchive(true); if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }
     }
 }

@@ -51,6 +51,7 @@ namespace Frontier.Runtime
         private string actionSignature, failedAction, failureMessage;
         private PlayerView actionView, hintView;
         private string hintSelectionSignature;
+        private bool placementHintContext, placementHintsEnabled = true;
         private bool stickReady, openReady;
         private float neutralSince = -1;
         private static readonly Color Normal = new Color(.035f, .09f, .14f, .98f), Accent = new Color(.16f, .65f, .68f), Ink = new Color(.68f, .86f, .91f);
@@ -116,19 +117,45 @@ namespace Frontier.Runtime
             return true;
         }
 
+        public void ToggleHints()
+        {
+            if(UpdatePlacementHintContext())placementHintsEnabled=!placementHintsEnabled;
+            else HintsEnabled=!HintsEnabled;
+        }
+        private bool UpdatePlacementHintContext()
+        {
+            bool placing=Quest!=null&&Quest.Placing;
+            if(placing!=placementHintContext)
+            {
+                placementHintContext=placing;
+                if(placing)placementHintsEnabled=true;
+                hintBindings=null;
+            }
+            return placing;
+        }
+        private bool ReplayHintContext=>Session!=null&&Session.IsReplay&&Panel!=null&&Panel.AcceptsReplayInput&&!Panel.IsDragging;
         public void TickHint(Ray pointer, bool available, float? now = null)
         {
             TickConfirmation(pointer, available, now ?? Time.unscaledTime);
-            bool visible = HintsEnabled && available && CanOpen && !IsOpen;
+            bool placing=UpdatePlacementHintContext(),replay=ReplayHintContext;
+            bool visible = (placing?placementHintsEnabled:HintsEnabled) && available && (CanOpen||replay||placing)
+                && Session!=null && !Session.HasSystemPause && !IsOpen;
             if (!visible) { if (hintRoot != null) hintRoot.gameObject.SetActive(false); return; }
             EnsureHint(); hintRoot.gameObject.SetActive(true);
-            string selection = string.Join(",", Session.Selection.OrderBy(id => id));
+            hintLabels[0].text=placing?"↑↓ Height":replay?"↑↓ Speed":"↑ Groups";
+            hintLabels[1].text=placing?"→ Turn right":replay?"→ +15 seconds":"→ Selection";
+            hintLabels[2].text=placing?"← Turn left":replay?"← −15 seconds":"← Unit orders";
+            string selection = (placing?"placement:":replay?"replay:":"")+string.Join(",", Session.Selection.OrderBy(id => id));
             if (!ReferenceEquals(hintView, Session.View) || selection != hintSelectionSignature)
             {
                 hintView = Session.View; hintSelectionSignature = selection;
-                var actions = AvailableActions();
-                hintSelection.color = actions.Any(a => a.Category != ActionCategory.Orders) ? Color.white : Disabled;
-                hintOrders.color = actions.Any(a => a.Category == ActionCategory.Orders) ? Color.white : Disabled;
+                if(placing||replay){hintSelection.color=hintOrders.color=Color.white;}
+                else
+                {
+                    var actions = AvailableActions();
+                    hintSelection.color = actions.Any(a => a.Category != ActionCategory.Orders) ? Color.white : Disabled;
+                    hintOrders.color = actions.Any(a => a.Category == ActionCategory.Orders) ? Color.white : Disabled;
+                }
             }
             LayoutHint(Quest.ActiveController == OVRInput.Controller.LTouch);
             RefreshButtonHints();
@@ -511,11 +538,24 @@ namespace Frontier.Runtime
         private void RefreshButtonHints()
         {
             var bindings = Panel.Bindings;
-            string signature = string.Join("|", HotkeyBindings.Definitions(true).Select(d => bindings.Get(true, d.Id)));
+            bool placing=Quest.Placing,replay=ReplayHintContext;
+            string signature = (placing?"placement:":replay?"replay:":"")+string.Join("|", HotkeyBindings.Definitions(true).Select(d => bindings.Get(true, d.Id)));
             if (signature == hintBindings) return;
             hintBindings = signature;
             for (int i = 0; i < hintInputs.Length; i++)
             {
+                if(placing)
+                {
+                    string buttonName=HotkeyBindings.Display(hintInputs[i],hintLeft==true);
+                    string actionName=i==0?"Hold: enlarge board":i==1?"Cancel placement":i==2?"Place board":i==3?"Hold: shrink board":"Show / hide hints";
+                    buttonHints[i].text=buttonName+(i==4?"\n":" · ")+actionName;continue;
+                }
+                if(replay)
+                {
+                    string buttonName=HotkeyBindings.Display(hintInputs[i],hintLeft==true);
+                    string actionName=i==0?"Use replay panel":i==1?"Exit replay\nGrip: zoom out":i==2?"Play / pause\nGrip: zoom in":i==3?"Hold + stick: pan": "Show / hide hints";
+                    buttonHints[i].text=buttonName+(i==4?"\n":" · ")+actionName;continue;
+                }
                 string id = HotkeyBindings.Definitions(true).First(d => bindings.Get(true, d.Id) == hintInputs[i]).Id;
                 string action = id == "select" ? "Select / place\nHold: drag · Double: same type" :
                     id == "order" ? "Move / interact\nDouble: Attack Move" :

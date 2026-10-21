@@ -27,7 +27,9 @@ namespace Frontier.Runtime
         private OVRSpatialAnchor anchor;
         private Transform anchorRoot;
         private float manualHeight=.75f;
+        public float PlacementHeight=>manualHeight;
         private bool useScene=true,busy,restoring,pendingStart;
+        private string pendingReplay;
         private bool restoredPlacement,checkingSavedBoard,savedPoseSample;
         private Vector3 savedBoardOffset;
         private float savedPoseSince;
@@ -37,6 +39,8 @@ namespace Frontier.Runtime
         private Vector3 placementPosition;
         private Quaternion placementRotation;
         private float placementWidth;
+        private float placementManualHeight;
+        private bool placementUseScene;
         private bool wasPlaced;
         private bool headPoseUpdated;
         private int anchorGeneration;
@@ -81,7 +85,25 @@ namespace Frontier.Runtime
                 if(OVRManager.display!=null)OVRManager.display.displayFrequency=72;Restore();
             }
         }
-        public void SetManualHeight(float height){manualHeight=height;useScene=false;}
+        public void SetManualHeight(float height){manualHeight=Mathf.Clamp(height,0,1.5f);useScene=false;}
+        public void AdjustPlacementHeight(float delta)
+        {
+            if(!Placing||Session.HasSystemPause||delta==0)return;
+            // Once the player adjusts a detected surface, keep a manual plane at
+            // that visible height instead of snapping back to the room's table.
+            if(useScene)manualHeight=Mathf.Clamp(Board.transform.position.y-.005f,0,1.5f);
+            useScene=false;manualHeight=Mathf.Clamp(manualHeight+delta,0,1.5f);
+            var position=Board.transform.position;position.y=manualHeight+.005f;Board.transform.position=position;
+            AnnouncePlacement();
+        }
+        private void AnnouncePlacement()
+        {
+            var bindings=Bindings??new HotkeyBindings();
+            string controls=Active?bindings.MenuConfirmName+": place · "+bindings.MenuBackName+": cancel · Grip / Trigger: shrink / enlarge · Stick: height / rotate"
+                :"Left-click: place · Escape: cancel · Page Up / Down: height";
+            string message="Height "+Mathf.RoundToInt(manualHeight*100)+" cm · "+controls;
+            if(Session.Message!=message)Session.Announce(message);
+        }
         private void Update()
         {
             if(!Active||manager==null)return;
@@ -105,17 +127,28 @@ namespace Frontier.Runtime
                     var callbacks=new PermissionCallbacks();callbacks.PermissionGranted+=_=>LoadRoom();callbacks.PermissionDenied+=_=>Session.Announce("Room access unavailable. You can use the manual plane.");
                     Permission.RequestUserPermission(permission,callbacks);return;
                 }
-                await mruk.LoadSceneFromDevice(false);Session.Announce(mruk.GetCurrentRoom()!=null?"Surfaces available. Place the board.":"No room data found. Use Table or Floor.");
+                await mruk.LoadSceneFromDevice(false);Session.Announce(mruk.GetCurrentRoom()!=null?"Surfaces available. Place the board.":"No room data found. Adjust the height while placing the board.");
             }
             catch(Exception e){Debug.LogWarning(e);Session.Announce("Could not load room data. Use manual placement.");}
         }
-        public void CancelStartRequest()=>pendingStart=false;
-        public void RequestStartMatch()
+        public void CancelStartRequest(){pendingStart=false;pendingReplay=null;}
+        public void RequestStartMatch(){pendingReplay=null;ContinueStartRequest();}
+        public void RequestReplay(string id)
+        {
+            if(Session.Running){Session.Announce("Exit the current match or replay first.");return;}
+            pendingReplay=id;ContinueStartRequest();
+        }
+        private void CompleteStartRequest()
+        {
+            string replay=pendingReplay;pendingStart=false;pendingReplay=null;
+            if(replay!=null)Session.StartReplay(replay);else Session.StartMatch();
+        }
+        private void ContinueStartRequest()
         {
             if(restoring){pendingStart=true;Session.Announce("Restoring your saved board…");return;}
             if(restoredPlacement&&!Placing&&Camera!=null&&SavedBoardIsDistant(Board.transform.position-Camera.transform.position))checkingSavedBoard=true;
             if(checkingSavedBoard&&!Placing){pendingStart=true;Session.Announce("Checking your saved board position…");return;}
-            if(Board.Placed&&!Placing){pendingStart=false;Session.StartMatch();return;}
+            if(Board.Placed&&!Placing){CompleteStartRequest();return;}
             BeginPlacement();pendingStart=Placing;
         }
         public void BeginPlacement()
@@ -125,31 +158,35 @@ namespace Frontier.Runtime
             anchorGeneration++;
             placementParent=Board.transform.parent;placementPosition=Board.transform.position;placementRotation=Board.transform.rotation;
             placementWidth=Board.Width;wasPlaced=Board.Placed;
+            placementManualHeight=manualHeight;placementUseScene=useScene;
+            if(wasPlaced)manualHeight=Mathf.Clamp(Board.transform.position.y-.005f,0,1.5f);
             Placing=true;Board.Placed=false;Session.Pause("placement",true);Board.transform.SetParent(null,true);
-            var bindings=Bindings??new HotkeyBindings();
-            Session.Announce(bindings.Name(Active,"select")+": place · "+bindings.Name(Active,"back")+": cancel"+
-                (Active?" · "+bindings.HandName+" stick: size/rotate · "+bindings.Name(true,"add")+" + stick: height":""));
+            AnnouncePlacement();
         }
         public void CancelPlacement()
         {
             if(!Placing)return;
-            pendingStart=false;Placing=false;Board.transform.SetParent(placementParent,true);
+            CancelStartRequest();Placing=false;Board.transform.SetParent(placementParent,true);
             Board.transform.SetPositionAndRotation(placementPosition,placementRotation);Board.Width=placementWidth;Board.Placed=wasPlaced;
+            manualHeight=placementManualHeight;useScene=placementUseScene;
             Session.Pause("placement",false);Session.Announce(wasPlaced?"Previous board placement kept.":"Place the board before starting a match.");
         }
-        public void PlaceRay(Ray ray,float height,Vector2 sizeRotate,bool confirm)
+        public void PlaceRay(Ray ray,float height,Vector2 sizeRotate,bool confirm,float? deltaTime=null)
         {
-            if(!Placing)return;
-            manualHeight=Mathf.Clamp(manualHeight+height*Time.unscaledDeltaTime*.3f,0,1.5f);
-            Board.Width=Mathf.Clamp(Board.Width+sizeRotate.y*Time.unscaledDeltaTime*.5f,.6f,2);
-            Board.transform.Rotate(Vector3.up,sizeRotate.x*Time.unscaledDeltaTime*45,Space.World);
+            if(!Placing||Session.HasSystemPause)return;
+            float delta=Mathf.Clamp(deltaTime??Time.unscaledDeltaTime,0,.05f);
+            AdjustPlacementHeight(height*delta*.3f);
+            Board.Width=Mathf.Clamp(Board.Width+sizeRotate.y*delta*.5f,.6f,2);
+            Board.transform.Rotate(Vector3.up,sizeRotate.x*delta*45,Space.World);
             bool hit=false;Vector3 point=default;
             var room=mruk==null?null:mruk.GetCurrentRoom();
             if(useScene&&room!=null&&room.Raycast(ray,5,new LabelFilter(MRUKAnchor.SceneLabels.TABLE|MRUKAnchor.SceneLabels.FLOOR),out var surface,out _)&&Vector3.Dot(surface.normal,Vector3.up)>.9f){point=surface.point;hit=true;}
             if(!hit){var plane=new Plane(Vector3.up,new Vector3(0,manualHeight,0));if(plane.Raycast(ray,out float d)&&d<5){point=ray.GetPoint(d);hit=true;}}
             if(!hit)return;
+            manualHeight=point.y;
             Board.transform.position=point+Vector3.up*.005f;
-            if(confirm){restoredPlacement=checkingSavedBoard=savedPoseSample=false;Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");if(pendingStart){pendingStart=false;Session.StartMatch();}}
+            AnnouncePlacement();
+            if(confirm){restoredPlacement=checkingSavedBoard=savedPoseSample=false;Placing=false;Board.Placed=true;Session.Pause("placement",false);Session.Pause("tracking",false);SaveAnchor();Session.Announce("Board placed. You can start or resume the match.");if(pendingStart)CompleteStartRequest();}
         }
         public Ray PointerRay()
         {
@@ -194,7 +231,7 @@ namespace Frontier.Runtime
                 Board.Width=Mathf.Clamp(saved.width,.6f,2);BeginSavedBoardCheck();
             }
             catch(Exception e){Debug.LogWarning(e);}
-            finally{restoring=false;if(pendingStart&&this!=null)RequestStartMatch();}
+            finally{restoring=false;if(pendingStart&&this!=null)ContinueStartRequest();}
         }
         private void BeginSavedBoardCheck()
         {
@@ -226,7 +263,7 @@ namespace Frontier.Runtime
             }
             else if(checkingSavedBoard)
             {checkingSavedBoard=false;Board.Placed=true;Session.Announce("Previous board placement restored.");}
-            if(pendingStart)RequestStartMatch();
+            if(pendingStart)ContinueStartRequest();
         }
         private async void EraseForgottenAnchor(OVRSpatialAnchor previous)
         {

@@ -6,7 +6,7 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private enum SettingsTab { Controls, Audio, PlaySpace }
+        private enum SettingsTab { Controls, Audio, Visuals, PlaySpace }
         private SettingsTab settingsTab;
         private string MenuOrigin=>Session.Running?"PAUSE":"MAIN MENU";
         private static readonly Color MenuMuted=new Color(.69f,.8f,.85f);
@@ -37,9 +37,12 @@ namespace Frontier.Runtime
             {
                 case MenuPage.Main:
                     MenuCard("New Match","Choose your faction and battlefield. Play a local skirmish against the AI.",Vector2.zero,new Vector2(1040,124),()=>Show(MenuPage.MatchSetup),true);
-                    MenuCard("Guides","Controls, units and structures. Everything you need to plan your next move.",new Vector2(0,-142),new Vector2(512,154),()=>OpenSubmenu(MenuPage.Guides));
-                    MenuCard("Settings","Controls, audio and play space. Your preferences, together in one place.",new Vector2(528,-142),new Vector2(512,154),()=>OpenSubmenu(MenuPage.Settings));
+                    MenuCard("Guides","Controls, units and structures. Everything you need to plan your next move.",new Vector2(0,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
+                    MenuCard("Settings","Controls, audio, visuals and play space. Your preferences in one place.",new Vector2(528,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+                    MenuCard("Match history","Watch replays and review saved reports, graphs and build orders.",new Vector2(0,-274),new Vector2(1040,108),OpenHistory);
                     return true;
+                case MenuPage.History:BuildHistory();return true;
+                case MenuPage.Replay:BuildReplayPanel();return true;
                 case MenuPage.MatchSetup:
                     MenuCard("Faction: "+ShortFaction(Session.Faction),"Your army · Select to switch faction.",Vector2.zero,new Vector2(512,108),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                     MenuCard("Opponent: "+ShortFaction(Session.EnemyFaction),"Enemy army · Select to switch faction.",new Vector2(528,0),new Vector2(512,108),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
@@ -52,7 +55,7 @@ namespace Frontier.Runtime
                 case MenuPage.Pause:
                     MenuCard("Resume match","Return to the battlefield.",Vector2.zero,new Vector2(1040,100),()=>Show(MenuPage.Actions),true);
                     MenuCard("Guides","Controls and the unit / structure reference.",new Vector2(0,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
-                    MenuCard("Settings","Controls, audio and play space.",new Vector2(528,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+                    MenuCard("Settings","Controls, audio, visuals and play space.",new Vector2(528,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
                     MenuFooter("Return to main menu",()=>Show(MenuPage.LeaveConfirmation),0,512);
                     return true;
                 case MenuPage.Guides:
@@ -66,9 +69,8 @@ namespace Frontier.Runtime
                     MenuCard("Keep playing","Resume your current match.",Vector2.zero,new Vector2(512,140),()=>Show(MenuPage.Actions),true);
                     MenuCard("Leave match","End this match and return to the main menu.",new Vector2(528,0),new Vector2(512,140),()=>Session.LeaveMatch());
                     MenuFooter("Back",Back);return true;
-                case MenuPage.Result:
-                    MenuCard("Rematch","Start again with the same factions, difficulty and battlefield.",Vector2.zero,new Vector2(512,154),Quest.RequestStartMatch,true);
-                    MenuCard("Main menu","Choose another match, review the guides or adjust settings.",new Vector2(528,0),new Vector2(512,154),()=>Session.LeaveMatch());
+                case MenuPage.Result:case MenuPage.HistoryReport:
+                    BuildMatchReport();
                     return true;
                 default:return false;
             }
@@ -76,13 +78,13 @@ namespace Frontier.Runtime
 
         private void BuildSettingsPage()
         {
-            var names=new[]{"Controls","Audio","Play space"};
+            var names=new[]{"Controls","Audio","Visuals","Play space"};
             for(int i=0;i<names.Length;i++)
             {
                 var tab=(SettingsTab)i;bool active=settingsTab==tab;
-                var rect=Section(actions,names[i],new Vector2(i*352,0),new Vector2(336,48),active?new Color(.075f,.27f,.3f):button);
-                Label(rect,names[i],Vector2.zero,new Vector2(336,48),21,active?accent:Color.white,TextAnchor.MiddleCenter);
-                if(active)Section(rect,"Selected",new Vector2(0,-45),new Vector2(336,3),accent);
+                var rect=Section(actions,names[i],new Vector2(i*264,0),new Vector2(248,48),active?new Color(.075f,.27f,.3f):button);
+                Label(rect,names[i],Vector2.zero,new Vector2(248,48),21,active?accent:Color.white,TextAnchor.MiddleCenter);
+                if(active)Section(rect,"Selected",new Vector2(0,-45),new Vector2(248,3),accent);
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
@@ -96,12 +98,31 @@ namespace Frontier.Runtime
                 MenuCard("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%","Background soundtrack · Select to change volume.",new Vector2(0,-70),new Vector2(512,130),()=>{AudioFeedback.CycleMusicVolume();Rebuild();});
                 MenuCard("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%","Orders, combat and interface sounds · Select to change volume.",new Vector2(528,-70),new Vector2(512,130),()=>{AudioFeedback.CycleEffectsVolume();Rebuild();});
             }
+            else if(settingsTab==SettingsTab.Visuals)
+            {
+                int density=Mathf.RoundToInt(Board.FogDensity*100);
+                Label(actions,"Fog density: "+density+"%"+(density==0?" (Off)":""),new Vector2(22,-82),new Vector2(996,36),26,Color.white);
+                Label(actions,"Visual mist over unseen terrain. Unseen enemies stay hidden.",new Vector2(22,-130),new Vector2(996,50),18,MenuMuted);
+                for(int i=0;i<=4;i++)
+                {
+                    int percent=i*25;bool active=density==percent;
+                    string title=percent==0?"0% (Off)":percent+"%";
+                    var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-194),new Vector2(196,72),active?new Color(.075f,.27f,.3f):button);
+                    Label(rect,title,Vector2.zero,new Vector2(196,72),23,active?accent:Color.white,TextAnchor.MiddleCenter);
+                    if(active)Section(rect,"Selected",new Vector2(0,-68),new Vector2(196,4),accent);
+                    targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
+                }
+                Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-284),new Vector2(996,30),18,MenuMuted);
+            }
             else
             {
-                MenuCard("Reposition board","Place, rotate and resize your battlefield.",new Vector2(0,-70),new Vector2(512,108),()=>PlaceRequested?.Invoke());
+                MenuCard("Reposition board","Place your battlefield and adjust its height as you aim.",new Vector2(0,-70),new Vector2(512,108),()=>PlaceRequested?.Invoke());
                 MenuCard("Detect surfaces","Refresh detected room surfaces for placement.",new Vector2(528,-70),new Vector2(512,108),()=>Quest.LoadRoom());
-                MenuCard("Table / height 75 cm","Place at a comfortable tabletop height.",new Vector2(0,-194),new Vector2(512,108),()=>{Quest.SetManualHeight(.75f);PlaceRequested?.Invoke();});
-                MenuCard("Floor / height 0","Place the battlefield at floor height.",new Vector2(528,-194),new Vector2(512,108),()=>{Quest.SetManualHeight(0);PlaceRequested?.Invoke();});
+                Label(actions,"Adjust while placing",new Vector2(22,-204),new Vector2(996,34),24,Color.white);
+                Label(actions,Quest.Active
+                    ?"Grip: shrink · Trigger: enlarge · "+Bindings.MenuConfirmName+": confirm · "+Bindings.MenuBackName+": cancel\nStick ↑↓: height · ←→: rotate · Stick click: show / hide hints"
+                    :"Page Up / Page Down: raise / lower · Left-click: confirm · Escape: cancel\nTap for a small height change, or hold to keep adjusting.",
+                    new Vector2(22,-248),new Vector2(996,64),18,MenuMuted);
             }
             MenuFooter("Back",Back);
         }

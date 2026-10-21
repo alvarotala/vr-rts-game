@@ -162,7 +162,10 @@ namespace Frontier.Editor
                     UnifiedWheelFixture.Call(f.Input, "OnApplicationFocus", true); f.Frame(Vector2.up);
                     f.Check(!f.Wheel.IsOpen, "Focus recovery requires a fresh neutral-to-direction gesture"); f.Drain();
                     f.OpenRoot(); f.Quest.BeginPlacement(); f.Frame(Vector2.right);
-                    f.Check(!f.Wheel.IsOpen && !f.Wheel.HintVisible, "Board placement dismisses wheel and compact hint");
+                    // This fixture drives only RouteWheel; the production placement
+                    // router refreshes the separate placement hints after closing it.
+                    f.Wheel.TickHint(f.Ray,true);
+                    f.Check(!f.Wheel.IsOpen && f.Wheel.HintVisible, "Board placement dismisses the wheel and shows placement callouts");
                     f.Quest.CancelPlacement(); f.Frame(Vector2.right);
                     f.Check(!f.Wheel.IsOpen, "Ending placement with a held stick cannot open the wheel"); f.Drain();
                     f.OpenRoot(); typeof(CommandPanel).GetField("moving", UnifiedWheelFixture.Private).SetValue(f.Panel, true); f.Frame(Vector2.right);
@@ -461,7 +464,7 @@ namespace Frontier.Editor
             Session.Match.Entities.Add(id, entity); if (type.building) Session.Match.Map.Occupy(position, type.footprint, id); Refresh(); return entity;
         }
         internal void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; Debug.Log("WHEEL_PASS: " + message); }
-        internal void Capture(string name, string rootField = "root")
+        internal void Capture(string name, string rootField = "root",int renderWidth=900,int renderHeight=1050)
         {
             // Check fixed labels at their configured font size, and best-fit labels at
             // their readable minimum. Compare actual generated glyphs as well as height.
@@ -489,7 +492,7 @@ namespace Frontier.Editor
                 // canvases aligned when the flat preview normalizes the wheel transform.
                 if (confirmation != null && rootField == "root")
                 { confirmation.localPosition = Vector3.zero; confirmation.localRotation = Quaternion.identity; confirmation.localScale = Vector3.one * .001f; }
-                HarvestingPreview.SaveCanvas(rootField == "confirmationRoot" ? view : Wheel.transform, view, output + "/" + name + ".png", preview, 900, 1050); captures++;
+                HarvestingPreview.SaveCanvas(rootField == "confirmationRoot" ? view : Wheel.transform, view, output + "/" + name + ".png", preview, renderWidth, renderHeight); captures++;
             }
             finally
             {

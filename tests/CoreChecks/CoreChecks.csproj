@@ -15,4 +15,6 @@
   <ItemGroup><Compile Include="DeathEventChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="ConstructionClearanceChecks.cs"/></ItemGroup>
   <ItemGroup><Compile Include="DesertMapChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="MatchReportChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="MatchRecordingChecks.cs"/></ItemGroup>
 </Project>

@@ -41,6 +41,28 @@ static class DesertMapChecks
             "Desert: paired sandstone decoration stays on blocked terrain");
         var ramps=map.terrain.Where(t=>t.ramp).ToArray();
         check(ramps.Length==20&&ramps.All(r=>(r.rampAxis=="x"?r.height:r.width)>=12),"Desert: twenty ramps provide broad twelve-cell army entrances");
+        // A broad ramp is not useful if it empties into a thin trench. Leave an
+        // eight-cell-deep, flat approach across the whole mouth of every ramp.
+        foreach(var ramp in ramps)
+        {
+            bool xAxis=ramp.rampAxis=="x",clear=true;
+            int depth=xAxis?ramp.width:ramp.height,span=xAxis?ramp.height:ramp.width;
+            for(int step=0;step<8;step++)for(int across=0;across<span;across++)
+            {
+                int along=ramp.rampDirection>0?-step-1:depth+step;
+                int x=ramp.x+(xAxis?along:across),y=ramp.y+(xAxis?across:along);
+                clear&=FlatLowCell(x,y);
+            }
+            check(clear,"Desert: full-width eight-cell low landing at ramp "+ramp.x+","+ramp.y);
+        }
+        // The central mesa used to overlap these shelves at two-cell corners,
+        // closing the low route into awkward pockets beside the inner ramps.
+        foreach(var corner in new[]{(x:88,y:60),(x:60,y:92)})
+        {
+            bool clear=true;
+            for(int y=corner.y;y<corner.y+8;y++)for(int x=corner.x;x<corner.x+12;x++)clear&=FlatLowCell(x,y);
+            check(clear,"Desert: broad low passage separates the central mesa and expansion at "+corner.x+","+corner.y);
+        }
         check(grid.Elevation.Count(e=>e>0)>3000&&map.terrain.Count(t=>!t.walkable)>=17,"Desert: distinct mesas and rock outcrops add substantial relief");
 
         // Occupy every intended HQ and extractor pad, then verify that the
@@ -65,6 +87,13 @@ static class DesertMapChecks
         StartingParity(catalog,map,check);
         Construction(catalog,map,check);
         Movement(catalog,map,check);
+
+        bool FlatLowCell(int x,int y)
+        {
+            if(!grid.Inside(x,y))return false;
+            int cell=grid.Index(x,y);
+            return grid.Walkable[cell]&&!grid.Ramp[cell]&&grid.SurfaceLevel[cell]==0;
+        }
     }
 
     private static bool Inside(ResourceDefinition resource,Point origin,int size)

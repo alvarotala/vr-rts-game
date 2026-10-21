@@ -9,6 +9,7 @@ namespace Frontier.Core
         private readonly List<(AbilityEvent effect, Point origin, int observers, int[] ids)> recentAbilities = new List<(AbilityEvent, Point, int, int[])>();
         // Event IDs must not disclose intervening spells outside the observer's vision.
         private readonly int[] nextAbilityIds = { 1, 1 };
+        private int nextObserverAbilityId;
         private static AbilityEvent ObservedAbility(AbilityEvent effect, int id) { effect.id=id; return effect; }
 
         private bool HasAbility(EntityState caster, AbilityDefinition ability) => caster.health > 0 && caster.complete
@@ -101,7 +102,7 @@ namespace Frontier.Core
             for (int player=0; player<2; player++) if (Visible(player,origin) && Visible(player,caster.castPoint)) observers |= 1 << player;
             var ids = new int[2];
             for(int player=0;player<2;player++)if((observers & (1<<player))!=0)ids[player]=nextAbilityIds[player]++;
-            recentAbilities.Add((new AbilityEvent { tick=Tick,caster=caster.id,owner=caster.owner,
+            recentAbilities.Add((new AbilityEvent { id=++nextObserverAbilityId,tick=Tick,caster=caster.id,owner=caster.owner,
                 ability=ability.id,position=caster.castPoint },origin,observers,ids));
             FinishCast(caster);
         }

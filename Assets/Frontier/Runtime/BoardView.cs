@@ -16,6 +16,8 @@ namespace Frontier.Runtime
         public bool Placed;
         public const string BaseTargetingKey="frontier.input.base-targeting.v1";
         public bool BaseTargeting { get; private set; }
+        public const string FogDensityKey="frontier.visuals.fog-density.v1";
+        public float FogDensity { get; private set; } = 1;
         public int Hovered;
         public int HoveredResource;
         public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
@@ -85,6 +87,7 @@ namespace Frontier.Runtime
         private void Start()
         {
             BaseTargeting=PlayerPrefs.GetInt(BaseTargetingKey,0)!=0;
+            FogDensity=ClampFogDensity(PlayerPrefs.GetFloat(FogDensityKey,1));
             hoverProperties=new MaterialPropertyBlock();
             impactProperties=new MaterialPropertyBlock();
             impactProperties.SetFloat("_Ring",1);
@@ -102,12 +105,12 @@ namespace Frontier.Runtime
             constructionMaterials=new[]{Material(new Color(.52f,.52f,.52f)),Material(new Color(.19f,.19f,.19f)),Material(new Color(.78f,.78f,.78f))};
             foreach(var material in constructionMaterials)material.SetFloat("_Desaturate",1);
             neutral.SetFloat("_Desaturate",1);
-            Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Session.UnitMoveOrdered += FaceMoveOrder; Rebuild();
+            Session.ReplayReset += ResetReplayPresentation; Session.NewMatch += Rebuild; Session.MatchClosed += Rebuild; Session.UnitMoveOrdered += FaceMoveOrder; Rebuild();
         }
         private void OnDestroy()
         {
             foreach(var visual in parts.Values)visual.soldier?.Dispose();
-            if(Session!=null){Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;Session.UnitMoveOrdered-=FaceMoveOrder;}
+            if(Session!=null){Session.ReplayReset-=ResetReplayPresentation;Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;Session.UnitMoveOrdered-=FaceMoveOrder;}
             unitVisuals.Dispose();
             buildingVisuals.Dispose();
             resourceVisuals.Dispose();
@@ -203,6 +206,20 @@ namespace Frontier.Runtime
             fogVisuals.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
+        private void ResetReplayPresentation()
+        {
+            // Time jumps invalidate motion/effect history, but the terrain, board pose and
+            // spectator's pan/zoom stay unchanged. Reuse the existing entity visual pools.
+            if(Content==null)return;
+            foreach(var pair in entities)
+            {pair.Value.gameObject.SetActive(false);pools[entityTypes[pair.Key]].Push(pair.Value);}
+            foreach(var visual in parts.Keys)visual.localRotation=Quaternion.identity;
+            entities.Clear();entityTypes.Clear();pendingMoveFacing.Clear();observedEntities.Clear();firing.Clear();
+            weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();orderQueueVisuals?.Hide();
+            workerVisuals?.Dispose();workerVisuals=new WorkerVisuals(Content);
+            creepVisuals?.Dispose();creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
+            Hovered=0;Pointer=null;DrawSelection(default,default,false);fogTick=-1;UpdateFog();
+        }
         private void FaceMoveOrder(int id,Point destination) => pendingMoveFacing[id]=destination;
         public void SetVisible(bool visible)
         {
@@ -581,6 +598,13 @@ namespace Frontier.Runtime
             PlayerPrefs.SetInt(BaseTargetingKey,enabled?1:0);PlayerPrefs.Save();
             Hovered=0;Pointer=null;
         }
+        public void SetFogDensity(float density)
+        {
+            FogDensity=ClampFogDensity(density);
+            PlayerPrefs.SetFloat(FogDensityKey,FogDensity);PlayerPrefs.Save();
+            fogVisuals?.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
+        }
+        private static float ClampFogDensity(float density) => float.IsNaN(density)||float.IsInfinity(density)?1:Mathf.Clamp01(density);
         private void ResolveBaseTarget(Point point,out int entityId,out int resourceId)
         {
             entityId=0;resourceId=0;

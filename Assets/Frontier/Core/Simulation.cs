@@ -51,6 +51,7 @@ namespace Frontier.Core
             }
             UpdateVision();
             foreach (var worker in Entities.Values.Where(e => Type(e).role == "worker").OrderBy(e => e.id)) ResumeGather(worker);
+            SampleMatch();
         }
         public Archetype Type(EntityState entity) => Catalog[entity.definition];
         public Point Center(EntityState entity)
@@ -66,14 +67,14 @@ namespace Frontier.Core
         public bool Explored(int player, Point position) { int cell = Map.Cell(position); return cell >= 0 && vision[player][cell] > 0; }
         public bool CanAfford(int player, int minerals, int catalyst) => Players[player].minerals >= minerals && Players[player].catalyst >= catalyst;
 
-        public CommandResult Submit(GameCommand command)
+        private CommandResult SubmitCommand(GameCommand command)
         {
             if (command == null || command.player < 0 || command.player > 1) return Reject("Invalid player.");
             if (command.replacePendingSequence < 0) return Reject("Invalid action sequence.");
             if (Winner != -1 || Paused) return Reject("The match is not active.");
             if (command.sequence > 0 && command.sequence <= lastSequences[command.player]) return Reject("Duplicate command.");
             if (command.sequence > 0) lastSequences[command.player] = command.sequence;
-            if (command.kind == CommandKind.Surrender) { Winner = 1 - command.player; return Accept(); }
+            if (command.kind == CommandKind.Surrender) { Winner = 1 - command.player; SampleMatch(true); return Accept(); }
             if (command.entities == null || command.entities.Length == 0 || command.entities.Length > UnitLimit) return Reject("Select a unit or building.");
             var selected = new List<EntityState>();
             foreach (int id in command.entities.Distinct())
@@ -81,9 +82,10 @@ namespace Frontier.Core
                 if (!Entities.TryGetValue(id, out var entity) || entity.owner != command.player) return Reject("You do not own the selected units or buildings.");
                 selected.Add(entity);
             }
-            if (IsUnitAction(command.kind) && (command.append || command.replacePendingSequence > 0))
-                return QueueCommand(command, selected);
-            return ExecuteCommand(command, selected, false);
+            var result = IsUnitAction(command.kind) && (command.append || command.replacePendingSequence > 0)
+                ? QueueCommand(command, selected) : ExecuteCommand(command, selected, false);
+            if (result.accepted) RecordCommand(command.player);
+            return result;
         }
         private CommandResult ExecuteCommand(GameCommand command, List<EntityState> selected, bool preserveQueue)
         {
@@ -145,6 +147,7 @@ namespace Frontier.Core
             if (clearance == null) return Reject("Your units need room to leave the construction area.");
             Pay(player, type.minerals, type.catalyst);
             var building = Spawn(player, type.id, position, clearance.Count == 0); building.complete = false; building.remaining = type.duration; building.health = type.health * .15f;
+            RecordBuildOrder(player, building.id, type.id, CommandKind.Build);
             ResetTravel(worker);worker.order = CommandKind.Build; worker.target = building.id;
             if (clearance.Count > 0)
             {
@@ -205,6 +208,7 @@ namespace Frontier.Core
                 if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");
                 Pay(player, upgrade.minerals, upgrade.catalyst);
                 producer.queue.Add(new ProductionOrder { id = nextProductionOrderIds[player]++, definition = upgrade.id, research = true, remaining = upgrade.duration, total = upgrade.duration });
+                RecordBuildOrder(player, producer.queue[producer.queue.Count-1].id, upgrade.id, CommandKind.Research);
             }
             else
             {
@@ -218,6 +222,7 @@ namespace Frontier.Core
                 if (!CanAfford(player, type.minerals, type.catalyst)) return Reject("Not enough resources.");
                 Pay(player, type.minerals, type.catalyst);
                 producer.queue.Add(new ProductionOrder { id = nextProductionOrderIds[player]++, definition = type.id, remaining = type.duration, total = type.duration });
+                RecordBuildOrder(player, producer.queue[producer.queue.Count-1].id, type.id, CommandKind.Train);
             }
             return Accept();
         }
@@ -227,12 +232,14 @@ namespace Frontier.Core
             if (!entity.complete)
             {
                 if (queueOrderId != 0) return Reject("Production order no longer available.");
+                FinishBuildOrder(entity.owner, entity.id, true, BuildOrderStatus.Cancelled);
                 var type = Type(entity); Pay(entity.owner, -(int)(type.minerals * .75f), -(int)(type.catalyst * .75f)); Remove(entity); return Accept();
             }
             if (entity.queue.Count == 0) return Reject("Nothing in the queue to cancel.");
             int index = queueOrderId == 0 ? entity.queue.Count - 1 : entity.queue.FindIndex(q => q.id == queueOrderId);
             if (index < 0) return Reject("Production order no longer available.");
             var order = entity.queue[index]; entity.queue.RemoveAt(index);
+            FinishBuildOrder(entity.owner, order.id, false, BuildOrderStatus.Cancelled);
             if (order.research) { var u = Catalog.Upgrade(order.definition); Pay(entity.owner, -u.minerals, -u.catalyst); }
             else { var t = Catalog[order.definition]; Pay(entity.owner, -t.minerals, -t.catalyst); }
             return Accept();
@@ -286,6 +293,7 @@ namespace Frontier.Core
             if (Tick % 4 == 0) UpdateVision();
             bool a = Buildings(0) > 0, b = Buildings(1) > 0;
             if (!a || !b) Winner = !a && !b ? 2 : a ? 0 : 1;
+            SampleMatch(Winner != -1);
         }
         private EntityState Spawn(int player, string definition, Point position, bool occupy = true)
         {
@@ -305,7 +313,13 @@ namespace Frontier.Core
             }
             Entities.Remove(e.id);
         }
-        private void Pay(int player, int minerals, int catalyst) { Players[player].minerals -= minerals; Players[player].catalyst -= catalyst; }
+        private void Pay(int player, int minerals, int catalyst)
+        {
+            Players[player].minerals -= minerals; Players[player].catalyst -= catalyst;
+            var c=matchCounters[player];
+            c.mineralsSpent+=Math.Max(0,minerals); c.catalystSpent+=Math.Max(0,catalyst);
+            c.mineralsRefunded+=Math.Max(0,-minerals); c.catalystRefunded+=Math.Max(0,-catalyst);
+        }
         private static bool Finite(Point p) => !float.IsNaN(p.x) && !float.IsNaN(p.y) && !float.IsInfinity(p.x) && !float.IsInfinity(p.y);
         private static bool InsideFootprint(Point p, Point origin, int size) => p.x >= origin.x && p.x < origin.x + size && p.y >= origin.y && p.y < origin.y + size;
         private static bool OverlapsFootprint(Point p,float radius,Point origin,int size)

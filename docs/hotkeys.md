@@ -1,6 +1,6 @@
 # Hotkeys predeterminados
 
-Referencia de los valores predeterminados. **Main menu → Hotkeys**, **New Match → Hotkeys** y **Pause → Hotkeys** abren el editor de asignaciones. Las seis categorías de consulta y la guía de pausa muestran los controles actuales, incluidos los cambios guardados. Hay 47 entradas de referencia por dispositivo entre gestos, acciones de menú y aclaraciones. Build, Train, Research, Stop y Hold se eligen desde el panel o la rueda; no tienen una tecla individual asignada.
+Referencia de los valores predeterminados. **Settings → Controls → Hotkeys**, desde inicio o pausa, abre el editor de asignaciones. Las seis categorías de consulta y la guía muestran los controles actuales, incluidos los cambios guardados. Las entradas cubren gestos, acciones de menú y aclaraciones. Build, Train, Research, Stop y Hold se eligen desde el panel o la rueda; no tienen una tecla individual asignada.
 
 **Edit bindings → Change** permite capturar una tecla o botón. Los cambios se guardan localmente; **Swap bindings** confirma un intercambio si la entrada está ocupada. **Restore device defaults** restaura solo el perfil elegido, después de confirmar. Los perfiles de Quest Touch y mouse/teclado son independientes. **Settings → Hand: Left/Right** elige el único mando de Quest que controla el juego. Hotkeys muestra solamente ese mando, o mouse/teclado en desktop; no permite capturar entradas de la mano inactiva. Cambiar la mano conserva las funciones configuradas y se guarda localmente.
 
@@ -11,6 +11,8 @@ Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando
 Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
 
 La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X/Y y se usa el stick izquierdo. Se genera desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`.
+
+La colocación del tablero usa controles fijos: **grip achica**, **gatillo agranda**, **stick arriba/abajo sube/baja la altura**, **A/X confirma** y **B/Y cancela**. Mantener continúa el ajuste; stick izquierda/derecha gira el tablero. El mando muestra hints de colocación y el clic físico del stick los alterna. En desktop, **Page Up/Page Down** ajusta altura, **clic izquierdo** confirma y **Escape** cancela.
 
 ## Quest 3 - right Touch controller
 
@@ -85,11 +87,11 @@ La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X
 | Move the menu | Hold Trigger / A on MOVE MENU + drag | Place the menu wherever it is comfortable. This does not move the battlefield. |
 | Adjust menu distance | Right stick up / down while dragging menu | Bring the grabbed menu closer or move it farther away. |
 | Recover the menu | Reset position button | Before a match: bring the menu in front of you. During a match: reset above the board. |
-| Reposition the board | Settings > Reposition board | Enter placement. The confirmed battlefield stays fixed while you walk around it. |
-| Place the board | Point at a surface + Trigger | Confirm the board position. Table / Floor and Detect surfaces provide placement options. |
-| Placement size / rotation | Right stick while placing | Up / down changes size; left / right rotates. These axes do not navigate the map during play. |
-| Placement height | Grip + right stick up / down | Adjust the board's height during placement. The other controller is unused. |
-| Cancel board placement | B while placing | Restore the previously confirmed board position and size. |
+| Reposition the board | Settings > Play space > Reposition board | Enter placement. The confirmed battlefield stays fixed while you walk around it. |
+| Place the board | Point at a surface + A | A confirms. The controller shows placement hints; Stick click hides or shows them. |
+| Placement size / rotation | Grip / Trigger · Right stick left / right | Hold Grip to shrink or Trigger to enlarge. Stick left / right rotates. These controls only adjust the board during placement. |
+| Placement height | Right stick up / down while placing | Up raises the board; down lowers it. Hold to keep adjusting, with or without detected room surfaces. |
+| Cancel board placement | B while placing | Restore the previously confirmed board position, height and size. |
 
 ## Desktop - mouse and keyboard
 
@@ -167,5 +169,6 @@ La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X
 | Recover the menu | M / Reset position | Return the menu above the board. |
 | Move the menu | Drag MOVE MENU with left mouse button | Move the console without changing the board position. |
 | Adjust menu distance | Mouse wheel while dragging menu | Bring the grabbed console closer or move it farther away. |
-| Place or reposition the board | Settings / New Match > Place board | Point and use Left mouse to confirm. Table / Floor set the manual height. |
-| Cancel board placement | Escape / Space while placing | Restore the previous board position and size. |
+| Place or reposition the board | Settings > Play space > Reposition board | Point and left-click to confirm. Adjust height directly during placement. |
+| Placement height | Page Up raise / Page Down lower | Tap for 2.5 cm; hold to keep adjusting while placing the board. |
+| Cancel board placement | Escape while placing | Restore the previous board position, height and size. |

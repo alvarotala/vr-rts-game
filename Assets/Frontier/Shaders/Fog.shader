@@ -6,6 +6,7 @@ Shader "Frontier/Fog"
         _MapSize("Map dimensions", Vector) = (128,128,0,0)
         _FogColor("Mist tint", Color) = (.22,.29,.34,1)
         _FogTime("Animation time", Float) = 0
+        _FogDensity("Mist density", Range(0,1)) = 1
     }
     SubShader
     {
@@ -25,7 +26,7 @@ Shader "Frontier/Fog"
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float2 map:TEXCOORD1; float layer:TEXCOORD2; half opacity:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
             CBUFFER_START(UnityPerMaterial)
-            float4 _MapSize; half4 _FogColor; float _FogTime;
+            float4 _MapSize; half4 _FogColor; float _FogTime; half _FogDensity;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
 
@@ -77,7 +78,7 @@ Shader "Frontier/Fog"
                 float small = Noise(input.map * .61 - drift * 1.4 + input.layer * 13.7);
                 half billow = smoothstep(.08, .9, large * .72 + small * .28);
                 half density = lerp(1, .42, explored);
-                half alpha = input.opacity * density * lerp(.68, 1, billow) * edge;
+                half alpha = input.opacity * density * lerp(.68, 1, billow) * edge * _FogDensity;
                 half3 color = _FogColor.rgb * lerp(.76, 1.18, billow) * (1 + input.layer * .045);
                 return half4(color, alpha);
             }

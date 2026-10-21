@@ -18,6 +18,7 @@ namespace Frontier.Runtime
         private Mesh mesh;
         private Material material;
         private static readonly int TimeProperty = Shader.PropertyToID("_FogTime");
+        private static readonly int DensityProperty = Shader.PropertyToID("_FogDensity");
 
         public FogVisuals(BoardView board, Texture2D visibility, Color? tint = null)
         {
@@ -85,7 +86,8 @@ namespace Frontier.Runtime
         public void Update(bool visible, float time)
         {
             if (Root == null) return;
-            bool active = visible && board.Session.Running && board.Session.View != null && board.Content.gameObject.activeInHierarchy;
+            material.SetFloat(DensityProperty, board.FogDensity);
+            bool active = visible && board.FogDensity > 0 && board.Session.Running && board.Session.View != null && board.Content.gameObject.activeInHierarchy;
             Root.gameObject.SetActive(active);
             if (active) material.SetFloat(TimeProperty, time);
         }

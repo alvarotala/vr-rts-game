@@ -910,3 +910,87 @@ MatchSetup agrega **Position board** junto a **START MATCH**, disponible tanto s
 
 - `StartupMenuPreview.Run`: salida 0 en `TestResults/unity-new-match-board-placement.log`; **51 comprobaciones de posición y 4 vistas**, **25 de tablero guardado**, **342 de menús y 52 paneles**, y **57 de comodidad/audio**. Los casos nuevos verifican acceso directo, cancelación sin tablero previo, confirmación sin iniciar partida y reajuste cancelado que conserva posición y tamaño.
 - Inspeccionada `TestResults/Menus/05-direct-board-placement.png`: Back, Position board y START MATCH comparten una fila sin solapamientos. Registro final sin errores de compilación, excepciones ni errores de shader; `git diff --check` aprobado. Validación en Editor con poses sintéticas, sin nuevo APK ni prueba física en Quest.
+
+## Informe de partida, gráficas y build order — 20 de octubre de 2026
+
+El resultado abre Overview, Graphs y Build order. Se registran ambos bandos durante la simulación y se publica una copia inmutable al terminar. El informe compara economía, población, producción, bajas, APM y ráfagas; separa recursos entregados, gastos y devoluciones. La historia de construcción/producción/investigación conserva tiempos y resultados, con paginación independiente por jugador. Las estadísticas rivales no entran en PlayerView durante la partida.
+
+- `bash scripts/check-core.sh --match-report-only`: **56 comprobaciones aprobadas**, registro `TestResults/match-report-core.log`. Comprueba ambas facciones, agrupación/rechazo/duplicados/colas para APM, pausas, entrega y pérdida de carga, devoluciones, producción completada/cancelada, pérdida del productor, investigación, picos, resultado natural/rendición, tiempo cero y separación de partidas.
+- `bash scripts/check-core.sh`: **2069 comprobaciones aprobadas**, salida 0 en `TestResults/match-report-regression.log`.
+- `MatchReportPreview.Run`: **849 comprobaciones y 13 paneles**, salida 0 en `TestResults/unity-match-report.log`. Dos estrategas generan seis minutos de historia; se prueban las siete gráficas, sus mallas finitas, todas las páginas de ambos jugadores, navegación real por rayos, revancha, orden vacío y duración cero. Texto y contenido sin recortes ni solapamiento con el pie.
+- `MenuFlowPreview.Render`: **342 comprobaciones y 52 paneles**, salida 0 en `TestResults/unity-report-menu-regression.log`; conserva los flujos existentes de inicio, pausa, resultado, revancha y menú principal.
+- Inspeccionadas `TestResults/Reports/01-overview.png`, `02-graph-army.png`, `02-graph-apm.png` y `03-build-ai.png`. Series distinguibles por color y trazo; tiempos, estado y población de cada orden legibles.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.13**. Registros finales sin excepciones ni errores de compilación; `git diff --check` aprobado. Validación en Editor, sin nuevo APK ni prueba física en Quest. El informe no se persiste entre sesiones.
+
+## Historial persistente y base de replays — 20 de octubre de 2026
+
+Match history permite volver a abrir informes desde el menú principal. Se guardan archivos locales por ID de partida con fecha, resultado, mapa, facciones, dificultad, informe completo, reglas originales y tramos ordenados de comandos. Las partidas abandonadas conservan su informe; las interrumpidas conservan el último tramo confirmado. Hay detección de formatos/reglas incompatibles y de datos dañados. Un fallo de escritura se muestra con Retry save. No se incluye aún un reproductor visual.
+
+- `bash scripts/check-core.sh --recording-only`: **12 comprobaciones aprobadas**, registro `TestResults/match-recording-core.log`. Copias independientes de comandos, rechazos que consumen secuencias, exclusión de pausas, DTOs/versionado y reconstrucción exacta de una partida de seis minutos con sus estadísticas.
+- `bash scripts/check-core.sh`: **2081 comprobaciones aprobadas**, salida 0 en `TestResults/match-history-regression.log`.
+- `MatchHistoryPreview.Run`: **240 comprobaciones y 7 paneles**, salida 0 en `TestResults/unity-match-history.log`. Escritura real en directorio temporal aislado; un nuevo lector recupera todas las estadísticas. Se reconstruyen desde disco todos los comandos, cada checkpoint y el estado/informe finales sin ejecutar el AI. Se comprueban incompatibilidades, IDs únicos, revancha, abandono desde pausa, interrupciones, aislamiento de archivos corruptos, paginación y navegación sin iniciar una partida.
+- La misma prueba provoca un fallo de almacenamiento de forma intencional, verifica el aviso y Retry save y confirma que el registro original se guarda cuando el destino vuelve a estar disponible. La advertencia de almacenamiento de ese registro es esperada; el proceso termina correctamente.
+- `MenuFlowPreview.Render`: **342 comprobaciones y 52 paneles**, salida 0 en `TestResults/unity-history-menu-regression.log`. Flujos existentes de inicio, guías, settings, pausa, resultado y revancha conservados.
+- Inspeccionadas `TestResults/History/01-main.png`, `03-history.png` y `05-saved-overview.png`: acceso desde inicio, lista paginada legible y estadísticas históricas completas. Unity **6000.3.26f1**, CLI **1.0.0-beta.13**. Sin nuevo APK ni prueba física en Quest; no se afirma determinismo entre plataformas/builds distintos. Contrato de compatibilidad y limitaciones en `docs/match-history.md`.
+
+## Replays e interfaz de espectador — 20 de octubre de 2026
+
+Watch replay abre las grabaciones locales desde historial o informe. El tablero revela ambos jugadores y el panel mantiene economía, workers/army, población, estructuras y producción con progreso. Incluye pausa, velocidades 0,5–4×, saltos de quince segundos, timeline por rayo, reinicio, pan/zoom y salida al historial. Los controles de la mano activa tienen hints propios. No se ejecuta el AI ni se aceptan órdenes de juego durante la reproducción; observar, buscar y salir no modifican la grabación.
+
+- `bash scripts/check-core.sh`: **2081 comprobaciones aprobadas**, salida 0 en `TestResults/replay-core.log`.
+- `ReplayPlaybackChecks.Run`: **30 comprobaciones aprobadas** en `TestResults/unity-replay-validation.log`. Reconstrucción exacta de mundo e informe, comandos y checkpoints en el mismo tick, pausa/velocidad, saltos acotados, reinicio, resultado, grabaciones interrumpidas o de duración cero, seis variantes de archivos inválidos y ráfaga de 2500 comandos. Esa primera ejecución integrada se detuvo después por una referencia destruida en el helper de captura del panel; se corrigió el helper y se repitió la parte afectada.
+- `ReplayValidation.RunPresentation`: salida 0 en `TestResults/unity-replay-presentation.log`; sesión **23**, panel de espectador **476 / 6 vistas**, historial **251 / 7 vistas**, menús **342 / 52 vistas**. Comprueba navegación por rayo, timeline pausado/en reproducción/al finalizar, recursos de ambos lados, producción paralela y pendiente, construcción/investigación, páginas independientes, aviso de divergencia y retorno al historial.
+- `ReplaySessionChecks.Run` ampliado: **25 comprobaciones**, salida 0 en `TestResults/unity-replay-board-session.log`. Colocación diferida y cancelación; mapa y catálogo congelados; vista omnisciente separada de PlayerView; renderizado de ambos bandos antes y después de rebobinar; reutilización de terreno/modelos; conservación de pan/zoom y pausas externas; archivo intacto y restauración de preferencias de la siguiente partida.
+- `ReplayInputChecks.Run`: **57 comprobaciones y 2 vistas**, salida 0 en `TestResults/unity-replay-input.log`. Transporte por flancos, ausencia de repetición al sostener stick, navegación/zoom en pausa, regreso a neutral después de grip, controles fijos aunque cambien hotkeys, hints de ambas manos, bloqueo por interrupción del sistema y archivos intactos. Se regeneraron las capturas con aspecto horizontal para incluir las dos columnas de hints completas.
+- Se inspeccionaron `TestResults/Spectator/02-spectator-playing.png`, `04-production-full.png`, `05-production-page-2.png` y `06-error.png`: contadores, filas de producción, paginación, errores y transporte sin recortes ni superposiciones.
+- `git diff --check` aprobado; registros finales de presentación, sesión y entrada sin errores de compilación ni excepciones. Unity **6000.3.26f1**, CLI **1.0.0-beta.13**. Validación del núcleo y Editor con entrada sintética; no se generó APK ni se probó comodidad, legibilidad o rendimiento en un Quest físico. No se afirma compatibilidad de simulación entre plataformas/builds diferentes.
+
+## Animaciones de curación y ataque — 20 de octubre de 2026
+
+Las cuatro habilidades tienen una secuencia de impacto/pulso y desaparición, con identidades por facción: descargas angulares y cruces de reparación para Consorcio; filamentos, esporas y semillas para Simbiosis. El perímetro de curación conserva el radio circular real, y las capas abiertas permiten ver las unidades. La presentación sigue el terreno y consume solo eventos de PlayerView; no cambia daño, curación, energía ni recargas.
+
+- Núcleo completo: **2081 comprobaciones aprobadas**, salida 0 en `TestResults/ability-animation-core.log`.
+- `CasterAbilityPreview.Render`: salida 0 en `TestResults/unity-ability-animation.log`; controles de habilidades **83 / 8 vistas**, modelos **29**, efectos **132 / 9 vistas**, puntero de ataque **124 / 12 vistas**, entrada con colas **200**, rueda **458 / 20 vistas**. El batch también conserva las tres vistas de modelos de casters.
+- Los efectos se verifican en varias fases, cámaras oblicua/superior, cuatro esquinas y dos combinaciones de tamaño/zoom. Se comprueba reproducción exacta de vértices/colores al rebobinar, pausa por tick, expiración antes de retirar el evento, geometría finita, límite de 32 eventos/24.576 vértices, ninguna creación por lanzamiento y ninguna modificación del estado autoritativo. Niebla, eventos futuros/desconocidos y tablero oculto siguen descartando efectos.
+- Inspeccionadas `TestResults/Abilities/pulse-18.png`, `industrial-with-units.png`, `biological-with-units.png`, `top-down.png` y `rift-ramps.png`. Tipos distinguibles, unidades legibles y trazos sobre rampas. Se mantienen nueve capturas de fases y escenarios en esa carpeta.
+- `git diff --check` aprobado; registro final sin errores de compilación, excepciones ni errores de shader. Unity **6000.3.26f1**, CLI **1.0.0-beta.13**. Pruebas y capturas de Editor; sin APK nuevo ni validación física de comodidad/rendimiento en Quest.
+
+## Igualar tamaño visual de Hammer y Bombardier — 20 de octubre de 2026
+
+Hammer aumenta su multiplicador visual de 1,8 a 3,2 para compensar su chasis estrecho; Bombardier conserva 1,8. Los límites de sus mallas sobre el suelo quedan en **9,349 y 9,436 celdas²** respectivamente (menos de 1 % de diferencia), conservando la forma alargada del tanque. El indicador de rol del tanque mantiene el tamaño del de Bombardier para dejar visible el chasis. La escala central se aplica también al arma, rig, origen del disparo y restos; catálogo, colisiones y reglas no cambian.
+
+- `UnitVisualPreview.RenderArtillery`: salida 0 en `TestResults/unity-artillery-size.log`; comparación de ambos modelos a la misma escala desde arriba y en ángulo, en `TestResults/Artillery/`. Ambas capturas inspeccionadas. La misma ejecución completa `DeathVisualPreview.Run`: **79 comprobaciones y 13 vistas**.
+- `git diff --check` aprobado. Unity Editor **6000.3.26f1**; sin APK nuevo ni prueba física en Quest.
+
+## Densidad de niebla en Settings — 20 de octubre de 2026
+
+Settings → Visuals permite elegir 0 %, 25 %, 50 %, 75 % o 100 % desde inicio y pausa. La preferencia se guarda en el dispositivo y se aplica inmediatamente; 100 % conserva la densidad original y 0 % desactiva el renderizado de las capas de neblina. La visibilidad del terreno y los enemigos siguen sujetos a las reglas de exploración.
+
+- `FogPreview.Run`: **70 comprobaciones y 15 renders**, salida 0 en `TestResults/unity-fog-density.log`. Comparación de píxeles a 0/50/100 %, conservación de visibilidad, guardado y reutilización de malla/material. Inspeccionadas las tres capturas de densidad.
+- `MenuFlowPreview.Render`: **347 comprobaciones y 54 paneles**, salida 0 en `TestResults/unity-fog-settings.log`. Cambio desde inicio y pausa sin avanzar la partida; inspeccionadas `02-settings-visuals-off.png` y `07-paused-visuals.png`.
+- `git diff --check` aprobado. Unity Editor **6000.3.26f1**; sin APK nuevo ni prueba física en Quest.
+
+## Pasos entre mesetas y rampas del desierto — 20 de octubre de 2026
+
+Se retraen los bordes interiores de las mesetas y se recolocan sus rampas para eliminar los encuentros de 2×2 celdas y las franjas bajas de 2–4 celdas. Cada una de las veinte rampas conserva doce celdas de ancho y tiene ocho celdas de terreno bajo despejado a su salida. Los dos antiguos cruces de esquinas quedan separados por pasos de 12×8. Las ocho zonas de recursos, posiciones iniciales y simetría de 180° se conservan; cambia el espacio disponible alrededor de las alturas.
+
+- `python3 scripts/generate-desert-map.py --check`: JSON sincronizado con su generador.
+- `bash scripts/check-core.sh --desert-map-only`: **262 comprobaciones aprobadas**, salida 0 en `TestResults/desert-passages-core.log`. Incluye accesos de artillería a los 64 depósitos con bases/extractores construidos, movimiento real por rampas, construcción, recolección y condiciones iniciales iguales.
+- `DesertMapPreview.Render`: **67 comprobaciones y 11 vistas**, salida 0 en `TestResults/unity-desert-passages.log`. Continuidad de altura en ambos extremos y todo el ancho de las veinte rampas, coincidencia de raycast y superficie. Inspeccionadas `central-mesa.png`, `north-passage.png`, `corner-passage.png` y `outer-passage.png` en `TestResults/DesertMap/`.
+- `git diff --check` aprobado. Unity Editor **6000.3.26f1**; sin APK nuevo ni prueba física en Quest.
+
+## Altura y hints durante la colocación — 20 de octubre de 2026
+
+Se eliminan los presets Table/Floor de Play space. Durante la colocación, A/X sube y B/Y baja 2,5 cm por toque; mantener continúa a 30 cm/s después de 0,3 s, dentro de 0–1,5 m. Trigger confirma, Grip cancela, stick cambia tamaño/orientación y su clic alterna los hints específicos del mando. Los controles son fijos e independientes de los hotkeys de juego. Ajustar una superficie detectada toma su altura visible y pasa al plano manual; cancelar restaura también los ajustes de altura/detección anteriores. Desktop usa Page Up/Down, clic izquierdo y Escape.
+
+- `BoardPlacementPreview.RunBatch`: salida 0 en `TestResults/unity-board-placement.log`. Colocación **52 comprobaciones / 2 vistas**, inicio **51 / 4 vistas**, restauración **25**, menús **350 / 54 paneles**, comodidad/audio **57 / 4 vistas**, rueda **710 / 22 vistas**. Ambos mandos, remaps, pausa, entrada/salida retenida, límites, restauración exacta y ausencia de órdenes de juego durante la colocación.
+- `BoardPlacementPreview.Run`: repetición dirigida con cámara de inspección corregida; **52 / 2 vistas**, salida 0 en `TestResults/unity-placement-hints.log`. Inspeccionadas ambas capturas de `TestResults/BoardPlacement/` y `TestResults/Menus/02-settings-play-space.png`.
+- `git diff --check` aprobado. Unity Editor **6000.3.26f1**; entrada/poses sintéticas, sin escrituras de anchors, APK nuevo ni validación física en Quest.
+
+## Controles revisados de colocación — 20 de octubre de 2026
+
+Grip achica y Trigger agranda al mantenerlos; stick arriba/abajo ajusta altura y a izquierda/derecha gira. A/X confirma y B/Y cancela. El clic de stick alterna los hints. Se actualizan mando, Play space y guía, conservando controles fijos y liberación obligatoria tras entrada, interrupción o salida. Los ajustes continuos usan tiempo sin escalar y un paso máximo de 50 ms para evitar saltos después de un cuadro lento.
+
+- `BoardPlacementPreview.RunBatch`: salida 0 en `TestResults/unity-placement-controls.log`. Colocación **68 comprobaciones / 2 vistas**, inicio **51 / 4 vistas**, restauración **25**, menús **350 / 54 paneles**, comodidad/audio **57 / 4 vistas**, rueda **710 / 22 vistas**. Verificados ambos mandos, cambios simultáneos de tamaño/altura, límites, stick en reposo, remaps, pausa, confirmación, cancelación y bloqueo de entradas sostenidas.
+- Inspeccionadas ambas capturas de `TestResults/BoardPlacement/` con los hints nuevos. `git diff --check` aprobado.
+- Unity Editor **6000.3.26f1**; entrada sintética y pasos de tiempo explícitos para movimiento continuo, sin escrituras de anchors, APK nuevo ni prueba física en Quest.

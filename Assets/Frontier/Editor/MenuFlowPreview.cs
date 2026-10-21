@@ -26,9 +26,12 @@ namespace Frontier.Editor
             int checks=0,captures=0;
             bool hadBasePreference=PlayerPrefs.HasKey(BoardView.BaseTargetingKey);
             int basePreference=PlayerPrefs.GetInt(BoardView.BaseTargetingKey);
+            bool hadFogPreference=PlayerPrefs.HasKey(BoardView.FogDensityKey);
+            float fogPreference=PlayerPrefs.GetFloat(BoardView.FogDensityKey);
             try
             {
                 PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
+                PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Invoke(session,"Awake");
                 var boardObject=new GameObject("Preview board");boardObject.transform.SetParent(fixture.transform);
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;Invoke(board,"Start");
@@ -52,15 +55,21 @@ namespace Frontier.Editor
                 }
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Main,"Guides Back returns to the original main menu");
                 Click("Settings");Check(panel.Page==CommandPanel.MenuPage.Settings&&!session.IsPaused,"Settings work before a match without creating a pause");
-                Check(Has("Controls")&&Has("Audio")&&Has("Play space"),"Settings organizes controls, sound and board placement into tabs");
+                Check(Has("Controls")&&Has("Audio")&&Has("Visuals")&&Has("Play space"),"Settings organizes controls, sound, visuals and board placement into tabs");
                 Click("Controls");
                 Check(Has("Hand: Right")&&Has("Hotkeys")&&Has("Selection: Bodies")&&quest.ActiveController==OVRInput.Controller.RTouch,"Controls identify the active hand and share targeting and hotkey settings");
                 Click("Hand: Right");Check(Has("Hand: Left")&&quest.ActiveController==OVRInput.Controller.LTouch,"Settings switches to the left hand");
                 Click("Hand: Left");Capture("02-settings");
                 Click("Audio");
                 Check(Has("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%")&&Has("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%")&&!Has("Hotkeys"),"Audio tab exposes current volume settings without unrelated controls");Capture("02-settings-audio");
+                Click("Visuals");
+                Check(board.FogDensity==1&&Has("Fog: 0% (Off)")&&Has("Fog: 25%")&&Has("Fog: 50%")&&Has("Fog: 75%")&&Has("Fog: 100%"),"Visual settings offer the original fog density and an explicit Off preset");
+                Click("Fog: 0% (Off)");
+                Check(board.FogDensity==0&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==0&&!session.Running&&!session.IsPaused,"Fog can be disabled and saved before starting a match");Capture("02-settings-visuals-off");
+                Click("Fog: 50%");Check(board.FogDensity==.5f&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==.5f,"Visual settings save intermediate fog density");
                 Click("Play space");
-                Check(Has("Reposition board")&&Has("Table / height 75 cm")&&Has("Floor / height 0")&&Has("Detect surfaces")&&!Has("Hand: Right"),"Play space collects the board placement controls");Capture("02-settings-play-space");
+                Check(Has("Reposition board")&&Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0")&&!Has("Hand: Right"),"Play space offers direct placement and surfaces without fixed-height presets");
+                Check(console.GetComponentsInChildren<Text>().Any(t=>t.text.Contains("Page Up / Page Down")&&t.text.Contains("raise / lower")),"Play space explains height adjustment during placement");Capture("02-settings-play-space");
                 Click("Detect surfaces");
                 Check(!quest.Active&&!quest.Placing&&!session.Running&&Field<Text>(panel,"status").text==session.Message&&session.Message.Contains("manual plane"),"Detect surfaces shows its desktop result in the Settings footer");Capture("02-settings-surface-feedback");
                 typeof(CommandPanel).GetField("menuMessageUntil",Private).SetValue(panel,Time.unscaledTime-1);Refresh();
@@ -146,6 +155,10 @@ namespace Frontier.Editor
                 Check(session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection),"Changing targeting does not resume or change the selection");
                 Capture("07-paused-controls");
                 Click("Selection: Bases");Check(!board.BaseTargeting&&PlayerPrefs.GetInt(BoardView.BaseTargetingKey)==0,"Body targeting can be restored from the same button");
+                Click("Visuals");Check(board.FogDensity==.5f,"Paused visual settings retain the pre-match density");
+                Click("Fog: 75%");for(int i=0;i<3;i++)session.Match.Step();
+                Check(board.FogDensity==.75f&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==.75f&&session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Changing fog from pause saves immediately without resuming or changing gameplay");Capture("07-paused-visuals");
+                Click("Fog: 100%");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Shared controls return to the same paused match");
                 Click("Guides");Click("Control guide");
                 Check(panel.Page==CommandPanel.MenuPage.Guide&&Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy&&!Has("Resume match"),"Guide opens as its own submenu");
@@ -296,6 +309,7 @@ namespace Frontier.Editor
             finally
             {
                 if(hadBasePreference)PlayerPrefs.SetInt(BoardView.BaseTargetingKey,basePreference);else PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
+                if(hadFogPreference)PlayerPrefs.SetFloat(BoardView.FogDensityKey,fogPreference);else PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
                 PlayerPrefs.Save();
                 Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();
             }

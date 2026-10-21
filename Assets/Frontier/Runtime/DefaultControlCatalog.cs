@@ -84,10 +84,10 @@ namespace Frontier.Runtime
                     new Command("board.menu-distance","Adjust menu distance",bindings.HandName+" stick up / down while dragging menu","Bring the grabbed menu closer or move it farther away."),
                     new Command("board.reset-menu","Recover the menu","Reset position button","Before a match: bring the menu in front of you. During a match: reset above the board."),
                     new Command("board.reposition","Reposition the board","Settings > Play space > Reposition board","Enter placement. The confirmed battlefield stays fixed while you walk around it."),
-                    new Command("board.place","Place the board","Point at a surface + "+select,"Confirm the board position. Table / Floor and Detect surfaces provide placement options."),
-                    new Command("board.size-rotation","Placement size / rotation",bindings.HandName+" stick while placing","Up / down changes size; left / right rotates. These axes do not navigate the map during play."),
-                    new Command("board.height","Placement height",shift+" + "+stick+" up / down","Adjust the board's height during placement. The other controller is unused."),
-                    new Command("board.cancel-placement","Cancel board placement",back+" while placing","Restore the previously confirmed board position and size.")):
+                    new Command("board.place","Place the board","Point at a surface + "+bindings.MenuConfirmName,bindings.MenuConfirmName+" confirms. The controller shows placement hints; Stick click hides or shows them."),
+                    new Command("board.size-rotation","Placement size / rotation","Grip / Trigger · "+bindings.HandName+" stick left / right","Hold Grip to shrink or Trigger to enlarge. Stick left / right rotates. These controls only adjust the board during placement."),
+                    new Command("board.height","Placement height",bindings.HandName+" stick up / down while placing","Up raises the board; down lowers it. Hold to keep adjusting, with or without detected room surfaces."),
+                    new Command("board.cancel-placement","Cancel board placement",bindings.MenuBackName+" while placing","Restore the previously confirmed board position, height and size.")):
                 new Topic("Board",
                     new Command("board.pan","Pan the map",string.Join(" / ",new[]{bindings.Name(false,"pan-up"),bindings.Name(false,"pan-left"),bindings.Name(false,"pan-down"),bindings.Name(false,"pan-right")}),"Move the desktop development view across the battlefield."),
                     new Command("board.zoom","Zoom the map","Mouse wheel","Change the desktop map scale. Quest keeps the placed board fixed."),
@@ -95,8 +95,9 @@ namespace Frontier.Runtime
                     new Command("board.reset-menu","Recover the menu",bindings.Name(false,"menu")+" / Reset position","Return the menu above the board."),
                     new Command("board.move-menu","Move the menu","Drag MOVE MENU with left mouse button","Move the console without changing the board position."),
                     new Command("board.menu-distance","Adjust menu distance","Mouse wheel while dragging menu","Bring the grabbed console closer or move it farther away."),
-                    new Command("board.place","Place or reposition the board","Settings > Play space > Reposition board","Point and use "+select+" to confirm. Table / Floor set the manual height."),
-                    new Command("board.cancel-placement","Cancel board placement",back+" / "+pause+" while placing","Restore the previous board position and size."))
+                    new Command("board.place","Place or reposition the board","Settings > Play space > Reposition board","Point and left-click to confirm. Adjust height directly during placement."),
+                    new Command("board.height","Placement height","Page Up raise / Page Down lower","Tap for 2.5 cm; hold to keep adjusting while placing the board."),
+                    new Command("board.cancel-placement","Cancel board placement","Escape while placing","Restore the previous board position, height and size."))
             };
         }
     }
