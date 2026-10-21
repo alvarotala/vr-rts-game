@@ -19,7 +19,7 @@ services:
       - -frontier-listen
       - 0.0.0.0
     ports:
-      - "${FRONTIER_BIND_ADDRESS:-127.0.0.1}:${FRONTIER_PORT:-7777}:${FRONTIER_PORT:-7777}/udp"
+      - "${FRONTIER_BIND_ADDRESS:-0.0.0.0}:${FRONTIER_PORT:-7777}:${FRONTIER_PORT:-7777}/udp"
     cap_drop:
       - ALL
     security_opt:

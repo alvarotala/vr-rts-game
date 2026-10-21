@@ -41,7 +41,7 @@ python3 scripts/build-server.py
 docker compose -f compose.multiplayer.yml up -d --build
 ```
 
-Abrir **Multiplayer LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Para conectar desde Quest u otra computadora, iniciar Compose con `FRONTIER_BIND_ADDRESS=0.0.0.0` y usar la dirección LAN de la Mac. El menú online permite editar dirección y puerto.
+Abrir **Multiplayer LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú online permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
 
 La imagen contiene solamente el servidor Linux y se puede trasladar a un host de producción compatible. Por ahora cada proceso atiende una partida; al finalizar se reinicia para recibir otros dos jugadores. No incluye búsqueda pública, ranking ni reconexión. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
 

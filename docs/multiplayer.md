@@ -38,10 +38,10 @@ docker compose -f compose.multiplayer.yml up --build -d
 docker compose -f compose.multiplayer.yml logs -f server
 ```
 
-Wait for `FRONTIER_SERVER Listening on`. Connect desktop clients to `127.0.0.1:7777`. For clients on another machine or Quest, publish the port on the LAN interface and connect to the Mac's LAN IP:
+Wait for `FRONTIER_SERVER Listening on`. Compose publishes UDP 7777 on all host interfaces (`0.0.0.0`) by default. Connect desktop clients on this Mac to `127.0.0.1:7777`. From another machine or Quest on the same LAN, connect to the Mac's LAN IP; `0.0.0.0` is a listening address, not a destination. To restrict access to this Mac instead:
 
 ```sh
-FRONTIER_BIND_ADDRESS=0.0.0.0 docker compose -f compose.multiplayer.yml up -d
+FRONTIER_BIND_ADDRESS=127.0.0.1 docker compose -f compose.multiplayer.yml up -d
 ```
 
 `FRONTIER_PORT` changes the UDP port (default `7777`), `FRONTIER_MAP` chooses `rift`, `training` or `desert`, and `FRONTIER_SERVER_IMAGE` changes the local image tag (default `frontier-command-server:ngo-local`). Use the same variables when recreating the service. One server process runs one match; use `docker compose -f compose.multiplayer.yml restart server` for another match after both players have left. `docker compose -f compose.multiplayer.yml down` removes this local deployment.
@@ -132,7 +132,7 @@ Passing this check proves the local process path for the binaries used. It does 
 
 ## Validation evidence
 
-Local validation on 2026-10-21 used image `sha256:d1c5db345f01265ad4e41fed7ef8e561bb54ab909647058532460db1c212ca8c` (`linux/amd64`). The same image completed both matches. Afterwards the container was recreated with normal pacing, bound to `127.0.0.1:7777/udp`, waiting for two players.
+Local validation on 2026-10-21 used image `sha256:d1c5db345f01265ad4e41fed7ef8e561bb54ab909647058532460db1c212ca8c` (`linux/amd64`). The same image completed both matches. Afterwards the container was recreated with normal pacing. Compose now defaults to `0.0.0.0:7777/udp` for LAN/Quest access; the original two-client checks used the loopback endpoint.
 
 | Check | Status | Evidence |
 | --- | --- | --- |
@@ -141,6 +141,7 @@ Local validation on 2026-10-21 used image `sha256:d1c5db345f01265ad4e41fed7ef8e5
 | Quest Android APK build | Passed; APK compiled, no physical headset check implied | `TestResults/ngo-quest-cli.log`, `FRONTIER_APK_BUILT` in `TestResults/ngo-quest-build.log` |
 | Linux amd64 IL2CPP dedicated build | Passed; Unity Server subtarget, IL2CPP, x86-64 ELF | `TestResults/dedicated-server-build.log`: `FRONTIER_SERVER_BUILT ... backend=IL2CPP` |
 | Docker image and server startup | Passed; Linux amd64 IL2CPP server listening on UDP 7777 | `TestResults/ngo-docker-image.txt`, `TestResults/ngo-docker-startup.log` |
+| Mac LAN port publication | Passed; host binding `0.0.0.0:7777/udp` and real NGO handshake from the Mac to its Wi-Fi IP; Quest traffic not yet checked | `TestResults/ngo-lan-binding.json`, `TestResults/ngo-lan-client.log` |
 | Docker server + two clients, healthy connection | Passed; winner seat 0, tick 9740; matching full report SHA-256 `359b99d6c60fe13cad7618d6102c1292a00de4bad1d1dbc8584a8fe91832d33e` | `TestResults/ngo-multiplayer/result.json` |
 | Same image, 60 ms one-way delay, ±20 ms jitter, 1% loss | Passed; winner seat 1, tick 13473; matching full report SHA-256 `902e69ab0f3d55daaaac53738b42f8237c17bef26d1a132e19da77ba62e0fff4`; 3973 received datagrams, 38 dropped, zero queue overflow | `TestResults/ngo-multiplayer-impaired/result.json` |
 | Core simulation regression suite | Passed: 2103 checks | `TestResults/ngo-core.log` |
