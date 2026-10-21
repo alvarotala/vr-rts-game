@@ -56,7 +56,7 @@ namespace Frontier.Runtime
             if (view != null && view.winner >= 0)
             {
                 if (finishTick != view.tick) { finishTick = view.tick; finishClock = visualTick; }
-                else if (!board.Session.IsPaused) finishClock += Time.unscaledDeltaTime * Simulation.TickRate;
+                else if (!board.Session.IsPaused || board.Session.IsOnline) finishClock += Time.unscaledDeltaTime * Simulation.TickRate;
                 visualTick = finishClock;
             }
             else finishTick = -1;

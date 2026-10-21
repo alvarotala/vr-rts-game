@@ -13,6 +13,8 @@ namespace Frontier.Runtime
         private ReportMetric resultMetric;
         private int resultBuildPlayer,resultBuildPage;
         private MatchReport shownReport;
+        private int ReportPlayer=>Page==MenuPage.HistoryReport?0:Session.LocalPlayer;
+        private string ReportOpponent=>Page!=MenuPage.HistoryReport&&Session.IsOnline?"OPPONENT":"AI";
         private static string ReportTime(int tick) { int seconds=tick/Simulation.TickRate;return $"{seconds/60:00}:{seconds%60:00}"; }
         private static string Stat(float value)=>value.ToString("N0",CultureInfo.InvariantCulture);
 
@@ -25,10 +27,16 @@ namespace Frontier.Runtime
         }
         private void BuildMatchReport()
         {
-            var report=Page==MenuPage.HistoryReport?archivedReport.Report:Session.Match.Report;
-            if(report==null)return;
+            var report=Page==MenuPage.HistoryReport?archivedReport.Report:Session.ResultReport;
+            if(report==null)
+            {
+                Label(actions,Session.OnlineReportUnavailable?"Final report unavailable":"Waiting for the final match report",new Vector2(24,-160),new Vector2(992,80),28,MenuMuted,TextAnchor.MiddleCenter);
+                ReportButton("Main menu",0,668,336,()=>Session.LeaveMatch());
+                if(Session.IsOnline)ReportButton("Multiplayer LAN",704,668,336,ReturnToOnlineSetup,true);
+                return;
+            }
             if(shownReport!=report)
-            { shownReport=report;resultTab=ResultTab.Overview;resultMetric=ReportMetric.Workers;resultBuildPage=0;resultBuildPlayer=0; }
+            { shownReport=report;resultTab=ResultTab.Overview;resultMetric=ReportMetric.Workers;resultBuildPage=0;resultBuildPlayer=ReportPlayer; }
             var tabs=new[]{"Overview","Graphs","Build order"};
             for(int i=0;i<tabs.Length;i++)
             { var tab=(ResultTab)i;ReportButton(tabs[i],i*352,0,336,()=>{resultTab=tab;Rebuild();},resultTab==tab); }
@@ -44,16 +52,17 @@ namespace Frontier.Runtime
             else
             {
                 ReportButton("Main menu",0,668,336,()=>Session.LeaveMatch());
-                if(Session.ArchiveFailed)ReportButton("Retry save",352,668,336,Session.RetryArchiveSave);
-                ReportButton("Rematch",704,668,336,Quest.RequestStartMatch,true);
+                if(!Session.IsOnline&&Session.ArchiveFailed)ReportButton("Retry save",352,668,336,Session.RetryArchiveSave);
+                if(Session.IsOnline)ReportButton("Multiplayer LAN",704,668,336,ReturnToOnlineSetup,true);
+                else ReportButton("Rematch",704,668,336,Quest.RequestStartMatch,true);
             }
         }
         private void BuildReportOverview(MatchReport report)
         {
-            var a=report.Players[0];var b=report.Players[1];
+            var a=report.Players[ReportPlayer];var b=report.Players[1-ReportPlayer];
             Label(actions,"MATCH TOTALS",new Vector2(18,-68),new Vector2(430,30),18,MenuMuted);
             Label(actions,"YOU · "+ShortFaction(a.Faction),new Vector2(452,-68),new Vector2(280,30),21,MatchReportGraph.PlayerColor,TextAnchor.MiddleCenter);
-            Label(actions,"AI · "+ShortFaction(b.Faction),new Vector2(746,-68),new Vector2(280,30),21,MatchReportGraph.OpponentColor,TextAnchor.MiddleCenter);
+            Label(actions,ReportOpponent+" · "+ShortFaction(b.Faction),new Vector2(746,-68),new Vector2(280,30),21,MatchReportGraph.OpponentColor,TextAnchor.MiddleCenter);
             int row=0;
             void Row(string title,string own,string enemy)
             {
@@ -81,10 +90,10 @@ namespace Frontier.Runtime
             for(int i=0;i<names.Length;i++)
             {var metric=(ReportMetric)i;ReportButton(names[i],i*150,64,140,()=>{resultMetric=metric;Rebuild();},resultMetric==metric);}
             Label(actions,"YOU ━",new Vector2(64,-122),new Vector2(250,30),20,MatchReportGraph.PlayerColor);
-            Label(actions,"AI - - -",new Vector2(320,-122),new Vector2(250,30),20,MatchReportGraph.OpponentColor);
+            Label(actions,ReportOpponent+" - - -",new Vector2(320,-122),new Vector2(300,30),20,MatchReportGraph.OpponentColor);
             var graphRect=new GameObject("Match comparison graph",typeof(RectTransform)).GetComponent<RectTransform>();graphRect.SetParent(actions,false);
             TopLeft(graphRect,new Vector2(80,-178),new Vector2(928,350));
-            var graph=graphRect.gameObject.AddComponent<MatchReportGraph>();graph.Configure(report,resultMetric);
+            var graph=graphRect.gameObject.AddComponent<MatchReportGraph>();graph.Configure(report,resultMetric,ReportPlayer);
             for(int i=0;i<=4;i++)
             {
                 Label(actions,Stat(graph.Maximum*(4-i)/4),new Vector2(0,-164-i*87.5f),new Vector2(70,28),17,MenuMuted,TextAnchor.MiddleRight);
@@ -100,8 +109,8 @@ namespace Frontier.Runtime
         }
         private void BuildReportOrder(MatchReport report)
         {
-            for(int p=0;p<2;p++)
-            {int side=p;ReportButton((p==0?"You · ":"AI · ")+ShortFaction(report.Players[p].Faction),p*528,64,512,()=>{resultBuildPlayer=side;resultBuildPage=0;Rebuild();},p==resultBuildPlayer);}
+            for(int column=0;column<2;column++)
+            {int side=column==0?ReportPlayer:1-ReportPlayer;ReportButton((column==0?"You · ":ReportOpponent+" · ")+ShortFaction(report.Players[side].Faction),column*528,64,512,()=>{resultBuildPlayer=side;resultBuildPage=0;Rebuild();},side==resultBuildPlayer);}
             var orders=report.BuildOrders[resultBuildPlayer];const int pageSize=7;
             int pages=Math.Max(1,(orders.Count+pageSize-1)/pageSize);resultBuildPage=Mathf.Clamp(resultBuildPage,0,pages-1);
             Label(actions,"TIME       SUPPLY     ORDER",new Vector2(18,-126),new Vector2(700,28),17,MenuMuted);

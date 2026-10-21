@@ -129,6 +129,7 @@ namespace Frontier.Runtime
             matchStrip.anchoredPosition=new Vector2(756,-470-queueSpace);
             matchTargets[0].rect.gameObject.SetActive(!Quest.Active);
             var pause=matchTargets[1].rect;
+            pause.GetComponentInChildren<Text>().text=Session.IsOnline?"Menu":"Pause";
             TopLeft(pause,new Vector2(Quest.Active?14:166,-36),new Vector2(Quest.Active?292:140,54));
             foreach(RectTransform label in pause)label.sizeDelta=new Vector2(pause.sizeDelta.x-16,label.sizeDelta.y);
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
@@ -186,7 +187,7 @@ namespace Frontier.Runtime
             UpdateSelectionGrid();
             UpdateOrderPlanHud();
             UpdateRallyPointHud();
-            status.text=Session.IsPaused?"MATCH PAUSED · Waiting for headset, focus or tracking to resume.":Session.Message;
+            status.text=Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
         }
         private void UpdateCasterStatus(VisibleEntity[] selected)
         {

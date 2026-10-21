@@ -124,7 +124,7 @@ namespace Frontier.Editor
             Configure();PrepareOutput("Builds/Desktop");
             // MRUK 203 ships a standalone macOS library for Apple Silicon only.
             EditorUserBuildSettings.SetPlatformSettings(BuildPipeline.GetBuildTargetName(BuildTarget.StandaloneOSX),"Architecture","ARM64");
-            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Desktop/FrontierCommand.app",target=BuildTarget.StandaloneOSX,options=BuildOptions.Development});
+            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Desktop/FrontierCommand.app",target=BuildTarget.StandaloneOSX,subtarget=(int)StandaloneBuildSubtarget.Player,options=BuildOptions.Development});
             if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Desktop playtest failed.");
         }
         private static void PrepareOutput(string directory)

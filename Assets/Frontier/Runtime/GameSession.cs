@@ -28,15 +28,15 @@ namespace Frontier.Runtime
         public string AbilityDefinitionId { get; private set; }
         public AbilityDefinition PendingAbility => Catalog?.Ability(AbilityDefinitionId);
         public bool HasTargetingMode => BuildDefinition != null || AttackMoveMode || AbilityDefinitionId != null;
-        public bool AbilityPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1 && PendingAbility != null;
-        public bool AttackPointerActive => Running && !IsPaused && Match != null && Match.Winner == -1
+        public bool AbilityPointerActive => CanIssueOrders && PendingAbility != null;
+        public bool AttackPointerActive => CanIssueOrders
             && AttackMoveMode;
         public const float CommandPulseDuration = 1.2f;
         public CommandKind LastCommandKind { get; private set; }
         public Point LastCommandPoint { get; private set; }
         public int LastCommandSequence { get; private set; }
         public float LastCommandTime { get; private set; }
-        public bool CommandPulseActive => Running && !IsPaused && Match != null && Match.Winner == -1
+        public bool CommandPulseActive => CanIssueOrders
             && LastCommandSequence > 0 && Time.unscaledTime-LastCommandTime < CommandPulseDuration;
         private Strategist bot;
         private float accumulator;
@@ -61,6 +61,7 @@ namespace Frontier.Runtime
         public void StartMatch()
         {
             if(IsReplay)StopReplay();
+            DisconnectOnline();
             LastClosedWasReplay=false;
             CloseArchive();
             Match = new Simulation(Map, Catalog, Faction, EnemyFaction);
@@ -77,6 +78,7 @@ namespace Frontier.Runtime
         public void LeaveMatch()
         {
             if(IsReplay){StopReplay();return;}
+            DisconnectOnline();
             LastClosedWasReplay=false;
             CloseArchive();
             if (Match != null) Match.Paused = true;
@@ -104,7 +106,7 @@ namespace Frontier.Runtime
             }
             if (steps > 0)
             {
-                RefreshView(); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == 0));
+                RefreshView(); Selection.RemoveWhere(id => !View.entities.Any(e => e.id == id && e.owner == LocalPlayer));
                 if (Match.Winner != -1) Announce(Match.Winner == 0 ? "VICTORY · The territory is yours." : Match.Winner == 2 ? "DRAW" : "DEFEAT · Your colony has fallen.");
                 else if (MapId == "training" && Time.unscaledTime > messageUntil)
                     Message = !Match.HasRole(0, "barracks") ? $"1 · Use a worker to build: {Catalog.Role(Faction, "barracks").name}." : Match.Units(0) < 10 ? $"2 · Select {Catalog.Role(Faction, "barracks").name} and train an army." : "3 · Use Attack Move to explore and destroy enemy buildings.";
@@ -123,7 +125,7 @@ namespace Frontier.Runtime
         {
             if (!additive) Selection.Clear();
             SelectedResource = 0;
-            if (View != null && View.entities.Any(e => e.id == id && e.owner == 0)) { if (!Selection.Add(id) && additive) Selection.Remove(id); }
+            if (View != null && View.entities.Any(e => e.id == id && e.owner == LocalPlayer)) { if (!Selection.Add(id) && additive) Selection.Remove(id); }
             else if (!additive && View != null && View.resources.Any(r => r.id == resourceId)) SelectedResource = resourceId;
             ValidateAbilitySelection();Feedback?.Invoke(true); Changed?.Invoke();
         }
@@ -133,7 +135,7 @@ namespace Frontier.Runtime
             if (!additive) Selection.Clear();
             if (View == null) return;
             foreach (var e in View.entities)
-                if (e.owner == 0 && !Catalog[e.definition].building && e.position.x >= Math.Min(a.x,b.x) && e.position.x <= Math.Max(a.x,b.x) && e.position.y >= Math.Min(a.y,b.y) && e.position.y <= Math.Max(a.y,b.y)) Selection.Add(e.id);
+                if (e.owner == LocalPlayer && !Catalog[e.definition].building && e.position.x >= Math.Min(a.x,b.x) && e.position.x <= Math.Max(a.x,b.x) && e.position.y >= Math.Min(a.y,b.y) && e.position.y <= Math.Max(a.y,b.y)) Selection.Add(e.id);
             ValidateAbilitySelection();Feedback?.Invoke(true); Changed?.Invoke();
         }
         public void Deselect(int id)
@@ -229,7 +231,11 @@ namespace Frontier.Runtime
         {
             if(IsReplay){if(!Replay.Seeking)RefreshReplayView();return;}
             UpdateArchive();
-            var previous=View;View=Match.View(0);ValidateAbilitySelection();
+            ApplyView(Match.View(0));
+        }
+        private void ApplyView(PlayerView view)
+        {
+            var previous=View;View=view;ValidateAbilitySelection();
             foreach(var entity in View.entities)
                 if(entity.owner==View.player&&(entity.order==CommandKind.Move||entity.order==CommandKind.AttackMove))
                 {
@@ -245,7 +251,7 @@ namespace Frontier.Runtime
         public bool ClearRallyPoint()
         {
             if(!Send(CommandKind.ClearRallyPoint))return false;
-            CancelMode();Announce("Rally point cleared. New units use their default behavior.");return true;
+            CancelMode();Announce(IsOnline?"Clear rally point requested.":"Rally point cleared. New units use their default behavior.");return true;
         }
         public int Context(Point point,int entityId,int resourceId,bool append=false,bool attack=false,int replaceSequence=0)
         {
@@ -254,17 +260,17 @@ namespace Frontier.Runtime
             {
                 var ability=PendingAbility;
                 if(!Send(CommandKind.Cast,definition:ability.id,position:point))return 0;
-                AbilityDefinitionId=null;Announce(ability.name+" ordered.");Changed?.Invoke();return sequence;
+                AbilityDefinitionId=null;Announce(ability.name+(IsOnline?" requested.":" ordered."));Changed?.Invoke();return sequence;
             }
             if(CanSetRallyPoint)
             {
                 if(!Send(CommandKind.SetRallyPoint,position:point))return 0;
-                CancelMode();Announce("Rally point set. Newly trained units will move there.");return sequence;
+                CancelMode();Announce(IsOnline?"Rally point requested.":"Rally point set. Newly trained units will move there.");return sequence;
             }
             if (BuildDefinition != null)
             {
                 if(!Send(CommandKind.Build,definition:BuildDefinition,position:point,append:append))return 0;
-                Announce(Catalog[BuildDefinition].name + (append ? " construction queued." : " construction ordered."));
+                Announce(Catalog[BuildDefinition].name + (IsOnline ? " construction requested." : append ? " construction queued." : " construction ordered."));
                 BuildDefinition=null;return sequence;
             }
             if (AttackMoveMode)
@@ -276,26 +282,28 @@ namespace Frontier.Runtime
             var selected = View.entities.Where(e=>Selection.Contains(e.id)).ToArray();
             if(attack)
             {
-                bool accepted=entity!=null&&entity.owner!=0
+                bool accepted=entity!=null&&entity.owner!=LocalPlayer
                     ?Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence)
                     :Send(CommandKind.AttackMove,position:point,append:append,replaceSequence:replaceSequence);
                 return accepted?sequence:0;
             }
             // The whole extractor footprint is a gas-order target, not only the deposit's center.
-            if (entity != null && entity.owner == 0 && Catalog[entity.definition].role == "extractor" && entity.complete)
+            if (entity != null && entity.owner == LocalPlayer && Catalog[entity.definition].role == "extractor" && entity.complete)
                 resourceId = View.resources.FirstOrDefault(r => r.extractorId == entity.id)?.id ?? resourceId;
             bool sent;
-            if (entity != null && entity.owner != 0) sent=Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence);
+            if (entity != null && entity.owner != LocalPlayer) sent=Send(CommandKind.Attack,target:entity.id,append:append,replaceSequence:replaceSequence);
             else if (resourceId > 0 && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Gather,target:resourceId,append:append,replaceSequence:replaceSequence);
-            else if (entity != null && entity.owner==0 && (!entity.complete || entity.health < Catalog[entity.definition].health) && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Repair,target:entity.id,append:append,replaceSequence:replaceSequence);
+            else if (entity != null && entity.owner==LocalPlayer && (!entity.complete || entity.health < Catalog[entity.definition].health) && selected.All(e=>Catalog[e.definition].role=="worker")) sent=Send(CommandKind.Repair,target:entity.id,append:append,replaceSequence:replaceSequence);
             else sent=Send(CommandKind.Move,position:point,append:append,replaceSequence:replaceSequence);
             return sent?sequence:0;
         }
         public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0)
         {
-            if (Match == null || IsReplay) return false;
+            if (IsReplay || !IsOnline && Match == null || IsOnline && !CanIssueOrders) return false;
             var selected = Selection.OrderBy(id=>id).ToArray();
-            var result = Match.Submit(new GameCommand { player=0, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence });
+            var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence };
+            if(IsOnline)return SendOnline(command);
+            var result = Match.Submit(command);
             if (!result.accepted) Announce(result.message);
             else
             {

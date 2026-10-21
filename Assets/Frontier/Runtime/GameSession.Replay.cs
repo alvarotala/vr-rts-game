@@ -19,7 +19,7 @@ namespace Frontier.Runtime
 
         public bool StartReplay(string id)
         {
-            if(Running){Announce("Exit the current match or replay first.");return false;}
+            if(Running||IsConnecting){Announce("Exit the current match or replay first.");return false;}
             ReplayPlayback playback;
             try{playback=new ReplayPlayback(History,History.Inspect(id));}
             catch(Exception error) when(MatchArchiveStore.IsStorageError(error))

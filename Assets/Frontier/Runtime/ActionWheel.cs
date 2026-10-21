@@ -34,7 +34,7 @@ namespace Frontier.Runtime
         private Image[] confirmationCheck;
         private string confirmedId;
         private WheelPage confirmedPage;
-        private Simulation confirmedMatch;
+        private object confirmedMatch;
         private int[] confirmedSelection;
         private float confirmationStarted = -1, confirmationStrength;
         private static readonly Color Confirmed = new Color(.65f, 1, .77f);
@@ -46,7 +46,7 @@ namespace Frontier.Runtime
         private bool? hintLeft;
         private string hintBindings;
         private Font font;
-        private Simulation openedMatch;
+        private object openedMatch;
         private int[] selectedIds;
         private string actionSignature, failedAction, failureMessage;
         private PlayerView actionView, hintView;
@@ -165,7 +165,7 @@ namespace Frontier.Runtime
         private void Open()
         {
             HideConfirmation(); EnsureView(); IsOpen = true; Page = WheelPage.Root; Highlighted = -1; stickReady = false; openReady = false;
-            selectedIds = Session.Selection.OrderBy(id => id).ToArray(); openedMatch = Session.Match;
+            selectedIds = Session.Selection.OrderBy(id => id).ToArray(); openedMatch = Session.SessionIdentity;
             neutralSince = -1; actionSignature = null; root.gameObject.SetActive(true); RefreshActions();
         }
 
@@ -179,7 +179,7 @@ namespace Frontier.Runtime
             if (hintRoot != null) hintRoot.gameObject.SetActive(false);
         }
 
-        private bool ValidContext() => CanOpen && Session.Match == openedMatch &&
+        private bool ValidContext() => CanOpen && Session.SessionIdentity == openedMatch &&
             selectedIds.SequenceEqual(Session.Selection.OrderBy(id => id)) &&
             selectedIds.All(id => Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player));
 
@@ -402,7 +402,7 @@ namespace Frontier.Runtime
         private void ShowConfirmation(string id, string label, WheelPage page, float angle, float sweep, float now)
         {
             EnsureConfirmation();
-            confirmedId = id; confirmedPage = page; confirmedMatch = Session.Match;
+            confirmedId = id; confirmedPage = page; confirmedMatch = Session.SessionIdentity;
             confirmedSelection = Session.Selection.ToArray(); confirmationStarted = now; confirmationStrength = 1;
             confirmationLabel.text = label;
             confirmationArc.Angle = angle; confirmationArc.Sweep = sweep; confirmationArc.SetVerticesDirty();
@@ -412,7 +412,7 @@ namespace Frontier.Runtime
         private void TickConfirmation(Ray pointer, bool available, float now)
         {
             if (confirmationStarted < 0) return;
-            if (!available || !CanOpen || Session.Match != confirmedMatch || !Session.Selection.SetEquals(confirmedSelection)
+            if (!available || !CanOpen || Session.SessionIdentity != confirmedMatch || !Session.Selection.SetEquals(confirmedSelection)
                 || confirmedSelection.Any(id => !Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player))
                 || now - confirmationStarted >= ConfirmationDuration)
             { HideConfirmation(); return; }

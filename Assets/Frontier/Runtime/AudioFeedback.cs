@@ -89,7 +89,7 @@ namespace Frontier.Runtime
             var view=Session.View;
             if(view==null||!Session.Running)return;
             if(Session.IsReplay&&Session.Replay.Seeking){StopBattle();return;}
-            if(Session.IsPaused)
+            if(Session.HasSystemPause||Session.IsPaused&&!Session.IsOnline)
             {StopBattle();ConsumeEvents(view);SeedView();return;}
             if(ReferenceEquals(lastView,view))return;
             lastView=view;

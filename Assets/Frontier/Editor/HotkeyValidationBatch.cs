@@ -65,7 +65,8 @@ namespace Frontier.Editor
                 Check(HotkeyBindings.Definitions(true).First(d=>d.Id=="wheel").Name=="Show / hide hints"&&!HotkeyBindings.Definitions(true).First(d=>d.Id=="add").Description.Contains("double"),"Bindings describe the hint toggle without obsolete wheel-opening gestures");
                 savedGroupLoaded.Assign(true,"select","touch:grip",true,out _);savedGroupLoaded.Assign(true,"back","touch:trigger",true,out _);
                 var wheelGuide=DefaultControlCatalog.For(true,savedGroupLoaded).SelectMany(t=>t.Commands).ToDictionary(c=>c.Id);
-                Check(wheelGuide["menus.execute-action"].Gesture=="Trigger in the wheel"&&wheelGuide["menus.back-action"].Gesture=="Down + Trigger / Y","Wheel navigation help stays physical after gameplay remaps and uses the active hand");
+                Check(wheelGuide["menus.execute-action"].Gesture=="Trigger in the wheel"&&wheelGuide["menus.back-action"].Gesture=="Y / Back sector","Wheel navigation help stays physical after gameplay remaps and uses the active hand");
+                Check(wheelGuide["menus.choose-action"].Gesture=="Up Groups · Right Selection · Left Orders · Down Quick select"&&wheelGuide["groups.choose"].Gesture=="1 up · 2 right · 3 down · 4 left","Down opens Quick select at root and remains group 3 inside Groups");
                 Check(wheelGuide["groups.replace"].Gesture=="Wheel up > group > Stick click"&&wheelGuide["groups.replace"].Description.StartsWith("Press the stick")&&wheelGuide["menus.actions"].Description.StartsWith("X shows/hides")&&wheelGuide["menus.actions"].Gesture=="Tilt left stick from center","Assignment uses physical stick click while hint-toggle help follows its binding");
                 foreach(string reserved in new[]{"touch:trigger","touch:b"})
                 {
@@ -263,8 +264,15 @@ namespace Frontier.Editor
                             wheel.Close();TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);
                             session.Select(0,false);session.Group(2,true);session.Select(worker.id,false);TouchFrame(Vector2.zero);
                             TouchFrame(Vector2.down);
-                            Check(!wheel.IsOpen&&session.GroupSize(2)==0,"Actual "+hand+" down does not open a wheel");
-                            TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.down);
+                            Check(wheel.IsOpen&&wheel.Page==WheelPage.QuickSelect&&wheel.HighlightedId=="idle-workers"&&session.GroupSize(2)==0&&session.Selection.SetEquals(new[]{worker.id}),
+                                "Actual "+hand+" down opens Quick select without selecting workers or assigning a group");
+                            var physicalBack=useLeft?OVRInput.RawButton.Y:OVRInput.RawButton.B;
+                            TouchFrame(Vector2.down,physicalBack);
+                            Check(wheel.Page==WheelPage.Root&&wheel.HighlightedId=="quick-select-menu"&&session.Selection.SetEquals(new[]{worker.id}),
+                                "Actual "+hand+" physical Back returns from Quick select with its held direction preserved");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.zero,physicalBack);
+                            Check(!wheel.IsOpen&&session.GroupSize(2)==0,"Actual "+hand+" physical Back closes the root without assigning");
+                            TouchFrame(Vector2.zero);TouchFrame(Vector2.zero);TouchFrame(Vector2.up);TouchFrame(Vector2.down);
                             Check(wheel.InGroupMenu&&wheel.HighlightedId=="group-3"&&session.GroupSize(2)==0,"Actual "+hand+" Groups highlights slot 3 without assigning");
                             TouchFrame(Vector2.down,click);
                             Check(!wheel.IsOpen&&session.GroupSize(2)==1&&session.Selection.Contains(worker.id)&&wheel.HintsEnabled,"Actual "+hand+" physical stick press immediately assigns without toggling hints");

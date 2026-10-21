@@ -1,6 +1,6 @@
 # Frontier Command — RTS para Quest 3
 
-Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción, combate terrestre y una IA local. Funciona sin servicios de juego externos. El nombre y el arte geométrico son provisionales.
+Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA y partidas LAN de dos jugadores con servidor dedicado NGO. Funciona sin servicios de juego externos. El nombre y el arte geométrico son provisionales.
 
 ## Requisitos y configuración
 
@@ -32,6 +32,19 @@ El APK usa el firmado de desarrollo local. La publicación en una tienda, sus cu
 
 La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/FrontierCommand.app`.
 
+## Multiplayer y servidor Docker
+
+Con Linux Dedicated Server Build Support instalado para el mismo Editor:
+
+```sh
+python3 scripts/build-server.py
+docker compose -f compose.multiplayer.yml up -d --build
+```
+
+Abrir **Multiplayer LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Para conectar desde Quest u otra computadora, iniciar Compose con `FRONTIER_BIND_ADDRESS=0.0.0.0` y usar la dirección LAN de la Mac. El menú online permite editar dirección y puerto.
+
+La imagen contiene solamente el servidor Linux y se puede trasladar a un host de producción compatible. Por ahora cada proceso atiende una partida; al finalizar se reinicia para recibir otros dos jugadores. No incluye búsqueda pública, ranking ni reconexión. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
+
 ## Uso básico
 
 Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y confirmar con el gatillo; si no hay datos de la habitación, usar **Mesa** o **Piso** para colocarlo manualmente. Iniciar la partida, seleccionar unidades con el gatillo y dar órdenes contextuales con A. Inclinar el joystick abre la rueda unificada: arriba grupos, derecha acciones de la selección e izquierda órdenes; el gatillo entra a cada opción. **Hotkeys** permite personalizar los controles antes de jugar o desde pausa, con guardado local y restauración de valores predeterminados.
@@ -44,5 +57,6 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
+- [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Formato de mapas](docs/maps.md)
 - [Registro de validación y pendientes](docs/validation.md)

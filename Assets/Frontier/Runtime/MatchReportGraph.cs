@@ -15,6 +15,7 @@ namespace Frontier.Runtime
         public MatchReport Report { get; private set; }
         public ReportMetric Metric { get; private set; }
         public float Maximum { get; private set; }
+        public int Player { get; private set; }
         public static float Value(PlayerMatchStats p,ReportMetric metric)
         {
             switch(metric)
@@ -28,9 +29,9 @@ namespace Frontier.Runtime
                 default:return p.RecentApm;
             }
         }
-        public void Configure(MatchReport report,ReportMetric metric)
+        public void Configure(MatchReport report,ReportMetric metric,int player=0)
         {
-            Report=report;Metric=metric;raycastTarget=false;
+            Report=report;Metric=metric;Player=player==1?1:0;raycastTarget=false;
             float max=1;
             foreach(var sample in report.Samples)foreach(var p in sample.Players)max=Mathf.Max(max,Value(p,metric));
             float step=Mathf.Pow(10,Mathf.Floor(Mathf.Log10(max)));
@@ -47,7 +48,7 @@ namespace Frontier.Runtime
             }
             for(int p=0;p<2;p++)
             {
-                var tint=p==0?PlayerColor:OpponentColor;
+                var tint=p==Player?PlayerColor:OpponentColor;
                 Vector2 Point(MatchSample s)=>new Vector2(r.xMin+r.width*s.Tick/Math.Max(1,Report.Tick),r.yMin+r.height*Value(s.Players[p],Metric)/Maximum);
                 int stride=Math.Max(1,(Report.Samples.Count+510)/511);
                 for(int previous=0;previous<Report.Samples.Count-1;)
@@ -57,7 +58,7 @@ namespace Frontier.Runtime
                     previous=i;
                     // Step values reflect the sampled counts without inventing fractional units.
                     var elbow=new Vector2(to.x,from.y);
-                    Draw(mesh,from,elbow,p==1,tint);Draw(mesh,elbow,to,p==1,tint);
+                    Draw(mesh,from,elbow,p!=Player,tint);Draw(mesh,elbow,to,p!=Player,tint);
                 }
                 var end=Point(Report.Samples[Report.Samples.Count-1]);
                 Line(mesh,end-Vector2.right*3,end+Vector2.right*3,6,tint);

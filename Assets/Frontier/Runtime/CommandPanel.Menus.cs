@@ -8,7 +8,7 @@ namespace Frontier.Runtime
     {
         private enum SettingsTab { Controls, Audio, Visuals, PlaySpace, Language }
         private SettingsTab settingsTab;
-        private string MenuOrigin=>Session.Running?"PAUSE":"MAIN MENU";
+        private string MenuOrigin=>Session.Running?(Session.IsOnline?"MATCH MENU":"PAUSE"):"MAIN MENU";
         private static readonly Color MenuMuted=new Color(.69f,.8f,.85f);
 
         // Shared spacing, typography and action hierarchy across all out-of-match pages.
@@ -36,13 +36,16 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.Main:
-                    MenuCard("New Match","Choose your faction and battlefield. Play a local skirmish against the AI.",Vector2.zero,new Vector2(1040,124),()=>Show(MenuPage.MatchSetup),true);
+                    MenuCard("New Match","Choose your faction and battlefield. Play offline against the AI.",Vector2.zero,new Vector2(512,124),()=>Show(MenuPage.MatchSetup),true);
+                    MenuCard("Multiplayer LAN","Join a dedicated server on your network. Two human players.",new Vector2(528,0),new Vector2(512,124),()=>Show(MenuPage.OnlineSetup));
                     MenuCard("Guides","Controls, units and structures. Everything you need to plan your next move.",new Vector2(0,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
                     MenuCard("Settings","Controls, audio, visuals and play space. Your preferences in one place.",new Vector2(528,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
                     MenuCard("Match history","Watch replays and review saved reports, graphs and build orders.",new Vector2(0,-274),new Vector2(1040,108),OpenHistory);
                     return true;
                 case MenuPage.History:BuildHistory();return true;
                 case MenuPage.Replay:BuildReplayPanel();return true;
+                case MenuPage.OnlineSetup:BuildOnlineSetup();return true;
+                case MenuPage.OnlineEndpoint:BuildOnlineEndpoint();return true;
                 case MenuPage.MatchSetup:
                     MenuCard("Faction: "+ShortFaction(Session.Faction),"Your army · Select to switch faction.",Vector2.zero,new Vector2(512,108),()=>{Session.Faction=Other(Session.Faction);Rebuild();});
                     MenuCard("Opponent: "+ShortFaction(Session.EnemyFaction),"Enemy army · Select to switch faction.",new Vector2(528,0),new Vector2(512,108),()=>{Session.EnemyFaction=Other(Session.EnemyFaction);Rebuild();});
@@ -67,7 +70,7 @@ namespace Frontier.Runtime
                     BuildSettingsPage();return true;
                 case MenuPage.LeaveConfirmation:
                     MenuCard("Keep playing","Resume your current match.",Vector2.zero,new Vector2(512,140),()=>Show(MenuPage.Actions),true);
-                    MenuCard("Leave match","End this match and return to the main menu.",new Vector2(528,0),new Vector2(512,140),()=>Session.LeaveMatch());
+                    MenuCard("Leave match",Session.IsOnline?"Concede to your opponent and return to the main menu.":"End this match and return to the main menu.",new Vector2(528,0),new Vector2(512,140),()=>Session.LeaveMatch());
                     MenuFooter("Back",Back);return true;
                 case MenuPage.Result:case MenuPage.HistoryReport:
                     BuildMatchReport();

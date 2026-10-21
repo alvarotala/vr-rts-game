@@ -18,7 +18,7 @@ namespace Frontier.Runtime
         private Target previousSelectionPage,nextSelectionPage;
         private int selectionPage;
         private int[] gestureSelection=Array.Empty<int>();
-        private Simulation selectionGestureMatch;
+        private object selectionGestureMatch;
         private bool selectionRemove;
         private string selectionRoster="";
 
@@ -117,7 +117,7 @@ namespace Frontier.Runtime
             }
             selectionGridHint.text=hint;
         }
-        private bool SelectionGestureValid()=>AcceptsGameInput&&!Quest.Placing&&!moving&&selectionGestureMatch==Session.Match
+        private bool SelectionGestureValid()=>AcceptsGameInput&&!Quest.Placing&&!moving&&selectionGestureMatch==Session.SessionIdentity
             &&Session.Selection.SetEquals(gestureSelection);
         private void ClearSelectionGesture()
         {
@@ -132,7 +132,7 @@ namespace Frontier.Runtime
                 ClearSelectionGesture();
                 if(hit?.selectionType!=null)
                 {
-                    selectionRemove=RemoveSelectionTypeHeld;gestureSelection=Session.Selection.ToArray();selectionGestureMatch=Session.Match;
+                    selectionRemove=RemoveSelectionTypeHeld;gestureSelection=Session.Selection.ToArray();selectionGestureMatch=Session.SessionIdentity;
                     pressed=hit;pressedAt=Time.unscaledTime;HideActionHelp();
                 }
             }

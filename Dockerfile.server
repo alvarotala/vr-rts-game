@@ -1,0 +1,20 @@
+FROM ubuntu:22.04
+
+# Runtime only: compile the Linux Dedicated Server with Unity before this build.
+# No Editor, license or source checkout is installed in the image.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates libatomic1 libgcc-s1 libstdc++6 libglib2.0-0 \
+        libgssapi-krb5-2 libcurl4 zlib1g \
+    && useradd --uid 10001 --create-home --shell /usr/sbin/nologin frontier \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/frontier
+COPY --chown=frontier:frontier Builds/Server/ ./
+RUN test -f ./FrontierServer && chmod 755 ./FrontierServer
+
+USER frontier
+EXPOSE 7777/udp
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/opt/frontier/FrontierServer", "-batchmode", "-nographics", "-frontier-server", "-logFile", "/dev/stdout"]
+CMD ["-frontier-port", "7777", "-frontier-map", "rift", "-frontier-listen", "0.0.0.0"]

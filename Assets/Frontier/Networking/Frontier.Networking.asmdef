@@ -1,0 +1,5 @@
+{
+  "name": "Frontier.Networking",
+  "rootNamespace": "Frontier.Networking",
+  "references": ["Frontier.Core", "Unity.Netcode.Runtime", "Unity.Collections"]
+}

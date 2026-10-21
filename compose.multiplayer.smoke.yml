@@ -1,0 +1,11 @@
+# Opt-in acceleration for scripts/check-multiplayer.py. Never needed for play.
+services:
+  server:
+    command:
+      - -frontier-port
+      - "${FRONTIER_PORT:-7777}"
+      - -frontier-map
+      - "${FRONTIER_MAP:-rift}"
+      - -frontier-listen
+      - 0.0.0.0
+      - -frontier-smoke

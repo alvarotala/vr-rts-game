@@ -87,7 +87,7 @@ namespace Frontier.Runtime
             float tickTime = board.Session.View.tick / (float)Simulation.TickRate;
             // Interpolate only as far as the next authoritative tick. Pauses and a
             // stalled player loop cannot leave a worker endlessly extracting.
-            if (!board.Session.IsPaused && board.Session.View.winner == -1)
+            if ((!board.Session.IsPaused || board.Session.IsOnline) && board.Session.View.winner == -1)
                 AnimationTime = Mathf.Clamp(AnimationTime + Mathf.Max(0, delta), tickTime, tickTime + 1f / Simulation.TickRate);
             var camera = board.Viewer != null ? board.Viewer : Camera.main;
             right = camera != null ? board.Content.InverseTransformDirection(camera.transform.right).normalized : Vector3.right;

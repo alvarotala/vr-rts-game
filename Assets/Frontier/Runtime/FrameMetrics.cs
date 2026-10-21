@@ -18,8 +18,8 @@ namespace Frontier.Runtime
         private void Update()
         {
             if(!Session.Running||Session.IsPaused||Session.IsReplay)return;
-            if(Session.Match.Winner!=-1){if(!saved)Save();return;}
-            if(Session.Match.Tick<100)return;
+            if(Session.Winner!=-1){if(!saved)Save();return;}
+            if(Session.Tick<100)return;
             intervals.Add(Time.unscaledDeltaTime*1000);
             FrameTimingManager.CaptureFrameTimings();
             if(Time.frameCount%72==0&&FrameTimingManager.GetLatestTimings(1,timings)>0)

@@ -1,0 +1,27 @@
+name: frontier-multiplayer
+
+services:
+  server:
+    image: ${FRONTIER_SERVER_IMAGE:-frontier-command-server:ngo-local}
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      platforms:
+        - linux/amd64
+    init: true
+    restart: "no"
+    command:
+      - -frontier-port
+      - "${FRONTIER_PORT:-7777}"
+      - -frontier-map
+      - "${FRONTIER_MAP:-rift}"
+      - -frontier-listen
+      - 0.0.0.0
+    ports:
+      - "${FRONTIER_BIND_ADDRESS:-127.0.0.1}:${FRONTIER_PORT:-7777}:${FRONTIER_PORT:-7777}/udp"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s

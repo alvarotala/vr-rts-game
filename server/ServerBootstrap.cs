@@ -1,0 +1,32 @@
+using System;
+using Frontier.Networking;
+using UnityEngine;
+
+namespace Frontier.Dedicated
+{
+    // Copied into the generated server project. It deliberately has no client, XR or room setup.
+    public static class ServerBootstrap
+    {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Launch()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            if (!ushort.TryParse(Argument(args, "-frontier-port", "7777"), out ushort port) || port == 0)
+            {
+                Debug.LogError("Invalid -frontier-port (1..65535 required)."); Application.Quit(2); return;
+            }
+            Application.runInBackground = true;
+            Application.targetFrameRate = 60;
+            var server = new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
+            if (Array.IndexOf(args, "-frontier-smoke") >= 0) server.SimulationSpeed = 20;
+            if (!server.StartServer(port, Argument(args, "-frontier-map", "rift"), Argument(args, "-frontier-listen", "0.0.0.0")))
+                Application.Quit(1);
+        }
+
+        private static string Argument(string[] args, string name, string fallback)
+        {
+            int index = Array.IndexOf(args, name);
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : fallback;
+        }
+    }
+}

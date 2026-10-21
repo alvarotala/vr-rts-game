@@ -1,0 +1,8 @@
+# This runtime image only needs the precompiled Linux dedicated server.
+**
+!Dockerfile.server
+!Builds/
+!Builds/Server/
+!Builds/Server/**
+Builds/Server/*_BackUpThisFolder_ButDontShipItWithYourGame
+Builds/Server/*_BurstDebugInformation_DoNotShip

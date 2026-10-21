@@ -31,7 +31,7 @@ namespace Frontier.Runtime
         private int actionSequence,actionEntity,actionResource,selectEntity;
         private Point actionPoint;
         private bool actionAdd,selectAdd,actionConfirmedTarget;
-        private Simulation gestureMatch;
+        private object gestureMatch;
         private object replaySource;
         private bool replayStickReady,replayMiddleDrag;
         private bool placementInputActive,placementInputReady;
@@ -483,8 +483,8 @@ namespace Frontier.Runtime
         }
         private void ValidateMapGestures(bool add)
         {
-            if(gestureMatch!=Session.Match||Session.IsPaused||Session.HasTargetingMode)ResetMapGestures();
-            gestureMatch=Session.Match;
+            if(gestureMatch!=Session.SessionIdentity||!Session.CanIssueOrders||Session.HasTargetingMode)ResetMapGestures();
+            gestureMatch=Session.SessionIdentity;
             // Session removes casualties from selection on each simulation update.
             // That must not be mistaken for the player changing the selected group.
             if(lastActionPress>=0&&Session.View!=null&&!actionSelection.SetEquals(Session.Selection))

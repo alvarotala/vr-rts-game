@@ -281,7 +281,7 @@ namespace Frontier.Runtime
                     if(!pools.TryGetValue(key,out var pool))pools[key]=pool=new Stack<Transform>();
                     visual=pool.Count>0?pool.Pop():MakeEntity(type,e.owner);visual.gameObject.SetActive(true);entities[e.id]=visual;entityTypes[e.id]=key;
                 }
-                var point=e.position;float half=type.building?type.footprint*.5f:0;
+                var point=Session.PresentationPoint(e);float half=type.building?type.footprint*.5f:0;
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
                 var cached=parts[visual];
                 bool ownWorker=type.role=="worker"&&e.owner==Session.View.player&&!e.remembered;
@@ -316,10 +316,10 @@ namespace Frontier.Runtime
                             cached.facing.FaceDestination(target,new Vector3(moveTarget.x,target.y,moveTarget.y));
                         pendingMoveFacing.Remove(e.id);
                     }
-                    visual.localRotation=cached.facing.Step(target,Session.View.tick,Time.unscaledDeltaTime,Session.IsPaused,aim);
+                    visual.localRotation=cached.facing.Step(target,Session.View.tick,Time.unscaledDeltaTime,Session.IsPaused&&!Session.IsOnline,aim);
                 }
                 else if(aim.HasValue)visual.localRotation=Quaternion.LookRotation(aim.Value);
-                visual.localPosition=type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
+                visual.localPosition=Session.IsOnline||type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));
                 visual.localScale=Vector3.one*(e.complete?1:Mathf.Lerp(.25f,1,e.progress));
                 if(ownWorker)workerVisuals.Add(e,work,visual,cached.model,type);
                 cached.soldier?.Apply(e,Session.View.tick,combatTick,attack,aim);
@@ -394,7 +394,7 @@ namespace Frontier.Runtime
                 if(preview==null)preview=Primitive(PrimitiveType.Cube,Content,highlight);
                 int size=Session.Catalog[Session.BuildDefinition].footprint;Point p=Pointer.Value;
                 preview.gameObject.SetActive(true);preview.localPosition=new Vector3(Mathf.Floor(p.x)+size*.5f,HeightAt(p)+.15f,Mathf.Floor(p.y)+size*.5f);preview.localScale=new Vector3(size,.3f,size);
-                bool valid=Session.Match.Map.CanPlace(new Point(Mathf.Floor(p.x),Mathf.Floor(p.y)),size)&&Session.Match.Visible(0,p);
+                bool valid=Session.CanPreviewBuild(new Point(Mathf.Floor(p.x),Mathf.Floor(p.y)),size);
                 preview.GetComponent<Renderer>().sharedMaterial=valid?highlight:red;
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
@@ -439,7 +439,7 @@ namespace Frontier.Runtime
         private Transform MakeEntity(Archetype type,int owner)
         {
             var root=new GameObject(type.name).transform;root.SetParent(Content,false);
-            Material color=owner==0?blue:red;
+            Material color=owner==Session.LocalPlayer?blue:red;
             float size=type.building?type.footprint*.85f:UnitVisuals.ModelScale(type)*.9f;
             var model=new GameObject(type.building?"Building silhouette":"Role silhouette",typeof(MeshFilter),typeof(MeshRenderer));model.transform.SetParent(root,false);
             bool soldier=!type.building&&type.role!="worker";
@@ -458,7 +458,7 @@ namespace Frontier.Runtime
         {var go=GameObject.CreatePrimitive(type);Release(go.GetComponent<Collider>());go.transform.SetParent(parent,false);go.GetComponent<Renderer>().sharedMaterial=material;return go.transform;}
         private void UpdateFog()
         {
-            if(fog==null||Session.Match!=null&&fogTick==Session.View.tick/4)return;
+            if(fog==null||Session.View!=null&&fogTick==Session.View.tick/4)return;
             fogTick=Session.View==null?-1:Session.View.tick/4;
             for(int i=0;i<fogColors.Length;i++){byte v=Session.View==null?(byte)255:Session.View.visibility[i]==2?(byte)255:Session.View.visibility[i]==1?(byte)75:(byte)0;fogColors[i]=new Color32(v,v,v,255);}
             fog.SetPixels32(fogColors);fog.Apply(false);
@@ -499,7 +499,7 @@ namespace Frontier.Runtime
                 ground.SetVector("_AbilityArea",new Vector4(point.x,point.y,ability.radius,.0015f/CellScale));
                 var caster=Session.AbilityCasters(ability.id).Where(e=>Session.AbilityReady(e,ability))
                     .OrderBy(e=>e.order==CommandKind.Cast?1:0)
-                    .ThenBy(e=>e.position.Distance(point)<=ability.range&&Session.Match.Map.HasLineOfSight(e.position,point)?0:1)
+                    .ThenBy(e=>e.position.Distance(point)<=ability.range&&terrainGrid.HasLineOfSight(e.position,point)?0:1)
                     .ThenBy(e=>e.position.Distance(point)).ThenBy(e=>e.id).FirstOrDefault();
                 if(caster!=null)ground.SetVector("_AbilityRange",new Vector4(caster.position.x,caster.position.y,ability.range,.001f/CellScale));
             }

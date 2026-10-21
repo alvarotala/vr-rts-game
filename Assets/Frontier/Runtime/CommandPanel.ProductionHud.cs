@@ -69,7 +69,7 @@ namespace Frontier.Runtime
         private void BindProductionTargets()
         {
             var producer=SelectedProducer();if(producer==null)return;
-            var match=Session.Match;int producerId=producer.id;
+            var match=Session.SessionIdentity;int producerId=producer.id;
             for(int i=0;i<producer.queue.Length&&i<productionTargets.Length;i++)
             {
                 var order=producer.queue[i];int orderId=order.id;
@@ -78,8 +78,8 @@ namespace Frontier.Runtime
                 var target=new Target{rect=card.rectTransform,image=card,normal=i==0?new Color(.055f,.18f,.22f):button,hoverColor=QueueCancelTint,
                     click=()=>
                     {
-                        if(!AcceptsGameInput||Session.Match!=match||SelectedProducer()?.id!=producerId)return;
-                        if(Session.Send(CommandKind.Cancel,queueOrderId:orderId))Session.Announce(QueueLabel(order.definition)+" cancelled. Resources refunded.");
+                        if(!AcceptsGameInput||Session.SessionIdentity!=match||SelectedProducer()?.id!=producerId)return;
+                        if(Session.Send(CommandKind.Cancel,queueOrderId:orderId))Session.Announce(Session.IsOnline?"Cancellation requested.":QueueLabel(order.definition)+" cancelled. Resources refunded.");
                         nextText=0;
                     }};
                 productionTargets[i]=target;targets.Add(target);
@@ -159,7 +159,7 @@ namespace Frontier.Runtime
                 productionName.text=QueueLabel(current.definition);
                 productionState.text=current.research?"1 · RESEARCHING":"1 · TRAINING";
                 productionProgress.text=$"{Mathf.FloorToInt(progress*100)}% · {seconds}s remaining";
-                if(Session.IsPaused)
+                if(Session.IsPaused&&!Session.IsOnline)
                 {
                     productionState.text="1 · PAUSED";tint=WarningTint;
                 }
@@ -175,7 +175,7 @@ namespace Frontier.Runtime
                 productionFill.rectTransform.sizeDelta=new Vector2(320*progress,12);
             }
             if(producerNumber>0&&current!=null)((LocalizedText)productionState).Append(" · B"+producerNumber);
-            if(producerNumber>0&&current==null&&Session.IsPaused){productionState.text="PAUSED";tint=WarningTint;}
+            if(producerNumber>0&&current==null&&Session.IsPaused&&!Session.IsOnline){productionState.text="PAUSED";tint=WarningTint;}
             productionAccent.color=productionFill.color=productionState.color=tint;
         }
 
@@ -200,11 +200,11 @@ namespace Frontier.Runtime
                 UpdateQueuedPortrait(i,item.order);
                 float progress=active?QueueProgress(item.order):0;
                 bool waiting=active&&item.order.remaining<=0&&!item.order.research;
-                var tint=active?(Session.IsPaused||waiting?WarningTint:accent):QueueIdleTint;
+                var tint=active?((Session.IsPaused&&!Session.IsOnline)||waiting?WarningTint:accent):QueueIdleTint;
                 queuedPositions[i].text=i==3&&queued>5?$"5 · +{queued-5} MORE":(i+2).ToString();
                 queuedNames[i].text=occupied?QueueLabel(item.order.definition):"Empty";
                 queuedNames[i].color=occupied?Color.white:QueueIdleTint;
-                string state=!active?"QUEUED":Session.IsPaused?"PAUSED":waiting?"READY":$"{Mathf.FloorToInt(progress*100)}%";
+                string state=!active?"QUEUED":Session.IsPaused&&!Session.IsOnline?"PAUSED":waiting?"READY":$"{Mathf.FloorToInt(progress*100)}%";
                 queuedKinds[i].text=occupied?$"B{item.producer} · {state}":"Available slot";
                 queuedKinds[i].color=tint;
                 queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);

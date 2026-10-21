@@ -65,6 +65,6 @@ namespace Frontier.Runtime
                 catch(Exception error) when(MatchArchiveStore.IsStorageError(error)){ArchiveFailure(error);}
         }
         private void OnApplicationQuit(){UpdateArchive(true);RetryPendingArchives();}
-        private void OnDestroy(){UpdateArchive(true);RetryPendingArchives();}
+        private void OnDestroy(){UpdateArchive(true);RetryPendingArchives();DisconnectOnline();}
     }
 }
