@@ -995,6 +995,15 @@ Grip achica y Trigger agranda al mantenerlos; stick arriba/abajo ajusta altura y
 - Inspeccionadas ambas capturas de `TestResults/BoardPlacement/` con los hints nuevos. `git diff --check` aprobado.
 - Unity Editor **6000.3.26f1**; entrada sintética y pasos de tiempo explícitos para movimiento continuo, sin escrituras de anchors, APK nuevo ni prueba física en Quest.
 
+## Selección agrupada por tipo — 21 de octubre de 2026
+
+El panel muestra una tarjeta por definición, con cantidad y vida media de sus miembros seleccionados. Trigger/A/X filtra ese tipo al soltar sobre la tarjeta; Grip al iniciar la pulsación quita el tipo completo de la selección. Desktop usa clic y Shift + clic. Se elimina la espera de doble clic y la eliminación por mantener sin modificador. La acción no incorpora aliados fuera de la selección ni elimina entidades del mundo.
+
+- `SelectionGridPreview.RunValidation`: salida 0 en `TestResults/unity-selection-types-final.log`. Selección **177 comprobaciones / 8 vistas**, ambas facciones/manos, límites de 60 unidades + 20 edificios, conteos, vida media, exclusión de aliados no seleccionados, Shift de ambos lados, cancelación por pausa/foco/bajas y bloqueo de releases superpuestos.
+- Regresiones aprobadas: rueda unificada **710**, grupos **496**, rueda de acciones **458**, colas de entrada **200**, rally **126**, menús **350**, producción **116**, además del panel de recolección.
+- Se corrigió un texto recortado de la guía detectado en la primera ejecución. Inspeccionadas las capturas agrupadas de ambas facciones y la tarjeta roja al quitar un tipo, en `TestResults/SelectionGrid/`. Guía y referencias de controles actualizadas.
+- `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Entrada sintética en Editor, sin APK ni prueba física en Quest.
+
 ## Densidad de niebla sin transparencia del tablero — 21 de octubre de 2026
 
 La mezcla de las capas de niebla utilizaba los mismos factores para color y alfa, reduciendo la opacidad de terreno ya opaco. Se separa la composición del alfa para conservar esa cobertura mientras la densidad sigue controlando únicamente el aspecto de la neblina.
@@ -1003,3 +1012,21 @@ La mezcla de las capas de niebla utilizaba los mismos factores para color y alfa
 - `FogPreview.Run` tras la corrección: **148 comprobaciones y 45 renders**, salida 0 en `TestResults/unity-fog-opacity-fixed.log`. Los tres mapas conservan **255/255** en todos los píxeles que eran opacos, con densidades 25/50/75/100 %, desde arriba y en ángulo, contra la referencia de 0 %. El exterior conserva transparencia; las zonas visibles conservan su color; la neblina sigue variando y la visibilidad de enemigos no cambia.
 - Las pruebas leen RGBA directamente del render target, evitando la captura estática RGB que no conserva alfa. Inspeccionados `TestResults/Fog/desert-opaque-25.png` y `desert-opaque-100.png`. `git diff --check` aprobado.
 - Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin APK ni validación del compositor en un Quest físico.
+
+## Modelos en construcción, entrenamiento y producción — 21 de octubre de 2026
+
+Las tarjetas Build/Train y los cinco espacios de producción muestran miniaturas de los modelos reales de ambas facciones, reutilizando la proyección cacheada de `SelectionPortrait`. Se conservan nombres, costos, resaltado SELECTED, progreso, cancelación individual y desbordamiento de colas agrupadas. Las investigaciones y los espacios vacíos retiran cualquier miniatura anterior.
+
+- `ConstructionPreview.Render`: **224 comprobaciones**, salida 0 en `TestResults/unity-construction-models.log`. Clic sobre las miniaturas, cambio de edificio, selección persistente y colocación real. El caso de academia detectó un costo seleccionado recortado; se compactaron las unidades M/G y se verificó el texto completo.
+- `ProductionCancelPreview.Render`: salida 0 en `TestResults/unity-production-models-cancel.log`; cancelación **168 comprobaciones / 14 vistas**, ayuda **140 / 38**, producción **776 / 26**, menús **350 / 54** y rueda **458 / 20**, además de 18 paneles de recolección. Verifica que cada retrato corresponda al pedido, cambie aunque la longitud de la cola se mantenga y desaparezca al investigar o vaciarse; comprueba nombres/costos legibles y acciones reales sobre las miniaturas.
+- Inspeccionadas capturas de construcción y producción de ambas facciones, incluidas academia seleccionada, colas llenas y unidad pendiente detrás de una investigación. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Capturas y entrada sintética en Editor; sin APK ni validación física en Quest.
+
+## Selección rápida hacia abajo en el stick — 21 de octubre de 2026
+
+Abajo entra directamente a Quick select con Idle workers resaltado; arriba dentro de esa rueda elige All army. Gatillo reemplaza la selección, conserva las órdenes y cierra con confirmación visual. Los contadores se actualizan desde PlayerView y se revalidan al confirmar; un resultado vacío conserva la selección previa. Se añade el hint lateral, la referencia de controles y una segunda página de la guía Selection para no ocultar las nuevas entradas.
+
+- `QuickSelectionPreview.Render`: **228 comprobaciones / 12 vistas**, ambas facciones y manos. Incluye trabajadores Stop/Hold, trabajo/traslado/entrega/órdenes pendientes, todos los roles militares lejos de la base, muertos/incompletos/enemigos/recordados, cambios entre apuntar y confirmar, confirmación sin recentrar, consumo del release, pausa, cierre y conservación de órdenes/grupos.
+- Regresiones: rueda unificada **724 / 22 vistas**, grupos **496 / 10**, acciones **466 / 20**, menús **356 / 55**. Salida 0 en `TestResults/unity-quick-selection-final.log`; la guía permite llegar a las nuevas entradas y volver sin reanudar la partida.
+- Inspeccionadas la rueda de dos opciones, el hint completo y la página de guía en `TestResults/QuickSelection`, `TestResults/UnifiedWheel` y `TestResults/Menus`. Referencias Markdown/CSV actualizadas desde el catálogo exportado. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Validación de Editor con entrada sintética; sin APK ni prueba física en Quest.

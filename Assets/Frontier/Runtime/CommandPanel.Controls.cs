@@ -7,7 +7,8 @@ namespace Frontier.Runtime
     {
         private RectTransform controlGuide;
         private Text controlGuideDevice;
-        private int controlGuideTopic;
+        private int controlGuideTopic,controlGuidePage,controlGuidePages=1;
+        private bool controlGuideTouch;
         private readonly Target[] controlGuideTabs=new Target[6];
         private readonly Text[] controlGuideTabLabels=new Text[6];
         private readonly RectTransform[] controlGuideCards=new RectTransform[8];
@@ -23,7 +24,7 @@ namespace Frontier.Runtime
                 int index=i;
                 var tab=Section(controlGuide,"Help category "+i,new Vector2(16+i*169,-46),new Vector2(163,42));
                 controlGuideTabLabels[i]=Label(tab,"",new Vector2(4,0),new Vector2(155,42),17,Color.white,TextAnchor.MiddleCenter);
-                controlGuideTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{controlGuideTopic=index;Rebuild();UpdateMenuText();}};
+                controlGuideTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{controlGuideTopic=index;controlGuidePage=0;Rebuild();UpdateMenuText();}};
             }
             for(int i=0;i<controlGuideCards.Length;i++)
             {
@@ -40,6 +41,7 @@ namespace Frontier.Runtime
             bool visible=Page==MenuPage.Guide;
             controlGuide.gameObject.SetActive(visible);if(!visible)return;
             var topics=DefaultControlCatalog.For(Quest.Active,Bindings);controlGuideTopic=Mathf.Clamp(controlGuideTopic,0,topics.Count-1);
+            if(controlGuideTouch!=Quest.Active){controlGuideTouch=Quest.Active;controlGuidePage=0;}
             controlGuideDevice.text=Quest.Active?Bindings.HandName.ToUpperInvariant()+" TOUCH · "+Bindings.OtherHandName+" unused":"MOUSE / KEYBOARD";
             for(int i=0;i<topics.Count;i++)
             {
@@ -49,11 +51,15 @@ namespace Frontier.Runtime
                 targets.Add(tab);
             }
             var commands=topics[controlGuideTopic].Commands;
+            controlGuidePages=Mathf.Max(1,(commands.Count+controlGuideCards.Length-1)/controlGuideCards.Length);
+            controlGuidePage=Mathf.Clamp(controlGuidePage,0,controlGuidePages-1);
+            if(controlGuidePages>1)controlGuideDevice.text+=$" · PAGE {controlGuidePage+1}/{controlGuidePages}";
             for(int i=0;i<controlGuideCards.Length;i++)
             {
-                bool active=i<commands.Count;controlGuideCards[i].gameObject.SetActive(active);if(!active)continue;
-                controlGuideCommands[i].text=commands[i].Name;controlGuideGestures[i].text=commands[i].Gesture;
-                controlGuideDescriptions[i].text=commands[i].Description;
+                int index=controlGuidePage*controlGuideCards.Length+i;
+                bool active=index<commands.Count;controlGuideCards[i].gameObject.SetActive(active);if(!active)continue;
+                controlGuideCommands[i].text=commands[index].Name;controlGuideGestures[i].text=commands[index].Gesture;
+                controlGuideDescriptions[i].text=commands[index].Description;
             }
         }
 

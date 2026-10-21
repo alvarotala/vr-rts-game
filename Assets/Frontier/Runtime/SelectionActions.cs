@@ -12,6 +12,7 @@ namespace Frontier.Runtime
     {
         public string Id, Title, Label, Detail, Description, HelpDetail;
         public ActionCategory Category = ActionCategory.Orders;
+        public Archetype Model;
         public bool Building;
         public Func<bool> Execute;
     }
@@ -38,7 +39,7 @@ namespace Frontier.Runtime
                     {
                         var captured = type;
                         result.Add("train:" + type.id, "Train " + type.name, type.name, UnitVisuals.RoleName(type.role) + " · " + Cost(type.minerals, type.catalyst), () => session.Send(CommandKind.Train, captured.id), ActionCategory.Train,
-                            Describe(type, session.Catalog), Requirements(type, session.Catalog));
+                            Describe(type, session.Catalog), Requirements(type, session.Catalog), type);
                     }
                     if (roles.Contains("tech")) foreach (var upgrade in session.Catalog.Definition.upgrades)
                     {
@@ -65,7 +66,7 @@ namespace Frontier.Runtime
                 {
                     var captured = type;
                     result.Add("build:" + type.id, "Build " + type.name, type.name, Cost(type.minerals, type.catalyst), () => { session.ChooseBuild(captured.id); return true; }, ActionCategory.Build,
-                        Describe(type, session.Catalog), Requirements(type, session.Catalog));
+                        Describe(type, session.Catalog), Requirements(type, session.Catalog), type);
                 }
                 var abilities=selected.SelectMany(e=>session.Catalog[e.definition].abilities).Distinct().ToArray();
                 if(abilities.Length>0)result.Heading="ABILITIES & UNIT ORDERS";
@@ -87,9 +88,9 @@ namespace Frontier.Runtime
             return result;
         }
 
-        private void Add(string id, string title, string label, string detail, Func<bool> execute, ActionCategory category = ActionCategory.Orders, string description = "", string helpDetail = "")
+        private void Add(string id, string title, string label, string detail, Func<bool> execute, ActionCategory category = ActionCategory.Orders, string description = "", string helpDetail = "", Archetype model = null)
             => Items.Add(new SelectionAction { Id = id, Title = title, Label = label, Detail = detail, Execute = execute, Building = category == ActionCategory.Build,
-                Category = category, Description = description, HelpDetail = helpDetail });
+                Category = category, Description = description, HelpDetail = helpDetail, Model = model });
 
         private static string Describe(Archetype type, Catalog catalog)
         {

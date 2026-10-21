@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Frontier.Runtime
 {
-    public enum WheelPage { Root, Groups, Selection, Orders }
+    public enum WheelPage { Root, Groups, Selection, Orders, QuickSelect }
 
     public sealed class ActionWheel : MonoBehaviour
     {
@@ -39,10 +39,10 @@ namespace Frontier.Runtime
         private float confirmationStarted = -1, confirmationStrength;
         private static readonly Color Confirmed = new Color(.65f, 1, .77f);
         private Text heading, title, detail, help, hintSelection, hintOrders;
-        private readonly Text[] hintLabels = new Text[3];
+        private readonly Text[] hintLabels = new Text[4];
         private readonly Text[] buttonHints = new Text[5];
         private static readonly string[] hintInputs = { "touch:trigger", "touch:b", "touch:a", "touch:grip", "touch:stick" };
-        private readonly RectTransform[] hintLines = new RectTransform[14];
+        private readonly RectTransform[] hintLines = new RectTransform[15];
         private bool? hintLeft;
         private string hintBindings;
         private Font font;
@@ -89,8 +89,6 @@ namespace Frontier.Runtime
             {
                 if (stick.magnitude < .25f) openReady = true;
                 if (!openReady || stick.magnitude < .45f) { TickHint(pointer, true, now); return false; }
-                if (Mathf.Abs(Mathf.Atan2(stick.x, stick.y) * Mathf.Rad2Deg) >= 135)
-                { TickHint(pointer, true, now); return false; }
                 Open(); stickReady = true; Aim(stick); Confirm(stick, now, false);
                 if (IsOpen) UpdatePose(pointer);
                 TickHint(pointer, true, now);
@@ -145,6 +143,8 @@ namespace Frontier.Runtime
             hintLabels[0].text=placing?"↑↓ Height":replay?"↑↓ Speed":"↑ Groups";
             hintLabels[1].text=placing?"→ Turn right":replay?"→ +15 seconds":"→ Selection";
             hintLabels[2].text=placing?"← Turn left":replay?"← −15 seconds":"← Unit orders";
+            hintLabels[3].gameObject.SetActive(!placing&&!replay);
+            hintLines[5].gameObject.SetActive(!placing&&!replay);
             string selection = (placing?"placement:":replay?"replay:":"")+string.Join(",", Session.Selection.OrderBy(id => id));
             if (!ReferenceEquals(hintView, Session.View) || selection != hintSelectionSignature)
             {
@@ -207,6 +207,15 @@ namespace Frontier.Runtime
         private IEnumerable<SelectionAction> AvailableActions()
             => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel");
 
+        private IEnumerable<SelectionAction> QuickSelectActions()
+        {
+            int army=Session.Army.Count(),idle=Session.IdleWorkers.Count();
+            yield return new SelectionAction{Id="all-army",Title="All army",Label="All army\n"+army+" units",
+                Detail=army==0?"No army units available":army+" army units\nAcross the map",Execute=Session.SelectArmy};
+            yield return new SelectionAction{Id="idle-workers",Title="Idle workers",Label="Idle workers\n"+idle+" available",
+                Detail=idle==0?"No idle workers available":idle+" idle workers\nAcross the map",Execute=Session.SelectIdleWorkers};
+        }
+
         private void RefreshActions()
         {
             if (InGroupMenu && actionSignature != null) { RefreshGroups(); return; }
@@ -218,6 +227,7 @@ namespace Frontier.Runtime
             {
                 current.Add(Navigation("groups-menu", "Groups", "Select a control group"));
                 current.Add(Navigation("selection-menu", "Selection", "Build, train, research and abilities"));
+                current.Add(Navigation("quick-select-menu", "Quick select", "Idle workers and all army units"));
                 current.Add(Navigation("orders-menu", "Unit orders", "Attack, stop and hold position"));
                 if (!available.Any(a => a.Category != ActionCategory.Orders)) disabled.Add("selection-menu");
                 if (!available.Any(a => a.Category == ActionCategory.Orders)) disabled.Add("orders-menu");
@@ -226,6 +236,13 @@ namespace Frontier.Runtime
             {
                 for (int i = 0; i < GameSession.ControlGroupCount; i++)
                     current.Add(Navigation("group-" + (i + 1), "Group " + (i + 1), ""));
+            }
+            else if(Page==WheelPage.QuickSelect)
+            {
+                current.AddRange(QuickSelectActions());
+                if(!Session.Army.Any())disabled.Add("all-army");
+                if(!Session.IdleWorkers.Any())disabled.Add("idle-workers");
+                if(failedAction!=null&&!disabled.Contains(failedAction))failedAction=failureMessage=null;
             }
             else
             {
@@ -237,7 +254,7 @@ namespace Frontier.Runtime
             if (signature == actionSignature)
             {
                 // Resource, energy and cooldown changes retain the chosen sector.
-                for (int i = 0; i < current.Count; i++) items[i] = current[i];
+                for (int i = 0; i < current.Count; i++) { items[i] = current[i]; sectorLabels[i].text=current[i].Label; }
                 UpdateHighlight(); UpdateDescription(); return;
             }
             actionSignature = signature; items.Clear(); items.AddRange(current);
@@ -245,7 +262,7 @@ namespace Frontier.Runtime
             // Never remap a held direction when the available commands change.
             Highlighted = -1; stickReady = false; BuildSectors();
             var selection = Session.View.entities.Where(e => Session.Selection.Contains(e.id)).ToArray();
-            heading.text = InGroupMenu ? "CONTROL GROUPS" : selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "COMMAND WHEEL";
+            heading.text = Page==WheelPage.QuickSelect ? "QUICK SELECT" : InGroupMenu ? "CONTROL GROUPS" : selection.Length == 1 ? Session.Catalog[selection[0].definition].name : selection.Length > 1 ? selection.Length + " selected items" : "COMMAND WHEEL";
             if (InGroupMenu) RefreshGroups();
             else { UpdateHighlight(); UpdateDescription(); }
         }
@@ -258,13 +275,13 @@ namespace Frontier.Runtime
                 if (Application.isPlaying) Destroy(child); else DestroyImmediate(child);
             }
             sectors.Clear(); sectorLabels.Clear(); angles.Clear();
-            bool cardinal = Page == WheelPage.Root || InGroupMenu;
+            bool cardinal = Page == WheelPage.Root || InGroupMenu || Page==WheelPage.QuickSelect;
             int commands = cardinal ? items.Count : items.Count - 1;
-            float step = cardinal ? 90 : 270f / Mathf.Max(1, commands);
+            float step = cardinal ? 360f/items.Count : 270f / Mathf.Max(1, commands);
             for (int i = 0; i < items.Count; i++)
             {
                 bool back = items[i].Id == "back";
-                float angle = cardinal ? Page == WheelPage.Root && i == 2 ? 270 : i * step : back ? 180 : -135 + step * (i + .5f);
+                float angle = cardinal ? i * step : back ? 180 : -135 + step * (i + .5f);
                 float sweep = cardinal ? step : back ? 90 : step;
                 angles.Add(angle);
                 var slice = Rect("Action " + items[i].Id, slices, Vector2.zero, new Vector2(600, 600));
@@ -305,11 +322,10 @@ namespace Frontier.Runtime
             }
             if (!stickReady || stick.magnitude < .45f || items.Count == 0) return;
             float angle = Mathf.Atan2(stick.x, stick.y) * Mathf.Rad2Deg;
-            bool cardinal = Page == WheelPage.Root || InGroupMenu;
-            float step = cardinal ? 90 : 270f / Mathf.Max(1, items.Count - 1);
-            int next = cardinal ? Mathf.FloorToInt((Mathf.Repeat(angle, 360) + step * .5f) / step) % 4 :
+            bool cardinal = Page == WheelPage.Root || InGroupMenu || Page==WheelPage.QuickSelect;
+            float step = cardinal ? 360f/items.Count : 270f / Mathf.Max(1, items.Count - 1);
+            int next = cardinal ? Mathf.FloorToInt((Mathf.Repeat(angle, 360) + step * .5f) / step) % items.Count :
                 Mathf.Abs(angle) >= 135 || items.Count == 1 ? items.Count - 1 : Mathf.Clamp(Mathf.FloorToInt((angle + 135) / step), 0, items.Count - 2);
-            if (Page == WheelPage.Root) next = next == 2 ? -1 : next == 3 ? 2 : next;
             if (Highlighted >= 0)
             {
                 float half = !cardinal && items[Highlighted].Id == "back" ? 45 : step * .5f;
@@ -341,9 +357,9 @@ namespace Frontier.Runtime
                 help.text = "Trigger · Select     Stick click · Assign\n" + Panel.Bindings.MenuBackName + " · Back     Center stick to hide";
                 return;
             }
-            title.text = Highlighted >= 0 ? items[Highlighted].Title : Page == WheelPage.Root ? "COMMANDS" : Page == WheelPage.Selection ? "SELECTION" : "UNIT ORDERS";
-            detail.text = Highlighted >= 0 ? disabled.Contains(items[Highlighted].Id) ? "No actions for this selection" : items[Highlighted].Detail : "Tilt to choose\nTrigger to enter";
-            help.text = Page == WheelPage.Root ? "Trigger · Enter     " + Panel.Bindings.MenuBackName + " · Close\nCenter stick to hide" : "Trigger · Confirm     Down · Back\nCenter stick to hide";
+            title.text = Highlighted >= 0 ? items[Highlighted].Title : Page == WheelPage.Root ? "COMMANDS" : Page==WheelPage.QuickSelect ? "QUICK SELECT" : Page == WheelPage.Selection ? "SELECTION" : "UNIT ORDERS";
+            detail.text = Highlighted >= 0 ? disabled.Contains(items[Highlighted].Id)&&Page!=WheelPage.QuickSelect ? "No actions for this selection" : items[Highlighted].Detail : "Tilt to choose\nTrigger to enter";
+            help.text = Page == WheelPage.Root ? "Trigger · Enter     " + Panel.Bindings.MenuBackName + " · Close\nCenter stick to hide" : Page==WheelPage.QuickSelect ? "Trigger · Select     "+Panel.Bindings.MenuBackName+" · Back\nCenter stick to hide" : "Trigger · Confirm     Down · Back\nCenter stick to hide";
             if (failedAction != null && failedAction == HighlightedId) { detail.text = failureMessage; detail.color = Save; }
         }
 
@@ -362,16 +378,17 @@ namespace Frontier.Runtime
             float angle = angles[Highlighted], sweep = sectors[Highlighted].Sweep;
             var page = Page;
             if (feedback) HideConfirmation();
-            if (disabled.Contains(id)) { detail.text = "No actions for this selection"; detail.color = Save; return; }
+            if (disabled.Contains(id)&&Page!=WheelPage.QuickSelect) { detail.text = "No actions for this selection"; detail.color = Save; return; }
             if (InGroupMenu) { ConfirmGroup(Highlighted, false, now); return; }
             if (id == "back") Back(stick);
             else if (id == "groups-menu") Enter(WheelPage.Groups, stick);
             else if (id == "selection-menu") Enter(WheelPage.Selection, stick);
             else if (id == "orders-menu") Enter(WheelPage.Orders, stick);
+            else if (id == "quick-select-menu") Enter(WheelPage.QuickSelect, stick);
             else
             {
                 // Resolve again just before submitting; availability can change while aiming.
-                var action = AvailableActions().FirstOrDefault(a => a.Id == id);
+                var action = (Page==WheelPage.QuickSelect?QuickSelectActions():AvailableActions()).FirstOrDefault(a => a.Id == id);
                 if (action == null) { actionSignature = null; RefreshActions(); return; }
                 if (!action.Execute()) { failedAction = id; failureMessage = Session.Message; UpdateDescription(); return; }
                 failedAction = failureMessage = null;
@@ -487,6 +504,7 @@ namespace Frontier.Runtime
             hintLabels[0] = Label(hintRoot, "↑ Groups", Vector2.zero, new Vector2(210, 38), 24, Color.white);
             hintLabels[1] = hintSelection = Label(hintRoot, "→ Selection", Vector2.zero, new Vector2(210, 38), 24, Color.white);
             hintLabels[2] = hintOrders = Label(hintRoot, "← Unit orders", Vector2.zero, new Vector2(210, 38), 24, Color.white);
+            hintLabels[3] = Label(hintRoot, "↓ Quick select", Vector2.zero, new Vector2(210, 38), 24, Color.white);
             for (int i = 0; i < buttonHints.Length; i++)
                 buttonHints[i] = Label(hintRoot, "", Vector2.zero, new Vector2(i == 4 ? 250 : 350, 80), 22, Color.white);
             foreach (var label in hintLabels.Concat(buttonHints))
@@ -503,7 +521,7 @@ namespace Frontier.Runtime
             hintLeft = left; hintBindings = null; float side = left ? -1 : 1;
             // Mirror the callout geometry, never the words or directional arrows.
             Line(0, new Vector3(side * 40, 0), new Vector3(side * 155, 0));
-            Line(1, new Vector3(side * 155, -130), new Vector3(side * 155, 50));
+            Line(1, new Vector3(side * 155, -180), new Vector3(side * 155, 50));
             for (int i = 0; i < hintLabels.Length; i++)
             {
                 float y = 50 - i * 50;
@@ -511,9 +529,9 @@ namespace Frontier.Runtime
                 hintLabels[i].alignment = left ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
                 Line(i + 2, new Vector3(side * 155, y), new Vector3(side * 169, y));
             }
-            buttonHints[4].rectTransform.anchoredPosition = new Vector2(side * 300, -130);
+            buttonHints[4].rectTransform.anchoredPosition = new Vector2(side * 300, -180);
             buttonHints[4].alignment = left ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
-            Line(5, new Vector3(side * 155, -130), new Vector3(side * 169, -130));
+            Line(6, new Vector3(side * 155, -180), new Vector3(side * 169, -180));
             var surface = ControllerVisuals.StickSurface(left);
             var origin = surface.position + surface.rotation * Vector3.back * .004f;
             for (int i = 0; i < 4; i++)
@@ -523,8 +541,8 @@ namespace Frontier.Runtime
                 buttonHints[i].alignment = left ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
                 var start = Quaternion.Inverse(surface.rotation) * (ControllerVisuals.ButtonPosition(left, hintInputs[i]) - origin) / .00022f;
                 var elbow = new Vector3(-side * 170, y);
-                Line(6 + i * 2, start, elbow);
-                Line(7 + i * 2, elbow, new Vector3(-side * 200, y));
+                Line(7 + i * 2, start, elbow);
+                Line(8 + i * 2, elbow, new Vector3(-side * 200, y));
             }
             void Line(int index, Vector3 start, Vector3 end)
             {

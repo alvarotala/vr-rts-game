@@ -60,6 +60,7 @@ namespace Frontier.Editor
                     Check(barracks.queue.Count==5&&Text("productionCount").Contains("FULL"),"Rejected sixth order leaves the displayed queue unchanged");
                     int minerals=session.View.minerals;Click("Cancel / refund");
                     Check(barracks.queue.Count==4&&session.View.minerals==minerals+session.Catalog.Role(faction,"scout").minerals&&Field<Text[]>(panel,"queuedNames")[3].text=="Empty","Cancel refunds only the last item and clears its slot");
+                    CheckQueueModels();
                     // Finish and enqueue between HUD refreshes: the length is unchanged, the active item is not.
                     barracks.queue[0].remaining=1;session.Match.Step();
                     Check(session.Send(CommandKind.Train,session.Catalog.Role(faction,"ranged").id),"Replacement order accepted");Refresh();
@@ -155,6 +156,7 @@ namespace Frontier.Editor
                     Check(Text("productionCount")=="0 / 10"&&Text("productionName")=="Queue empty"&&Text("productionState")=="IDLE"&&
                         Field<Text[]>(panel,"queuedNames").All(t=>t.text=="Empty"),
                         "An idle producer group clears all five slots and its active state");
+                    CheckQueueModels();
 
                     // Real training orders in two and three barracks fill every card,
                     // instead of replacing the second card with a total-order counter.
@@ -223,6 +225,7 @@ namespace Frontier.Editor
                     Check(barracks.queue.Count==1&&Text("productionProgress")=="100% · Clear the building exit","Finished unit with blocked exit shows deployment feedback");Capture(faction+"-blocked-exit");
                     Border(0);session.Match.Step();Refresh();
                     Check(barracks.queue.Count==0&&Text("productionName")=="Queue empty","Opening the exit deploys the unit and clears the display");
+                    CheckQueueModels();
                     Click("Train "+session.Catalog.Role(faction,"scout").name);
                     // Lost capacity after accepting an order: existing units, not reservations, determine the warning.
                     session.Match.Entities.Remove(supply.id);session.Match.Map.Occupy(supply.position,session.Catalog[supply.definition].footprint,0);
@@ -267,12 +270,68 @@ namespace Frontier.Editor
                 void Click(string title)
                 {
                     Refresh();var rect=panel.GetComponentsInChildren<RectTransform>().First(t=>t.gameObject.activeInHierarchy&&t.name==title);
-                    var center=rect.TransformPoint(rect.rect.center);var ray=new Ray(center-rect.forward,rect.forward);
+                    var hit=rect.GetComponentInChildren<SelectionPortrait>()?.rectTransform??rect;
+                    var center=hit.TransformPoint(hit.rect.center);var ray=new Ray(center-rect.forward,rect.forward);
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Pointer missed "+title);Refresh();
                 }
-                void Capture(string name){HarvestingPreview.SavePanel(panel,output+"/"+name+".png",preview);captures++;}
+                void CheckQueueModels()
+                {
+                    Canvas.ForceUpdateCanvases();
+                    var portraits=new[]{Field<SelectionPortrait>(panel,"productionPortrait")}.Concat(Field<SelectionPortrait[]>(panel,"queuedPortraits")).ToArray();
+                    var names=ShownNames();
+                    for(int i=0;i<portraits.Length;i++)
+                    {
+                        var type=session.Catalog.Definition.archetypes.SingleOrDefault(t=>!t.building&&t.name==names[i]);
+                        Check(type==null?!portraits[i].gameObject.activeSelf:MatchesModel(portraits[i],type),
+                            "Queue portrait matches the displayed order, or clears for empty/research: "+names[i]);
+                        var card=(RectTransform)portraits[i].transform.parent;
+                        Check(card.GetComponentsInChildren<Text>().All(text=>Inside(card,text.rectTransform)&&Fits(text)),
+                            "Queue name, status and progress remain readable with its model: "+names[i]);
+                        if(type!=null)Check(Inside(card,portraits[i].rectTransform),"Queue model stays inside its card");
+                    }
+                }
+                void Capture(string name)
+                {
+                    CheckActionModels(panel,session,Check);CheckQueueModels();
+                    HarvestingPreview.SavePanel(panel,output+"/"+name+".png",preview);captures++;
+                }
             }
             finally{Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();}
+        }
+        internal static bool MatchesModel(SelectionPortrait portrait,Archetype type)
+        {
+            if(portrait==null||!portrait.gameObject.activeInHierarchy||portrait.raycastTarget)return false;
+            var expected=new GameObject("Expected model",typeof(RectTransform),typeof(SelectionPortrait));
+            try
+            {
+                var reference=expected.GetComponent<SelectionPortrait>();reference.SetType(type);
+                portrait.Rebuild(CanvasUpdate.PreRender);
+                return ReferenceEquals(Field<object>(portrait,"faces"),Field<object>(reference,"faces"))&&portrait.canvasRenderer.GetMesh().vertexCount>0;
+            }
+            finally{Object.DestroyImmediate(expected);}
+        }
+        internal static void CheckActionModels(CommandPanel panel,GameSession session,Action<bool,string> check)
+        {
+            Canvas.ForceUpdateCanvases();var area=Field<RectTransform>(panel,"actions");
+            foreach(var action in SelectionActions.For(session).Items.Where(a=>a.Category==ActionCategory.Build||a.Category==ActionCategory.Train))
+            {
+                var type=session.Catalog[action.Id.Substring(action.Id.IndexOf(':')+1)];
+                var card=area.Cast<RectTransform>().Single(t=>t.name==action.Title);
+                var portrait=card.GetComponentInChildren<SelectionPortrait>();
+                check(MatchesModel(portrait,type),"Action shows the actual model: "+action.Title);
+                var modelRect=new Rect(portrait.rectTransform.anchoredPosition-new Vector2(0,portrait.rectTransform.rect.height),portrait.rectTransform.rect.size);
+                foreach(var label in card.GetComponentsInChildren<Text>())
+                {
+                    var rect=label.rectTransform;
+                    var settings=label.GetGenerationSettings(rect.rect.size);settings.resizeTextForBestFit=false;
+                    if(label.resizeTextForBestFit)settings.fontSize=label.resizeTextMinSize;
+                    check(label.cachedTextGeneratorForLayout.GetPreferredHeight(label.text,settings)/label.pixelsPerUnit<=rect.rect.height+.5f&&
+                        !modelRect.Overlaps(new Rect(rect.anchoredPosition-new Vector2(0,rect.rect.height),rect.rect.size)),
+                        "Action text fits beside the model: "+action.Title+" / "+label.text);
+                }
+                check(card.GetComponentsInChildren<Text>().Any(t=>t.text.Replace(" ","").Contains(type.minerals+"M")&&(type.catalyst==0||t.text.Replace(" ","").Contains(type.catalyst+"G"))),
+                    "Action keeps its mineral and gas costs: "+action.Title);
+            }
         }
     }
 }

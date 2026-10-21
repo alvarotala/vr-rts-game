@@ -83,13 +83,30 @@ namespace Frontier.Runtime
             hint=Label(card,"",new Vector2(216,-36),new Vector2(108,44),14,tint,TextAnchor.MiddleRight);
             return value;
         }
-        private Target HudButton(RectTransform parent,string title,string subtitle,Vector2 position,Vector2 size,Action click,Action hold,out Text detail)
+        private SelectionPortrait ModelPortrait(RectTransform parent,Vector2 position,Vector2 size,Archetype model=null)
+        {
+            var portrait=new GameObject("Model portrait",typeof(RectTransform),typeof(SelectionPortrait)).GetComponent<SelectionPortrait>();
+            portrait.transform.SetParent(parent,false);TopLeft(portrait.rectTransform,position,size);portrait.raycastTarget=false;
+            if(model!=null)portrait.SetType(model);
+            portrait.gameObject.SetActive(model!=null);return portrait;
+        }
+        private Target HudButton(RectTransform parent,string title,string subtitle,Vector2 position,Vector2 size,Action click,Action hold,out Text detail,Archetype model=null)
         {
             var rect=Section(parent,title,position,size,button);
             bool compact=size.y<54;
             var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,Color.white,TextAnchor.MiddleCenter);
             if(compact){name.resizeTextForBestFit=true;name.resizeTextMinSize=13;name.resizeTextMaxSize=16;}
             detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,new Color(.71f,.83f,.87f),TextAnchor.MiddleCenter);
+            if(model!=null)
+            {
+                float portraitSize=Mathf.Min(44,size.y-10),left=portraitSize+16;
+                ModelPortrait(rect,new Vector2(8,-5),new Vector2(portraitSize,portraitSize),model);
+                name.text=model.name;name.alignment=detail.alignment=TextAnchor.MiddleLeft;
+                name.rectTransform.anchoredPosition=new Vector2(left,name.rectTransform.anchoredPosition.y);
+                detail.rectTransform.anchoredPosition=new Vector2(left,detail.rectTransform.anchoredPosition.y);
+                name.rectTransform.sizeDelta=new Vector2(size.x-left-8,name.rectTransform.sizeDelta.y);
+                detail.rectTransform.sizeDelta=new Vector2(size.x-left-8,detail.rectTransform.sizeDelta.y);
+            }
             return new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click,hold=hold,detail=detail};
         }
         private void LayoutPage()
@@ -195,7 +212,7 @@ namespace Frontier.Runtime
             {
                 var action=available.Items.FirstOrDefault(a=>a.Id==target.actionId);if(action==null)continue;
                 bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
-                target.help=action;target.detail.text=(active?"SELECTED · ":"")+action.Detail;
+                target.help=action;target.detail.text=MatchActionDetail(action,active);
             }
         }
         private VisibleEntity[] SelectedMobileUnits()=>Session.View==null?Array.Empty<VisibleEntity>():Session.View.entities
@@ -280,7 +297,7 @@ namespace Frontier.Runtime
                 {
                     var captured=action;
                     bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
-                    var target=HudButton(actions,action.Title,(active?"SELECTED · ":"")+action.Detail,new Vector2(column*230,-y),new Vector2(218,buttonHeight),()=>captured.Execute(),null,out var detail);
+                    var target=HudButton(actions,action.Title,MatchActionDetail(action,active),new Vector2(column*230,-y),new Vector2(218,buttonHeight),()=>captured.Execute(),null,out var detail,action.Model);
                     target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
                     if(active)
                     {
@@ -297,6 +314,14 @@ namespace Frontier.Runtime
                 y+=2;
             }
             actionHint.gameObject.SetActive(actionIndex==0);
+        }
+        private static string MatchActionDetail(SelectionAction action,bool active)
+        {
+            // The category already says Build / Train; leave room for the model
+            // and cost. Roles and requirements remain in the action's hover help.
+            var model=action.Model;
+            string detail=model==null?action.Detail:model.minerals+"M"+(model.catalyst>0?" / "+model.catalyst+"G":"");
+            return (active?"SELECTED · ":"")+detail;
         }
     }
 }

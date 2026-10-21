@@ -28,15 +28,15 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.HintVisible && !f.Wheel.IsOpen, "Gameplay starts with a compact controller hint and no full wheel");
                     var hint = UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "hintRoot");
                     f.Check(hint.GetComponentsInChildren<RadialSector>().Length == 0
-                        && hint.GetComponentsInChildren<Image>().Length == 14
+                        && hint.GetComponentsInChildren<Image>().Length == 15
                         && hint.GetComponentsInChildren<Graphic>().All(graphic => !graphic.raycastTarget)
-                        && new[] { "↑ Groups", "→ Selection", "← Unit orders" }.All(text => hint.GetComponentsInChildren<Text>().Any(label => label.text == text))
-                        && hint.GetComponentsInChildren<Text>().Length == 8,
+                        && new[] { "↑ Groups", "→ Selection", "← Unit orders", "↓ Quick select" }.All(text => hint.GetComponentsInChildren<Text>().Any(label => label.text == text))
+                        && hint.GetComponentsInChildren<Text>().Length == 9,
                         "All directional and button callouts use thin leaders without a small wheel or input-blocking graphics");
                     var hintPosition = hint.position;
                     f.Ray = new Ray(f.Ray.origin + new Vector3(.12f, .04f, 0), f.Ray.direction); f.Frame();
                     f.Check(hint.position != hintPosition, "The compact hint follows the active pointer pose");
-                    f.Capture(faction + "-idle-hint", "hintRoot");
+                    f.Capture(faction + "-idle-hint", "hintRoot",1600,700);
                     CheckHandAttachment(f, faction);
                     CheckNavigationHaptics(f);
                     CheckConfirmationFeedback(f, faction);
@@ -88,10 +88,10 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.HighlightedId == "attack-move", "Left enters Orders with Attack Move already highlighted");
                     f.Capture(faction + "-direct-orders");
                     f.Dismiss(); f.Frame(Vector2.down);
-                    f.Check(!f.Wheel.IsOpen && f.Wheel.HintVisible && f.Session.GroupSize(2) == 0,
-                        "Down from the hint has no action and cannot open assignment");
+                    f.Check(f.Wheel.Page==WheelPage.QuickSelect && f.Wheel.HighlightedId=="idle-workers" && f.Session.GroupSize(2) == 0,
+                        "Down directly opens Quick select with idle workers highlighted, without assigning a group");
                     f.OpenRoot(); f.Frame();
-                    foreach (var target in new[] { ("groups-menu", Vector2.up), ("selection-menu", Vector2.right), ("orders-menu", Vector2.left) })
+                    foreach (var target in new[] { ("groups-menu", Vector2.up), ("selection-menu", Vector2.right), ("orders-menu", Vector2.left), ("quick-select-menu",Vector2.down) })
                     {
                         f.Frame(target.Item2);
                         f.Check(f.Wheel.HighlightedId == target.Item1, "Root cardinal direction selects " + target.Item1);
@@ -116,7 +116,7 @@ namespace Frontier.Editor
                     f.Frame();
                     f.Check(f.Wheel.Highlighted == -1 && f.Wheel.IsOpen, "Centering clears the highlight without confirming");
                     f.Choose("back"); f.Confirm();
-                    f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == null, "Back reaches the root with no action on down");
+                    f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == "quick-select-menu", "Back reaches root and preserves the down direction on Quick select without entering it");
                     f.Frame(); f.Frame(elapsed: .3f);
                     f.Check(f.Wheel.IsOpen, "A 0.3-second centered pause leaves the wheel available");
                     f.Frame(elapsed: .15f);
@@ -140,7 +140,8 @@ namespace Frontier.Editor
                     f.Choose("back"); f.Confirm();
                     f.Check(f.Wheel.Page == WheelPage.Root, "Back from construction options returns directly to the root");
                     f.Frame(Vector2.down, down: true, held: true);
-                    f.Check(f.Wheel.Page == WheelPage.Root && f.Wheel.HighlightedId == null, "Down and Trigger on the root do nothing");
+                    f.Check(f.Wheel.Page == WheelPage.QuickSelect && f.Wheel.HighlightedId == "idle-workers", "Down and Trigger at root enter Quick select without selecting units");
+                    f.Frame(Vector2.up,b:true);
                     f.Frame(Vector2.up); f.Frame(Vector2.up, down: true, held: true);
                     f.Check(f.Wheel.InGroupMenu && f.Wheel.HighlightedId == "group-1", "Up and Trigger enter the single Groups wheel");
                     f.Frame(Vector2.down, held: true);

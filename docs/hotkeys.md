@@ -4,11 +4,11 @@ Referencia de los valores predeterminados. **Settings → Controls → Hotkeys**
 
 **Edit bindings → Change** permite capturar una tecla o botón. Los cambios se guardan localmente; **Swap bindings** confirma un intercambio si la entrada está ocupada. **Restore device defaults** restaura solo el perfil elegido, después de confirmar. Los perfiles de Quest Touch y mouse/teclado son independientes. **Settings → Hand: Left/Right** elige el único mando de Quest que controla el juego. Hotkeys muestra solamente ese mando, o mouse/teclado en desktop; no permite capturar entradas de la mano inactiva. Cambiar la mano conserva las funciones configuradas y se guarda localmente.
 
-Al inclinar el joystick desde el centro se entra directamente en Groups (arriba), Selection (derecha) o Unit orders (izquierda). Abajo no abre una rueda. La dirección se conserva entre niveles; el gatillo físico confirma cada paso. En Groups, gatillo recupera y pulsar el stick asigna la selección al grupo resaltado inmediatamente. Centrar durante 0,8 s sin acción cierra; mantener una dirección conserva la rueda abierta. Fuera de Groups, el clic del stick alterna todos los hints; la rueda sigue disponible con la ayuda oculta.
+Al inclinar el joystick desde el centro se entra directamente en Groups (arriba), Selection (derecha), Unit orders (izquierda) o Quick select (abajo). Quick select resalta Idle workers abajo; arriba elige All army. Gatillo confirma la selección, B/Y vuelve. La dirección se conserva entre niveles; el gatillo físico confirma cada paso. En Groups, gatillo recupera y pulsar el stick asigna la selección al grupo resaltado inmediatamente. Centrar durante 0,4 s sin acción cierra; mantener una dirección conserva la rueda abierta. Fuera de Groups, el clic del stick alterna todos los hints; la rueda sigue disponible con la ayuda oculta.
 
 Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando derecho, gatillo/X y Y en el izquierdo, clic izquierdo y Escape en desktop. En la rueda solo gatillo confirma y B/Y vuelve; A/X y grip no navegan. Fuera de Groups, el clic de stick muestra u oculta todos los hints y se edita como **Show / hide hints**; admite clic de stick, A/X o grip. Los remaps anteriores conservan su botón, ahora para alternar la ayuda. Asignar grupos usa el stick físico dentro de Groups: arriba → elegir grupo → pulsar stick. Los modificadores aceptan Shift, Ctrl o Alt de ambos lados. Arrastre, mantener/soltar y doble pulsación siguen al botón de su función; los ejes del joystick y la rueda del mouse no se reasignan. El tablero confirmado permanece fijo. Contrato técnico: [arquitectura](architecture.md).
 
-Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa o **0,65 s** sobre un icono del panel, guardar desde un botón de grupo más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
+Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa. En las tarjetas del panel, **Grip + Trigger** (desktop: **Shift + clic**) quita el tipo completo sin espera. Guardar desde un botón de grupo requiere más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
 
 La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X/Y y se usa el stick izquierdo. Se genera desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`.
 
@@ -20,14 +20,16 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Trigger on map / Trigger / A on icon | Select an allied unit, building or resource. A selection icon isolates that item. |
+| Select an item | Trigger on map | Select an allied unit, building or resource. |
 | Select an area | Hold Trigger + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Grip + Trigger | Keep your selection and add more units, including by dragging an area. |
-| Remove one item | Grip + hold Trigger / hold icon | Map: hold still with Grip for 0.5 s. Selection icon: hold for 0.65 s, without Grip. |
-| Select the same type | Map: double Trigger · Icon: double click | Map: same-type units/buildings within 12 cells. Icon: same type from selection. Grip adds on map. |
+| Remove from selection | Map: Grip + hold Trigger · Card: Grip + Trigger | Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders. |
+| Select the same type | Map: double Trigger · Card: Trigger / A | Map: same type within 12 cells; Grip adds. Card: keep only that type from the current selection. |
 | Toggle one item | Grip + short Trigger on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
 | Clear selection | Trigger on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |
+| Select idle workers | Stick down > Idle workers > Trigger | Select all idle workers on the map. Moving, working and queued workers stay out. Empty: keep selection. |
+| Select all army | Stick down > up All army > Trigger | Select all your military units, including scouts and casters. Excludes workers and buildings. |
 
 ### Orders
 
@@ -46,10 +48,10 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Open unified wheel | Tilt right stick from center | Stick click shows/hides controller hints. Center for 0.8 s to close the wheel. |
-| Choose a wheel category | Up Groups · Right Selection · Left Orders | Tilt to enter. Keep the stick tilted across levels; press Trigger for each step. |
+| Open unified wheel | Tilt right stick from center | Stick click shows/hides controller hints. Center for 0.4 s to close the wheel. |
+| Choose a wheel category | Up Groups · Right Selection · Left Orders · Down Quick select | Tilt to enter. Keep the stick tilted across levels; press Trigger for each step. |
 | Execute an action | Trigger in the wheel | Selection stays open: press Trigger again to repeat or choose another action. Release the stick to hide. |
-| Back in the wheel | Down + Trigger / B | B goes back or closes the root. Down returns from actions; in Groups it chooses group 3. |
+| Back in the wheel | B / Back sector | B returns or closes root. Down: Quick select at root, idle workers there, group 3 in Groups, Back in actions. |
 | Use menu buttons | Trigger / A | Press and release on the same button. Empty menu areas never send orders through to the map. |
 | Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
@@ -99,11 +101,11 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Select an item | Left mouse on map / Left-click on icon | Select an allied unit, building or resource. A selection icon isolates that item. |
+| Select an item | Left mouse on map | Select an allied unit, building or resource. |
 | Select an area | Hold Left mouse + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Shift + Left mouse | Keep your selection and add more units, including by dragging an area. |
-| Remove one item | Shift + hold Left mouse / hold icon | Map: hold still with Shift for 0.5 s. Selection icon: hold for 0.65 s, without Shift. |
-| Select the same type | Map: double Left mouse · Icon: double click | Map: same-type units/buildings within 12 cells. Icon: same type from selection. Shift adds on map. |
+| Remove from selection | Map: Shift + hold Left mouse · Card: Shift + click | Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders. |
+| Select the same type | Map: double Left mouse · Card: Left-click | Map: same type within 12 cells; Shift adds. Card: keep only that type from the current selection. |
 | Toggle one item | Shift + short Left mouse on an ally | Add or remove one allied unit or building. Area selection with the modifier only adds units. |
 | Clear selection | Left mouse on empty terrain | Clear the current selection without the modifier. Finish or cancel an armed action first. |
 | Preview your target | Point at a unit, building or resource | The hover highlight identifies your target; the point on the map shows where you are aiming. |

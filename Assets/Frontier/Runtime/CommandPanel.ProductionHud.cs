@@ -10,6 +10,8 @@ namespace Frontier.Runtime
         private RectTransform productionStrip;
         private Text productionCount, productionState, productionName, productionProgress, productionTitle, productionHint;
         private Image productionFill, productionAccent, productionCard;
+        private SelectionPortrait productionPortrait;
+        private readonly SelectionPortrait[] queuedPortraits=new SelectionPortrait[4];
         private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4], queuedPositions=new Text[4];
         private readonly Image[] queuedCards=new Image[4];
         private readonly Image[] queuedProgress=new Image[4];
@@ -30,6 +32,7 @@ namespace Frontier.Runtime
             productionAccent=Section(active,"Active accent",Vector2.zero,new Vector2(4,112),accent).GetComponent<Image>();
             productionState=Label(active,"",new Vector2(16,-4),new Vector2(320,22),15,accent);
             productionName=Label(active,"",new Vector2(16,-25),new Vector2(320,38),28,Color.white);
+            productionPortrait=ModelPortrait(active,new Vector2(16,-26),new Vector2(44,38));
             var bar=Section(active,"Production progress track",new Vector2(16,-68),new Vector2(320,12),new Color(.12f,.28f,.31f));
             productionFill=Section(bar,"Production progress",Vector2.zero,new Vector2(0,12),accent).GetComponent<Image>();
             productionProgress=Label(active,"",new Vector2(16,-84),new Vector2(320,24),19,Color.white);
@@ -40,6 +43,7 @@ namespace Frontier.Runtime
                 queuedCards[i]=card.GetComponent<Image>();
                 queuedPositions[i]=Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
                 queuedNames[i]=Label(card,"",new Vector2(12,-30),new Vector2(136,52),21,Color.white);
+                queuedPortraits[i]=ModelPortrait(card,new Vector2(8,-30),new Vector2(48,48));
                 queuedProgress[i]=Section(card,"Production progress",new Vector2(12,-82),new Vector2(0,3),accent).GetComponent<Image>();
                 queuedKinds[i]=Label(card,"",new Vector2(12,-87),new Vector2(136,22),14,QueueIdleTint);
                 cancelHints[i+1]=CreateCancelHint(card,160);
@@ -124,6 +128,7 @@ namespace Frontier.Runtime
                 queuedPositions[i].text=(i+2).ToString();
                 bool occupied=i+1<queue.Length;
                 var item=occupied?queue[i+1]:null;
+                UpdateQueuedPortrait(i,item);
                 queuedNames[i].text=occupied?QueueLabel(item.definition):"Empty";
                 queuedNames[i].color=occupied?Color.white:QueueIdleTint;
                 queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
@@ -138,6 +143,8 @@ namespace Frontier.Runtime
 
         private void UpdateCurrentProduction(ProductionOrder current,int producerNumber=0)
         {
+            bool portrait=UpdateProductionPortrait(productionPortrait,current);
+            TopLeft(productionName.rectTransform,new Vector2(portrait?72:16,-25),new Vector2(portrait?264:320,38));
             var tint=accent;
             if(current==null)
             {
@@ -190,6 +197,7 @@ namespace Frontier.Runtime
             for(int i=0;i<4;i++)
             {
                 var item=visible[i+1];bool occupied=item.order!=null,active=occupied&&item.depth==0;
+                UpdateQueuedPortrait(i,item.order);
                 float progress=active?QueueProgress(item.order):0;
                 bool waiting=active&&item.order.remaining<=0&&!item.order.research;
                 var tint=active?(Session.IsPaused||waiting?WarningTint:accent):QueueIdleTint;
@@ -204,6 +212,18 @@ namespace Frontier.Runtime
             }
             // Group cancellation remains an explicit single-building operation.
             UpdateProductionHover();
+        }
+        private bool UpdateProductionPortrait(SelectionPortrait portrait,ProductionOrder order)
+        {
+            bool visible=order!=null&&!order.research;
+            if(visible)portrait.SetType(Session.Catalog[order.definition]);
+            portrait.gameObject.SetActive(visible);return visible;
+        }
+        private void UpdateQueuedPortrait(int index,ProductionOrder order)
+        {
+            bool portrait=UpdateProductionPortrait(queuedPortraits[index],order);
+            TopLeft(queuedNames[index].rectTransform,new Vector2(portrait?62:12,-30),new Vector2(portrait?90:136,52));
+            queuedNames[index].fontSize=portrait?17:21;
         }
     }
 }

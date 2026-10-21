@@ -153,12 +153,28 @@ namespace Frontier.Runtime
                     &&entity.position.Distance(source.position)<=12)Selection.Add(entity.id);
             ValidateAbilitySelection();Feedback?.Invoke(true);Changed?.Invoke();
         }
-        public void SelectSameTypeInSelection(int id)
+        public void SelectTypeInSelection(string definition,bool remove)
         {
-            var source=View?.entities.FirstOrDefault(e=>e.id==id&&Selection.Contains(id)&&OwnGroupMember(id));
-            if(source==null)return;
-            Selection.RemoveWhere(member=>!View.entities.Any(e=>e.id==member&&e.owner==View.player&&!e.remembered&&e.definition==source.definition));
+            if(View==null)return;
+            var members=new HashSet<int>(View.entities.Where(e=>Selection.Contains(e.id)&&e.owner==View.player&&!e.remembered&&e.definition==definition).Select(e=>e.id));
+            if(members.Count==0)return;
+            if(remove)Selection.ExceptWith(members);else Selection.IntersectWith(members);
             SelectedResource=0;ValidateAbilitySelection();Feedback?.Invoke(true);Changed?.Invoke();
+        }
+        private IEnumerable<VisibleEntity> SelectableUnits => View==null?Enumerable.Empty<VisibleEntity>():View.entities.Where(e=>
+            e.owner==View.player&&!e.remembered&&e.health>0&&e.complete&&!Catalog[e.definition].building);
+        public IEnumerable<VisibleEntity> IdleWorkers => SelectableUnits.Where(e=>Catalog[e.definition].role=="worker"&&
+            (e.order==CommandKind.Stop||e.order==CommandKind.Hold)&&e.pendingOrders.Length==0&&!e.working&&!e.depositing);
+        public IEnumerable<VisibleEntity> Army => SelectableUnits.Where(e=>Catalog[e.definition].role!="worker");
+        public bool SelectIdleWorkers()=>SelectUnits(IdleWorkers,"idle workers","No idle workers available.");
+        public bool SelectArmy()=>SelectUnits(Army,"army units","No army units available.");
+        private bool SelectUnits(IEnumerable<VisibleEntity> units,string label,string emptyMessage)
+        {
+            if(!Running||IsPaused||IsReplay)return false;
+            var ids=units.Select(e=>e.id).ToArray();
+            if(ids.Length==0){Announce(emptyMessage);Feedback?.Invoke(false);Changed?.Invoke();return false;}
+            CancelMode();SelectedResource=0;Selection.Clear();Selection.UnionWith(ids);
+            Announce(ids.Length+" "+label+" selected.");Feedback?.Invoke(true);Changed?.Invoke();return true;
         }
         public void Group(int index, bool save)
         {

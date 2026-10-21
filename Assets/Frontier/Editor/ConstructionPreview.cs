@@ -65,6 +65,10 @@ namespace Frontier.Editor
                     Click("Build " + supply.name);
                     Check(SelectedButtons() == 1 && Selected(supply.name) && !Selected(barracks.name), "Switching blueprint moves the persistent highlight " + faction);
                     CapturePanel(faction + "-supply-selected");
+                    // The longest name and selected mineral/gas cost must fit next to its model.
+                    Click("Build " + session.Catalog.Role(faction, "academy").name);
+                    CapturePanel(faction + "-academy-selected");
+                    Click("Build " + supply.name);
                     var blocker = session.Match.Entities.Values.First(e => e.owner == 0 && !session.Catalog[e.definition].building && e.id != worker.id);
                     blocker.position = new Point(20.5f, 14.5f); blocker.order = CommandKind.Hold;
                     Check(session.Context(new Point(20, 14), 0, 0) > 0, "Selected blueprint places through the normal command path " + faction);
@@ -138,10 +142,11 @@ namespace Frontier.Editor
                 int SelectedButtons() => Field<RectTransform>(panel, "actions").GetComponentsInChildren<Text>().Count(t => t.text.StartsWith("SELECTED ·"));
                 void Click(string name)
                 {
-                    RefreshPanel(); var rect = Button(name); var center = rect.TransformPoint(rect.rect.center); var ray = new Ray(center - rect.forward, rect.forward);
+                    RefreshPanel(); var rect = Button(name); var hit=rect.GetComponentInChildren<SelectionPortrait>()?.rectTransform??rect;
+                    var center = hit.TransformPoint(hit.rect.center); var ray = new Ray(center - rect.forward, rect.forward);
                     Check(panel.Point(ray, true, false) && panel.Point(ray, false, true), "Real menu click hits " + name); RefreshPanel();
                 }
-                void CapturePanel(string name) { RefreshPanel(); boardObject.SetActive(false); HarvestingPreview.SavePanel(panel, output + "/" + name + ".png", preview); boardObject.SetActive(true); }
+                void CapturePanel(string name) { RefreshPanel(); ProductionQueuePreview.CheckActionModels(panel,session,Check); boardObject.SetActive(false); HarvestingPreview.SavePanel(panel, output + "/" + name + ".png", preview); boardObject.SetActive(true); }
                 void CameraAt()
                 {
                     preview.camera.orthographic = true; preview.camera.orthographicSize = .24f; preview.camera.nearClipPlane = .001f; preview.camera.farClipPlane = 10;

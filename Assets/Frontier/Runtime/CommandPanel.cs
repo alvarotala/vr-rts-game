@@ -44,7 +44,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset, boardOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public int selectionId; public string actionId; public Text detail; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; }
         private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
         private void Start()
         {
@@ -98,7 +98,6 @@ namespace Frontier.Runtime
             Board.SetVisible(ShowsBoard);
             if(!UpdatePosition(!UsesLobbyPosition||Quest.HeadTracked))return;
             if(Session.Running&&!Session.IsReplay&&Session.Match.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
-            TickSelectionClick(Time.unscaledTime);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
@@ -292,7 +291,12 @@ namespace Frontier.Runtime
                 if(!HotkeyModalOpen)Add("Restore device defaults",RequestHotkeyReset);
                 return;
             }
-            if(Page==MenuPage.Guide||IsReferencePage){Add("Back",Back);return;}
+            if(Page==MenuPage.Guide||IsReferencePage)
+            {
+                Add("Back",Back);
+                if(Page==MenuPage.Guide&&controlGuidePages>1)Add($"Page {controlGuidePage+1} / {controlGuidePages} · Next",()=>{controlGuidePage=(controlGuidePage+1)%controlGuidePages;Rebuild();});
+                return;
+            }
             BuildMatchActions();
         }
         private void Show(MenuPage page)
@@ -302,6 +306,7 @@ namespace Frontier.Runtime
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
             {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
             if(page!=MenuPage.Hotkeys)DismissHotkeyModal();
+            if(page==MenuPage.Guide&&Page!=MenuPage.Guide)controlGuidePage=0;
             if(page!=MenuPage.MatchSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
             lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=0;
@@ -429,7 +434,7 @@ namespace Frontier.Runtime
             }
             if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??Color.Lerp(hovered.normal,Color.white,.2f);}
             UpdateProductionHover();
-            if(PointSelectionGrid(hit,down,up,Time.unscaledTime))return true;
+            if(PointSelectionGrid(hit,down,up))return true;
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
             UpdateActionHelp();
             if(up&&pressed!=null)

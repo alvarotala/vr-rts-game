@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Frontier.Runtime
 {
@@ -35,15 +36,17 @@ namespace Frontier.Runtime
             string click=touch?"Trigger / "+bindings.MenuConfirmName:"Left-click";
             string stick=bindings.HandName.ToLowerInvariant()+" stick";
             return new[]{
-                new Topic("Selection",
-                    new Command("selection.single","Select an item",select+" on map / "+click+" on icon","Select an allied unit, building or resource. A selection icon isolates that item."),
+                new Topic("Selection",new[]{
+                    new Command("selection.single","Select an item",select+" on map","Select an allied unit, building or resource."),
                     new Command("selection.area","Select an area","Hold "+select+" + drag","Enclose units in the flat rectangle. The drag can start outside the map."),
                     new Command("selection.add","Add to selection",shift+" + "+select,"Keep your selection and add more units, including by dragging an area."),
-                    new Command("selection.remove","Remove one item",shift+" + hold "+select+" / hold icon","Map: hold still with "+shift+" for 0.5 s. Selection icon: hold for 0.65 s, without "+shift+"."),
-                    new Command("selection.same-type","Select the same type","Map: double "+select+" · Icon: double click","Map: same-type units/buildings within 12 cells. Icon: same type from selection. "+shift+" adds on map."),
+                    new Command("selection.remove","Remove from selection","Map: "+shift+" + hold "+select+" · Card: "+(touch?"Grip + Trigger":"Shift + click"),"Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders."),
+                    new Command("selection.same-type","Select the same type","Map: double "+select+" · Card: "+click,"Map: same type within 12 cells; "+shift+" adds. Card: keep only that type from the current selection."),
                     new Command("selection.toggle","Toggle one item",shift+" + short "+select+" on an ally","Add or remove one allied unit or building. Area selection with the modifier only adds units."),
                     new Command("selection.clear","Clear selection",select+" on empty terrain","Clear the current selection without the modifier. Finish or cancel an armed action first."),
-                    new Command("selection.hover","Preview your target","Point at a unit, building or resource","The hover highlight identifies your target; the point on the map shows where you are aiming.")),
+                    new Command("selection.hover","Preview your target","Point at a unit, building or resource","The hover highlight identifies your target; the point on the map shows where you are aiming.")}.Concat(touch?new[]{
+                    new Command("selection.idle-workers","Select idle workers","Stick down > Idle workers > Trigger","Select all idle workers on the map. Moving, working and queued workers stay out. Empty: keep selection."),
+                    new Command("selection.army","Select all army","Stick down > up All army > Trigger","Select all your military units, including scouts and casters. Excludes workers and buildings.")}:Array.Empty<Command>()).ToArray()),
                 new Topic("Orders",
                     new Command("orders.move","Move",order+" on terrain","Selected units move to that location using their movement and collision rules."),
                     new Command("orders.attack","Attack a target",order+" on a visible enemy","Focus attacks on that enemy. Double "+order+" over an enemy also attacks directly."),
@@ -55,9 +58,9 @@ namespace Frontier.Runtime
                     new Command("orders.hold","Hold Position","Hold Position action","Clear orders and keep units in place. Attack in range without chasing; resist allied pushes.")),
                 new Topic("Menus",
                     new Command("menus.actions",touch?"Open unified wheel":"Open unit actions",touch?"Tilt "+stick+" from center":"Select units or a building",touch?wheel+" shows/hides controller hints. Center for 0.4 s to close the wheel.":"Use the selected item's actions. Workers have Build; producers have Train and Research."),
-                    new Command("menus.choose-action",touch?"Choose a wheel category":"Choose a menu action",touch?"Up Groups · Right Selection · Left Orders":"Point at an action button",touch?"Tilt to enter. Keep the stick tilted across levels; press Trigger for each step.":"Available actions follow your selection. Hover to preview the button before clicking."),
+                    new Command("menus.choose-action",touch?"Choose a wheel category":"Choose a menu action",touch?"Up Groups · Right Selection · Left Orders · Down Quick select":"Point at an action button",touch?"Tilt to enter. Keep the stick tilted across levels; press Trigger for each step.":"Available actions follow your selection. Hover to preview the button before clicking."),
                     new Command("menus.execute-action","Execute an action",touch?"Trigger in the wheel":"Left-click the action",touch?"Selection stays open: press Trigger again to repeat or choose another action. Release the stick to hide.":"Execute the highlighted action. Building and Attack Move then need a point on the map."),
-                    new Command("menus.back-action",touch?"Back in the wheel":"Cancel a pending action",touch?"Down + Trigger / "+bindings.MenuBackName:back,touch?bindings.MenuBackName+" goes back or closes the root. Down returns from actions; in Groups it chooses group 3.":"Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus."),
+                    new Command("menus.back-action",touch?"Back in the wheel":"Cancel a pending action",touch?bindings.MenuBackName+" / Back sector":back,touch?bindings.MenuBackName+" returns or closes root. Down: Quick select at root, idle workers there, group 3 in Groups, Back in actions.":"Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus."),
                     new Command("menus.activate","Use menu buttons",click,"Press and release on the same button. Empty menu areas never send orders through to the map."),
                     new Command("menus.pause","Pause / resume",touch?back+" / Pause button":back+" / "+pause+" / Pause button","Cancel an armed action first, or pause. Menus: "+(touch?bindings.MenuBackName:"Escape")+" goes back; Resume continues the match."),
                     new Command("menus.leave","Return to main menu","Pause > Return to main menu","Confirm Leave match to end the current match. Keep playing returns to your army."),

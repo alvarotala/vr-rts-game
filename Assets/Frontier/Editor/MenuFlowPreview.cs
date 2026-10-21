@@ -167,6 +167,15 @@ namespace Frontier.Editor
                     Click("Help: "+topic);for(int i=0;i<3;i++)session.Match.Step();
                     Check(panel.Page==CommandPanel.MenuPage.Guide&&session.IsPaused&&session.Match.Tick==pausedTick&&!panel.AcceptsGameInput,"Browsing "+topic+" keeps simulation paused and gameplay input blocked");
                     Capture("07-guide-touch-"+topic.ToLowerInvariant());
+                    if(topic=="Selection")
+                    {
+                        Click("Page 1 / 2 · Next");
+                        Check(Field<Text[]>(panel,"controlGuideCommands").Take(2).Select(t=>t.text).SequenceEqual(new[]{"Select idle workers","Select all army"})&&session.IsPaused,
+                            "The selection guide exposes the quick-selection controls on its second page without resuming");
+                        Capture("07-guide-touch-selection-quick");
+                        Click("Page 2 / 2 · Next");
+                        Check(Field<int>(panel,"controlGuidePage")==0,"Guide pagination returns to the first selection page");
+                    }
                 }
                 Check(session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Guide cards never change selection or resources");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Guides&&session.IsPaused&&!Has("Help: Selection"),"Guide Back returns to its hub and removes detail targets");
