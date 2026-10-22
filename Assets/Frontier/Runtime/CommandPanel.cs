@@ -48,7 +48,7 @@ namespace Frontier.Runtime
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
         private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; }
-        private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
+        private readonly Color background = MenuPalette.Background, button = MenuPalette.Card, accent = MenuPalette.Accent;
         private void Start()
         {
             Bindings=HotkeyBindings.Load();
@@ -56,14 +56,19 @@ namespace Frontier.Runtime
             font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
+            // Render dynamic glyphs at twice the atlas resolution without changing
+            // world-space panel dimensions or pointer targets.
+            canvas.scaleFactor=2;
+            var scaler=go.AddComponent<CanvasScaler>();scaler.dynamicPixelsPerUnit=2;
             root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
-            var image=go.AddComponent<Image>();image.color=background;
+            var image=go.AddComponent<MenuSurface>();image.color=background;image.Style=MenuSurface.SurfaceStyle.Panel;image.Radius=24;image.BorderWidth=3;image.BottomShade=.78f;
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
             headline=Label(root,"LITTLE LEGION",new Vector2(30,-84),new Vector2(1040,44),30,accent);
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
             selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
             harvesting=Label(root,"",new Vector2(30,-207),new Vector2(1040,28),18,accent);
+            CreateBrand();
             statusBanner=Section(root,"Status message",new Vector2(30,-473),new Vector2(1040,48),Color.clear);
             statusAccent=Section(statusBanner,"Error accent",Vector2.zero,new Vector2(5,48),ErrorTint);
             statusIcon=Label(statusBanner,"!",new Vector2(12,0),new Vector2(24,48),26,ErrorTint,TextAnchor.MiddleCenter);
@@ -110,6 +115,7 @@ namespace Frontier.Runtime
             if(Session.Running&&!Session.IsReplay&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
+            UpdateMenuFeedback(Time.unscaledDeltaTime);
             if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
             if(Page!=MenuPage.Actions){UpdateMenuText();return;}
@@ -274,9 +280,10 @@ namespace Frontier.Runtime
             statusBanner.GetComponent<Image>().color=error?new Color(.23f,.035f,.045f,1):Color.clear;
             statusAccent.gameObject.SetActive(error);statusIcon.gameObject.SetActive(error);
             status.fontStyle=error?FontStyle.Bold:FontStyle.Normal;
-            status.fontSize=error?22:Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
+            status.fontSize=error?22:Page==MenuPage.Replay?16:17;
             if(error)status.color=ErrorTint;
-            else if(Page!=MenuPage.Replay)status.color=accent;
+            else if(Page!=MenuPage.Replay)status.color=MenuPalette.Muted;
+            status.alignment=Page==MenuPage.Main&&!error?TextAnchor.MiddleCenter:TextAnchor.MiddleLeft;
             TopLeft(status.rectTransform,new Vector2(error?46:0,0),new Vector2(statusBanner.sizeDelta.x-(error?60:0),statusBanner.sizeDelta.y));
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
@@ -285,20 +292,27 @@ namespace Frontier.Runtime
             int columns=Page==MenuPage.Main?1:grid?4:2;
             int n=actionIndex++,col=n%columns,row=n/columns;
             float width=columns==1?600:columns==2?505:246,height=grid?49:58;
-            var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
+            var go=new GameObject(label,typeof(RectTransform),typeof(MenuSurface));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
             TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
-            var image=go.GetComponent<Image>();image.color=primary?new Color(.1f,.32f,.36f):button;
+            var image=go.GetComponent<Image>();image.color=primary?MenuPalette.Primary:button;
             Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,Color.white,TextAnchor.MiddleCenter);
+            if(label=="Back")Icon(rt,MenuIcon.Symbol.Back,new Vector2(16,-(height-22)*.5f),22,accent);
             targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
         }
         private void Rebuild()
+        {
+            if(actions==null)return;
+            RebuildContent();
+            StyleMenuTargets();
+        }
+        private void RebuildContent()
         {
             if(actions==null)return;
             CancelReplayScrub();
             // Hide the old controls immediately, including between pointer events in the same frame.
             for(int i=actions.childCount-1;i>=0;i--)
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
-            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
+            ResetTargetFeedback(hovered);
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
             ClearProductionTargets();
             HideActionHelp();
@@ -393,8 +407,11 @@ namespace Frontier.Runtime
             CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
-            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
+            ResetTargetFeedback(hovered);
             hovered=null;
+            if(moveImage!=null)SetHandleFeedback(moveImage,false);
+            if(resetImage!=null)SetHandleFeedback(resetImage,false);
+            foreach(var target in targets)ResetTargetFeedback(target);
             UpdateProductionHover();
             HideActionHelp();
         }
@@ -443,8 +460,7 @@ namespace Frontier.Runtime
             }
             bool onMove=Hit(moveHandle,ray,out float distance);
             bool onReset=Hit(resetHandle,ray,out _);
-            moveImage.color=onMove?new Color(.12f,.35f,.39f):button;
-            resetImage.color=onReset?new Color(.12f,.35f,.39f):button;
+            SetHandleFeedback(moveImage,onMove);SetHandleFeedback(resetImage,onReset);
             if(down&&onMove)
             {
                 CancelPointerInteraction();moving=true;grabDistance=distance;grabOffset=root.position-ray.GetPoint(distance);
@@ -457,7 +473,7 @@ namespace Frontier.Runtime
             {
                 if(target.rect.gameObject.activeInHierarchy&&Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??Color.Lerp(hovered.normal,Color.white,.2f);}
+            if(hovered!=hit){ResetTargetFeedback(hovered,false);hovered=hit;HideActionHelp();if(hovered?.hoverColor!=null)hovered.image.color=hovered.hoverColor.Value;}
             UpdateProductionHover();
             if(PointSelectionGrid(hit,down,up))return true;
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
@@ -475,9 +491,11 @@ namespace Frontier.Runtime
         }
         private RectTransform Handle(string name,Vector2 position,Vector2 size,string label,out Image image)
         {
-            var go=new GameObject(name,typeof(RectTransform),typeof(Image));var rect=go.GetComponent<RectTransform>();rect.SetParent(root,false);TopLeft(rect,position,size);
-            image=go.GetComponent<Image>();image.color=button;
-            Label(rect,label,new Vector2(8,0),size-new Vector2(16,0),18,accent,TextAnchor.MiddleCenter);return rect;
+            var go=new GameObject(name,typeof(RectTransform),typeof(MenuSurface));var rect=go.GetComponent<RectTransform>();rect.SetParent(root,false);TopLeft(rect,position,size);
+            var surface=go.GetComponent<MenuSurface>();surface.Style=MenuSurface.SurfaceStyle.Flat;surface.Radius=8;surface.BorderWidth=0;
+            image=surface;SetHandleFeedback(image,false);
+            Icon(rect,name=="Move menu"?MenuIcon.Symbol.Grip:MenuIcon.Symbol.Reset,new Vector2(12,-11),22,MenuPalette.Muted);
+            Label(rect,label,new Vector2(44,0),size-new Vector2(56,0),14,MenuPalette.Muted,TextAnchor.MiddleCenter);return rect;
         }
         private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAnchor alignment=TextAnchor.MiddleLeft)
         {var go=new GameObject("Label",typeof(RectTransform),typeof(LocalizedText));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.raycastTarget=false;return text;}

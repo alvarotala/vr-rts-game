@@ -12,6 +12,14 @@ La versión inglesa del lema es **Little armies. Big battles.** El nombre perman
 
 La identidad combina ejércitos en miniatura, estrategia y personajes con personalidad. El tablero sobre una mesa o el piso permite que culturas y criaturas muy distintas compartan el mismo campo de batalla.
 
+## Identidad de los menús
+
+Los menús adoptan el concepto visual 05, «Geometría actual»: logo geométrico con **LITTLE** en blanco cálido y **LEGION** en turquesa, superficies azul oscuro, bordes finos y esquinas redondeadas. El logo y los iconos se dibujan con geometría de UI para conservar nitidez al escalar el panel.
+
+El acabado distingue el marco exterior doble, las tarjetas hundidas de información y los botones con bisel, sombra de contacto y luz superior. Los estados de foco iluminan progresivamente el borde y el relleno sin mover los objetivos del puntero. La barra de mover/restablecer queda discreta; títulos, pestañas, recursos y guías comparten iconos con el mismo peso visual. Audio representa el volumen exacto con segmentos parcialmente llenos. El texto dinámico usa un atlas a doble resolución conservando las dimensiones del panel en el mundo.
+
+El inicio destaca Nueva partida a todo el ancho y agrupa Multijugador LAN, Guías, Configuración e Historial en dos columnas. El lema sigue el idioma elegido. Pausa conserva esa jerarquía, con Reanudar como acción principal; las demás páginas usan una marca compacta junto al título. El HUD mantiene el logo pequeño y comparte las superficies y colores con producción, selección y la rueda de controles.
+
 ## Juego gratis y skins
 
 La dirección acordada es ofrecer el juego gratis y monetizar mediante la venta de skins. Las compras son cosméticas: no modifican estadísticas, recursos, tiempos de producción, habilidades ni ventajas competitivas.

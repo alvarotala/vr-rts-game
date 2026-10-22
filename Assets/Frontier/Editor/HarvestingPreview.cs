@@ -43,9 +43,9 @@ namespace Frontier.Editor
                 typeof(QuestBridge).GetProperty("Camera").SetValue(quest,preview.camera);
                 if(fullPanel)
                 {
-                    Capture("setup-rift","The Rift","selection");
+                    Capture("setup-rift","Forest Watch","selection");
                     session.Faction="biological";session.EnemyFaction="industrial";session.Difficulty="easy";session.LoadMap("training");
-                    Capture("setup-training","Training Grounds","selection");
+                    Capture("setup-training","Neon Loop","selection");
                     session.Faction="industrial";session.EnemyFaction="biological";session.Difficulty="normal";session.LoadMap("rift");
                 }
                 session.StartMatch();

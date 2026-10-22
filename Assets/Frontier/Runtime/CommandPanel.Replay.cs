@@ -79,7 +79,7 @@ namespace Frontier.Runtime
             replayTime=Label(replayTimeline,"",Vector2.zero,new Vector2(510,30),23,Color.white);
             replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,accent,TextAnchor.MiddleRight);
             Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),new Color(.065f,.14f,.18f));
-            replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),new Color(.12f,.36f,.39f));
+            replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),MenuPalette.Primary);
             replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),accent);
             ReplayButton("Replay back 15s","−15 seconds",0,642,170,()=>Session.SeekReplay(ReplayTransportTick-Simulation.TickRate*15),out _);
             ReplayButton("Replay play / pause","Pause",182,642,220,Session.ToggleReplayPause,out replayPauseLabel);
@@ -163,7 +163,7 @@ namespace Frontier.Runtime
             replayTimelineMarker.anchoredPosition=new Vector2(Mathf.Clamp(1040*fraction,0,1036),-34);
             for(int i=0;i<replaySpeedButtons.Length;i++)
             {
-                var target=replaySpeedButtons[i];target.normal=Mathf.Approximately(replay.Speed,ReplaySpeeds[i])?new Color(.075f,.27f,.3f):button;
+                var target=replaySpeedButtons[i];target.normal=Mathf.Approximately(replay.Speed,ReplaySpeeds[i])?MenuPalette.Primary:button;
                 if(hovered!=target)target.image.color=target.normal;
             }
         }

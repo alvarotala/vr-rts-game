@@ -125,7 +125,7 @@ namespace Frontier.Runtime
         }
 
         private void AddHotkeyTab(Target tab,bool selected)
-        {tab.normal=selected?new Color(.12f,.36f,.39f):button;tab.image.color=tab.normal;targets.Add(tab);}
+        {tab.normal=selected?MenuPalette.Primary:button;tab.image.color=tab.normal;targets.Add(tab);}
 
         private void BeginHotkeyChange(string id)
         {

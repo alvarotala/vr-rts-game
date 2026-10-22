@@ -76,7 +76,7 @@ namespace Frontier.Runtime
                 var faction=catalog.Definition.factions[i];var tab=referenceFactionTabs[i];
                 tab.rect.name="Reference faction: "+faction.id;
                 referenceFactionNames[i].text=faction.name;
-                tab.normal=faction.id==referenceFaction?new Color(.12f,.36f,.39f):button;tab.image.color=tab.normal;targets.Add(tab);
+                tab.normal=faction.id==referenceFaction?MenuPalette.Primary:button;tab.image.color=tab.normal;targets.Add(tab);
             }
             referenceCount.text=entries.Count+(structures?" STRUCTURES":" UNITS")+"  ·  BASE STATS";
             for(int i=0;i<referenceEntries.Length;i++)
@@ -84,7 +84,7 @@ namespace Frontier.Runtime
                 bool visible=i<entries.Count;var entry=referenceEntries[i];entry.rect.gameObject.SetActive(visible);if(!visible)continue;
                 var type=entries[i];entry.rect.name="Reference entry: "+type.id;
                 referenceNames[i].text=type.name;referenceRoles[i].text=CatalogReference.Role(type);
-                entry.normal=i==selected?new Color(.12f,.32f,.38f):button;entry.image.color=entry.normal;targets.Add(entry);
+                entry.normal=i==selected?MenuPalette.Primary:button;entry.image.color=entry.normal;targets.Add(entry);
             }
             var current=entries[selected];referenceName.text=current.name;referenceRole.text=CatalogReference.Role(current);
             referencePortrait.SetType(current);referenceDescription.text=CatalogReference.Description(catalog,current);

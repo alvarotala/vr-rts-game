@@ -46,7 +46,7 @@ namespace Frontier.Runtime
             for(int i=0;i<topics.Count;i++)
             {
                 var tab=controlGuideTabs[i];tab.rect.name="Help: "+topics[i].Name;
-                tab.normal=i==controlGuideTopic?new Color(.12f,.36f,.39f):button;tab.image.color=tab.normal;
+                tab.normal=i==controlGuideTopic?MenuPalette.Primary:button;tab.image.color=tab.normal;
                 controlGuideTabLabels[i].text=topics[i].Name;
                 targets.Add(tab);
             }

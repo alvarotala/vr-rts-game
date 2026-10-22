@@ -54,8 +54,8 @@ namespace Frontier.Runtime
         private bool placementHintContext, placementHintsEnabled = true;
         private bool stickReady, openReady;
         private float neutralSince = -1;
-        private static readonly Color Normal = new Color(.035f, .09f, .14f, .98f), Accent = new Color(.16f, .65f, .68f), Ink = new Color(.68f, .86f, .91f);
-        private static readonly Color Disabled = new Color(.38f, .47f, .52f), Save = new Color(1, .7f, .3f);
+        private static readonly Color Normal = MenuPalette.Card, Accent = MenuPalette.Accent, Ink = MenuPalette.Muted;
+        private static readonly Color Disabled = new Color(.7f, .78f, .82f), Save = new Color(1, .7f, .3f);
         public bool CanOpen => Session != null && Session.View != null && Panel != null && Panel.AcceptsGameInput && !Panel.IsDragging && Quest != null && !Quest.Placing;
 
         // The router calls this before console/terrain input. Every open frame is consumed,
@@ -288,7 +288,9 @@ namespace Frontier.Runtime
                 var sector = slice.gameObject.AddComponent<RadialSector>(); sector.Angle = angle; sector.Sweep = sweep - 3; sector.color = Normal; sector.raycastTarget = false;
                 sectors.Add(sector);
                 var direction = new Vector2(Mathf.Sin(angle * Mathf.Deg2Rad), Mathf.Cos(angle * Mathf.Deg2Rad));
-                float labelWidth = cardinal || back ? 146 : Mathf.Clamp(434 * Mathf.Sin(step * .45f * Mathf.Deg2Rad), 80, 146);
+                // Quick select has two full half-rings: use their real horizontal
+                // space so longer translated titles keep the count on its own line.
+                float labelWidth = Page == WheelPage.QuickSelect ? 260 : cardinal || back ? 146 : Mathf.Clamp(434 * Mathf.Sin(step * .45f * Mathf.Deg2Rad), 80, 146);
                 var label = Label(slice, items[i].Label, direction * 217, new Vector2(labelWidth, 78), 23, Color.white);
                 label.resizeTextForBestFit = true; label.resizeTextMinSize = 16; label.resizeTextMaxSize = 23; sectorLabels.Add(label);
             }
@@ -445,6 +447,7 @@ namespace Frontier.Runtime
             EnsureFont();
             confirmationRoot = Rect("Wheel confirmation", transform, Vector2.zero, new Vector2(640, 740));
             var canvas = confirmationRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 21;
+            canvas.scaleFactor = 2; confirmationRoot.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             confirmationArc = Rect("Confirmed sector", confirmationRoot, Vector2.zero, new Vector2(620, 620)).gameObject.AddComponent<RadialSector>();
             confirmationArc.InnerRadius = 294; confirmationArc.OuterRadius = 305; confirmationArc.raycastTarget = false;
             confirmationGlyph = Rect("Confirmation check", confirmationRoot, Vector2.zero, new Vector2(130, 130));
@@ -495,6 +498,7 @@ namespace Frontier.Runtime
             if (hintRoot != null) return;
             EnsureFont(); hintRoot = Rect("Controller command hint", transform, Vector2.zero, new Vector2(1240, 460));
             var canvas = hintRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 19;
+            canvas.scaleFactor = 2; hintRoot.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             for (int i = 0; i < hintLines.Length; i++)
             {
                 hintLines[i] = Rect("Hint leader " + i, hintRoot, Vector2.zero, Vector2.one);
@@ -590,11 +594,14 @@ namespace Frontier.Runtime
             EnsureFont();
             root = Rect("Controller action wheel", transform, Vector2.zero, new Vector2(640, 740));
             var canvas = root.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 20;
+            canvas.scaleFactor = 2; root.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             var center = Rect("Center", root, Vector2.zero, new Vector2(600, 600)).gameObject.AddComponent<RadialSector>();
-            center.InnerRadius = 0; center.OuterRadius = 137; center.Sweep = 360; center.color = new Color(.018f, .035f, .055f, .98f); center.raycastTarget = false;
+            center.InnerRadius = 0; center.OuterRadius = 137; center.Sweep = 360; center.color = MenuPalette.Background; center.raycastTarget = false;
             slices = Rect("Sectors", root, Vector2.zero, new Vector2(600, 600));
-            heading = Label(root, "", new Vector2(0, 328), new Vector2(560, 44), 29, Color.white);
-            title = Label(root, "", new Vector2(0, 44), new Vector2(222, 80), 25, Color.white);
+            heading = Label(root, "", new Vector2(0, 328), new Vector2(560, 44), 29, MenuPalette.Ink);
+            heading.fontStyle = FontStyle.Bold;
+            title = Label(root, "", new Vector2(0, 44), new Vector2(222, 80), 25, MenuPalette.Ink);
+            title.fontStyle = FontStyle.Bold;
             title.resizeTextForBestFit = true; title.resizeTextMinSize = 18; title.resizeTextMaxSize = 25;
             detail = Label(root, "", new Vector2(0, -47), new Vector2(224, 94), 21, Ink);
             detail.resizeTextForBestFit = true; detail.resizeTextMinSize = 15; detail.resizeTextMaxSize = 21;

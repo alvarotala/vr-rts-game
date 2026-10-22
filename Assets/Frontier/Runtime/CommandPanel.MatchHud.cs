@@ -71,15 +71,18 @@ namespace Frontier.Runtime
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
         {
-            var go=new GameObject(name,typeof(RectTransform),typeof(Image));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);
-            var image=go.GetComponent<Image>();image.color=color??new Color(.04f,.095f,.13f,.98f);image.raycastTarget=false;return rect;
+            var go=new GameObject(name,typeof(RectTransform),typeof(MenuSurface));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);
+            var image=go.GetComponent<MenuSurface>();image.color=color??MenuPalette.Surface;image.raycastTarget=false;
+            image.Style=MenuSurface.SurfaceStyle.Inset;
+            if(Mathf.Min(size.x,size.y)<14){image.Style=MenuSurface.SurfaceStyle.Flat;image.Radius=0;image.BorderWidth=0;image.EdgeSoftness=0;image.BottomShade=1;}
+            return rect;
         }
         private Text ResourceCard(string label,float x,Color tint,out Text hint)
         {
             var card=Section(resourceStrip,label,new Vector2(x,0),new Vector2(340,92));
-            Section(card,"Accent",Vector2.zero,new Vector2(4,92),tint);
-            Label(card,label,new Vector2(18,-8),new Vector2(304,24),16,tint);
-            var value=Label(card,"0",new Vector2(16,-32),new Vector2(210,50),38,Color.white);
+            Icon(card,label=="MINERALS"?MenuIcon.Symbol.Minerals:label=="GAS"?MenuIcon.Symbol.Gas:MenuIcon.Symbol.Population,new Vector2(16,-13),22,tint);
+            Label(card,label,new Vector2(47,-10),new Vector2(275,24),15,tint);
+            var value=Label(card,"0",new Vector2(18,-35),new Vector2(194,45),36,MenuPalette.Ink);value.fontStyle=FontStyle.Bold;
             hint=Label(card,"",new Vector2(216,-36),new Vector2(108,44),14,tint,TextAnchor.MiddleRight);
             return value;
         }
@@ -140,6 +143,7 @@ namespace Frontier.Runtime
             status.fontSize=replay?16:hud?18:20;
             TopLeft(statusBanner,hud?new Vector2(24,-581-queueSpace):new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(hud?1052:1040,48));
             TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,guide?-786:controls?-866:reference?-840:-240),hud?new Vector2(684,240):new Vector2(1040,report?716:history?648:replay?756:controls||guide||reference?58:396));
+            LayoutBrand();
         }
         private void UpdateMatchHud()
         {
@@ -300,15 +304,14 @@ namespace Frontier.Runtime
                     var captured=action;
                     bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
                     var target=HudButton(actions,action.Title,MatchActionDetail(action,active),new Vector2(column*230,-y),new Vector2(218,buttonHeight),()=>captured.Execute(),null,out var detail,action.Model);
-                    target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
+                    target.normal=Color.Lerp(button,tint,active ? .3f : .065f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
                     if(active)
                     {
                         detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
-                        Section(target.rect,"Selected top",Vector2.zero,new Vector2(218,3),tint);
-                        Section(target.rect,"Selected bottom",new Vector2(0,3-buttonHeight),new Vector2(218,3),tint);
-                        Section(target.rect,"Selected right",new Vector2(215,0),new Vector2(3,buttonHeight),tint);
+                        target.rect.GetComponent<MenuSurface>().BorderColor=tint;
+                        Section(target.rect,"Selected bottom",new Vector2(12,4-buttonHeight),new Vector2(194,2),tint);
                     }
-                    Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,buttonHeight),tint);
+                    Section(target.rect,"Category accent",new Vector2(4,-10),new Vector2(2,buttonHeight-20),tint);
                     targets.Add(target);actionIndex++;
                     if(++column==3){column=0;y+=rowHeight;}
                 }
