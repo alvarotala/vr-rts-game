@@ -18,6 +18,8 @@ namespace Frontier.Runtime
         public bool BaseTargeting { get; private set; }
         public const string FogDensityKey="frontier.visuals.fog-density.v1";
         public float FogDensity { get; private set; } = 1;
+        public const string LightingKey="frontier.visuals.enhanced-lighting.v1";
+        public bool EnhancedLighting { get; private set; }
         public int Hovered;
         public int HoveredResource;
         public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
@@ -32,6 +34,7 @@ namespace Frontier.Runtime
         private DesertScenery desertScenery;
         private ThemedScenery themedScenery;
         private FogVisuals fogVisuals;
+        private ContactShadows contactShadows;
         private MeshCollider terrainCollider;
         private Matrix4x4 raycastTransform;
         private readonly Dictionary<int, Transform> entities = new Dictionary<int, Transform>();
@@ -89,18 +92,19 @@ namespace Frontier.Runtime
         {
             BaseTargeting=PlayerPrefs.GetInt(BaseTargetingKey,0)!=0;
             FogDensity=ClampFogDensity(PlayerPrefs.GetFloat(FogDensityKey,1));
+            EnhancedLighting=PlayerPrefs.GetInt(LightingKey,0)!=0;
             hoverProperties=new MaterialPropertyBlock();
             impactProperties=new MaterialPropertyBlock();
             impactProperties.SetFloat("_Ring",1);
             impactMaterial=new Material(Shader.Find("Frontier/Impact"));
             Content = new GameObject("Map coordinates").transform; Content.SetParent(transform,false);
             ground=Material(new Color(.16f,.31f,.31f));ground.SetFloat("_UseFog",1);ground.SetFloat("_Grid",1);
-            blue=Material(new Color(.2f,.8f,1));red=Material(new Color(1,.36f,.23f));
-            neutral=Material(new Color(.2f,.28f,.35f));resourceMaterial=Material(Color.white);highlight=Material(new Color(.9f,1,.6f));
-            unitStructure=Material(new Color(.12f,.17f,.22f));
-            organicTissue=Material(Color.white);
-            foreach(string role in new[]{"worker","scout","melee","ranged","siege","caster"})roleMaterials[role]=Material(UnitVisuals.Accent(role));
-            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","academy","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role));
+            blue=Material(new Color(.2f,.8f,1),.1f);red=Material(new Color(1,.36f,.23f),.1f);
+            neutral=Material(new Color(.2f,.28f,.35f));resourceMaterial=Material(Color.white,.2f);highlight=Material(new Color(.9f,1,.6f));
+            unitStructure=Material(new Color(.12f,.17f,.22f),.16f);
+            organicTissue=Material(Color.white,.08f);
+            foreach(string role in new[]{"worker","scout","melee","ranged","siege","caster"})roleMaterials[role]=Material(UnitVisuals.Accent(role),.12f);
+            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","academy","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role),.13f);
             var memoryStructure=Material(new Color(.12f,.17f,.22f));memoryStructure.SetFloat("_Desaturate",1);
             memoryMaterials=new[]{neutral,memoryStructure,neutral};
             constructionMaterials=new[]{Material(new Color(.52f,.52f,.52f)),Material(new Color(.19f,.19f,.19f)),Material(new Color(.78f,.78f,.78f))};
@@ -119,6 +123,7 @@ namespace Frontier.Runtime
             abilityEffects?.Dispose();
             deathEffects?.Dispose();
             fogVisuals?.Dispose();
+            contactShadows?.Dispose();
             desertScenery?.Dispose();
             themedScenery?.Dispose();
             harvestingMarkers?.Dispose();
@@ -135,7 +140,7 @@ namespace Frontier.Runtime
         }
         private static void Release(Object resource)
         {if(resource!=null){if(Application.isPlaying)Destroy(resource);else DestroyImmediate(resource);}}
-        private Material Material(Color color) { var m=new Material(Shader.Find("Frontier/Board")){enableInstancing=true};m.SetColor("_BaseColor",color);return m; }
+        private Material Material(Color color,float gloss=0) { var m=new Material(Shader.Find("Frontier/Board")){enableInstancing=true};m.SetColor("_BaseColor",color);m.SetFloat("_Gloss",gloss);return m; }
         public void Rebuild()
         {
             if(Content==null)return;
@@ -144,6 +149,7 @@ namespace Frontier.Runtime
             abilityEffects?.Dispose();abilityEffects=null;
             deathEffects?.Dispose();deathEffects=null;
             fogVisuals?.Dispose();fogVisuals=null;
+            contactShadows?.Dispose();contactShadows=null;
             desertScenery?.Dispose();desertScenery=null;
             themedScenery?.Dispose();themedScenery=null;
             harvestingMarkers?.Dispose();harvestingMarkers=null;
@@ -208,8 +214,9 @@ namespace Frontier.Runtime
             if(forest||desert)themedScenery=new ThemedScenery(this,fog,grid);
             else if(!neon)foreach(var d in Session.Map.decoration) { var rock=Primitive(PrimitiveType.Sphere,Content,neutral);rock.localPosition=new Vector3(d.x,1.2f,d.y);rock.localScale=new Vector3(4,2.4f,4); }
             Zoom=1;Pan=Vector2.zero;UpdateTransform();UpdateFog();
-            fogVisuals=new FogVisuals(this,fog,desert?new Color(.44f,.32f,.21f):forest?new Color(.19f,.28f,.18f):neon?new Color(.17f,.16f,.29f):new Color(.14f,.23f,.29f));
+            fogVisuals=new FogVisuals(this,fog,desert?new Color(.52f,.43f,.32f):forest?new Color(.3f,.39f,.29f):neon?new Color(.28f,.29f,.42f):new Color(.28f,.36f,.4f));
             fogVisuals.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
+            UpdateContactShadows();
         }
         public void Fit() { Zoom=1;Pan=Vector2.zero; }
         private void ResetReplayPresentation()
@@ -222,6 +229,7 @@ namespace Frontier.Runtime
             foreach(var visual in parts.Keys)visual.localRotation=Quaternion.identity;
             entities.Clear();entityTypes.Clear();pendingMoveFacing.Clear();observedEntities.Clear();firing.Clear();
             weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();orderQueueVisuals?.Hide();
+            contactShadows?.SetVisible(false);
             workerVisuals?.Dispose();workerVisuals=new WorkerVisuals(Content);
             creepVisuals?.Dispose();creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
             Hovered=0;Pointer=null;DrawSelection(default,default,false);fogTick=-1;UpdateFog();
@@ -236,6 +244,7 @@ namespace Frontier.Runtime
                 weapons?.Clear();
                 abilityEffects?.Clear();
                 fogVisuals?.Hide();
+                contactShadows?.SetVisible(false);
                 harvestingMarkers?.Hide();
                 workerVisuals?.Hide();
                 orderQueueVisuals?.Hide();
@@ -258,6 +267,31 @@ namespace Frontier.Runtime
             Content.localPosition=new Vector3(-(Session.Map.width*.5f+Pan.x)*CellScale,0,-(Session.Map.height*.5f+Pan.y)*CellScale);
             Shader.SetGlobalMatrix("_FrontierWorldToBoard",transform.worldToLocalMatrix);
             Shader.SetGlobalVector("_FrontierBounds",new Vector4(Width*.5f,Depth*.5f,Session.Map.width,Session.Map.height));
+            Shader.SetGlobalFloat("_FrontierEnhancedLighting",EnhancedLighting?1:0);
+            Shader.SetGlobalColor("_FrontierLightColor",Session.Map.theme=="desert"?new Color(1.08f,1,.88f)
+                :Session.Map.theme=="forest"?new Color(1.02f,1.04f,.95f)
+                :Session.Map.theme=="neon"?new Color(.9f,.98f,1.12f):new Color(1,1.02f,1.04f));
+        }
+        public void SetEnhancedLighting(bool enabled)
+        {
+            EnhancedLighting=enabled;
+            PlayerPrefs.SetInt(LightingKey,enabled?1:0);PlayerPrefs.Save();
+            UpdateTransform();UpdateContactShadows();
+        }
+        private void UpdateContactShadows()
+        {
+            if(!EnhancedLighting||Content==null||!Content.gameObject.activeInHierarchy||Session.View==null)
+            {contactShadows?.SetVisible(false);return;}
+            if(contactShadows==null)
+            {
+                contactShadows=new ContactShadows(this,fog);
+                var casters=new List<Vector4>();
+                if(themedScenery!=null)casters.AddRange(themedScenery.ShadowCasters);
+                if(desertScenery!=null)casters.AddRange(desertScenery.ShadowCasters);
+                contactShadows.SetStaticCasters(casters);
+            }
+            contactShadows.SetVisible(true);
+            contactShadows.Update(Session.View,entities,resources);
         }
         private void LateUpdate()
         {
@@ -268,7 +302,7 @@ namespace Frontier.Runtime
             UpdateFog(); UpdatePointer();
             fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,Session.View?.tick/(float)Simulation.TickRate??0);
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
-            if(Session.View==null){weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
+            if(Session.View==null){contactShadows?.SetVisible(false);weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
             workerVisuals.Begin(this,Time.unscaledDeltaTime);
             float combatTick=weapons.AdvanceClock(this);
             creepVisuals.Update(Session.View,Session.Catalog);ground.SetFloat("_CreepTime",combatTick/Simulation.TickRate);
@@ -410,6 +444,7 @@ namespace Frontier.Runtime
             resourceVisuals.UpdateVapor(this,viewer);
             harvestingMarkers?.Update(this,viewer);
             orderQueueVisuals?.Update(this);
+            UpdateContactShadows();
         }
         public bool TryEntityTop(int id,out Vector3 top)
         {

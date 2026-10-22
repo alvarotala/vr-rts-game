@@ -89,7 +89,7 @@ namespace Frontier.Editor
                 void Capture(string name)
                 {
                     Refresh();Canvas.ForceUpdateCanvases();
-                    var root=Field<RectTransform>(panel,"root");var actions=Field<RectTransform>(panel,"actions");var footer=Field<Text>(panel,"status").rectTransform;
+                    var root=Field<RectTransform>(panel,"root");var actions=Field<RectTransform>(panel,"actions");var footer=Field<RectTransform>(panel,"statusBanner");
                     Check(-actions.anchoredPosition.y+actions.sizeDelta.y<=-footer.anchoredPosition.y,"Report actions and footer do not overlap");
                     foreach(var text in panel.GetComponentsInChildren<Text>())
                         Check(text.preferredHeight<=text.rectTransform.rect.height+.5f,"Report text fits: "+text.text);

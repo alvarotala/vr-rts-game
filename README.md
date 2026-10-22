@@ -1,6 +1,10 @@
-# Frontier Command — RTS para Quest 3
+# Little Legion — RTS para Quest 3
 
-Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA y partidas LAN de dos jugadores con servidor dedicado NGO. Funciona sin servicios de juego externos. El nombre y el arte geométrico son provisionales.
+**Pequeños ejércitos. Grandes batallas.**
+
+Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA y partidas LAN de dos jugadores con servidor dedicado NGO. Funciona sin servicios de juego externos. El arte geométrico es provisional.
+
+La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
 ## Requisitos y configuración
 
@@ -20,17 +24,17 @@ Para generar el APK, usar **Frontier → Build Quest APK** o:
 bash scripts/unity.sh quest
 ```
 
-El archivo se genera en `Builds/Quest/FrontierCommand.apk`. Para instalarlo en un Quest con modo desarrollador y depuración USB autorizada:
+El archivo se genera en `Builds/Quest/LittleLegion.apk`. Para instalarlo en un Quest con modo desarrollador y depuración USB autorizada:
 
 ```sh
 adb devices
-adb install -r Builds/Quest/FrontierCommand.apk
-adb shell monkey -p com.alvaro.frontiercommand 1
+adb install -r Builds/Quest/LittleLegion.apk
+adb shell monkey -p app.sadmonkey.littlelegion 1
 ```
 
-El APK usa el firmado de desarrollo local. La publicación en una tienda, sus cuentas y su firmado de distribución no están configurados.
+El APK usa el firmado de desarrollo local, el identificador `app.sadmonkey.littlelegion` y el nombre visible **Little Legion**. Android lo instala como una aplicación nueva respecto al prototipo anterior; no migra sus datos y ambas instalaciones pueden coexistir. La publicación en una tienda, sus cuentas y su firmado de distribución no están configurados.
 
-La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/FrontierCommand.app`.
+La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`.
 
 ## Multiplayer y servidor Docker
 
@@ -41,7 +45,7 @@ python3 scripts/build-server.py
 docker compose -f compose.multiplayer.yml up -d --build
 ```
 
-Abrir **Multiplayer LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú online permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
+Abrir **Multijugador LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú online permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
 
 La imagen contiene solamente el servidor Linux y se puede trasladar a un host de producción compatible. Por ahora cada proceso atiende una partida; al finalizar se reinicia para recibir otros dos jugadores. No incluye búsqueda pública, ranking ni reconexión. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
 
@@ -51,10 +55,11 @@ Elegir facción, rival, dificultad y mapa. En Quest, usar **Ubicar tablero** y c
 
 Los trabajadores recolectan y construyen; los edificios producen unidades e investigan mejoras. Se gana destruyendo todos los edificios enemigos. Consultar la [guía de juego](docs/gameplay.md) para los controles completos, el movimiento del menú y la identificación de unidades.
 
-Por ahora las dos facciones comparten todas las reglas y estadísticas; se diferencian en nombres y apariencia. Ambas requieren un trabajador durante toda la construcción y pueden reparar con trabajadores. Las diferencias de jugabilidad quedan para una etapa posterior de diseño y balance.
+Por ahora las dos facciones comparten todas las reglas y estadísticas; se diferencian en nombres y apariencia. Ambas requieren un trabajador durante toda la construcción y pueden reparar con trabajadores. Las futuras skins mantendrán las mismas reglas y estadísticas: la compra personaliza la apariencia del ejército.
 
 ## Documentación
 
+- [Identidad, skins y primeras razas](docs/identity.md)
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)

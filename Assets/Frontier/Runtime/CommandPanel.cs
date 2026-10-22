@@ -60,7 +60,7 @@ namespace Frontier.Runtime
             var image=go.AddComponent<Image>();image.color=background;
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
-            headline=Label(root,"FRONTIER / COMMAND",new Vector2(30,-84),new Vector2(1040,44),30,accent);
+            headline=Label(root,"LITTLE LEGION",new Vector2(30,-84),new Vector2(1040,44),30,accent);
             economy=Label(root,"",new Vector2(30,-130),new Vector2(1040,36),22,Color.white);
             selection=Label(root,"",new Vector2(30,-169),new Vector2(1040,38),20,new Color(.65f,.76f,.82f));
             harvesting=Label(root,"",new Vector2(30,-207),new Vector2(1040,28),18,accent);
@@ -209,7 +209,7 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.Main:
-                    headline.text="FRONTIER / COMMAND";economy.text="MAIN MENU";
+                    headline.text="LITTLE LEGION";economy.text="Little armies. Big battles.";
                     selection.text="Lead your faction from a tabletop battlefield. Play offline or join a LAN match.";
                     status.text=Board.Placed?"Your saved play space is ready. Adjust it from New Match if needed.":"Open New Match to position your battlefield and start playing.";break;
                 case MenuPage.MatchSetup:

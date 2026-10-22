@@ -2,7 +2,7 @@ name: frontier-multiplayer
 
 services:
   server:
-    image: ${FRONTIER_SERVER_IMAGE:-frontier-command-server:ngo-local}
+    image: ${FRONTIER_SERVER_IMAGE:-little-legion-server:ngo-local}
     platform: linux/amd64
     build:
       context: .

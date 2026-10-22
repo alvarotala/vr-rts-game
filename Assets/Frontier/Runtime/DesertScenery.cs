@@ -12,6 +12,8 @@ namespace Frontier.Runtime
         private readonly GameObject root;
         private readonly Mesh mesh;
         private readonly Material material;
+        private readonly List<Vector4> shadowCasters=new List<Vector4>();
+        public IReadOnlyList<Vector4> ShadowCasters=>shadowCasters;
 
         public DesertScenery(BoardView board,Texture visibility,GridMap grid)
         {
@@ -56,6 +58,7 @@ namespace Frontier.Runtime
             void Butte(float x,float z,float radius,float height,float yaw,System.Random random)
             {
                 if(radius<.12f)return;
+                shadowCasters.Add(new Vector4(x,z,radius*1.12f,.18f));
                 const int sides=7,layers=5;
                 var rings=new Vector3[layers+1,sides];
                 var stretch=new float[sides];for(int side=0;side<sides;side++)stretch[side]=.77f+(float)random.NextDouble()*.23f;

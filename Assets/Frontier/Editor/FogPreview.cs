@@ -26,9 +26,12 @@ namespace Frontier.Editor
             var previousBounds = Shader.GetGlobalVector("_FrontierBounds"); var previousMatrix = Shader.GetGlobalMatrix("_FrontierWorldToBoard");
             bool hadDensity = PlayerPrefs.HasKey(BoardView.FogDensityKey);
             float previousDensity = PlayerPrefs.GetFloat(BoardView.FogDensityKey, 1);
+            bool hadLighting = PlayerPrefs.HasKey(BoardView.LightingKey); int previousLighting = PlayerPrefs.GetInt(BoardView.LightingKey);
+            float previousLight = Shader.GetGlobalFloat("_FrontierEnhancedLighting"); var previousLightColor = Shader.GetGlobalColor("_FrontierLightColor");
             try
             {
                 PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
+                PlayerPrefs.DeleteKey(BoardView.LightingKey);
                 var session = fixture.AddComponent<GameSession>(); if (session.Catalog == null) Call(session, "Awake");
                 session.LoadMap("training");
                 var board = boardObject.AddComponent<BoardView>(); board.Session = session; board.Viewer = preview.camera; Call(board, "Start");
@@ -82,6 +85,7 @@ namespace Frontier.Editor
                     Check(material.GetFloat("_FogTime") == 40, "The fog animation clock accepts a reproducible simulation time");
 
                     if (asset.name == "training") CheckPixels();
+                    CheckTerrainReadability();
                     CheckBoardOpacity();
                     board.SetVisible(false); fog.Update(true, 60);
                     Check(!fog.Root.gameObject.activeSelf, "Hidden boards suppress the fog even if an update requests visibility");
@@ -99,6 +103,38 @@ namespace Frontier.Editor
                     session.LeaveMatch(); board.SetVisible(true); Refresh();
                     Check(!Field<FogVisuals>(board, "fogVisuals").Root.gameObject.activeSelf, "Leaving a match removes fog from the next setup preview");
 
+                    void CheckTerrainReadability()
+                    {
+                        // Compare the same real geometry in all visibility states.
+                        // Flat darkness used to erase cliff and decoration shading.
+                        CameraAt(false);preview.camera.backgroundColor=Color.clear;
+                        board.SetFogDensity(0);
+                        Array.Fill(session.View.visibility,(byte)2);Refresh();
+                        var clear=SnapRgba(asset.name+"-terrain-visible");
+                        Array.Fill(session.View.visibility,(byte)0);Refresh();
+                        var unseen=SnapRgba(asset.name+"-terrain-unseen-fog-off");
+                        Array.Fill(session.View.visibility,(byte)1);Refresh();
+                        var explored=SnapRgba(asset.name+"-terrain-explored-fog-off");
+                        var solid=Enumerable.Range(0,clear.Length).Where(i=>i%7==0&&clear[i].a==255&&Luma(clear[i])>.025).ToArray();
+                        double bright=solid.Average(i=>Luma(clear[i])),dark=solid.Average(i=>Luma(unseen[i])),remembered=solid.Average(i=>Luma(explored[i]));
+                        Check(dark/bright>.55&&dark/bright<.9,asset.name+": unseen terrain remains readable but dimmed with mist off; brightness="+(dark/bright).ToString("0.000"));
+                        Check(remembered>dark*1.06&&remembered<bright*.97,asset.name+": explored terrain has an intermediate brightness");
+                        double covariance=0,clearVariance=0,darkVariance=0;
+                        foreach(int i in solid)
+                        {
+                            double a=Luma(clear[i])-bright,b=Luma(unseen[i])-dark;
+                            covariance+=a*b;clearVariance+=a*a;darkVariance+=b*b;
+                        }
+                        double correlation=covariance/Math.Sqrt(clearVariance*darkVariance);
+                        Check(correlation>.97,asset.name+": hidden terrain preserves the visible map's relief and detail contrast; correlation="+correlation.ToString("0.000"));
+                        Array.Fill(session.View.visibility,(byte)0);Refresh();
+                        board.SetFogDensity(.5f);fog.Update(true,12);SnapRgba(asset.name+"-terrain-unseen-fog-50");
+                        board.SetFogDensity(1);fog.Update(true,12);SnapRgba(asset.name+"-terrain-unseen-fog-100");
+                        Check(Field<System.Collections.IDictionary>(board,"entities").Count==0&&Field<System.Collections.IDictionary>(board,"resources").Count==0,
+                            asset.name+": brighter terrain and mist settings do not reveal hidden units or deposits");
+                        SetBands();Refresh();
+                        double Luma(Color32 c)=>(c.r*.2126+c.g*.7152+c.b*.0722)/255;
+                    }
                     void CheckBoardOpacity()
                     {
                         // RGB previews cannot reveal a passthrough leak. Read RGBA
@@ -249,6 +285,8 @@ namespace Frontier.Editor
                 Object.DestroyImmediate(boardObject); Object.DestroyImmediate(fixture); preview.Cleanup();
                 Shader.SetGlobalVector("_FrontierBounds", previousBounds); Shader.SetGlobalMatrix("_FrontierWorldToBoard", previousMatrix);
                 if (hadDensity) PlayerPrefs.SetFloat(BoardView.FogDensityKey, previousDensity); else PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
+                if (hadLighting) PlayerPrefs.SetInt(BoardView.LightingKey, previousLighting); else PlayerPrefs.DeleteKey(BoardView.LightingKey);
+                Shader.SetGlobalFloat("_FrontierEnhancedLighting", previousLight); Shader.SetGlobalColor("_FrontierLightColor", previousLightColor);
                 PlayerPrefs.Save();
             }
         }

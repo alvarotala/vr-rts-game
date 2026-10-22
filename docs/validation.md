@@ -1,5 +1,30 @@
 # Registro de validación
 
+## Guía de controles — validación completa y APK 0.1.9 — 21 de octubre de 2026
+
+Se confirmó la corrección ya presente en el directorio de trabajo: las comprobaciones de solapamiento usan `statusBanner`, que comparte el contenedor del panel con la guía y la navegación. El texto `status` es hijo del banner y tiene coordenadas locales distintas; usar su posición producía el falso error `Control guide overlaps footer`. El mismo ajuste aparece en las comprobaciones de hotkeys, historial, informe y espectador.
+
+- `LocalizationPreview.Run` completo aprobado con Unity **6000.3.26f1**, salida 0: `TestResults/unity-control-guide-localization.log`.
+- **366 comprobaciones de flujo de menús y 61 vistas**, **328 de idiomas**, **30 de replays** y **528 del panel de espectador y 7 vistas** aprobadas. La validación española registra **0 desbordamientos** y solo 9 términos compartidos legítimos sin traducción.
+- Inspeccionadas las capturas `TestResults/Menus/01-guide-control-guide.png` y `TestResults/Localization/es-touch-guide-Selection.png`: tarjetas, navegación y pie separados en inglés/español y en las referencias desktop/Touch.
+- El fallo pendiente registrado en la entrega 0.1.8 queda resuelto. Estas son comprobaciones de Editor con poses sintéticas; no constituyen una prueba física en Quest.
+- **APK recompilado:** `Builds/Quest/LittleLegion.apk`, **74.331.482 bytes**, **Little Legion 0.1.9 (10)**, paquete **`app.sadmonkey.littlelegion`**, ARM64/IL2CPP. Unity terminó con salida 0 y `editorErrors` vacío: `TestResults/unity-little-legion-apk-0.1.9.log`.
+- Verificados etiqueta, paquete, versión, arquitectura, integridad ZIP y firma APK v2. SHA-256: `aceb2708ff8ab06ab502ef67b3e5268cf069928d3c3e0a15214b6ff790cb43f0`. Evidencias: `TestResults/little-legion-0.1.9-badging.txt`, `little-legion-0.1.9-signature.txt`, `little-legion-delivery-0.1.9.json` y `Builds/Quest/LittleLegion.provenance.json`.
+- Conservados y verificados por hash el APK 0.1.8 y su procedencia en `Builds/Quest/Archive/LittleLegion-0.1.8.apk` y `LittleLegion-0.1.8.provenance.json`. El nuevo APK corresponde al directorio de trabajo actual, incluidos los cambios locales de iluminación y niebla ya presentes. No se instaló en un dispositivo ni se hizo push.
+
+## Little Legion — nombre, concepto y APK 0.1.8 — 21 de octubre de 2026
+
+El menú y el producto pasan a **Little Legion**, con **Pequeños ejércitos. Grandes batallas.** en español y **Little armies. Big battles.** en inglés. El plan de juego gratis con venta de skins y las colecciones Pharaoh Cats, Gummy Brigade y Cosmic Crew quedan documentados en [identidad](identity.md), sin implementar tienda ni nuevas razas.
+
+- **APK:** `Builds/Quest/LittleLegion.apk`, **74.319.474 bytes**, nombre visible **Little Legion**, identificador **`app.sadmonkey.littlelegion`**, versión **0.1.8**, código **9**, ARM64/IL2CPP, Android mínimo 32 y objetivo 36. Es una aplicación distinta del prototipo anterior; no migra sus datos.
+- Unity **6000.3.26f1** y Unity CLI **1.0.0-beta.14** compilaron correctamente, salida 0 y `editorErrors` vacío. Registro: `TestResults/unity-little-legion-apk-0.1.8.log`; procedencia: `Builds/Quest/LittleLegion.provenance.json`. El build usa el directorio de trabajo actual, incluidos los cambios locales de niebla que ya estaban presentes al iniciar esta tarea.
+- Integridad ZIP, firma APK v2, etiqueta, paquete, versión y arquitectura comprobados con las herramientas Android y lectura del archivo. SHA-256: `e0e1bbf497f938dbc6d2d682c0e871e5d6ab14723d5a7ece594a9dc16a7acef6`. Evidencias: `TestResults/little-legion-0.1.8-badging.txt`, `little-legion-0.1.8-signature.txt` y `little-legion-delivery-0.1.8.json`.
+- Se revisaron las capturas reales del menú en español e inglés: `TestResults/Localization/es-main.png` y `TestResults/Menus/01-main.png`. El nombre y el lema caben correctamente. Se completaron cuatro traducciones que faltaban en el menú principal.
+- `LocalizationPreview.Run` aprobó cobertura de traducciones y ausencia de desbordamientos en español; después falló al invocar la batería general `MenuFlowPreview` con **`Control guide overlaps footer`**. La comprobación compara la posición del texto de estado relativa a su contenedor con la posición de la guía relativa al panel; ese código y la jerarquía ya existían antes de esta tarea. **La batería completa no se considera aprobada.** Registro: `TestResults/unity-little-legion-localization-final.log`.
+- `git diff --check`, sintaxis Shell/Python, catálogos JSON sin claves duplicadas, enlaces locales de documentación y resolución de la nueva imagen Compose aprobados. Los namespaces y herramientas internos `Frontier` permanecen estables; la configuración Android activa usa únicamente el nuevo identificador.
+
+No se instaló ni probó en Quest físico. No se recompilaron el reproductor macOS ni el servidor; sus nombres de producto y próximas salidas están actualizados en fuentes. Las entregas y evidencias anteriores conservan sus nombres originales.
+
 ## Hints laterales con líneas y rueda cercana orientada a la vista — fuentes, sin nuevo APK — 20 de octubre de 2026
 
 Los cuatro hints pasan a una columna al costado exterior del mando, con flechas de dirección y seis trazos finos conectados al stick. La columna y sus líneas cambian de lado según la mano, sin invertir letras ni flechas. La rueda abierta baja de 6 a 2,5 cm sobre la referencia del stick; su normal gira hasta 35° hacia la posición de los ojos. La cámara no desplaza el anclaje y girar la cabeza sin trasladarla no hace girar la rueda.
@@ -1012,6 +1037,15 @@ La mezcla de las capas de niebla utilizaba los mismos factores para color y alfa
 - `FogPreview.Run` tras la corrección: **148 comprobaciones y 45 renders**, salida 0 en `TestResults/unity-fog-opacity-fixed.log`. Los tres mapas conservan **255/255** en todos los píxeles que eran opacos, con densidades 25/50/75/100 %, desde arriba y en ángulo, contra la referencia de 0 %. El exterior conserva transparencia; las zonas visibles conservan su color; la neblina sigue variando y la visibilidad de enemigos no cambia.
 - Las pruebas leen RGBA directamente del render target, evitando la captura estática RGB que no conserva alfa. Inspeccionados `TestResults/Fog/desert-opaque-25.png` y `desert-opaque-100.png`. `git diff --check` aprobado.
 - Unity **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin APK ni validación del compositor en un Quest físico.
+
+## Iluminación mejorada experimental — 21 de octubre de 2026
+
+Configuración → Visuales permite alternar entre Actual (predeterminada) y Mejorada (experimental), antes de comenzar o desde pausa. La preferencia se aplica inmediatamente y se guarda. La prueba combina luz suave y relleno ambiental según la temática, reflejos moderados en objetos y dos mallas de sombras de contacto que siguen el terreno. No añade luces con mapas de sombras ni posprocesado de pantalla completa.
+
+- `LightingPreview.Render`: **98 comprobaciones y 33 renders** de los tres mapas, con detalles de ambas facciones. Compara Actual/Mejorada/Actual, persistencia, conservación de partida/selección/colocación/niebla, sombras en rampas, geometría acotada, ausencia de colliders, liberación al reconstruir y cobertura alfa. Enemigos recordados, omitidos o fuera de visión no producen sombras dinámicas incluso con niebla al 0 %. Fase aprobada en `TestResults/unity-experimental-lighting.log`; imágenes en `TestResults/Lighting/`. Inspeccionadas las comparaciones de Neon Loop y detalles de Desser Alert y Forest Watch.
+- La ejecución integrada inicial detectó comprobaciones antiguas del pie de menú que medían el texto dentro del nuevo `statusBanner` en otro sistema de coordenadas. Se actualizaron los fixtures para medir el banner; no cambió la interfaz por este ajuste.
+- Regresión final con **salida 0** en `TestResults/unity-lighting-settings-fog-final.log`: menú **366 comprobaciones / 61 paneles**, localización **328 / 0 desbordamientos**, replay **30**, espectador **528 / 7 paneles** y niebla **160 / 60 renders**. Inspeccionado el selector en español. `FRONTIER_SHADERS_RETAINED` confirma que el shader nuevo queda referenciado para próximas compilaciones.
+- Validación mediante Unity Editor con Burst desactivado solo para esa ejecución. No se generó una nueva APK ni se midieron rendimiento, comodidad o aspecto en el visor físico.
 
 ## Modelos en construcción, entrenamiento y producción — 21 de octubre de 2026
 

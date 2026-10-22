@@ -12,7 +12,9 @@ namespace Frontier.Runtime
         private readonly GameObject root;
         private readonly Mesh mesh;
         private readonly Material material;
+        private readonly List<Vector4> shadowCasters=new List<Vector4>();
         public int Count { get; private set; }
+        public IReadOnlyList<Vector4> ShadowCasters=>shadowCasters;
 
         public ThemedScenery(BoardView board,Texture visibility,GridMap grid)
         {
@@ -45,6 +47,7 @@ namespace Frontier.Runtime
                 float y=board.HeightAt(new Point(x,z));
                 if(forest)Tree(new Vector3(x,y,z),radius,random);
                 else Cactus(new Vector3(x,y,z),radius,random);
+                shadowCasters.Add(new Vector4(x,z,radius*(forest?1.05f:.8f),forest?.18f:.15f));
                 Count++;
             }
             mesh=new Mesh{name=forest?"Forest Watch trees":"Desser Alert cacti",indexFormat=IndexFormat.UInt32};

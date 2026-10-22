@@ -3,6 +3,7 @@ Shader "Frontier/Board"
     Properties
     {
         _BaseColor("Color", Color) = (1,1,1,1)
+        _Gloss("Soft material highlight", Range(0, .3)) = 0
         _FogTex("Visibility", 2D) = "white" {}
         _UseFog("Fog", Float) = 0
         _Grid("Grid", Float) = 0
@@ -43,7 +44,7 @@ Shader "Frontier/Board"
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float topSurface:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseColor; float _UseFog; float _Grid; float _Desert; float _Forest; float _Neon;
+            float4 _BaseColor; float _Gloss; float _UseFog; float _Grid; float _Desert; float _Forest; float _Neon;
             float4 _SelectionBounds; float _SelectionWidth;
             float4 _HoverArea; float4 _HoverColor; float _HoverWidth; float _HoverAmount;
             float4 _PointerArea; float4 _PointerColor; float4 _PointerDotColor;
@@ -53,6 +54,7 @@ Shader "Frontier/Board"
             float _Desaturate; float _CreepTime;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
+            float _FrontierEnhancedLighting; float4 _FrontierLightColor;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
             TEXTURE2D(_CreepTex); SAMPLER(sampler_CreepTex);
             float TissueNoise(float2 p)
@@ -75,6 +77,26 @@ Shader "Frontier/Board"
                 clip(_FrontierBounds.x-abs(p.x)); clip(_FrontierBounds.y-abs(p.z));
                 half light=.63+.37*saturate(dot(normalize(input.normal),normalize(float3(-.3,.9,-.5))));
                 half3 color=_BaseColor.rgb*input.color.rgb*light;
+                if(_FrontierEnhancedLighting>.5)
+                {
+                    // A broad key and cool ambient fill keep the small tabletop forms
+                    // readable. Lighting follows the board, independently of its pose.
+                    half3 normal=normalize(mul((float3x3)_FrontierWorldToBoard,input.normal));
+                    half3 key=normalize(half3(-.45,.8,-.45));
+                    half diffuse=saturate((dot(normal,key)+.2)/1.2);
+                    half sky=saturate(normal.y*.5+.5);
+                    half fill=saturate(dot(normal,normalize(half3(.65,.4,.6))));
+                    half3 illumination=(.43+.1*sky)*half3(.91,.97,1.06)
+                        +.52*diffuse*_FrontierLightColor.rgb+.08*fill;
+                    color=_BaseColor.rgb*input.color.rgb*illumination;
+                    light=dot(illumination,half3(.299,.587,.114));
+                    if(_Gloss>0)
+                    {
+                        half3 view=normalize(mul((float3x3)_FrontierWorldToBoard,GetWorldSpaceNormalizeViewDir(input.world)));
+                        half shine=pow(saturate(dot(normal,normalize(key+view))),24)*saturate(dot(normal,key));
+                        color+=_Gloss*shine*_FrontierLightColor.rgb*(1-_Desaturate);
+                    }
+                }
                 color=lerp(color,dot(color,half3(.299,.587,.114)).xxx,_Desaturate);
                 if(_HoverAmount>0)
                 {
@@ -146,7 +168,13 @@ Shader "Frontier/Board"
                         color=lerp(color,flesh*light,coverage);
                     }
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
-                    color=lerp(half3(.018,.035,.05),color,visibility);
+                    // Visibility dims the authored surface instead of replacing it
+                    // with a flat color: cliff shading, ramps, trees and floor details
+                    // remain readable even when the separate mist layer is disabled.
+                    // Decode states explicitly; the shared texture may be sampled as sRGB.
+                    half explored=step(.01,visibility),visible=step(.98,visibility);
+                    half terrainLight=lerp(lerp(.58,.78,explored),1,visible);
+                    color*=terrainLight;
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
                     float gridLine=step(.48,max(tile.x,tile.y));
                     color*=1-gridLine*.1*_Grid;

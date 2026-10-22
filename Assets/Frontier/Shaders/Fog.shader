@@ -76,12 +76,16 @@ Shader "Frontier/Fog"
                 // distinct from zero after decoding (about .07 instead of .294).
                 half explored = step(.01, visibility);
                 float2 drift = float2(_FogTime * .018, -_FogTime * .013);
-                float large = Noise(input.map * .22 + drift + input.layer * 7.13);
-                float small = Noise(input.map * .61 - drift * 1.4 + input.layer * 13.7);
-                half billow = smoothstep(.08, .9, large * .72 + small * .28);
+                float large = Noise(input.map * .11 + drift + input.layer * 7.13);
+                float small = Noise(input.map * .34 - drift * 1.4 + input.layer * 13.7);
+                half billow = smoothstep(.15, .85, large * .78 + small * .22);
                 half density = lerp(1, .42, explored);
-                half alpha = input.opacity * density * lerp(.68, 1, billow) * edge * _FogDensity;
-                half3 color = _FogColor.rgb * lerp(.76, 1.18, billow) * (1 + input.layer * .045);
+                float2 borderDistance = min(input.map, _MapSize.xy - input.map);
+                half borderFade = smoothstep(0, 1.5, min(borderDistance.x, borderDistance.y));
+                // Broad translucent wisps leave the terrain's relief visible through
+                // all three layers, rather than accumulating into an opaque blanket.
+                half alpha = input.opacity * density * lerp(.24, .7, billow) * edge * borderFade * _FogDensity;
+                half3 color = _FogColor.rgb * lerp(.92, 1.14, billow) * (1 + input.layer * .035);
                 return half4(color, alpha);
             }
             ENDHLSL

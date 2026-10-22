@@ -20,7 +20,7 @@ namespace Frontier.Dedicated.Editor
                 throw new BuildFailedException("Linux Dedicated Server build support is required for this Unity editor.");
 
             PlayerSettings.companyName = "Frontier";
-            PlayerSettings.productName = "Frontier Command Server";
+            PlayerSettings.productName = "Little Legion Server";
             PlayerSettings.runInBackground = true;
             // Ahead-of-time compilation also avoids Mono JIT address assumptions
             // when the production Linux amd64 image is tested under emulation.

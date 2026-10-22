@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-binary="$PWD/Builds/Desktop/FrontierCommand.app/Contents/MacOS/Frontier Command"
+binary="$PWD/Builds/Desktop/LittleLegion.app/Contents/MacOS/Little Legion"
 [[ -x "$binary" ]] || { echo "Primero ejecutá bash scripts/unity.sh desktop." >&2; exit 1; }
 mkdir -p TestResults/Desktop
 "$binary" --frontier-smoke "$PWD/TestResults/Desktop" \

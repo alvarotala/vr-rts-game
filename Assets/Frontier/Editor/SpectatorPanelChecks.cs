@@ -125,7 +125,7 @@ namespace Frontier.Editor
                 {
                     Refresh();Canvas.ForceUpdateCanvases();
                     foreach(var text in panel.GetComponentsInChildren<Text>())Check(text.preferredHeight<=text.rectTransform.rect.height+.5f,"Text fits: "+text.text);
-                    var area=Field<RectTransform>(panel,"actions");var footer=Field<Text>(panel,"status").rectTransform;
+                    var area=Field<RectTransform>(panel,"actions");var footer=Field<RectTransform>(panel,"statusBanner");
                     Check(-area.anchoredPosition.y+area.sizeDelta.y<=-footer.anchoredPosition.y,"Actions and transport do not overlap footer");
                     Check(-Field<Text>(panel,"harvesting").rectTransform.anchoredPosition.y+Field<Text>(panel,"harvesting").rectTransform.sizeDelta.y<=-area.anchoredPosition.y,"Header does not overlap spectator cards");
                     HarvestingPreview.SavePanel(panel,"TestResults/Spectator/"+name+".png",preview);captures++;

@@ -11,7 +11,7 @@ This deliverable connects directly to a server address. Public matchmaking, acco
 Use the project's Unity version from `ProjectSettings/ProjectVersion.txt`, currently **6000.3.26f1**. The desktop client uses the configured project. The Linux server builder stages only Core, Networking and map/catalog resources in a separate generated project because Meta XR SDK 203's build preprocessor rejects Linux targets. Both builds use the same simulation and protocol sources, **NGO 2.13.3** and **Unity Transport 2.7.4**. The server generator copies the actual resolved client package graph from `Packages/packages-lock.json`; it does not substitute NGO's older minimum transport dependency.
 
 ```sh
-unity build . --target StandaloneOSX --execute-method Frontier.Editor.ProjectBuilder.BuildDesktop --output-path Builds/Desktop/FrontierCommand.app --log-file TestResults/multiplayer-desktop-build.log --format json
+unity build . --target StandaloneOSX --execute-method Frontier.Editor.ProjectBuilder.BuildDesktop --output-path Builds/Desktop/LittleLegion.app --log-file TestResults/multiplayer-desktop-build.log --format json
 python3 scripts/build-server.py
 ```
 
@@ -44,7 +44,7 @@ Wait for `FRONTIER_SERVER Listening on`. Compose publishes UDP 7777 on all host 
 FRONTIER_BIND_ADDRESS=127.0.0.1 docker compose -f compose.multiplayer.yml up -d
 ```
 
-`FRONTIER_PORT` changes the UDP port (default `7777`), `FRONTIER_MAP` chooses `rift`, `training` or `desert`, and `FRONTIER_SERVER_IMAGE` changes the local image tag (default `frontier-command-server:ngo-local`). Use the same variables when recreating the service. One server process runs one match; use `docker compose -f compose.multiplayer.yml restart server` for another match after both players have left. `docker compose -f compose.multiplayer.yml down` removes this local deployment.
+`FRONTIER_PORT` changes the UDP port (default `7777`), `FRONTIER_MAP` chooses `rift`, `training` or `desert`, and `FRONTIER_SERVER_IMAGE` changes the local image tag (default `little-legion-server:ngo-local`). Use the same variables when recreating the service. One server process runs one match; use `docker compose -f compose.multiplayer.yml restart server` for another match after both players have left. `docker compose -f compose.multiplayer.yml down` removes this local deployment.
 
 The image contains the compiled Linux server and runtime libraries, runs as user `frontier` (UID 10001), writes logs to standard output, and exposes UDP rather than TCP. It contains no Unity Editor or license. Ubuntu 22.04 is within Unity 6.3's supported Linux server OS list. [Unity server system requirements](https://docs.unity3d.com/6000.3/Documentation/Manual/system-requirements.html#server)
 
@@ -57,15 +57,15 @@ The initial Mono server build crashed during startup under QEMU on this Mac. The
 After the local runtime checks pass, export the tested image and record its identity:
 
 ```sh
-docker image inspect frontier-command-server:ngo-local --format '{{.Id}} {{.Os}}/{{.Architecture}}'
-docker save --output Builds/frontier-command-server.tar frontier-command-server:ngo-local
+docker image inspect little-legion-server:ngo-local --format '{{.Id}} {{.Os}}/{{.Architecture}}'
+docker save --output Builds/little-legion-server.tar little-legion-server:ngo-local
 ```
 
 Copy that archive, the recorded image identity and `compose.multiplayer.yml` to the chosen Linux amd64 host. Loading restores the saved image and tag; it does not rebuild the application. [Docker save](https://docs.docker.com/reference/cli/docker/image/save/), [Docker load](https://docs.docker.com/reference/cli/docker/image/load/)
 
 ```sh
-docker load --input frontier-command-server.tar
-docker image inspect frontier-command-server:ngo-local --format '{{.Id}} {{.Os}}/{{.Architecture}}'
+docker load --input little-legion-server.tar
+docker image inspect little-legion-server:ngo-local --format '{{.Id}} {{.Os}}/{{.Architecture}}'
 ```
 
 Confirm that the image ID and `linux/amd64` platform match the tested artifact, then start it with the normal Compose file:
@@ -87,10 +87,10 @@ The Linux executable below runs directly on a Linux host. On the authoring Mac, 
 Builds/Server/FrontierServer -batchmode -nographics -frontier-server -frontier-port 7777 -logFile server.log
 ```
 
-For the macOS server substitute `Builds/ServerMac/FrontierServer.app/Contents/MacOS/Frontier Command` (check the executable's actual name inside the app). Desktop clients also accept command-line connection parameters:
+For the macOS server substitute `Builds/ServerMac/FrontierServer.app/Contents/MacOS/Little Legion` (check the executable's actual name inside the app). Desktop clients also accept command-line connection parameters:
 
 ```sh
-"Builds/Desktop/FrontierCommand.app/Contents/MacOS/Frontier Command" -frontier-client 127.0.0.1 -frontier-port 7777 -frontier-faction industrial
+"Builds/Desktop/LittleLegion.app/Contents/MacOS/Little Legion" -frontier-client 127.0.0.1 -frontier-port 7777 -frontier-faction industrial
 ```
 
 Both clients must connect before the match starts. A normal server has no AI filling an empty seat. The match ends through the existing victory rules or concession, and both clients receive the same authoritative result.

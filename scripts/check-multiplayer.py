@@ -131,7 +131,7 @@ def main():
     server_source = parser.add_mutually_exclusive_group(required=True)
     server_source.add_argument("--server", type=Path, help="Linux server binary or macOS server .app")
     server_source.add_argument("--external-server", help="Already-running dedicated server address (for example a Docker server on 127.0.0.1)")
-    parser.add_argument("--client", type=Path, default=ROOT / "Builds/Desktop/FrontierCommand.app")
+    parser.add_argument("--client", type=Path, default=ROOT / "Builds/Desktop/LittleLegion.app")
     parser.add_argument("--port", type=int, default=0, help="UDP port; zero chooses a currently free port")
     parser.add_argument("--timeout", type=float, default=540)
     parser.add_argument("--output", type=Path, default=ROOT / "TestResults/ngo-multiplayer")

@@ -115,19 +115,22 @@ namespace Frontier.Runtime
             }
             else if(settingsTab==SettingsTab.Visuals)
             {
+                MenuCard(Board.EnhancedLighting?"Lighting: Enhanced (experimental)":"Lighting: Current",
+                    "Soft light, contact shadows and subtle highlights. Select to compare.",
+                    new Vector2(0,-64),new Vector2(1040,76),()=>{Board.SetEnhancedLighting(!Board.EnhancedLighting);Rebuild();});
                 int density=Mathf.RoundToInt(Board.FogDensity*100);
-                Label(actions,"Fog density: "+density+"%"+(density==0?" (Off)":""),new Vector2(22,-82),new Vector2(996,36),26,Color.white);
-                Label(actions,"Visual mist over unseen terrain. Unseen enemies stay hidden.",new Vector2(22,-130),new Vector2(996,50),18,MenuMuted);
+                Label(actions,"Fog density: "+density+"%"+(density==0?" (Off)":""),new Vector2(22,-156),new Vector2(996,32),23,Color.white);
+                Label(actions,"Visual mist over unseen terrain. Unseen enemies stay hidden.",new Vector2(22,-192),new Vector2(996,28),17,MenuMuted);
                 for(int i=0;i<=4;i++)
                 {
                     int percent=i*25;bool active=density==percent;
                     string title=percent==0?"0% (Off)":percent+"%";
-                    var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-194),new Vector2(196,72),active?new Color(.075f,.27f,.3f):button);
-                    Label(rect,title,Vector2.zero,new Vector2(196,72),23,active?accent:Color.white,TextAnchor.MiddleCenter);
-                    if(active)Section(rect,"Selected",new Vector2(0,-68),new Vector2(196,4),accent);
+                    var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-230),new Vector2(196,60),active?new Color(.075f,.27f,.3f):button);
+                    Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAnchor.MiddleCenter);
+                    if(active)Section(rect,"Selected",new Vector2(0,-56),new Vector2(196,4),accent);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
-                Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-284),new Vector2(996,30),18,MenuMuted);
+                Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-302),new Vector2(996,24),16,MenuMuted);
             }
             else if(settingsTab==SettingsTab.Language)
             {

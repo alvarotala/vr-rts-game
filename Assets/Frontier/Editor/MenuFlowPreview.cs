@@ -28,10 +28,13 @@ namespace Frontier.Editor
             int basePreference=PlayerPrefs.GetInt(BoardView.BaseTargetingKey);
             bool hadFogPreference=PlayerPrefs.HasKey(BoardView.FogDensityKey);
             float fogPreference=PlayerPrefs.GetFloat(BoardView.FogDensityKey);
+            bool hadLightingPreference=PlayerPrefs.HasKey(BoardView.LightingKey);
+            int lightingPreference=PlayerPrefs.GetInt(BoardView.LightingKey);
             try
             {
                 PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
                 PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
+                PlayerPrefs.DeleteKey(BoardView.LightingKey);
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Invoke(session,"Awake");
                 var boardObject=new GameObject("Preview board");boardObject.transform.SetParent(fixture.transform);
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;Invoke(board,"Start");
@@ -64,6 +67,9 @@ namespace Frontier.Editor
                 Check(Has("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%")&&Has("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%")&&!Has("Hotkeys"),"Audio tab exposes current volume settings without unrelated controls");Capture("02-settings-audio");
                 Click("Visuals");
                 Check(board.FogDensity==1&&Has("Fog: 0% (Off)")&&Has("Fog: 25%")&&Has("Fog: 50%")&&Has("Fog: 75%")&&Has("Fog: 100%"),"Visual settings offer the original fog density and an explicit Off preset");
+                Check(!board.EnhancedLighting&&Has("Lighting: Current"),"Visual settings keep current lighting as the default");Capture("02-settings-visuals-current");
+                Click("Lighting: Current");
+                Check(board.EnhancedLighting&&PlayerPrefs.GetInt(BoardView.LightingKey)==1&&Has("Lighting: Enhanced (experimental)")&&!session.Running&&!session.IsPaused,"Experimental lighting can be enabled and saved before starting a match");Capture("02-settings-visuals-enhanced");
                 Click("Fog: 0% (Off)");
                 Check(board.FogDensity==0&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==0&&!session.Running&&!session.IsPaused,"Fog can be disabled and saved before starting a match");Capture("02-settings-visuals-off");
                 Click("Fog: 50%");Check(board.FogDensity==.5f&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==.5f,"Visual settings save intermediate fog density");
@@ -158,7 +164,13 @@ namespace Frontier.Editor
                 Check(session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection),"Changing targeting does not resume or change the selection");
                 Capture("07-paused-controls");
                 Click("Selection: Bases");Check(!board.BaseTargeting&&PlayerPrefs.GetInt(BoardView.BaseTargetingKey)==0,"Body targeting can be restored from the same button");
-                Click("Visuals");Check(board.FogDensity==.5f,"Paused visual settings retain the pre-match density");
+                Click("Visuals");Check(board.FogDensity==.5f&&board.EnhancedLighting&&Has("Lighting: Enhanced (experimental)"),"Paused visual settings retain the pre-match density and lighting");
+                var lightingMatch=session.Match;
+                Click("Lighting: Enhanced (experimental)");
+                Check(!board.EnhancedLighting&&PlayerPrefs.GetInt(BoardView.LightingKey)==0&&Has("Lighting: Current")&&session.Match==lightingMatch&&session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Current lighting restores immediately from pause without restarting or changing gameplay");Capture("07-paused-lighting-current");
+                Click("Lighting: Current");
+                Check(board.EnhancedLighting&&PlayerPrefs.GetInt(BoardView.LightingKey)==1&&session.Match==lightingMatch&&session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Enhanced lighting reapplies immediately in the same paused match");Capture("07-paused-lighting-enhanced");
+                Click("Lighting: Enhanced (experimental)");
                 Click("Fog: 75%");for(int i=0;i<3;i++)session.Match.Step();
                 Check(board.FogDensity==.75f&&PlayerPrefs.GetFloat(BoardView.FogDensityKey)==.75f&&session.IsPaused&&session.Match.Tick==pausedTick&&session.Selection.SetEquals(beforeSelection)&&session.View.minerals==minerals,"Changing fog from pause saves immediately without resuming or changing gameplay");Capture("07-paused-visuals");
                 Click("Fog: 100%");
@@ -301,6 +313,12 @@ namespace Frontier.Editor
                 void Capture(string name)
                 {
                     Refresh();var guide=Field<RectTransform>(panel,"controlGuide");
+                    if(panel.Page==CommandPanel.MenuPage.Settings&&(Has("Lighting: Current")||Has("Lighting: Enhanced (experimental)")))
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        foreach(var text in Field<RectTransform>(panel,"actions").GetComponentsInChildren<Text>())
+                            if(text.preferredHeight>text.rectTransform.rect.height+.5f)throw new Exception("Clipped visual settings text: "+text.text);
+                    }
                     if(guide.gameObject.activeInHierarchy)
                     {
                         Canvas.ForceUpdateCanvases();
@@ -310,7 +328,7 @@ namespace Frontier.Editor
                         float guideTop=-guide.anchoredPosition.y,guideBottom=guideTop+guide.sizeDelta.y;
                         float actionsTop=-actions.anchoredPosition.y,actionsBottom=actionsTop+actions.sizeDelta.y;
                         if(!(actionsBottom<=guideTop||guideBottom<=actionsTop))throw new Exception("Control guide overlaps navigation buttons");
-                        if(guideBottom>-Field<Text>(panel,"status").rectTransform.anchoredPosition.y)throw new Exception("Control guide overlaps footer");
+                        if(guideBottom>-Field<RectTransform>(panel,"statusBanner").anchoredPosition.y)throw new Exception("Control guide overlaps footer");
                     }
                     var reference=Field<RectTransform>(panel,"hotkeys");
                     if(reference.gameObject.activeInHierarchy)
@@ -320,7 +338,7 @@ namespace Frontier.Editor
                             if(text.preferredHeight>text.rectTransform.rect.height+.5f)throw new Exception("Clipped hotkey text: "+text.text);
                         var actions=Field<RectTransform>(panel,"actions");
                         if(-reference.anchoredPosition.y+reference.sizeDelta.y>-actions.anchoredPosition.y)throw new Exception("Hotkeys overlaps navigation");
-                        if(-actions.anchoredPosition.y+actions.sizeDelta.y>-Field<Text>(panel,"status").rectTransform.anchoredPosition.y)throw new Exception("Hotkey navigation overlaps footer");
+                        if(-actions.anchoredPosition.y+actions.sizeDelta.y>-Field<RectTransform>(panel,"statusBanner").anchoredPosition.y)throw new Exception("Hotkey navigation overlaps footer");
                     }
                     HarvestingPreview.SavePanel(panel,"TestResults/Menus/"+name+".png",preview);captures++;
                 }
@@ -329,6 +347,7 @@ namespace Frontier.Editor
             {
                 if(hadBasePreference)PlayerPrefs.SetInt(BoardView.BaseTargetingKey,basePreference);else PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
                 if(hadFogPreference)PlayerPrefs.SetFloat(BoardView.FogDensityKey,fogPreference);else PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
+                if(hadLightingPreference)PlayerPrefs.SetInt(BoardView.LightingKey,lightingPreference);else PlayerPrefs.DeleteKey(BoardView.LightingKey);
                 PlayerPrefs.Save();
                 Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();
             }

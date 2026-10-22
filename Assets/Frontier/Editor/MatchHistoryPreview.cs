@@ -107,7 +107,7 @@ namespace Frontier.Editor
                 {
                     Refresh();Canvas.ForceUpdateCanvases();
                     foreach(var text in panel.GetComponentsInChildren<Text>())Check(text.preferredHeight<=text.rectTransform.rect.height+.5f,"Text fits: "+text.text);
-                    var actions=Field<RectTransform>(panel,"actions");var footer=Field<Text>(panel,"status").rectTransform;
+                    var actions=Field<RectTransform>(panel,"actions");var footer=Field<RectTransform>(panel,"statusBanner");
                     Check(-actions.anchoredPosition.y+actions.sizeDelta.y<=-footer.anchoredPosition.y,"Actions do not overlap footer");
                     HarvestingPreview.SavePanel(panel,"TestResults/History/"+name+".png",preview);captures++;
                 }

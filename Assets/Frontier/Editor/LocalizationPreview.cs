@@ -20,6 +20,7 @@ namespace Frontier.Editor
         private static void RunChecks(bool strict)
         {
             bool had=PlayerPrefs.HasKey(Localization.PreferenceKey);string saved=PlayerPrefs.GetString(Localization.PreferenceKey);
+            bool hadLighting=PlayerPrefs.HasKey(BoardView.LightingKey);int savedLighting=PlayerPrefs.GetInt(BoardView.LightingKey);
             var missing=new HashSet<string>();var clipped=new HashSet<string>();var rendered=new SortedDictionary<string,string>();int checks=0;
             string archivePath=Path.Combine(Path.GetTempPath(),"frontier-language-"+Guid.NewGuid().ToString("N"));
             try
@@ -44,6 +45,7 @@ namespace Frontier.Editor
                 Check(Localization.Text("0 queued orders")=="0 órdenes en cola"&&Localization.Text("1 queued order")=="1 orden en cola","Queued orders use natural singular and plural");
                 Check(Localization.Text("48 × 48 · 4 zones · 1v1\n16m/4g · Futuristic neon")=="48 × 48 · 4 zonas · 1v1\n16m/4g · Neón futurista","Map summary localizes labels while preserving real numeric values");
                 Check(Localization.Text("Map: Forest Watch")=="Mapa: Forest Watch","Map names remain the user's chosen titles");
+                Check(Localization.Text("Lighting: Current")=="Iluminación: Actual"&&Localization.Text("Lighting: Enhanced (experimental)")=="Iluminación: Mejorada (experimental)","Lighting modes identify the current and experimental options in Spanish");
                 Check(Localization.Text("unknown.future.key")=="unknown.future.key","Missing translations retain readable source");
                 var labelObject=new GameObject("Language binding",typeof(RectTransform),typeof(LocalizedText));
                 try
@@ -66,9 +68,19 @@ namespace Frontier.Editor
                     }
                     // This fixture normally emulates Touch; desktop avoids waiting for tracking in the lobby.
                     typeof(QuestBridge).GetProperty("Active").SetValue(f.Quest,false);
+                    f.Board.SetEnhancedLighting(false);
                     Show(CommandPanel.MenuPage.Main);Capture("es-main");
                     Show(CommandPanel.MenuPage.Settings);
-                    foreach(string tab in new[]{"Controls","Audio","Visuals","Play space","Language"}){Click(tab);Capture("es-settings-"+tab);}
+                    foreach(string tab in new[]{"Controls","Audio","Visuals","Play space","Language"})
+                    {
+                        Click(tab);Capture("es-settings-"+tab);
+                        if(tab=="Visuals")
+                        {
+                            Click("Lighting: Current");
+                            Check(f.Board.EnhancedLighting&&f.Panel.GetComponentsInChildren<LocalizedText>().Any(t=>t.text=="Iluminación: Mejorada (experimental)"),"Lighting selector updates immediately in Spanish");
+                            Capture("es-settings-Visuals-enhanced");Click("Lighting: Enhanced (experimental)");
+                        }
+                    }
                     Capture("es-settings-language");
                     Click("Language: Español");Check(Localization.Preference=="system"&&!PlayerPrefs.HasKey(Localization.PreferenceKey),"Settings cycles back to system and removes explicit override");
                     Localization.SetPreference("es");Show(CommandPanel.MenuPage.MatchSetup);Capture("es-new-match");
@@ -146,13 +158,18 @@ namespace Frontier.Editor
                 if(strict)
                 {
                     Check(clipped.Count==0,"All Spanish text fits its layout");
-                    var unchanged=new HashSet<string>{"Arsenal","Audio","Ctrl + 1 / 2 / 3 / 4","Escape","Gas","GAS","FRONTIER / COMMAND","APM","Neon Loop","Forest Watch","Desser Alert"};
+                    var unchanged=new HashSet<string>{"Arsenal","Audio","Ctrl + 1 / 2 / 3 / 4","Escape","Gas","GAS","LITTLE LEGION","APM","Neon Loop","Forest Watch","Desser Alert"};
                     Check(missing.All(unchanged.Contains),"Unchanged visible strings are only shared terms, key names and the game title");
                 }
                 Localization.SetPreference("en");if(strict){MenuFlowPreview.Render();ReplaySessionChecks.Run();SpectatorPanelChecks.Run();}
                 Debug.Log($"FRONTIER_LOCALIZATION passed: {checks} checks; {missing.Count} shared strings and {clipped.Count} layout overflows; no player build");
             }
-            finally{if(had)PlayerPrefs.SetString(Localization.PreferenceKey,saved);else PlayerPrefs.DeleteKey(Localization.PreferenceKey);PlayerPrefs.Save();Localization.ReloadPreference();if(Directory.Exists(archivePath))Directory.Delete(archivePath,true);}
+            finally
+            {
+                if(had)PlayerPrefs.SetString(Localization.PreferenceKey,saved);else PlayerPrefs.DeleteKey(Localization.PreferenceKey);
+                if(hadLighting)PlayerPrefs.SetInt(BoardView.LightingKey,savedLighting);else PlayerPrefs.DeleteKey(BoardView.LightingKey);
+                PlayerPrefs.Save();Localization.ReloadPreference();if(Directory.Exists(archivePath))Directory.Delete(archivePath,true);
+            }
             void Check(bool value,string message){if(!value)throw new Exception(message);checks++;Debug.Log("LOCALIZATION_PASS: "+message);}
         }
     }

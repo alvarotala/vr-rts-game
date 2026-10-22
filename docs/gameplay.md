@@ -48,7 +48,7 @@ En los tres mapas busca y ocupa depósitos de otras zonas: Easy y Normal planean
 | --- | --- |
 | **Controls** | Mano activa, **Hotkeys** y **Selection: Bodies / Bases**. |
 | **Audio** | Volumen de **Music** y **Effects** por separado. |
-| **Visuals** | Densidad de niebla: 0 %, 25 %, 50 %, 75 % o 100 %. 0 % quita la neblina visual; el terreno conserva su opacidad en todos los niveles. |
+| **Visuals** | **Iluminación: Actual / Mejorada (experimental)** y densidad de niebla: 0 %, 25 %, 50 %, 75 % o 100 %. 0 % quita la neblina visual; el terreno conserva su opacidad en todos los niveles. |
 | **Play space** | **Reposition board** y **Detect surfaces**. La altura se ajusta durante la colocación. |
 | **Language / Idioma** | **Sistema**, **English** o **Español**. Se aplica al instante y se guarda en el dispositivo. |
 
@@ -263,7 +263,9 @@ Los **minerales** se pueden apuntar directamente sobre el cristal, incluso miran
 
 Al apuntar al mapa aparece un **punto blanco con líneas de mira turquesa** en la intersección del láser con el terreno. Está al ras del suelo y las rampas, mantiene su tamaño con el zoom de escritorio y se recorta en el borde del tablero. También funciona con el mouse. Sigue visible sobre niebla como referencia del cursor, sin revelar información; desaparece al salir del tablero, apuntar al panel o pausar.
 
-La **niebla de guerra** tiene tres capas suaves sobre el terreno, con movimiento lento y un tono arenoso en Desser Alert. Es más densa en zonas nunca exploradas y más tenue donde ya hubo visión; las celdas visibles quedan completamente despejadas. Los edificios recordados conservan su última información conocida, mientras las unidades enemigas fuera de visión permanecen ocultas. La bruma no cambia las reglas de exploración y se detiene durante la pausa.
+La **niebla de guerra** tiene tres capas translúcidas de bruma amplia y suave, con movimiento lento y un tono acorde al mapa. El relieve y los detalles del suelo se ven a través de la bruma. Es más densa en zonas nunca exploradas y más tenue donde ya hubo visión; las celdas visibles quedan completamente despejadas. Los edificios recordados conservan su última información conocida, mientras las unidades enemigas fuera de visión permanecen ocultas. Al bajar la densidad a 0 %, desaparece la bruma y el terreno sin explorar conserva sus colores, sombras, rampas, árboles y rocas con un oscurecimiento moderado; el terreno explorado queda un poco más claro. Las zonas visibles conservan su iluminación normal. Este ajuste no revela unidades enemigas ni depósitos todavía ocultos. La bruma no cambia las reglas de exploración y se detiene durante la pausa.
+
+**Configuración → Visuales → Iluminación** permite alternar al instante entre **Actual** (predeterminada) y **Mejorada (experimental)**, antes de la partida o desde pausa. La mejorada combina luz suave, relleno ambiental, sombras de contacto bajo objetos y reflejos moderados en unidades, edificios y recursos. El suelo mantiene un acabado mate y cada mapa conserva su tono. La elección se guarda en el dispositivo; cambiarla conserva la partida, la selección y el ajuste de niebla. Las sombras de unidades y recursos solo aparecen en zonas con visión actual.
 
 Al apuntar a una unidad o edificio, el modelo se ilumina y aparece un contorno sobre el suelo: circular para unidades y cuadrado para edificios, amarillo en aliados y rojo en enemigos. Se muestra antes de seleccionar y se apaga al retirar el puntero, apuntar al menú o perder el foco. El disco de selección permanece en los objetos seleccionados. El contorno de hover sigue el terreno y las rampas, respeta el borde del tablero y no aparece sobre recuerdos enemigos bajo niebla de guerra.
 

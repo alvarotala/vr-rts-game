@@ -23,9 +23,9 @@ namespace Frontier.Editor
         public static void Configure()
         {
             Directory.CreateDirectory("Assets/Frontier/Settings");Directory.CreateDirectory("Assets/Frontier/Scenes");
-            PlayerSettings.companyName="Frontier";PlayerSettings.productName="Frontier Command";
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android,"com.alvaro.frontiercommand");
-            PlayerSettings.bundleVersion="0.1.7";PlayerSettings.Android.bundleVersionCode=8;
+            PlayerSettings.companyName="Frontier";PlayerSettings.productName="Little Legion";
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android,"app.sadmonkey.littlelegion");
+            PlayerSettings.bundleVersion="0.1.9";PlayerSettings.Android.bundleVersionCode=10;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android,ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures=AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion=AndroidSdkVersions.AndroidApiLevel32;
@@ -98,7 +98,7 @@ namespace Frontier.Editor
             // Shader.Find assets must be explicitly retained in player builds.
             var graphics=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
             var shaders=graphics.FindProperty("m_AlwaysIncludedShaders");
-            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Frontier/Remains","Frontier/Fog","Universal Render Pipeline/Unlit","UI/Default"})
+            foreach(string name in new[]{"Frontier/Board","Frontier/Impact","Frontier/Weapons","Frontier/Remains","Frontier/Fog","Frontier/ContactShadows","Universal Render Pipeline/Unlit","UI/Default"})
             {
                 var shader=Shader.Find(name);if(shader==null)throw new BuildFailedException("Shader not found: "+name);
                 bool found=false;for(int i=0;i<shaders.arraySize;i++)if(shaders.GetArrayElementAtIndex(i).objectReferenceValue==shader)found=true;
@@ -114,7 +114,7 @@ namespace Frontier.Editor
             Configure();
             if(!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android,BuildTarget.Android))throw new BuildFailedException("Android Build Support is missing.");
             PrepareOutput("Builds/Quest");
-            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Quest/FrontierCommand.apk",target=BuildTarget.Android,options=BuildOptions.None});
+            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Quest/LittleLegion.apk",target=BuildTarget.Android,options=BuildOptions.None});
             if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Quest build failed: "+report.summary.result);
             Debug.Log("FRONTIER_APK_BUILT "+report.summary.totalSize);
         }
@@ -124,7 +124,7 @@ namespace Frontier.Editor
             Configure();PrepareOutput("Builds/Desktop");
             // MRUK 203 ships a standalone macOS library for Apple Silicon only.
             EditorUserBuildSettings.SetPlatformSettings(BuildPipeline.GetBuildTargetName(BuildTarget.StandaloneOSX),"Architecture","ARM64");
-            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Desktop/FrontierCommand.app",target=BuildTarget.StandaloneOSX,subtarget=(int)StandaloneBuildSubtarget.Player,options=BuildOptions.Development});
+            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{ScenePath},locationPathName="Builds/Desktop/LittleLegion.app",target=BuildTarget.StandaloneOSX,subtarget=(int)StandaloneBuildSubtarget.Player,options=BuildOptions.Development});
             if(report.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Desktop playtest failed.");
         }
         private static void PrepareOutput(string directory)

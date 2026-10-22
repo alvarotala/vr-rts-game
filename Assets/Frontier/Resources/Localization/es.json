@@ -1872,6 +1872,16 @@
       "template": false
     },
     {
+      "key": "Lighting: Current",
+      "value": "Iluminación: Actual",
+      "template": false
+    },
+    {
+      "key": "Lighting: Enhanced (experimental)",
+      "value": "Iluminación: Mejorada (experimental)",
+      "template": false
+    },
+    {
       "key": "Living army units over time. Workers are excluded.",
       "value": "Unidades militares vivas a lo largo del tiempo. No incluye trabajadores.",
       "template": false
@@ -3372,6 +3382,11 @@
       "template": false
     },
     {
+      "key": "Soft light, contact shadows and subtle highlights. Select to compare.",
+      "value": "Luz suave, sombras de contacto y brillo moderado. Selecciona para comparar.",
+      "template": false
+    },
+    {
       "key": "Settings > Play space > Reposition board",
       "value": "Configuración > Espacio de juego > Reubicar tablero",
       "template": false
@@ -4028,7 +4043,7 @@
     },
     {
       "key": "Visuals",
-      "value": "Imagen",
+      "value": "Visuales",
       "template": false
     },
     {
@@ -6522,8 +6537,33 @@
       "template": false
     },
     {
-      "key": "FRONTIER / COMMAND",
-      "value": "FRONTIER / COMMAND",
+      "key": "LITTLE LEGION",
+      "value": "LITTLE LEGION",
+      "template": false
+    },
+    {
+      "key": "Lead your faction from a tabletop battlefield. Play offline or join a LAN match.",
+      "value": "Dirige tu ejército sobre un tablero. Juega contra la IA o en una partida LAN.",
+      "template": false
+    },
+    {
+      "key": "Choose your faction and battlefield. Play offline against the AI.",
+      "value": "Elige tu facción y el campo de batalla. Juega contra la IA sin conexión.",
+      "template": false
+    },
+    {
+      "key": "Multiplayer LAN",
+      "value": "Multijugador LAN",
+      "template": false
+    },
+    {
+      "key": "Join a dedicated server on your network. Two human players.",
+      "value": "Únete a un servidor de tu red local. Dos jugadores.",
+      "template": false
+    },
+    {
+      "key": "Little armies. Big battles.",
+      "value": "Pequeños ejércitos. Grandes batallas.",
       "template": false
     },
     {
