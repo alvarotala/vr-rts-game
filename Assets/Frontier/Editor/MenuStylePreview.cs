@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using System.Collections;
 using System.IO;
@@ -8,6 +9,7 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 using Object = UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -179,7 +181,7 @@ namespace Frontier.Editor
                         decorationsAreTargets |= rect == logo.rectTransform || icons.Any(icon => icon.rectTransform == rect);
                     }
                     Check(!decorationsAreTargets, name + ": logo and icons add no separate command targets");
-                    foreach (var label in panel.GetComponentsInChildren<Text>().Where(t => !t.resizeTextForBestFit))
+                    foreach (var label in panel.GetComponentsInChildren<Text>().Where(t => !t.enableAutoSizing))
                         Check(label.preferredHeight <= label.rectTransform.rect.height + .5f, name + ": text fits: " + label.text);
                     HarvestingPreview.SavePanel(panel, output + "/" + name + ".png", preview); captures++;
                 }

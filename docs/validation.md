@@ -1112,3 +1112,22 @@ Se conserva la estructura del concepto 05 y se sustituye el acabado ornamental p
 - `MenuStylePreview.Validate`: **salida 0** en `TestResults/unity-flat-menus-validation.log`. Estilo **1.540 comprobaciones / 44 capturas**, localización **328 / 0 desbordamientos**, menús **366 / 61 paneles**, replay **30**, espectador **527 / 7**, selección **177 / 8**, producción **776 / 26**, recolección **18 paneles** y rueda **724 / 22** aprobados.
 - Inspeccionadas capturas del inicio, audio, HUD de trabajador, rueda de órdenes y selección rápida en español. La revisión comprueba rellenos uniformes, contraste, distribución y texto completo. `git diff --check` aprobado.
 - Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo para la validación. No se generó APK: la reducción del parpadeo y la legibilidad al mover la cabeza requieren comprobación física en Quest.
+
+
+## Contornos de texto SDF para Quest — 21 de octubre de 2026
+
+Se sustituye el texto bitmap de `LegacyRuntime.ttf` por TextMesh Pro/SDF en menús, HUD, rueda, avisos del mando y contadores del tablero. El atlas estático compartido incluye inglés, español y los símbolos usados; los avisos flotantes reemplazan las cuatro copias desplazadas de UGUI Outline por un contorno SDF compartido. Se conservan tamaños, distribución, traducciones e interacción. El proyecto ya utiliza MSAA 4×; esta corrección actúa sobre las letras.
+
+- Migración funcional: **salida 0** en `TestResults/unity-sdf-menus.log`, con estilo **1.540 / 44 paneles**, localización **328 / 0 desbordamientos**, menús **366 / 61**, replay **30**, espectador **527 / 7**, selección **177 / 8**, producción **776 / 26**, recolección **18 paneles** y rueda **724 / 22**. La revisión de las imágenes detectó que el capturador antiguo reemplazaba el atlas TMP con una textura blanca; se corrigió la captura. También se reemplazó el símbolo de leyenda de gráficos no disponible por una raya compatible.
+- Validación final y capturas con los materiales reales: **salida 0** en `TestResults/unity-sdf-ui-final.log`, con estilo **1.540 / 44**, localización **328 / 0 desbordamientos**, menús **366 / 61**, replay **30**, espectador **527 / 7**, rueda **724 / 22** y contadores del mapa **96 / 8**. Sin avisos de caracteres faltantes ni errores de shader. Inspeccionados inicio, selección rápida y avisos en español.
+- `TextEdgesPreview.Render`: **48 comprobaciones / 12 renders**, salida 0 en `TestResults/unity-sdf-edges.log`. Panel y aviso con contorno, a 0°, 40° y 60°, en 48 × 48 y 192 × 192 píxeles. Verifica enlace al atlas real, cobertura parcial de píxeles en los contornos, glifo visible y hueco interior de la O. Capturas en `TestResults/TextEdges/`.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo durante la validación. `git diff --check` aprobado. No se generó APK ni se verificó movimiento, estéreo o rendimiento en Quest físico; la mejora percibida en el visor queda pendiente de esa prueba.
+
+
+## Prueba aislada sin contorno de letras — 21 de octubre de 2026
+
+Se retira únicamente el contorno SDF de avisos flotantes del mando y confirmaciones. Los textos de los paneles ya tenían ancho de contorno cero; todos comparten ahora su material. Se elimina el material específico de avisos y el preparador mantiene desactivado `OUTLINE_ON`, con ancho y suavidad de contorno cero. No se cambian fondos, colores, geometría, tamaños ni transiciones del menú en esta prueba.
+
+- `TextRenderingSetup.ValidatePlainText`: **salida 0** en `TestResults/unity-text-no-outline.log`. Localización **328 / 0 desbordamientos**, menús **366 / 61 paneles**, replay **30**, espectador **527 / 7** y bordes de glifo **24 / 6 renders** aprobados.
+- Inspeccionados los avisos en español sin contorno. Atlas y suavizado SDF conservados; no quedan componentes Outline ni asignaciones de material con contorno en el texto de juego. `git diff --check` aprobado.
+- Capturas y entrada sintética en Unity Editor **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin APK ni prueba física en Quest; esta comparación no demuestra todavía una reducción del serrucho percibido en movimiento.

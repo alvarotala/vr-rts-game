@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using System.Linq;
 using UnityEngine;
@@ -41,8 +42,8 @@ namespace Frontier.Runtime
                 }
                 else Icon(rect,symbol.Value,new Vector2(24,compact?-10:-19),26,accent);
             }
-            Label(rect,title,new Vector2(titleX,tall?-91:compact?-8:-15),new Vector2(size.x-titleX-48,32),primary?26:23,MenuPalette.Ink).fontStyle=FontStyle.Bold;
-            Label(rect,description,new Vector2(24,tall?-132:compact?-40:-54),new Vector2(size.x-48,compact?22:tall?size.y-142:size.y-62),compact?16:17,MenuMuted,TextAnchor.UpperLeft);
+            Label(rect,title,new Vector2(titleX,tall?-91:compact?-8:-15),new Vector2(size.x-titleX-48,32),primary?26:23,MenuPalette.Ink).fontStyle=FontStyles.Bold;
+            Label(rect,description,new Vector2(24,tall?-132:compact?-40:-54),new Vector2(size.x-48,compact?22:tall?size.y-142:size.y-62),compact?16:17,MenuMuted,TextAlignmentOptions.TopLeft);
             Icon(rect,MenuIcon.Symbol.Chevron,new Vector2(size.x-40,tall?-35:compact?-12:-21),20,primary?accent:MenuMuted);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
             return rect;
@@ -66,7 +67,7 @@ namespace Frontier.Runtime
         private void MenuFooter(string title,Action click,float x=0,float width=330,bool primary=false)
         {
             var rect=Section(actions,title,new Vector2(x,-326),new Vector2(width,58),primary?MenuPalette.Primary:button);
-            Label(rect,title,new Vector2(42,0),new Vector2(width-64,58),22,MenuPalette.Ink,TextAnchor.MiddleCenter).fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
+            Label(rect,title,new Vector2(42,0),new Vector2(width-64,58),22,MenuPalette.Ink,TextAlignmentOptions.Center).fontStyle=primary?FontStyles.Bold:FontStyles.Normal;
             if(title=="Back")Icon(rect,MenuIcon.Symbol.Back,new Vector2(18,-18),22,accent);
             else if(title=="Return to main menu")Icon(rect,MenuIcon.Symbol.Home,new Vector2(18,-17),24,MenuPalette.Ink);
             else if(title=="START MATCH")Icon(rect,MenuIcon.Symbol.Play,new Vector2(18,-17),24,MenuPalette.Ink);
@@ -131,7 +132,7 @@ namespace Frontier.Runtime
                 var tab=(SettingsTab)i;bool active=settingsTab==tab;
                 var rect=Section(actions,names[i],new Vector2(i*211,0),new Vector2(196,48),active?MenuPalette.Primary:button);
                 Icon(rect,symbols[i],new Vector2(14,-14),20,active?accent:MenuMuted);
-                Label(rect,names[i],new Vector2(40,0),new Vector2(146,48),18,active?MenuPalette.Ink:MenuMuted,TextAnchor.MiddleCenter).fontStyle=active?FontStyle.Bold:FontStyle.Normal;
+                Label(rect,names[i],new Vector2(40,0),new Vector2(146,48),18,active?MenuPalette.Ink:MenuMuted,TextAlignmentOptions.Center).fontStyle=active?FontStyles.Bold:FontStyles.Normal;
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
@@ -160,7 +161,7 @@ namespace Frontier.Runtime
                     int percent=i*25;bool active=density==percent;
                     string title=percent==0?"0% (Off)":percent+"%";
                     var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-230),new Vector2(196,60),active?MenuPalette.Primary:button);
-                    Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAnchor.MiddleCenter);
+                    Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAlignmentOptions.Center);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
                 Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-302),new Vector2(996,24),16,MenuMuted);

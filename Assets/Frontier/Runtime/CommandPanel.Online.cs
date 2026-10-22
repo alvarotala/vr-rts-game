@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using System.Globalization;
 using System.Net;
@@ -36,15 +37,15 @@ namespace Frontier.Runtime
         {
             if(Session.IsConnecting)
             {
-                Label(actions,"Waiting for the server and your opponent",new Vector2(22,-32),new Vector2(996,64),27,Color.white,TextAnchor.MiddleCenter);
-                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(22,-114),new Vector2(996,44),24,accent,TextAnchor.MiddleCenter);
-                Label(actions,"Keep this app open. Both players need to join the same server.",new Vector2(40,-188),new Vector2(960,70),21,MenuMuted,TextAnchor.MiddleCenter);
+                Label(actions,"Waiting for the server and your opponent",new Vector2(22,-32),new Vector2(996,64),27,Color.white,TextAlignmentOptions.Center);
+                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(22,-114),new Vector2(996,44),24,accent,TextAlignmentOptions.Center);
+                Label(actions,"Keep this app open. Both players need to join the same server.",new Vector2(40,-188),new Vector2(960,70),21,MenuMuted,TextAlignmentOptions.Center);
                 MenuFooter("Cancel connection",CancelOnlineSetup,352,336);return;
             }
             MenuCard("Server: "+Session.ServerAddress,"Enter the IPv4 address of the computer running the server.",Vector2.zero,new Vector2(512,108),()=>EditOnlineEndpoint(false));
             MenuCard("Port: "+Session.ServerPort,"Use the port configured on the server.",new Vector2(528,0),new Vector2(512,108),()=>EditOnlineEndpoint(true));
-            Label(actions,"The server chooses the map and assigns each player's faction.",new Vector2(22,-144),new Vector2(996,50),22,MenuMuted,TextAnchor.MiddleCenter);
-            Label(actions,"On Quest, use your server computer's LAN address. 127.0.0.1 refers to this device.",new Vector2(22,-220),new Vector2(996,68),19,MenuMuted,TextAnchor.MiddleCenter);
+            Label(actions,"The server chooses the map and assigns each player's faction.",new Vector2(22,-144),new Vector2(996,50),22,MenuMuted,TextAlignmentOptions.Center);
+            Label(actions,"On Quest, use your server computer's LAN address. 127.0.0.1 refers to this device.",new Vector2(22,-220),new Vector2(996,68),19,MenuMuted,TextAlignmentOptions.Center);
             MenuFooter("Back",CancelOnlineSetup,0,336);
             MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
             MenuFooter("JOIN MATCH",()=>{endpointMessage=null;Quest.RequestOnlineMatch();Rebuild();},704,336,true);
@@ -61,7 +62,7 @@ namespace Frontier.Runtime
             {
                 string key=keys[i];int col=i%3,row=i/3;
                 var rect=Section(actions,"Endpoint key "+key,new Vector2(col*352,-row*70),new Vector2(336,60),button);
-                Label(rect,key,Vector2.zero,new Vector2(336,60),27,Color.white,TextAnchor.MiddleCenter);
+                Label(rect,key,Vector2.zero,new Vector2(336,60),27,Color.white,TextAlignmentOptions.Center);
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>
                 {
                     endpointMessage=null;

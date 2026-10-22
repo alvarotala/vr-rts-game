@@ -1,8 +1,10 @@
+using TMPro;
 using System;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -32,19 +34,19 @@ namespace Frontier.Runtime
             previousSelectionPage=HudButton(selectionGrid,"Previous selection page","",new Vector2(772,-6),new Vector2(80,28),()=>ChangeSelectionPage(-1),null,out _);
             nextSelectionPage=HudButton(selectionGrid,"Next selection page","",new Vector2(956,-6),new Vector2(80,28),()=>ChangeSelectionPage(1),null,out _);
             previousSelectionPage.rect.GetComponentInChildren<Text>().text="<";nextSelectionPage.rect.GetComponentInChildren<Text>().text=">";
-            selectionPageLabel=Label(selectionGrid,"",new Vector2(856,-6),new Vector2(96,28),15,Color.white,TextAnchor.MiddleCenter);
+            selectionPageLabel=Label(selectionGrid,"",new Vector2(856,-6),new Vector2(96,28),15,Color.white,TextAlignmentOptions.Center);
             for(int i=0;i<SelectionPageSize;i++)
             {
                 var card=Section(selectionGrid,"Selection slot",new Vector2(16+(i%SelectionColumns)*102,-40-(i/SelectionColumns)*104),new Vector2(94,94),button);
                 var portraitObject=new GameObject("Portrait",typeof(RectTransform),typeof(SelectionPortrait));
                 var portrait=portraitObject.GetComponent<SelectionPortrait>();portrait.transform.SetParent(card,false);
                 TopLeft(portrait.rectTransform,new Vector2(6,-4),new Vector2(82,54));portrait.raycastTarget=false;selectionPortraits[i]=portrait;
-                selectionNames[i]=Label(card,"",new Vector2(3,-58),new Vector2(88,28),12,Color.white,TextAnchor.MiddleCenter);
+                selectionNames[i]=Label(card,"",new Vector2(3,-58),new Vector2(88,28),12,Color.white,TextAlignmentOptions.Center);
                 Section(card,"Health track",new Vector2(5,-87),new Vector2(84,3),new Color(.12f,.22f,.25f));
                 selectionHealthBars[i]=Section(card,"Health",new Vector2(5,-87),new Vector2(84,3),SupplyTint).GetComponent<Image>();
                 var count=Section(card,"Count badge",new Vector2(52,-4),new Vector2(38,24),new Color(.025f,.08f,.12f,.95f));
-                selectionCounts[i]=Label(count,"",Vector2.zero,new Vector2(38,24),16,Color.white,TextAnchor.MiddleCenter);
-                selectionCounts[i].fontStyle=FontStyle.Bold;
+                selectionCounts[i]=Label(count,"",Vector2.zero,new Vector2(38,24),16,Color.white,TextAlignmentOptions.Center);
+                selectionCounts[i].fontStyle=FontStyles.Bold;
                 selectionTiles[i]=new Target{rect=card,image=card.GetComponent<Image>(),normal=button};
             }
             selectionGridHint=Label(selectionGrid,"",new Vector2(16,-140),new Vector2(1020,26),15,new Color(.72f,.82f,.87f));

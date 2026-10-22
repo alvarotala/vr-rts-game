@@ -1,7 +1,9 @@
+using TMPro;
 using System.Collections.Generic;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -25,12 +27,12 @@ namespace Frontier.Runtime
             {
                 int index=i;
                 var tab=Section(referenceGuide,"Reference faction "+i,new Vector2(16+i*254,-14),new Vector2(244,48));
-                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,Color.white,TextAnchor.MiddleCenter);
+                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,Color.white,TextAlignmentOptions.Center);
                 referenceFactionTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{
                     referenceFaction=Session.Catalog.Definition.factions[index].id;Rebuild();UpdateMenuText();
                 }};
             }
-            referenceCount=Label(referenceGuide,"",new Vector2(540,-14),new Vector2(484,48),16,new Color(.68f,.8f,.85f),TextAnchor.MiddleRight);
+            referenceCount=Label(referenceGuide,"",new Vector2(540,-14),new Vector2(484,48),16,new Color(.68f,.8f,.85f),TextAlignmentOptions.Right);
             for(int i=0;i<referenceEntries.Length;i++)
             {
                 int index=i;
@@ -45,7 +47,7 @@ namespace Frontier.Runtime
             var detail=Section(referenceGuide,"Reference detail",new Vector2(286,-82),new Vector2(738,502),new Color(.055f,.12f,.17f));
             referenceName=Label(detail,"",new Vector2(16,-8),new Vector2(572,32),26,Color.white);
             referenceRole=Label(detail,"",new Vector2(16,-42),new Vector2(572,24),18,accent);
-            referenceDescription=Label(detail,"",new Vector2(16,-72),new Vector2(572,48),17,new Color(.8f,.87f,.9f),TextAnchor.UpperLeft);
+            referenceDescription=Label(detail,"",new Vector2(16,-72),new Vector2(572,48),17,new Color(.8f,.87f,.9f),TextAlignmentOptions.TopLeft);
             var portraitObject=new GameObject("Reference model",typeof(RectTransform),typeof(CanvasRenderer),typeof(SelectionPortrait));
             var portraitRect=portraitObject.GetComponent<RectTransform>();portraitRect.SetParent(detail,false);
             TopLeft(portraitRect,new Vector2(600,-8),new Vector2(122,112));
@@ -57,9 +59,9 @@ namespace Frontier.Runtime
                 referenceStatLabels[i]=Label(card,"",new Vector2(10,-4),new Vector2(150,18),14,new Color(.65f,.79f,.84f));
                 referenceStatValues[i]=Label(card,"",new Vector2(10,-22),new Vector2(150,25),21,Color.white);
             }
-            referenceRequirements=Label(detail,"",new Vector2(16,-312),new Vector2(706,49),17,new Color(.78f,.86f,.89f),TextAnchor.UpperLeft);
+            referenceRequirements=Label(detail,"",new Vector2(16,-312),new Vector2(706,49),17,new Color(.78f,.86f,.89f),TextAlignmentOptions.TopLeft);
             referenceExtraTitle=Label(detail,"",new Vector2(16,-369),new Vector2(706,22),15,accent);
-            referenceExtraDetails=Label(detail,"",new Vector2(16,-396),new Vector2(706,98),17,new Color(.82f,.89f,.91f),TextAnchor.UpperLeft);
+            referenceExtraDetails=Label(detail,"",new Vector2(16,-396),new Vector2(706,98),17,new Color(.82f,.89f,.91f),TextAlignmentOptions.TopLeft);
         }
 
         private void BuildReferenceGuide()

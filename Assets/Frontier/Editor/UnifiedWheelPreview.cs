@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,7 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 using Object = UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -471,16 +473,11 @@ namespace Frontier.Editor
             // their readable minimum. Compare actual generated glyphs as well as height.
             foreach (var label in Wheel.GetComponentsInChildren<Text>())
             {
-                var settings = label.GetGenerationSettings(label.rectTransform.rect.size);
-                settings.resizeTextForBestFit = false; settings.fontSize = label.resizeTextForBestFit ? label.resizeTextMinSize : label.fontSize;
-                float height = label.cachedTextGeneratorForLayout.GetPreferredHeight(label.text, settings) / label.pixelsPerUnit;
-                Check(height <= label.rectTransform.rect.height + .5f, "Wheel text fits at readable font size: " + label.text);
-                using (var bounded = new TextGenerator()) using (var complete = new TextGenerator())
-                {
-                    settings.verticalOverflow = VerticalWrapMode.Truncate; bounded.Populate(label.text, settings);
-                    settings.verticalOverflow = VerticalWrapMode.Overflow; complete.Populate(label.text, settings);
-                    Check(bounded.vertexCount == complete.vertexCount, "Wheel text generates every glyph without clipping: " + label.text);
-                }
+                label.ForceMeshUpdate();
+                Check(!label.isTextOverflowing && (!label.enableAutoSizing || label.fontSize >= label.fontSizeMin),
+                    "Wheel SDF text fits at readable font size: " + label.text);
+                Check(label.textInfo.characterCount == label.text.Length,
+                    "Wheel text generates every character without clipping: " + label.text);
             }
             var view = Field<RectTransform>(Wheel, rootField);
             var confirmation = Field<RectTransform>(Wheel, "confirmationRoot");

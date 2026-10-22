@@ -1,7 +1,9 @@
+using TMPro;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -25,7 +27,7 @@ namespace Frontier.Runtime
             productionStrip=Section(matchHud,"Production queue",new Vector2(24,-422),new Vector2(1052,168));
             productionTitle=Label(productionStrip,"PRODUCTION QUEUE",new Vector2(16,-8),new Vector2(350,26),18,accent);
             productionHint=Label(productionStrip,"CLICK AN ITEM TO CANCEL",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
-            productionCount=Label(productionStrip,"",new Vector2(802,-8),new Vector2(234,26),20,Color.white,TextAnchor.MiddleRight);
+            productionCount=Label(productionStrip,"",new Vector2(802,-8),new Vector2(234,26),20,Color.white,TextAlignmentOptions.Right);
 
             var active=Section(productionStrip,"Current production",new Vector2(14,-42),new Vector2(352,112),new Color(.055f,.18f,.22f));
             productionCard=active.GetComponent<Image>();
@@ -53,7 +55,7 @@ namespace Frontier.Runtime
         private RectTransform CreateCancelHint(RectTransform card,float width)
         {
             var hint=Section(card,"Cancel hint",new Vector2(8,-82),new Vector2(width-16,30),QueueCancelTint);
-            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,30),14,Color.white,TextAnchor.MiddleCenter);
+            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,30),14,Color.white,TextAlignmentOptions.Center);
             hint.gameObject.SetActive(false);return hint;
         }
         private void ClearProductionTargets()

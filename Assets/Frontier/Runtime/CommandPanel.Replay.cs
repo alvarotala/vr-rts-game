@@ -1,9 +1,11 @@
+using TMPro;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -30,7 +32,7 @@ namespace Frontier.Runtime
         private Target ReplayButton(string name,string title,float x,float y,float width,Action click,out Text label)
         {
             var rect=Section(actions,name,new Vector2(x,-y),new Vector2(width,48),button);
-            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,Color.white,TextAnchor.MiddleCenter);
+            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,Color.white,TextAlignmentOptions.Center);
             var target=new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click};targets.Add(target);return target;
         }
         private void BuildReplayPanel()
@@ -51,17 +53,17 @@ namespace Frontier.Runtime
                 replayArmy[p]=Label(card,"Army 0",new Vector2(264,-118),new Vector2(232,30),21,Color.white);
                 replaySupply[p]=Label(card,"",new Vector2(16,-150),new Vector2(480,26),18,MenuMuted);
                 replayProductionTitle[p]=Label(card,"PRODUCTION",new Vector2(16,-183),new Vector2(232,26),16,tint);
-                Label(card,"active + queued   /   next ready",new Vector2(240,-183),new Vector2(256,26),14,MenuMuted,TextAnchor.MiddleRight);
-                replayEmptyProduction[p]=Label(card,"No production in progress",new Vector2(16,-252),new Vector2(480,70),21,MenuMuted,TextAnchor.MiddleCenter);
+                Label(card,"active + queued   /   next ready",new Vector2(240,-183),new Vector2(256,26),14,MenuMuted,TextAlignmentOptions.Right);
+                replayEmptyProduction[p]=Label(card,"No production in progress",new Vector2(16,-252),new Vector2(480,70),21,MenuMuted,TextAlignmentOptions.Center);
                 for(int row=0;row<ReplayProductionRows;row++)
                 {
                     var line=Section(card,"Production type "+row,new Vector2(16,-215-row*21),new Vector2(480,21),Color.clear);
                     replayProductionRows[p,row]=line;
                     replayProductionNames[p,row]=Label(line,"",Vector2.zero,new Vector2(256,21),16,Color.white);
-                    replayProductionCounts[p,row]=Label(line,"",new Vector2(260,0),new Vector2(76,21),16,tint,TextAnchor.MiddleCenter);
+                    replayProductionCounts[p,row]=Label(line,"",new Vector2(260,0),new Vector2(76,21),16,tint,TextAlignmentOptions.Center);
                     var track=Section(line,"Progress",new Vector2(344,-8),new Vector2(88,5),new Color(.12f,.22f,.25f));
                     replayProductionFills[p,row]=Section(track,"Fill",Vector2.zero,new Vector2(0,5),tint);
-                    replayProductionProgress[p,row]=Label(line,"",new Vector2(438,0),new Vector2(42,21),15,MenuMuted,TextAnchor.MiddleRight);
+                    replayProductionProgress[p,row]=Label(line,"",new Vector2(438,0),new Vector2(42,21),15,MenuMuted,TextAlignmentOptions.Right);
                 }
                 int player=p;
                 var navigation=Section(card,"Production pages "+p,new Vector2(16,-497),new Vector2(480,34),Color.clear);
@@ -69,15 +71,15 @@ namespace Frontier.Runtime
                 void PageButton(string title,float x,int delta)
                 {
                     var rect=Section(navigation,title,new Vector2(x,0),new Vector2(100,34),button);
-                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,Color.white,TextAnchor.MiddleCenter);
+                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,Color.white,TextAlignmentOptions.Center);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>{replayProductionPage[player]+=delta;replayPanelView=null;UpdateReplayPanel();}});
                 }
                 PageButton("Previous",0,-1);PageButton("Next",380,1);
-                replayProductionPageLabel[p]=Label(navigation,"",new Vector2(108,0),new Vector2(264,34),16,MenuMuted,TextAnchor.MiddleCenter);
+                replayProductionPageLabel[p]=Label(navigation,"",new Vector2(108,0),new Vector2(264,34),16,MenuMuted,TextAlignmentOptions.Center);
             }
             replayTimeline=Section(actions,"Replay timeline",new Vector2(0,-558),new Vector2(1040,70),Color.clear);
             replayTime=Label(replayTimeline,"",Vector2.zero,new Vector2(510,30),23,Color.white);
-            replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,accent,TextAnchor.MiddleRight);
+            replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,accent,TextAlignmentOptions.Right);
             Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),new Color(.065f,.14f,.18f));
             replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),MenuPalette.Primary);
             replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),accent);

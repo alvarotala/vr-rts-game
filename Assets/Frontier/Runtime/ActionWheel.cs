@@ -1,8 +1,10 @@
+using TMPro;
 using System.Collections.Generic;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -45,7 +47,7 @@ namespace Frontier.Runtime
         private readonly RectTransform[] hintLines = new RectTransform[15];
         private bool? hintLeft;
         private string hintBindings;
-        private Font font;
+        private TMP_FontAsset font;
         private object openedMatch;
         private int[] selectedIds;
         private string actionSignature, failedAction, failureMessage;
@@ -292,7 +294,7 @@ namespace Frontier.Runtime
                 // space so longer translated titles keep the count on its own line.
                 float labelWidth = Page == WheelPage.QuickSelect ? 260 : cardinal || back ? 146 : Mathf.Clamp(434 * Mathf.Sin(step * .45f * Mathf.Deg2Rad), 80, 146);
                 var label = Label(slice, items[i].Label, direction * 217, new Vector2(labelWidth, 78), 23, Color.white);
-                label.resizeTextForBestFit = true; label.resizeTextMinSize = 16; label.resizeTextMaxSize = 23; sectorLabels.Add(label);
+                label.enableAutoSizing = true; label.fontSizeMin = 16; label.fontSizeMax = 23; sectorLabels.Add(label);
             }
         }
 
@@ -447,7 +449,6 @@ namespace Frontier.Runtime
             EnsureFont();
             confirmationRoot = Rect("Wheel confirmation", transform, Vector2.zero, new Vector2(640, 740));
             var canvas = confirmationRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 21;
-            canvas.scaleFactor = 2; confirmationRoot.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             confirmationArc = Rect("Confirmed sector", confirmationRoot, Vector2.zero, new Vector2(620, 620)).gameObject.AddComponent<RadialSector>();
             confirmationArc.InnerRadius = 294; confirmationArc.OuterRadius = 305; confirmationArc.raycastTarget = false;
             confirmationGlyph = Rect("Confirmation check", confirmationRoot, Vector2.zero, new Vector2(130, 130));
@@ -456,8 +457,8 @@ namespace Frontier.Runtime
             confirmationCheck = new Image[2];
             Stroke(0, new Vector2(-28, 1), new Vector2(-7, -20)); Stroke(1, new Vector2(-7, -20), new Vector2(31, 23));
             confirmationLabel = Label(confirmationRoot, "", new Vector2(0, -96), new Vector2(310, 60), 23, Confirmed);
-            confirmationLabel.resizeTextForBestFit = true; confirmationLabel.resizeTextMinSize = 18; confirmationLabel.resizeTextMaxSize = 23;
-            var outline = confirmationLabel.gameObject.AddComponent<Outline>(); outline.effectColor = new Color(.015f, .035f, .05f, 1); outline.effectDistance = new Vector2(1, -1);
+            confirmationLabel.enableAutoSizing = true; confirmationLabel.fontSizeMin = 18; confirmationLabel.fontSizeMax = 23;
+            confirmationLabel.fontSharedMaterial = UiTypography.Font.material; confirmationLabel.extraPadding = true;
             void Stroke(int index, Vector2 from, Vector2 to)
             {
                 var line = Rect("Check " + index, confirmationGlyph, (from + to) * .5f, new Vector2(Vector2.Distance(from, to), 9));
@@ -491,14 +492,13 @@ namespace Frontier.Runtime
             view.localScale = Vector3.one * scale;
         }
 
-        private void EnsureFont() { if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+        private void EnsureFont() { if (font == null) font = UiTypography.Font; }
 
         private void EnsureHint()
         {
             if (hintRoot != null) return;
             EnsureFont(); hintRoot = Rect("Controller command hint", transform, Vector2.zero, new Vector2(1240, 460));
             var canvas = hintRoot.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 19;
-            canvas.scaleFactor = 2; hintRoot.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             for (int i = 0; i < hintLines.Length; i++)
             {
                 hintLines[i] = Rect("Hint leader " + i, hintRoot, Vector2.zero, Vector2.one);
@@ -513,9 +513,8 @@ namespace Frontier.Runtime
                 buttonHints[i] = Label(hintRoot, "", Vector2.zero, new Vector2(i == 4 ? 250 : 350, 80), 22, Color.white);
             foreach (var label in hintLabels.Concat(buttonHints))
             {
-                var outline = label.gameObject.AddComponent<Outline>();
-                outline.effectColor = new Color(.015f, .035f, .05f, 1);
-                outline.effectDistance = new Vector2(1.2f, -1.2f);
+                label.fontSharedMaterial = UiTypography.Font.material;
+                label.extraPadding = true;
             }
         }
 
@@ -530,11 +529,11 @@ namespace Frontier.Runtime
             {
                 float y = 50 - i * 50;
                 hintLabels[i].rectTransform.anchoredPosition = new Vector2(side * 280, y);
-                hintLabels[i].alignment = left ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+                hintLabels[i].alignment = left ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
                 Line(i + 2, new Vector3(side * 155, y), new Vector3(side * 169, y));
             }
             buttonHints[4].rectTransform.anchoredPosition = new Vector2(side * 300, -180);
-            buttonHints[4].alignment = left ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+            buttonHints[4].alignment = left ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
             Line(6, new Vector3(side * 155, -180), new Vector3(side * 169, -180));
             var surface = ControllerVisuals.StickSurface(left);
             var origin = surface.position + surface.rotation * Vector3.back * .004f;
@@ -542,7 +541,7 @@ namespace Frontier.Runtime
             {
                 float y = 180 - i * 120;
                 buttonHints[i].rectTransform.anchoredPosition = new Vector2(-side * 385, y);
-                buttonHints[i].alignment = left ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
+                buttonHints[i].alignment = left ? TextAlignmentOptions.Left : TextAlignmentOptions.Right;
                 var start = Quaternion.Inverse(surface.rotation) * (ControllerVisuals.ButtonPosition(left, hintInputs[i]) - origin) / .00022f;
                 var elbow = new Vector3(-side * 170, y);
                 Line(7 + i * 2, start, elbow);
@@ -594,17 +593,16 @@ namespace Frontier.Runtime
             EnsureFont();
             root = Rect("Controller action wheel", transform, Vector2.zero, new Vector2(640, 740));
             var canvas = root.gameObject.AddComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 20;
-            canvas.scaleFactor = 2; root.gameObject.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 2;
             var center = Rect("Center", root, Vector2.zero, new Vector2(600, 600)).gameObject.AddComponent<RadialSector>();
             center.InnerRadius = 0; center.OuterRadius = 137; center.Sweep = 360; center.color = MenuPalette.Background; center.raycastTarget = false;
             slices = Rect("Sectors", root, Vector2.zero, new Vector2(600, 600));
             heading = Label(root, "", new Vector2(0, 328), new Vector2(560, 44), 29, MenuPalette.Ink);
-            heading.fontStyle = FontStyle.Bold;
+            heading.fontStyle = FontStyles.Bold;
             title = Label(root, "", new Vector2(0, 44), new Vector2(222, 80), 25, MenuPalette.Ink);
-            title.fontStyle = FontStyle.Bold;
-            title.resizeTextForBestFit = true; title.resizeTextMinSize = 18; title.resizeTextMaxSize = 25;
+            title.fontStyle = FontStyles.Bold;
+            title.enableAutoSizing = true; title.fontSizeMin = 18; title.fontSizeMax = 25;
             detail = Label(root, "", new Vector2(0, -47), new Vector2(224, 94), 21, Ink);
-            detail.resizeTextForBestFit = true; detail.resizeTextMinSize = 15; detail.resizeTextMaxSize = 21;
+            detail.enableAutoSizing = true; detail.fontSizeMin = 15; detail.fontSizeMax = 21;
             help = Label(root, "", new Vector2(0, -332), new Vector2(610, 62), 21, Ink);
         }
 
@@ -616,8 +614,8 @@ namespace Frontier.Runtime
         private Text Label(Transform parent, string text, Vector2 position, Vector2 size, int fontSize, Color color)
         {
             var label = Rect("Label", parent, position, size).gameObject.AddComponent<LocalizedText>(); label.font = font; label.text = text;
-            label.fontSize = fontSize; label.alignment = TextAnchor.MiddleCenter; label.color = color; label.raycastTarget = false;
-            label.horizontalOverflow = HorizontalWrapMode.Wrap; label.verticalOverflow = VerticalWrapMode.Truncate; return label;
+            label.fontSize = fontSize; label.alignment = TextAlignmentOptions.Center; label.color = color; label.raycastTarget = false;
+            label.textWrappingMode = TextWrappingModes.Normal; label.overflowMode = TextOverflowModes.Truncate; return label;
         }
         private void OnDisable() { HideConfirmation(); Close(); if (hintRoot != null) hintRoot.gameObject.SetActive(false); }
     }

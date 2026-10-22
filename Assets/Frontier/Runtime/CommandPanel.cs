@@ -1,9 +1,11 @@
+using TMPro;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -20,7 +22,7 @@ namespace Frontier.Runtime
         private RectTransform statusBanner, statusAccent;
         private Text statusIcon;
         private static readonly Color ErrorTint=new Color(1,.38f,.36f,1);
-        private Font font;
+        private TMP_FontAsset font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
         public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay, OnlineSetup, OnlineEndpoint }
@@ -53,13 +55,10 @@ namespace Frontier.Runtime
         {
             Bindings=HotkeyBindings.Load();
             Quest.Bindings=Bindings;
-            font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            font=UiTypography.Font;
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
-            // Render dynamic glyphs at twice the atlas resolution without changing
-            // world-space panel dimensions or pointer targets.
-            canvas.scaleFactor=2;
-            var scaler=go.AddComponent<CanvasScaler>();scaler.dynamicPixelsPerUnit=2;
+            // SDF glyphs keep their edge smoothing independent of atlas pixel density.
             root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
             var image=go.AddComponent<MenuSurface>();image.color=background;image.Radius=24;
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
@@ -71,8 +70,8 @@ namespace Frontier.Runtime
             CreateBrand();
             statusBanner=Section(root,"Status message",new Vector2(30,-473),new Vector2(1040,48),Color.clear);
             statusAccent=Section(statusBanner,"Error accent",Vector2.zero,new Vector2(5,48),ErrorTint);
-            statusIcon=Label(statusBanner,"!",new Vector2(12,0),new Vector2(24,48),26,ErrorTint,TextAnchor.MiddleCenter);
-            statusIcon.fontStyle=FontStyle.Bold;
+            statusIcon=Label(statusBanner,"!",new Vector2(12,0),new Vector2(24,48),26,ErrorTint,TextAlignmentOptions.Center);
+            statusIcon.fontStyle=FontStyles.Bold;
             status=Label(statusBanner,"",Vector2.zero,new Vector2(1040,48),20,accent);
             actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
             CreateMatchHud();
@@ -279,11 +278,11 @@ namespace Frontier.Runtime
         {
             statusBanner.GetComponent<Image>().color=error?new Color(.23f,.035f,.045f,1):Color.clear;
             statusAccent.gameObject.SetActive(error);statusIcon.gameObject.SetActive(error);
-            status.fontStyle=error?FontStyle.Bold:FontStyle.Normal;
+            status.fontStyle=error?FontStyles.Bold:FontStyles.Normal;
             status.fontSize=error?22:Page==MenuPage.Replay?16:17;
             if(error)status.color=ErrorTint;
             else if(Page!=MenuPage.Replay)status.color=MenuPalette.Muted;
-            status.alignment=Page==MenuPage.Main&&!error?TextAnchor.MiddleCenter:TextAnchor.MiddleLeft;
+            status.alignment=Page==MenuPage.Main&&!error?TextAlignmentOptions.Center:TextAlignmentOptions.Left;
             TopLeft(status.rectTransform,new Vector2(error?46:0,0),new Vector2(statusBanner.sizeDelta.x-(error?60:0),statusBanner.sizeDelta.y));
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
@@ -295,7 +294,7 @@ namespace Frontier.Runtime
             var go=new GameObject(label,typeof(RectTransform),typeof(MenuSurface));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
             TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
             var image=go.GetComponent<Image>();image.color=primary?MenuPalette.Primary:button;
-            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,Color.white,TextAnchor.MiddleCenter);
+            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,Color.white,TextAlignmentOptions.Center);
             if(label=="Back")Icon(rt,MenuIcon.Symbol.Back,new Vector2(16,-(height-22)*.5f),22,accent);
             targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
         }
@@ -495,10 +494,10 @@ namespace Frontier.Runtime
             var surface=go.GetComponent<MenuSurface>();surface.Radius=8;
             image=surface;SetHandleFeedback(image,false);
             Icon(rect,name=="Move menu"?MenuIcon.Symbol.Grip:MenuIcon.Symbol.Reset,new Vector2(12,-11),22,MenuPalette.Muted);
-            Label(rect,label,new Vector2(44,0),size-new Vector2(56,0),14,MenuPalette.Muted,TextAnchor.MiddleCenter);return rect;
+            Label(rect,label,new Vector2(44,0),size-new Vector2(56,0),14,MenuPalette.Muted,TextAlignmentOptions.Center);return rect;
         }
-        private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAnchor alignment=TextAnchor.MiddleLeft)
-        {var go=new GameObject("Label",typeof(RectTransform),typeof(LocalizedText));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.raycastTarget=false;return text;}
+        private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAlignmentOptions alignment=TextAlignmentOptions.Left)
+        {var go=new GameObject("Label",typeof(RectTransform),typeof(LocalizedText));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);var text=go.GetComponent<Text>();text.font=font;text.fontSize=fontSize;text.color=color;text.text=value;text.alignment=alignment;text.textWrappingMode=TextWrappingModes.Normal;text.overflowMode=TextOverflowModes.Truncate;text.raycastTarget=false;return text;}
         private static void TopLeft(RectTransform rect,Vector2 position,Vector2 size){rect.anchorMin=rect.anchorMax=new Vector2(0,1);rect.pivot=new Vector2(0,1);rect.anchoredPosition=position;rect.sizeDelta=size;}
     }
 }

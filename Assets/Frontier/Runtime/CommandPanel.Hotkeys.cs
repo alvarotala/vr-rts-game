@@ -1,5 +1,7 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -29,7 +31,7 @@ namespace Frontier.Runtime
             hotkeys=Section(root,"Hotkey reference",new Vector2(30,-216),new Vector2(1040,634),new Color(.035f,.08f,.12f));
             hotkeysDevice=Label(hotkeys,"",new Vector2(16,-8),new Vector2(500,40),19,accent);
             hotkeysEditTab=HotkeyButton("Edit bindings",new Vector2(534,-8),new Vector2(230,40),()=>{hotkeysEditing=true;hotkeysPage=0;Rebuild();});
-            Label(hotkeys,"SAVED LOCALLY",new Vector2(778,-8),new Vector2(246,40),16,accent,TextAnchor.MiddleRight);
+            Label(hotkeys,"SAVED LOCALLY",new Vector2(778,-8),new Vector2(246,40),16,accent,TextAlignmentOptions.Right);
             var topics=DefaultControlCatalog.For(true);
             for(int i=0;i<hotkeysCategories.Length;i++)
             {
@@ -44,9 +46,9 @@ namespace Frontier.Runtime
             {
                 var row=Section(hotkeys,"Hotkey row "+i,new Vector2(16,-136-i*86),new Vector2(1008,80),new Color(.055f,.12f,.17f));
                 hotkeyRows[i]=row;
-                hotkeyNames[i]=Label(row,"",new Vector2(12,-8),new Vector2(212,64),18,Color.white,TextAnchor.MiddleLeft);
-                hotkeyBindings[i]=Label(row,"",new Vector2(248,-8),new Vector2(288,64),17,accent,TextAnchor.MiddleLeft);
-                hotkeyDetails[i]=Label(row,"",new Vector2(558,-5),new Vector2(438,70),16,new Color(.73f,.83f,.87f),TextAnchor.MiddleLeft);
+                hotkeyNames[i]=Label(row,"",new Vector2(12,-8),new Vector2(212,64),18,Color.white,TextAlignmentOptions.Left);
+                hotkeyBindings[i]=Label(row,"",new Vector2(248,-8),new Vector2(288,64),17,accent,TextAlignmentOptions.Left);
+                hotkeyDetails[i]=Label(row,"",new Vector2(558,-5),new Vector2(438,70),16,new Color(.73f,.83f,.87f),TextAlignmentOptions.Left);
                 int slot=i;
                 var change=Section(row,"Change binding",new Vector2(240,-4),new Vector2(304,72),button);
                 hotkeyBindings[i].transform.SetAsLastSibling();
@@ -54,10 +56,10 @@ namespace Frontier.Runtime
             }
             hotkeysPrevious=HotkeyButton("Previous",new Vector2(16,-580),new Vector2(155,38),()=>{hotkeysPage--;Rebuild();});
             hotkeysNext=HotkeyButton("Next",new Vector2(869,-580),new Vector2(155,38),()=>{hotkeysPage++;Rebuild();});
-            hotkeysCount=Label(hotkeys,"",new Vector2(185,-580),new Vector2(670,38),18,Color.white,TextAnchor.MiddleCenter);
+            hotkeysCount=Label(hotkeys,"",new Vector2(185,-580),new Vector2(670,38),18,Color.white,TextAlignmentOptions.Center);
             hotkeyModal=Section(hotkeys,"Change hotkey",new Vector2(16,-136),new Vector2(1008,430),new Color(.055f,.12f,.17f));
             hotkeyModalTitle=Label(hotkeyModal,"",new Vector2(28,-24),new Vector2(952,70),27,accent);
-            hotkeyModalDetail=Label(hotkeyModal,"",new Vector2(28,-108),new Vector2(952,190),22,Color.white,TextAnchor.UpperLeft);
+            hotkeyModalDetail=Label(hotkeyModal,"",new Vector2(28,-108),new Vector2(952,190),22,Color.white,TextAlignmentOptions.TopLeft);
             hotkeyCancel=ModalButton("Cancel change",new Vector2(28,-344),CancelHotkeyChange);
             hotkeyConfirm=ModalButton("Confirm change",new Vector2(518,-344),ConfirmHotkeyChange);
         }
@@ -65,14 +67,14 @@ namespace Frontier.Runtime
         private Target ModalButton(string label,Vector2 position,System.Action click)
         {
             var rect=Section(hotkeyModal,label,position,new Vector2(462,58),button);
-            Label(rect,label,new Vector2(8,0),new Vector2(446,58),22,Color.white,TextAnchor.MiddleCenter);
+            Label(rect,label,new Vector2(8,0),new Vector2(446,58),22,Color.white,TextAlignmentOptions.Center);
             return new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click};
         }
 
         private Target HotkeyButton(string label,Vector2 position,Vector2 size,System.Action click)
         {
             var rect=Section(hotkeys,label,position,size,button);
-            Label(rect,label,new Vector2(4,0),new Vector2(size.x-8,size.y),17,Color.white,TextAnchor.MiddleCenter);
+            Label(rect,label,new Vector2(4,0),new Vector2(size.x-8,size.y),17,Color.white,TextAlignmentOptions.Center);
             return new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click};
         }
 

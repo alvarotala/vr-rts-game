@@ -1,6 +1,8 @@
+using TMPro;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -26,10 +28,10 @@ namespace Frontier.Runtime
                 main?new Vector2(800,84):hud?new Vector2(250,26):new Vector2(240,26));
             headline.gameObject.SetActive(!main&&!hud);
             TopLeft(headline.rectTransform,new Vector2(94,-86),new Vector2(700,44));
-            headline.fontStyle=FontStyle.Bold;
+            headline.fontStyle=FontStyles.Bold;
             headline.color=MenuPalette.Ink;
             pageEmblem.gameObject.SetActive(!main&&!hud);pageIcon.Icon=PageSymbol();
-            economy.alignment=main?TextAnchor.MiddleCenter:TextAnchor.MiddleLeft;
+            economy.alignment=main?TextAlignmentOptions.Center:TextAlignmentOptions.Left;
             economy.fontSize=main?25:18;economy.color=MenuPalette.Muted;
             TopLeft(economy.rectTransform,main?new Vector2(60,-207):new Vector2(30,-130),main?new Vector2(980,38):new Vector2(1040,36));
             selection.gameObject.SetActive(!main);harvesting.gameObject.SetActive(!main);
@@ -113,7 +115,7 @@ namespace Frontier.Runtime
             float iconSize=primary?44:40;
             Icon(rect,symbol,new Vector2(30,-(size.y-iconSize)*.5f),iconSize,MenuPalette.Ink);
             var titleLabel=Label(rect,title,new Vector2(98,0),new Vector2(size.x-154,size.y),primary?32:24,MenuPalette.Ink);
-            titleLabel.fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
+            titleLabel.fontStyle=primary?FontStyles.Bold:FontStyles.Normal;
             Icon(rect,MenuIcon.Symbol.Chevron,new Vector2(size.x-48,-(size.y-24)*.5f),24,primary?new Color(.45f,.9f,.3f):accent);
             targets.Add(new Target{rect=rect,image=surface,normal=surface.color,click=click});
         }

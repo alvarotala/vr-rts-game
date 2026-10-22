@@ -1,5 +1,7 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -18,12 +20,12 @@ namespace Frontier.Runtime
         {
             controlGuide=Section(root,"Control guide cards",new Vector2(30,-216),new Vector2(1040,554),new Color(.035f,.08f,.12f));
             Label(controlGuide,"CONTROL GUIDE",new Vector2(16,-10),new Vector2(450,26),21,accent);
-            controlGuideDevice=Label(controlGuide,"",new Vector2(470,-10),new Vector2(554,26),16,Color.white,TextAnchor.MiddleRight);
+            controlGuideDevice=Label(controlGuide,"",new Vector2(470,-10),new Vector2(554,26),16,Color.white,TextAlignmentOptions.Right);
             for(int i=0;i<controlGuideTabs.Length;i++)
             {
                 int index=i;
                 var tab=Section(controlGuide,"Help category "+i,new Vector2(16+i*169,-46),new Vector2(163,42));
-                controlGuideTabLabels[i]=Label(tab,"",new Vector2(4,0),new Vector2(155,42),17,Color.white,TextAnchor.MiddleCenter);
+                controlGuideTabLabels[i]=Label(tab,"",new Vector2(4,0),new Vector2(155,42),17,Color.white,TextAlignmentOptions.Center);
                 controlGuideTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{controlGuideTopic=index;controlGuidePage=0;Rebuild();UpdateMenuText();}};
             }
             for(int i=0;i<controlGuideCards.Length;i++)
@@ -32,7 +34,7 @@ namespace Frontier.Runtime
                 controlGuideCards[i]=card;
                 controlGuideCommands[i]=Label(card,"",new Vector2(12,-7),new Vector2(474,23),19,Color.white);
                 controlGuideGestures[i]=Label(card,"",new Vector2(12,-32),new Vector2(474,22),16,accent);
-                controlGuideDescriptions[i]=Label(card,"",new Vector2(12,-57),new Vector2(474,38),16,new Color(.73f,.83f,.87f),TextAnchor.UpperLeft);
+                controlGuideDescriptions[i]=Label(card,"",new Vector2(12,-57),new Vector2(474,38),16,new Color(.73f,.83f,.87f),TextAlignmentOptions.TopLeft);
             }
         }
 

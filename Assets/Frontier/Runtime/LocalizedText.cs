@@ -1,11 +1,11 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 namespace Frontier.Runtime
 {
     // Keep the original binding, including composed messages. Translation never changes
     // GameObject names, command IDs or the strings used for gameplay comparisons.
-    public sealed class LocalizedText : Text
+    public sealed class LocalizedText : TextMeshProUGUI
     {
         private string source="";
         private object[] arguments;
@@ -16,6 +16,14 @@ namespace Frontier.Runtime
         {
             get=>base.text;
             set{value=value??"";if(source==value&&arguments==null)return;source=value;arguments=null;RefreshLanguage();}
+        }
+        protected override void Awake()
+        {
+            font = UiTypography.Font;
+            base.Awake();
+            textWrappingMode = TextWrappingModes.Normal;
+            overflowMode = TextOverflowModes.Truncate;
+            raycastTarget = false;
         }
         protected override void OnEnable(){base.OnEnable();Localization.Changed+=RefreshLanguage;RefreshLanguage();}
         protected override void OnDisable(){Localization.Changed-=RefreshLanguage;base.OnDisable();}

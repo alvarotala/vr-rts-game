@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using UnityEngine;
 
@@ -39,10 +40,10 @@ namespace Frontier.Runtime
                 MenuCard(title,description,new Vector2(0,-i*96),new Vector2(852,84),()=>OpenSavedReport(info));
                 if(info.Error==null&&info.Progress!=null)ReportButton("Watch replay",868,i*96+18,172,()=>Quest.RequestReplay(info.Id));
             }
-            if(savedMatches.Length==0)Label(actions,"No matches recorded yet.\nYour next matches will appear here automatically.",new Vector2(40,-120),new Vector2(960,110),25,MenuMuted,TextAnchor.MiddleCenter);
+            if(savedMatches.Length==0)Label(actions,"No matches recorded yet.\nYour next matches will appear here automatically.",new Vector2(40,-120),new Vector2(960,110),25,MenuMuted,TextAlignmentOptions.Center);
             if(historyPage>0)ReportButton("Previous",0,516,220,()=>{historyPage--;Rebuild();});
             if(historyPage+1<pages)ReportButton("Next",820,516,220,()=>{historyPage++;Rebuild();});
-            Label(actions,$"Page {historyPage+1} / {pages}",new Vector2(240,-516),new Vector2(560,48),20,MenuMuted,TextAnchor.MiddleCenter);
+            Label(actions,$"Page {historyPage+1} / {pages}",new Vector2(240,-516),new Vector2(560,48),20,MenuMuted,TextAlignmentOptions.Center);
             ReportButton("Main menu",0,590,336,()=>{archivedReport=null;shownReport=null;Show(MenuPage.Main);});
         }
         private void OpenSavedReport(SavedMatchInfo info)

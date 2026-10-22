@@ -1,9 +1,11 @@
+using TMPro;
 using System;
 using System.Globalization;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -35,18 +37,18 @@ namespace Frontier.Runtime
             var bar=Section(selectedCard,"Health bar",new Vector2(16,-115),new Vector2(288,6),new Color(.12f,.22f,.25f));healthBackground=bar.GetComponent<Image>();
             healthFill=Section(bar,"Health",Vector2.zero,new Vector2(288,6),SupplyTint).GetComponent<Image>();
             selectionHealth=Label(selectedCard,"",new Vector2(16,-125),new Vector2(288,26),17,Color.white);
-            selectionDetails=Label(selectedCard,"",new Vector2(16,-159),new Vector2(288,66),16,new Color(.72f,.82f,.87f),TextAnchor.UpperLeft);
-            casterStatus=Label(selectedCard,"",new Vector2(16,-228),new Vector2(288,32),14,new Color(.8f,.65f,1),TextAnchor.UpperLeft);
+            selectionDetails=Label(selectedCard,"",new Vector2(16,-159),new Vector2(288,66),16,new Color(.72f,.82f,.87f),TextAlignmentOptions.TopLeft);
+            casterStatus=Label(selectedCard,"",new Vector2(16,-228),new Vector2(288,32),14,new Color(.8f,.65f,1),TextAlignmentOptions.TopLeft);
             Label(selectedCard,"Hover an action to learn more",new Vector2(16,-262),new Vector2(288,24),14,accent);
 
             actionCard=Section(matchHud,"Selected item actions",new Vector2(360,-178),new Vector2(716,296));
             actionHeading=Label(actionCard,"ACTIONS",new Vector2(16,-10),new Vector2(684,24),15,accent);
-            actionHint=Label(actionCard,"",new Vector2(36,-66),new Vector2(644,122),22,new Color(.65f,.76f,.82f),TextAnchor.MiddleCenter);
+            actionHint=Label(actionCard,"",new Vector2(36,-66),new Vector2(644,122),22,new Color(.65f,.76f,.82f),TextAlignmentOptions.Center);
             harvestingStrip=Section(matchHud,"Harvesting information",new Vector2(24,-422),new Vector2(1052,36));
 
             groupStrip=Section(matchHud,"Control groups",new Vector2(24,-470),new Vector2(716,100));
             Label(groupStrip,"CONTROL GROUPS",new Vector2(14,-7),new Vector2(200,24),15,accent);
-            Label(groupStrip,"Tap to recall · Hold to save selection",new Vector2(222,-7),new Vector2(480,24),14,new Color(.65f,.76f,.82f),TextAnchor.MiddleRight);
+            Label(groupStrip,"Tap to recall · Hold to save selection",new Vector2(222,-7),new Vector2(480,24),14,new Color(.65f,.76f,.82f),TextAlignmentOptions.Right);
             for(int g=0;g<GameSession.ControlGroupCount;g++)
             {
                 int index=g;
@@ -54,19 +56,19 @@ namespace Frontier.Runtime
             }
             matchStrip=Section(matchHud,"Match controls",new Vector2(756,-470),new Vector2(320,100));
             Label(matchStrip,"MATCH",new Vector2(14,-7),new Vector2(140,24),15,accent);
-            matchClock=Label(matchStrip,"00:00",new Vector2(164,-7),new Vector2(142,24),17,Color.white,TextAnchor.MiddleRight);
+            matchClock=Label(matchStrip,"00:00",new Vector2(164,-7),new Vector2(142,24),17,Color.white,TextAlignmentOptions.Right);
             matchTargets[0]=HudButton(matchStrip,"Full map","Reset view",new Vector2(14,-36),new Vector2(140,54),()=>Board.Fit(),null,out _);
             matchTargets[1]=HudButton(matchStrip,"Pause","Menu",new Vector2(166,-36),new Vector2(140,54),()=>Show(MenuPage.Pause),null,out _);
             CreateProductionHud();
             CreateSelectionGrid();
             orderPlanStrip=Section(matchHud,"Unit order plan",new Vector2(24,-484),new Vector2(1052,96));
             Label(orderPlanStrip,"UNIT ORDER PLAN",new Vector2(16,-7),new Vector2(320,24),16,accent);
-            orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAnchor.MiddleRight);
+            orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAlignmentOptions.Right);
             orderPlanSteps=Label(orderPlanStrip,"",new Vector2(16,-34),new Vector2(1020,28),18,Color.white);
             orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,new Color(.65f,.76f,.82f));
             rallyPointStrip=Section(matchHud,"Rally point",new Vector2(24,-484),new Vector2(1052,72));
             Label(rallyPointStrip,"RALLY POINT",new Vector2(16,-7),new Vector2(230,24),16,MineralTint);
-            rallyPointValue=Label(rallyPointStrip,"",new Vector2(260,-7),new Vector2(776,24),18,Color.white,TextAnchor.MiddleRight);
+            rallyPointValue=Label(rallyPointStrip,"",new Vector2(260,-7),new Vector2(776,24),18,Color.white,TextAlignmentOptions.Right);
             rallyPointHint=Label(rallyPointStrip,"",new Vector2(16,-38),new Vector2(1020,24),16,new Color(.65f,.76f,.82f));
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
@@ -81,8 +83,8 @@ namespace Frontier.Runtime
             var card=Section(resourceStrip,label,new Vector2(x,0),new Vector2(340,92));
             Icon(card,label=="MINERALS"?MenuIcon.Symbol.Minerals:label=="GAS"?MenuIcon.Symbol.Gas:MenuIcon.Symbol.Population,new Vector2(16,-13),22,tint);
             Label(card,label,new Vector2(47,-10),new Vector2(275,24),15,tint);
-            var value=Label(card,"0",new Vector2(18,-35),new Vector2(194,45),36,MenuPalette.Ink);value.fontStyle=FontStyle.Bold;
-            hint=Label(card,"",new Vector2(216,-36),new Vector2(108,44),14,tint,TextAnchor.MiddleRight);
+            var value=Label(card,"0",new Vector2(18,-35),new Vector2(194,45),36,MenuPalette.Ink);value.fontStyle=FontStyles.Bold;
+            hint=Label(card,"",new Vector2(216,-36),new Vector2(108,44),14,tint,TextAlignmentOptions.Right);
             return value;
         }
         private SelectionPortrait ModelPortrait(RectTransform parent,Vector2 position,Vector2 size,Archetype model=null)
@@ -96,14 +98,14 @@ namespace Frontier.Runtime
         {
             var rect=Section(parent,title,position,size,button);
             bool compact=size.y<54;
-            var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,Color.white,TextAnchor.MiddleCenter);
-            if(compact){name.resizeTextForBestFit=true;name.resizeTextMinSize=13;name.resizeTextMaxSize=16;}
-            detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,new Color(.71f,.83f,.87f),TextAnchor.MiddleCenter);
+            var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,Color.white,TextAlignmentOptions.Center);
+            if(compact){name.enableAutoSizing=true;name.fontSizeMin=13;name.fontSizeMax=16;}
+            detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,new Color(.71f,.83f,.87f),TextAlignmentOptions.Center);
             if(model!=null)
             {
                 float portraitSize=Mathf.Min(44,size.y-10),left=portraitSize+16;
                 ModelPortrait(rect,new Vector2(8,-5),new Vector2(portraitSize,portraitSize),model);
-                name.text=model.name;name.alignment=detail.alignment=TextAnchor.MiddleLeft;
+                name.text=model.name;name.alignment=detail.alignment=TextAlignmentOptions.Left;
                 name.rectTransform.anchoredPosition=new Vector2(left,name.rectTransform.anchoredPosition.y);
                 detail.rectTransform.anchoredPosition=new Vector2(left,detail.rectTransform.anchoredPosition.y);
                 name.rectTransform.sizeDelta=new Vector2(size.x-left-8,name.rectTransform.sizeDelta.y);
@@ -306,7 +308,7 @@ namespace Frontier.Runtime
                     target.normal=Color.Lerp(button,tint,active ? .3f : .065f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
                     if(active)
                     {
-                        detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
+                        detail.color=Color.white;detail.fontStyle=FontStyles.Bold;
                     }
                     Section(target.rect,"Category accent",new Vector2(4,-10),new Vector2(4,buttonHeight-20),tint);
                     targets.Add(target);actionIndex++;

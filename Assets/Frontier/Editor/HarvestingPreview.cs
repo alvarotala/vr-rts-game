@@ -1,3 +1,4 @@
+using TMPro;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +9,7 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 using Object = UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -177,7 +179,7 @@ namespace Frontier.Editor
         }
         internal static void SaveCanvas(Transform container,RectTransform root,string path,PreviewRenderUtility preview,int width=1600,int height=0,bool preservePose=false)
         {
-            foreach(var label in container.GetComponentsInChildren<Text>().Where(t=>!t.resizeTextForBestFit))
+            foreach(var label in container.GetComponentsInChildren<Text>().Where(t=>!t.enableAutoSizing))
                 Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
             if(!preservePose)
             {
@@ -196,11 +198,13 @@ namespace Frontier.Editor
                 var source=graphic.canvasRenderer.GetMesh();if(source==null)continue;
                 var mesh=Object.Instantiate(source);meshes.Add(mesh);
                 if(mesh.vertexCount==0)continue;
-                var material=new Material(graphic.materialForRendering){mainTexture=graphic.mainTexture};materials.Add(material);
+                var material=new Material(graphic.materialForRendering);materials.Add(material);
+                // TMP binds its atlas through the material. Graphic.mainTexture
+                // returns white for it and must not replace the SDF atlas.
+                if(!(graphic is TMP_Text))material.mainTexture=graphic.mainTexture;
                 // At an oblique angle transparent distance sorting can draw a sector
                 // over its label. Reproduce Canvas hierarchy order in these mesh previews.
                 if(preservePose)material.renderQueue=3000+meshes.Count;
-                if(graphic is Text)material.SetVector("_TextureSampleAdd",new Vector4(1,1,1,0));
                 var matrix=Matrix4x4.Translate(-preview.camera.transform.forward*.0001f*meshes.Count)*graphic.transform.localToWorldMatrix;
                 preview.DrawMesh(mesh,matrix,material,0);
             }

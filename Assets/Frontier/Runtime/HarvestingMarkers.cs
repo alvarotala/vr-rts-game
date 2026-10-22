@@ -1,8 +1,10 @@
+using TMPro;
 using System.Collections.Generic;
 using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -13,7 +15,7 @@ namespace Frontier.Runtime
         public static readonly Color ExcessColor = new Color(1, .22f, .18f);
         private const float PixelScale = .00032f;
         private readonly Transform root;
-        private readonly Font font;
+        private readonly TMP_FontAsset font;
         private readonly Material stemMaterial;
         private readonly Dictionary<int, Marker> markers = new Dictionary<int, Marker>();
         private readonly List<Rect> occupied = new List<Rect>();
@@ -30,7 +32,7 @@ namespace Frontier.Runtime
         public HarvestingMarkers(Transform parent)
         {
             root = new GameObject("Harvesting counters").transform; root.SetParent(parent, false);
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            font = UiTypography.Font;
             stemMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit")); stemMaterial.color = new Color(.65f, .65f, .65f);
         }
         public void Update(BoardView board, Camera viewer)
@@ -126,8 +128,8 @@ namespace Frontier.Runtime
         {
             var text = new GameObject(name, typeof(RectTransform)).AddComponent<LocalizedText>(); text.transform.SetParent(parent, false);
             text.rectTransform.anchoredPosition = position; text.rectTransform.sizeDelta = size;
-            text.font = font; text.fontSize = fontSize; text.alignment = TextAnchor.MiddleCenter; text.raycastTarget = false;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow; text.verticalOverflow = VerticalWrapMode.Truncate; return text;
+            text.font = font; text.fontSize = fontSize; text.alignment = TextAlignmentOptions.Center; text.raycastTarget = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap; text.overflowMode = TextOverflowModes.Truncate; return text;
         }
         private static void Face(Transform label, Camera viewer)
         {
