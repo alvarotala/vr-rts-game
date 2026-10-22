@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +8,6 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 using Object = UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -168,8 +166,8 @@ namespace Frontier.Editor
                         var mesh = Object.Instantiate(source); meshes.Add(mesh); if (mesh.vertexCount == 0) continue;
                         // Billboard children have different distances to the preview camera.
                         // Preserve Canvas hierarchy order instead of transparent distance sorting.
-                        var material = new Material(graphic.materialForRendering) { renderQueue = 3000 + meshes.Count }; materials.Add(material);
-                        if (!(graphic is TMP_Text)) material.mainTexture = graphic.mainTexture;
+                        var material = new Material(graphic.materialForRendering) { mainTexture = graphic.mainTexture, renderQueue = 3000 + meshes.Count }; materials.Add(material);
+                        if (graphic is Text) material.SetVector("_TextureSampleAdd", new Vector4(1, 1, 1, 0));
                         var layer = Matrix4x4.Translate(-preview.camera.transform.forward * (.00001f * meshes.Count));
                         preview.DrawMesh(mesh, layer * graphic.transform.localToWorldMatrix, material, 0);
                     }

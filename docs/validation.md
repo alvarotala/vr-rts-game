@@ -1131,3 +1131,22 @@ Se retira únicamente el contorno SDF de avisos flotantes del mando y confirmaci
 - `TextRenderingSetup.ValidatePlainText`: **salida 0** en `TestResults/unity-text-no-outline.log`. Localización **328 / 0 desbordamientos**, menús **366 / 61 paneles**, replay **30**, espectador **527 / 7** y bordes de glifo **24 / 6 renders** aprobados.
 - Inspeccionados los avisos en español sin contorno. Atlas y suavizado SDF conservados; no quedan componentes Outline ni asignaciones de material con contorno en el texto de juego. `git diff --check` aprobado.
 - Capturas y entrada sintética en Unity Editor **6000.3.26f1**, CLI **1.0.0-beta.14**. Sin APK ni prueba física en Quest; esta comparación no demuestra todavía una reducción del serrucho percibido en movimiento.
+
+## Menús claros y planos — 22 de octubre de 2026
+
+Se mantiene la estructura y el texto SDF sin contorno, con fondos opacos gris claro, texto azul oscuro y selecciones turquesa suave. La paleta se aplica a inicio, pausa, ajustes, guías, HUD, producción, resultados, replay y rueda. Los avisos del mando tienen placas claras detrás de las letras; sus conectores conservan un color claro porque se dibujan directamente sobre el mundo. Confirmaciones y errores usan fondos suaves con texto oscuro.
+
+- `MenuStylePreview.Validate`: **salida 0** en `TestResults/unity-light-menus-final.log`. Estilo **1.540 / 44 capturas**, localización **328 / 0 desbordamientos**, menús **366 / 61**, replay **30**, espectador **527 / 7**, selección **177 / 8**, producción **776 / 26**, recolección **18 paneles** y rueda **724 / 22** aprobados. Se actualizan únicamente las expectativas visuales de placas y confirmación de la rueda; se conservan sus comprobaciones de interacción.
+- Tras aclarar los conectores del mando, `LocalizationPreview.Run`: **salida 0** en `TestResults/unity-light-hints-final.log`, con **328 / 0 desbordamientos**, menús **366 / 61**, replay **30** y espectador **527 / 7** aprobados.
+- Inspeccionadas las capturas de inicio, audio, HUD, ayudas del mando, selección rápida, confirmación, gráficos, exceso de trabajadores y error de replay. Contraste calculado sobre colores sólidos sRGB: texto principal/fondo **8,82:1**, secundario/fondo **4,78:1**, acento/selección **4,61:1** y error/fondo de error **4,72:1**. Estas cifras no miden la legibilidad dentro del visor.
+- `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo durante los batches. Sin APK nuevo ni validación física de comodidad, movimiento o rendimiento en Quest.
+
+## Restauración anterior al primer rediseño — 22 de octubre de 2026
+
+Por solicitud del usuario, se restaura la interfaz de `6cadbc4`, inmediatamente anterior al primer rediseño incluido en `3ec1500`. El código de juego de ese punto es el mismo que `2631738`. Vuelven distribución, colores, tipografía UGUI, HUD y ayudas del mando originales; se retiran los componentes de branding y los recursos TMP añadidos después. Se mantienen Little Legion, mapas, músicas, niebla, iluminación experimental y los conceptos de arte posteriores.
+
+- Comparación Git sin diferencias respecto a `6cadbc4` en Runtime, Resources, Shaders, Packages y ProjectSettings. La única diferencia en los previews frente a ese punto conserva dos expectativas de nombres actuales de mapas: Forest Watch y Neon Loop.
+- `LocalizationPreview.Run`: **salida 0**, `TestResults/unity-menu-rollback-localization.log`; localización **328 / 0 desbordamientos**, menús **366 / 61 capturas**, replay **30** y espectador **528 / 7** aprobados. Inspeccionada la captura de inicio en español.
+- `SelectionGridPreview.RunValidation`: selección **177 / 8**, rueda unificada **724 / 22**, grupos **496 / 10**, rueda de acciones **466 / 20**, órdenes en cola **200**, rally **126** y menús **366 / 61** aprobados en `TestResults/unity-menu-rollback-controls.log`. El batch se detuvo al encontrar las expectativas antiguas de nombres de mapas en `HarvestingPreview`.
+- Tras conservar esas dos correcciones de nombres, `ProductionQueuePreview.Render`: **salida 0**, `TestResults/unity-menu-rollback-production.log`; producción **776 / 26**, recolección **18 capturas** y menús **366 / 61** aprobados. Esto completa las fases pendientes de la validación anterior.
+- `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo en los batches. Sin APK ni prueba física en Quest.

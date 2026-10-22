@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.Linq;
 using UnityEngine;
@@ -11,7 +10,7 @@ namespace Frontier.Runtime
         private enum SettingsTab { Controls, Audio, Visuals, PlaySpace, Language }
         private SettingsTab settingsTab;
         private string MenuOrigin=>Session.Running?(Session.IsOnline?"MATCH MENU":"PAUSE"):"MAIN MENU";
-        private static readonly Color MenuMuted=MenuPalette.Muted;
+        private static readonly Color MenuMuted=new Color(.69f,.8f,.85f);
         private string MapDescription
         {
             get
@@ -26,52 +25,21 @@ namespace Frontier.Runtime
 
         // Shared spacing, typography and action hierarchy across all out-of-match pages.
         // Titles remain separate from descriptions so pointing targets are unambiguous.
-        private RectTransform MenuCard(string title,string description,Vector2 position,Vector2 size,Action click,bool primary=false)
+        private void MenuCard(string title,string description,Vector2 position,Vector2 size,Action click,bool primary=false)
         {
-            var rect=Section(actions,title,position,size,primary?MenuPalette.Primary:button);
-            bool compact=size.y<80,tall=size.y>=200;
-            var symbol=CardSymbol(title);
-            float titleX=symbol.HasValue&&!tall?66:24;
-            if(symbol.HasValue)
-            {
-                if(tall)
-                {
-                    var badge=Section(rect,"Category emblem",new Vector2(24,-20),new Vector2(58,58),MenuPalette.Surface);
-                    badge.GetComponent<MenuSurface>().Radius=18;
-                    Icon(badge,symbol.Value,new Vector2(11,-11),36,accent);
-                }
-                else Icon(rect,symbol.Value,new Vector2(24,compact?-10:-19),26,accent);
-            }
-            Label(rect,title,new Vector2(titleX,tall?-91:compact?-8:-15),new Vector2(size.x-titleX-48,32),primary?26:23,MenuPalette.Ink).fontStyle=FontStyles.Bold;
-            Label(rect,description,new Vector2(24,tall?-132:compact?-40:-54),new Vector2(size.x-48,compact?22:tall?size.y-142:size.y-62),compact?16:17,MenuMuted,TextAlignmentOptions.TopLeft);
-            Icon(rect,MenuIcon.Symbol.Chevron,new Vector2(size.x-40,tall?-35:compact?-12:-21),20,primary?accent:MenuMuted);
+            var rect=Section(actions,title,position,size,primary?new Color(.075f,.27f,.3f):button);
+            Section(rect,"Accent",Vector2.zero,new Vector2(4,size.y),primary?accent:new Color(.17f,.38f,.44f));
+            bool compact=size.y<80;
+            Label(rect,title,new Vector2(22,compact?-8:-15),new Vector2(size.x-72,32),primary?26:23,Color.white);
+            Label(rect,description,new Vector2(22,compact?-40:-54),new Vector2(size.x-58,compact?22:size.y-62),compact?16:18,MenuMuted,TextAnchor.UpperLeft);
+            Label(rect,"›",new Vector2(size.x-42,-12),new Vector2(26,38),26,primary?accent:MenuMuted,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
-            return rect;
-        }
-
-        private static MenuIcon.Symbol? CardSymbol(string title)
-        {
-            if(title.StartsWith("Faction:")||title.StartsWith("Opponent:")||title=="Units")return MenuIcon.Symbol.Army;
-            if(title.StartsWith("Map:")||title=="Position board"||title=="Reposition board"||title=="Detect surfaces")return MenuIcon.Symbol.Board;
-            if(title.StartsWith("AI:"))return MenuIcon.Symbol.Orders;
-            if(title.StartsWith("Hand:")||title=="Hotkeys"||title=="Control guide"||title.StartsWith("Selection:"))return MenuIcon.Symbol.Controls;
-            if(title.StartsWith("Music:")||title.StartsWith("Effects:"))return MenuIcon.Symbol.Audio;
-            if(title.StartsWith("Lighting:"))return MenuIcon.Symbol.Visuals;
-            if(title.StartsWith("Language:"))return MenuIcon.Symbol.Language;
-            if(title=="Structures")return MenuIcon.Symbol.Build;
-            if(title=="Keep playing")return MenuIcon.Symbol.Play;
-            if(title=="Leave match")return MenuIcon.Symbol.Home;
-            return null;
         }
 
         private void MenuFooter(string title,Action click,float x=0,float width=330,bool primary=false)
         {
-            var rect=Section(actions,title,new Vector2(x,-326),new Vector2(width,58),primary?MenuPalette.Primary:button);
-            Label(rect,title,new Vector2(42,0),new Vector2(width-64,58),22,MenuPalette.Ink,TextAlignmentOptions.Center).fontStyle=primary?FontStyles.Bold:FontStyles.Normal;
-            if(title=="Back")Icon(rect,MenuIcon.Symbol.Back,new Vector2(18,-18),22,accent);
-            else if(title=="Return to main menu")Icon(rect,MenuIcon.Symbol.Home,new Vector2(18,-17),24,MenuPalette.Ink);
-            else if(title=="START MATCH")Icon(rect,MenuIcon.Symbol.Play,new Vector2(18,-17),24,MenuPalette.Ink);
-            else if(title=="Position board")Icon(rect,MenuIcon.Symbol.Board,new Vector2(18,-17),24,MenuPalette.Ink);
+            var rect=Section(actions,title,new Vector2(x,-338),new Vector2(width,58),primary?new Color(.075f,.27f,.3f):button);
+            Label(rect,title,new Vector2(18,0),new Vector2(width-36,58),22,primary?accent:Color.white,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
         }
 
@@ -80,11 +48,11 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.Main:
-                    NavigationCard("New Match",MenuIcon.Symbol.Play,Vector2.zero,new Vector2(920,102),()=>Show(MenuPage.MatchSetup),true);
-                    NavigationCard("Multiplayer LAN",MenuIcon.Symbol.Network,new Vector2(0,-122),new Vector2(450,88),()=>Show(MenuPage.OnlineSetup));
-                    NavigationCard("Guides",MenuIcon.Symbol.Book,new Vector2(470,-122),new Vector2(450,88),()=>OpenSubmenu(MenuPage.Guides));
-                    NavigationCard("Settings",MenuIcon.Symbol.Settings,new Vector2(0,-228),new Vector2(450,88),()=>OpenSubmenu(MenuPage.Settings));
-                    NavigationCard("Match history",MenuIcon.Symbol.History,new Vector2(470,-228),new Vector2(450,88),OpenHistory);
+                    MenuCard("New Match","Choose your faction and battlefield. Play offline against the AI.",Vector2.zero,new Vector2(512,124),()=>Show(MenuPage.MatchSetup),true);
+                    MenuCard("Multiplayer LAN","Join a dedicated server on your network. Two human players.",new Vector2(528,0),new Vector2(512,124),()=>Show(MenuPage.OnlineSetup));
+                    MenuCard("Guides","Controls, units and structures. Everything you need to plan your next move.",new Vector2(0,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
+                    MenuCard("Settings","Controls, audio, visuals and play space. Your preferences in one place.",new Vector2(528,-142),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+                    MenuCard("Match history","Watch replays and review saved reports, graphs and build orders.",new Vector2(0,-274),new Vector2(1040,108),OpenHistory);
                     return true;
                 case MenuPage.History:BuildHistory();return true;
                 case MenuPage.Replay:BuildReplayPanel();return true;
@@ -100,9 +68,9 @@ namespace Frontier.Runtime
                     MenuFooter("START MATCH",Quest.RequestStartMatch,704,336,true);
                     return true;
                 case MenuPage.Pause:
-                    NavigationCard("Resume match",MenuIcon.Symbol.Play,Vector2.zero,new Vector2(1040,100),()=>Show(MenuPage.Actions),true);
-                    NavigationCard("Guides",MenuIcon.Symbol.Book,new Vector2(0,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
-                    NavigationCard("Settings",MenuIcon.Symbol.Settings,new Vector2(528,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+                    MenuCard("Resume match","Return to the battlefield.",Vector2.zero,new Vector2(1040,100),()=>Show(MenuPage.Actions),true);
+                    MenuCard("Guides","Controls and the unit / structure reference.",new Vector2(0,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
+                    MenuCard("Settings","Controls, audio, visuals and play space.",new Vector2(528,-118),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
                     MenuFooter("Return to main menu",()=>Show(MenuPage.LeaveConfirmation),0,512);
                     return true;
                 case MenuPage.Guides:
@@ -126,13 +94,12 @@ namespace Frontier.Runtime
         private void BuildSettingsPage()
         {
             var names=new[]{"Controls","Audio","Visuals","Play space","Language"};
-            var symbols=new[]{MenuIcon.Symbol.Controls,MenuIcon.Symbol.Audio,MenuIcon.Symbol.Visuals,MenuIcon.Symbol.Board,MenuIcon.Symbol.Language};
             for(int i=0;i<names.Length;i++)
             {
                 var tab=(SettingsTab)i;bool active=settingsTab==tab;
-                var rect=Section(actions,names[i],new Vector2(i*211,0),new Vector2(196,48),active?MenuPalette.Primary:button);
-                Icon(rect,symbols[i],new Vector2(14,-14),20,active?accent:MenuMuted);
-                Label(rect,names[i],new Vector2(40,0),new Vector2(146,48),18,active?MenuPalette.Ink:MenuMuted,TextAlignmentOptions.Center).fontStyle=active?FontStyles.Bold:FontStyles.Normal;
+                var rect=Section(actions,names[i],new Vector2(i*211,0),new Vector2(196,48),active?new Color(.075f,.27f,.3f):button);
+                Label(rect,names[i],Vector2.zero,new Vector2(196,48),20,active?accent:Color.white,TextAnchor.MiddleCenter);
+                if(active)Section(rect,"Selected",new Vector2(0,-45),new Vector2(196,3),accent);
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
@@ -143,10 +110,8 @@ namespace Frontier.Runtime
             }
             else if(settingsTab==SettingsTab.Audio)
             {
-                var music=MenuCard("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%","Background soundtrack · Select to change volume.",new Vector2(0,-70),new Vector2(512,174),()=>{AudioFeedback.CycleMusicVolume();Rebuild();});
-                VolumeMeter(music,AudioFeedback.MusicVolume);
-                var effects=MenuCard("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%","Orders, combat and interface sounds · Select to change volume.",new Vector2(528,-70),new Vector2(512,174),()=>{AudioFeedback.CycleEffectsVolume();Rebuild();});
-                VolumeMeter(effects,AudioFeedback.EffectsVolume);
+                MenuCard("Music: "+Mathf.RoundToInt(AudioFeedback.MusicVolume*100)+"%","Background soundtrack · Select to change volume.",new Vector2(0,-70),new Vector2(512,130),()=>{AudioFeedback.CycleMusicVolume();Rebuild();});
+                MenuCard("Effects: "+Mathf.RoundToInt(AudioFeedback.EffectsVolume*100)+"%","Orders, combat and interface sounds · Select to change volume.",new Vector2(528,-70),new Vector2(512,130),()=>{AudioFeedback.CycleEffectsVolume();Rebuild();});
             }
             else if(settingsTab==SettingsTab.Visuals)
             {
@@ -160,8 +125,9 @@ namespace Frontier.Runtime
                 {
                     int percent=i*25;bool active=density==percent;
                     string title=percent==0?"0% (Off)":percent+"%";
-                    var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-230),new Vector2(196,60),active?MenuPalette.Primary:button);
-                    Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAlignmentOptions.Center);
+                    var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-230),new Vector2(196,60),active?new Color(.075f,.27f,.3f):button);
+                    Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAnchor.MiddleCenter);
+                    if(active)Section(rect,"Selected",new Vector2(0,-56),new Vector2(196,4),accent);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
                 Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-302),new Vector2(996,24),16,MenuMuted);
@@ -191,21 +157,6 @@ namespace Frontier.Runtime
                     new Vector2(22,-248),new Vector2(996,64),18,MenuMuted);
             }
             MenuFooter("Back",Back);
-        }
-
-        private void VolumeMeter(RectTransform card,float volume)
-        {
-            for(int i=0;i<10;i++)
-            {
-                var segment=Section(card,"Volume segment",new Vector2(24+i*46,-136),new Vector2(40,14),MenuPalette.Surface);
-                var surface=segment.GetComponent<MenuSurface>();surface.Radius=3;
-                float fill=Mathf.Clamp01(volume*10-i);
-                if(fill>0)
-                {
-                    var level=Section(segment,"Level",Vector2.zero,new Vector2(40*fill,14),accent).GetComponent<MenuSurface>();
-                    level.Radius=3;
-                }
-            }
         }
     }
 }

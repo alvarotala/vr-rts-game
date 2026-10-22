@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +8,6 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 using Object = UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -110,11 +108,11 @@ namespace Frontier.Editor
                     foreach (var graphic in board.GetComponentsInChildren<Graphic>())
                     {
                         graphic.Rebuild(CanvasUpdate.PreRender); var source = graphic.canvasRenderer.GetMesh(); if (source == null || source.vertexCount == 0) continue;
-                        var mesh = Object.Instantiate(source); meshes.Add(mesh); var material = new Material(graphic.materialForRendering); materials.Add(material);
-                        if (!(graphic is TMP_Text)) material.mainTexture = graphic.mainTexture;
+                        var mesh = Object.Instantiate(source); meshes.Add(mesh); var material = new Material(graphic.materialForRendering) { mainTexture = graphic.mainTexture }; materials.Add(material);
                         // Preview meshes do not inherit Canvas sibling ordering. Preserve it
                         // explicitly so a tilted background cannot sort in front of its text.
                         material.renderQueue = 3000 + meshes.Count;
+                        if (graphic is Text) material.SetVector("_TextureSampleAdd", new Vector4(1, 1, 1, 0));
                         preview.DrawMesh(mesh, Matrix4x4.Translate(-preview.camera.transform.forward * .00002f * meshes.Count) * graphic.transform.localToWorldMatrix, material, 0);
                     }
                     preview.Render(true); var image = preview.EndStaticPreview(); File.WriteAllBytes("TestResults/Workforce/" + name + ".png", image.EncodeToPNG()); Object.DestroyImmediate(image);

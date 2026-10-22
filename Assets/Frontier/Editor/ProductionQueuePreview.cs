@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.IO;
 using System.Linq;
@@ -8,7 +7,6 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 using Object=UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -259,8 +257,10 @@ namespace Frontier.Editor
                 }
                 bool Fits(Text text)
                 {
-                    text.ForceMeshUpdate();
-                    return !text.isTextOverflowing && (!text.enableAutoSizing || text.fontSize >= text.fontSizeMin);
+                    var settings=text.GetGenerationSettings(text.rectTransform.rect.size);
+                    if(text.resizeTextForBestFit)settings.fontSize=text.resizeTextMinSize;
+                    settings.resizeTextForBestFit=false;
+                    return text.cachedTextGeneratorForLayout.GetPreferredHeight(text.text,settings)/text.pixelsPerUnit<=text.rectTransform.rect.height+.5f;
                 }
                 void Refresh()
                 {
@@ -323,8 +323,9 @@ namespace Frontier.Editor
                 foreach(var label in card.GetComponentsInChildren<Text>())
                 {
                     var rect=label.rectTransform;
-                    label.ForceMeshUpdate();
-                    check(!label.isTextOverflowing&&
+                    var settings=label.GetGenerationSettings(rect.rect.size);settings.resizeTextForBestFit=false;
+                    if(label.resizeTextForBestFit)settings.fontSize=label.resizeTextMinSize;
+                    check(label.cachedTextGeneratorForLayout.GetPreferredHeight(label.text,settings)/label.pixelsPerUnit<=rect.rect.height+.5f&&
                         !modelRect.Overlaps(new Rect(rect.anchoredPosition-new Vector2(0,rect.rect.height),rect.rect.size)),
                         "Action text fits beside the model: "+action.Title+" / "+label.text);
                 }

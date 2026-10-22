@@ -1,7 +1,5 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -20,8 +18,8 @@ namespace Frontier.Runtime
             helpAccent=Section(actionHelp,"Category accent",Vector2.zero,new Vector2(4,296),accent).GetComponent<Image>();
             helpCategory=Label(actionHelp,"",new Vector2(16,-10),new Vector2(288,24),14,accent);
             helpTitle=Label(actionHelp,"",new Vector2(16,-40),new Vector2(288,34),24,Color.white);
-            helpDescription=Label(actionHelp,"",new Vector2(16,-84),new Vector2(288,140),18,new Color(.85f,.9f,.93f),TextAlignmentOptions.TopLeft);
-            helpDetail=Label(actionHelp,"",new Vector2(16,-230),new Vector2(288,56),16,accent,TextAlignmentOptions.TopLeft);
+            helpDescription=Label(actionHelp,"",new Vector2(16,-84),new Vector2(288,140),18,new Color(.85f,.9f,.93f),TextAnchor.UpperLeft);
+            helpDetail=Label(actionHelp,"",new Vector2(16,-230),new Vector2(288,56),16,accent,TextAnchor.UpperLeft);
             actionHelp.gameObject.SetActive(false);
         }
         private void HideActionHelp()

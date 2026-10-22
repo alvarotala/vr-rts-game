@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +8,6 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 using Object=UnityEngine.Object;
 
 namespace Frontier.Editor
@@ -141,7 +139,7 @@ namespace Frontier.Editor
                     void Capture(string name)
                     {
                         Refresh();Audit();
-                        if(!strict&&f.Panel.GetComponentsInChildren<Text>().Any(t=>!t.enableAutoSizing&&t.preferredHeight>t.rectTransform.rect.height+.5f))return;
+                        if(!strict&&f.Panel.GetComponentsInChildren<Text>().Any(t=>!t.resizeTextForBestFit&&t.preferredHeight>t.rectTransform.rect.height+.5f))return;
                         HarvestingPreview.SavePanel(f.Panel,"TestResults/Localization/"+name+".png",UnifiedWheelFixture.Field<PreviewRenderUtility>(f,"preview"));
                     }
                     void Audit(Component component=null)

@@ -1,4 +1,3 @@
-using TMPro;
 using System;
 using System.IO;
 using System.Linq;
@@ -7,7 +6,6 @@ using Frontier.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 
 namespace Frontier.Editor
 {

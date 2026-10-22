@@ -1,9 +1,7 @@
-using TMPro;
 using System.Collections.Generic;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
-using Text = TMPro.TMP_Text;
 
 namespace Frontier.Runtime
 {
@@ -27,12 +25,12 @@ namespace Frontier.Runtime
             {
                 int index=i;
                 var tab=Section(referenceGuide,"Reference faction "+i,new Vector2(16+i*254,-14),new Vector2(244,48));
-                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,Color.white,TextAlignmentOptions.Center);
+                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,Color.white,TextAnchor.MiddleCenter);
                 referenceFactionTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{
                     referenceFaction=Session.Catalog.Definition.factions[index].id;Rebuild();UpdateMenuText();
                 }};
             }
-            referenceCount=Label(referenceGuide,"",new Vector2(540,-14),new Vector2(484,48),16,new Color(.68f,.8f,.85f),TextAlignmentOptions.Right);
+            referenceCount=Label(referenceGuide,"",new Vector2(540,-14),new Vector2(484,48),16,new Color(.68f,.8f,.85f),TextAnchor.MiddleRight);
             for(int i=0;i<referenceEntries.Length;i++)
             {
                 int index=i;
@@ -47,7 +45,7 @@ namespace Frontier.Runtime
             var detail=Section(referenceGuide,"Reference detail",new Vector2(286,-82),new Vector2(738,502),new Color(.055f,.12f,.17f));
             referenceName=Label(detail,"",new Vector2(16,-8),new Vector2(572,32),26,Color.white);
             referenceRole=Label(detail,"",new Vector2(16,-42),new Vector2(572,24),18,accent);
-            referenceDescription=Label(detail,"",new Vector2(16,-72),new Vector2(572,48),17,new Color(.8f,.87f,.9f),TextAlignmentOptions.TopLeft);
+            referenceDescription=Label(detail,"",new Vector2(16,-72),new Vector2(572,48),17,new Color(.8f,.87f,.9f),TextAnchor.UpperLeft);
             var portraitObject=new GameObject("Reference model",typeof(RectTransform),typeof(CanvasRenderer),typeof(SelectionPortrait));
             var portraitRect=portraitObject.GetComponent<RectTransform>();portraitRect.SetParent(detail,false);
             TopLeft(portraitRect,new Vector2(600,-8),new Vector2(122,112));
@@ -59,9 +57,9 @@ namespace Frontier.Runtime
                 referenceStatLabels[i]=Label(card,"",new Vector2(10,-4),new Vector2(150,18),14,new Color(.65f,.79f,.84f));
                 referenceStatValues[i]=Label(card,"",new Vector2(10,-22),new Vector2(150,25),21,Color.white);
             }
-            referenceRequirements=Label(detail,"",new Vector2(16,-312),new Vector2(706,49),17,new Color(.78f,.86f,.89f),TextAlignmentOptions.TopLeft);
+            referenceRequirements=Label(detail,"",new Vector2(16,-312),new Vector2(706,49),17,new Color(.78f,.86f,.89f),TextAnchor.UpperLeft);
             referenceExtraTitle=Label(detail,"",new Vector2(16,-369),new Vector2(706,22),15,accent);
-            referenceExtraDetails=Label(detail,"",new Vector2(16,-396),new Vector2(706,98),17,new Color(.82f,.89f,.91f),TextAlignmentOptions.TopLeft);
+            referenceExtraDetails=Label(detail,"",new Vector2(16,-396),new Vector2(706,98),17,new Color(.82f,.89f,.91f),TextAnchor.UpperLeft);
         }
 
         private void BuildReferenceGuide()
@@ -78,7 +76,7 @@ namespace Frontier.Runtime
                 var faction=catalog.Definition.factions[i];var tab=referenceFactionTabs[i];
                 tab.rect.name="Reference faction: "+faction.id;
                 referenceFactionNames[i].text=faction.name;
-                tab.normal=faction.id==referenceFaction?MenuPalette.Primary:button;tab.image.color=tab.normal;targets.Add(tab);
+                tab.normal=faction.id==referenceFaction?new Color(.12f,.36f,.39f):button;tab.image.color=tab.normal;targets.Add(tab);
             }
             referenceCount.text=entries.Count+(structures?" STRUCTURES":" UNITS")+"  ·  BASE STATS";
             for(int i=0;i<referenceEntries.Length;i++)
@@ -86,7 +84,7 @@ namespace Frontier.Runtime
                 bool visible=i<entries.Count;var entry=referenceEntries[i];entry.rect.gameObject.SetActive(visible);if(!visible)continue;
                 var type=entries[i];entry.rect.name="Reference entry: "+type.id;
                 referenceNames[i].text=type.name;referenceRoles[i].text=CatalogReference.Role(type);
-                entry.normal=i==selected?MenuPalette.Primary:button;entry.image.color=entry.normal;targets.Add(entry);
+                entry.normal=i==selected?new Color(.12f,.32f,.38f):button;entry.image.color=entry.normal;targets.Add(entry);
             }
             var current=entries[selected];referenceName.text=current.name;referenceRole.text=CatalogReference.Role(current);
             referencePortrait.SetType(current);referenceDescription.text=CatalogReference.Description(catalog,current);
