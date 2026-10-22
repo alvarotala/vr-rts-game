@@ -61,7 +61,7 @@ namespace Frontier.Runtime
             canvas.scaleFactor=2;
             var scaler=go.AddComponent<CanvasScaler>();scaler.dynamicPixelsPerUnit=2;
             root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
-            var image=go.AddComponent<MenuSurface>();image.color=background;image.Style=MenuSurface.SurfaceStyle.Panel;image.Radius=24;image.BorderWidth=3;image.BottomShade=.78f;
+            var image=go.AddComponent<MenuSurface>();image.color=background;image.Radius=24;
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
             headline=Label(root,"LITTLE LEGION",new Vector2(30,-84),new Vector2(1040,44),30,accent);
@@ -492,7 +492,7 @@ namespace Frontier.Runtime
         private RectTransform Handle(string name,Vector2 position,Vector2 size,string label,out Image image)
         {
             var go=new GameObject(name,typeof(RectTransform),typeof(MenuSurface));var rect=go.GetComponent<RectTransform>();rect.SetParent(root,false);TopLeft(rect,position,size);
-            var surface=go.GetComponent<MenuSurface>();surface.Style=MenuSurface.SurfaceStyle.Flat;surface.Radius=8;surface.BorderWidth=0;
+            var surface=go.GetComponent<MenuSurface>();surface.Radius=8;
             image=surface;SetHandleFeedback(image,false);
             Icon(rect,name=="Move menu"?MenuIcon.Symbol.Grip:MenuIcon.Symbol.Reset,new Vector2(12,-11),22,MenuPalette.Muted);
             Label(rect,label,new Vector2(44,0),size-new Vector2(56,0),14,MenuPalette.Muted,TextAnchor.MiddleCenter);return rect;

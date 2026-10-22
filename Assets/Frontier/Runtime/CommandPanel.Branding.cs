@@ -6,7 +6,7 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private RectTransform brandLogo, headerRule, footerRule, pageEmblem;
+        private RectTransform brandLogo, pageEmblem;
         private MenuIcon pageIcon;
 
         private void CreateBrand()
@@ -14,10 +14,7 @@ namespace Frontier.Runtime
             var logo=new GameObject("Little Legion logo",typeof(RectTransform),typeof(LegionLogo));
             brandLogo=logo.GetComponent<RectTransform>();brandLogo.SetParent(root,false);
             logo.GetComponent<LegionLogo>().raycastTarget=false;
-            headerRule=Section(root,"Header divider",new Vector2(32,-70),new Vector2(1036,1),new Color(.1f,.24f,.3f,.42f));
-            footerRule=Section(root,"Footer divider",Vector2.zero,new Vector2(1036,1),new Color(.1f,.24f,.3f,.42f));
             pageEmblem=Section(root,"Page emblem",new Vector2(32,-86),new Vector2(46,46),MenuPalette.Surface);
-            pageEmblem.GetComponent<MenuSurface>().Style=MenuSurface.SurfaceStyle.Inset;
             pageEmblem.GetComponent<MenuSurface>().Radius=14;
             pageIcon=Icon(pageEmblem,MenuIcon.Symbol.Settings,new Vector2(10,-10),26,MenuPalette.Accent);
         }
@@ -32,7 +29,6 @@ namespace Frontier.Runtime
             headline.fontStyle=FontStyle.Bold;
             headline.color=MenuPalette.Ink;
             pageEmblem.gameObject.SetActive(!main&&!hud);pageIcon.Icon=PageSymbol();
-            headerRule.gameObject.SetActive(!hud);
             economy.alignment=main?TextAnchor.MiddleCenter:TextAnchor.MiddleLeft;
             economy.fontSize=main?25:18;economy.color=MenuPalette.Muted;
             TopLeft(economy.rectTransform,main?new Vector2(60,-207):new Vector2(30,-130),main?new Vector2(980,38):new Vector2(1040,36));
@@ -51,7 +47,6 @@ namespace Frontier.Runtime
                 label.fontSize=hud?13:14;
                 TopLeft(label.rectTransform,new Vector2(44,0),handle.sizeDelta-new Vector2(56,0));
             }
-            TopLeft(footerRule,new Vector2(statusBanner.anchoredPosition.x,statusBanner.anchoredPosition.y+6),new Vector2(statusBanner.sizeDelta.x,1));
         }
 
         private MenuIcon.Symbol PageSymbol()
@@ -78,9 +73,7 @@ namespace Frontier.Runtime
             {
                 if(target?.rect==null||target.image==null)continue;
                 if(!(target.image is MenuSurface surface))continue;
-                surface.Style=MenuSurface.SurfaceStyle.Button;
                 surface.Radius=Mathf.Min(12,target.rect.rect.height*.2f);
-                if(target.help==null)surface.BorderColor=target.normal==MenuPalette.Primary?accent:MenuPalette.Border;
                 surface.State=0;
             }
         }
@@ -90,8 +83,6 @@ namespace Frontier.Runtime
             foreach(var target in targets)
                 if(target?.rect!=null&&target.image!=null&&target.image is MenuSurface surface)
                 {
-                    if(target.help==null)surface.BorderColor=target.normal==MenuPalette.Primary?accent:MenuPalette.Border;
-                    surface.FocusColor=target.selectionType!=null&&selectionRemove?ErrorTint:target.hoverColor??accent;
                     surface.State=Mathf.MoveTowards(surface.State,target==hovered?1:0,step);
                     if(!target.hoverColor.HasValue&&target.selectionType==null)
                         surface.color=Color.Lerp(target.normal,accent,surface.State*.12f);
@@ -105,7 +96,7 @@ namespace Frontier.Runtime
         }
         private static void SetHandleFeedback(Image image,bool active)
         {
-            image.color=active?new Color(.03f,.14f,.17f,.75f):new Color(.02f,.05f,.07f,.18f);
+            image.color=active?MenuPalette.Card:MenuPalette.Background;
         }
 
         private MenuIcon Icon(RectTransform parent,MenuIcon.Symbol symbol,Vector2 position,float size,Color color)
@@ -118,8 +109,7 @@ namespace Frontier.Runtime
         private void NavigationCard(string title,MenuIcon.Symbol symbol,Vector2 position,Vector2 size,Action click,bool primary=false)
         {
             var rect=Section(actions,title,position,size,primary?MenuPalette.Primary:button);
-            var surface=rect.GetComponent<MenuSurface>();surface.Radius=14;surface.BorderWidth=1.5f;
-            if(primary)surface.BorderColor=accent;
+            var surface=rect.GetComponent<MenuSurface>();surface.Radius=14;
             float iconSize=primary?44:40;
             Icon(rect,symbol,new Vector2(30,-(size.y-iconSize)*.5f),iconSize,MenuPalette.Ink);
             var titleLabel=Label(rect,title,new Vector2(98,0),new Vector2(size.x-154,size.y),primary?32:24,MenuPalette.Ink);

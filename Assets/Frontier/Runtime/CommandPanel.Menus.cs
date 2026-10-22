@@ -28,7 +28,6 @@ namespace Frontier.Runtime
         private RectTransform MenuCard(string title,string description,Vector2 position,Vector2 size,Action click,bool primary=false)
         {
             var rect=Section(actions,title,position,size,primary?MenuPalette.Primary:button);
-            if(primary)rect.GetComponent<MenuSurface>().BorderColor=accent;
             bool compact=size.y<80,tall=size.y>=200;
             var symbol=CardSymbol(title);
             float titleX=symbol.HasValue&&!tall?66:24;
@@ -37,7 +36,7 @@ namespace Frontier.Runtime
                 if(tall)
                 {
                     var badge=Section(rect,"Category emblem",new Vector2(24,-20),new Vector2(58,58),MenuPalette.Surface);
-                    badge.GetComponent<MenuSurface>().Style=MenuSurface.SurfaceStyle.Inset;badge.GetComponent<MenuSurface>().Radius=18;
+                    badge.GetComponent<MenuSurface>().Radius=18;
                     Icon(badge,symbol.Value,new Vector2(11,-11),36,accent);
                 }
                 else Icon(rect,symbol.Value,new Vector2(24,compact?-10:-19),26,accent);
@@ -133,7 +132,6 @@ namespace Frontier.Runtime
                 var rect=Section(actions,names[i],new Vector2(i*211,0),new Vector2(196,48),active?MenuPalette.Primary:button);
                 Icon(rect,symbols[i],new Vector2(14,-14),20,active?accent:MenuMuted);
                 Label(rect,names[i],new Vector2(40,0),new Vector2(146,48),18,active?MenuPalette.Ink:MenuMuted,TextAnchor.MiddleCenter).fontStyle=active?FontStyle.Bold:FontStyle.Normal;
-                if(active)Section(rect,"Selected",new Vector2(20,-44),new Vector2(156,2),accent);
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
@@ -163,7 +161,6 @@ namespace Frontier.Runtime
                     string title=percent==0?"0% (Off)":percent+"%";
                     var rect=Section(actions,"Fog: "+title,new Vector2(i*211,-230),new Vector2(196,60),active?MenuPalette.Primary:button);
                     Label(rect,title,Vector2.zero,new Vector2(196,60),23,active?accent:Color.white,TextAnchor.MiddleCenter);
-                    if(active)Section(rect,"Selected",new Vector2(20,-55),new Vector2(156,2),accent);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
                 Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(22,-302),new Vector2(996,24),16,MenuMuted);
@@ -200,12 +197,12 @@ namespace Frontier.Runtime
             for(int i=0;i<10;i++)
             {
                 var segment=Section(card,"Volume segment",new Vector2(24+i*46,-136),new Vector2(40,14),MenuPalette.Surface);
-                var surface=segment.GetComponent<MenuSurface>();surface.Style=MenuSurface.SurfaceStyle.Flat;surface.Radius=3;surface.BorderWidth=0;
+                var surface=segment.GetComponent<MenuSurface>();surface.Radius=3;
                 float fill=Mathf.Clamp01(volume*10-i);
                 if(fill>0)
                 {
                     var level=Section(segment,"Level",Vector2.zero,new Vector2(40*fill,14),accent).GetComponent<MenuSurface>();
-                    level.Style=MenuSurface.SurfaceStyle.Flat;level.Radius=3;level.BorderWidth=0;
+                    level.Radius=3;
                 }
             }
         }

@@ -21,13 +21,13 @@ namespace Frontier.Runtime
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear(); var rect = rectTransform.rect;
-            // Reserve a sliver for the lower edge and its soft shadow. The same
-            // proportions apply to the compact HUD mark and the large masthead.
+            // Keep the same proportions in the compact HUD mark and the large
+            // masthead, with room for a soft alpha edge around the solid letters.
             float scale = Mathf.Min(rect.width / AspectRatio, rect.height) / 1.06f;
             if (scale <= 0 || color.a <= 0) return;
             Vector2 origin = rect.center - new Vector2(AspectRatio, 1) * (scale * .5f) + Vector2.up * (.01f * scale);
-            float cursor = 0; bool shadow = true;
-            DrawWords(); shadow = false; cursor = 0; DrawWords();
+            float cursor = 0;
+            DrawWords();
 
             void DrawWords() { DrawWord("LITTLE", littleColor); cursor += .34f; DrawWord("LEGION", legionColor); }
             void DrawWord(string word, Color tint)
@@ -53,47 +53,29 @@ namespace Frontier.Runtime
             void Polygon(Vector2[] points, Color tint, bool edge)
             {
                 int start = mesh.currentVertCount;
-                foreach (var point in points) Vertex(point, Tint(tint, point.y));
+                foreach (var point in points) Vertex(point, tint * color);
                 var triangles = Triangulate(points);
                 for (int i = 0; i < triangles.Count; i += 3)
                     mesh.AddTriangle(start + triangles[i], start + triangles[i + 1], start + triangles[i + 2]);
                 if (edge) Edge(points, tint, false);
             }
-            Color Tint(Color tint,float y)
-            {
-                if(shadow) return new Color(.008f,.02f,.028f,.48f * tint.a * color.a);
-                var result=tint*color;float shade=Mathf.Lerp(.88f,1.025f,y);
-                result.r=Mathf.Min(1,result.r*shade);result.g=Mathf.Min(1,result.g*shade);result.b=Mathf.Min(1,result.b*shade);return result;
-            }
             void Vertex(Vector2 point,Color tint)
             {
-                var offset=shadow?new Vector2(.003f,-.019f):Vector2.zero;
-                mesh.AddVert(origin+(new Vector2(cursor+point.x,point.y)+offset)*scale,tint,Vector2.zero);
+                mesh.AddVert(origin+new Vector2(cursor+point.x,point.y)*scale,tint,Vector2.zero);
             }
             void Edge(Vector2[] points,Color tint,bool hole)
             {
                 float area=0;for(int i=0;i<points.Length;i++)area+=Cross(points[i],points[(i+1)%points.Length]);
                 float sign=(area>0?1:-1)*(hole?-1:1);
-                float feather=Mathf.Min((shadow?1.1f:.65f)/scale,.018f);int start=mesh.currentVertCount;
+                float feather=Mathf.Min(.65f/scale,.018f);int start=mesh.currentVertCount;
                 for(int i=0;i<points.Length;i++)
                 {
                     var a=(points[i]-points[(i+points.Length-1)%points.Length]).normalized;var b=(points[(i+1)%points.Length]-points[i]).normalized;
                     var n0=new Vector2(a.y,-a.x)*sign;var n1=new Vector2(b.y,-b.x)*sign;var normal=(n0+n1).normalized;
-                    float length=feather/Mathf.Max(.55f,Vector2.Dot(normal,n1));var solid=Tint(tint,points[i].y);var clear=solid;clear.a=0;
+                    float length=feather/Mathf.Max(.55f,Vector2.Dot(normal,n1));var solid=tint*color;var clear=solid;clear.a=0;
                     Vertex(points[i],solid);Vertex(points[i]+normal*length,clear);
                 }
                 for(int i=0;i<points.Length;i++){int a=start+i*2,b=start+((i+1)%points.Length)*2;mesh.AddTriangle(a,a+1,b+1);mesh.AddTriangle(a,b+1,b);}
-                if(shadow)return;
-                // A hairline on upward-facing edges supplies the restrained bevel
-                // of the concept; downward edges keep the darker body tint.
-                for(int i=0;i<points.Length;i++)
-                {
-                    var a=points[i];var b=points[(i+1)%points.Length];var d=(b-a).normalized;var normal=new Vector2(d.y,-d.x)*sign;
-                    if(normal.y<.5f)continue;
-                    float width=Mathf.Min(.008f,.65f/scale);var bright=tint*color;bright.r=Mathf.Lerp(bright.r,1,.17f);bright.g=Mathf.Lerp(bright.g,1,.17f);bright.b=Mathf.Lerp(bright.b,1,.17f);
-                    int first=mesh.currentVertCount;Vertex(a,bright);Vertex(b,bright);Vertex(b-normal*width,Tint(tint,b.y));Vertex(a-normal*width,Tint(tint,a.y));
-                    mesh.AddTriangle(first,first+1,first+2);mesh.AddTriangle(first,first+2,first+3);
-                }
             }
         }
 

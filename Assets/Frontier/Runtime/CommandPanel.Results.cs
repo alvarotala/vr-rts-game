@@ -22,7 +22,6 @@ namespace Frontier.Runtime
         {
             var rect=Section(actions,title,new Vector2(x,-y),new Vector2(width,48),selected?MenuPalette.Primary:button);
             Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,selected?accent:Color.white,TextAnchor.MiddleCenter);
-            if(selected)Section(rect,"Selected",new Vector2(0,-45),new Vector2(width,3),accent);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
         }
         private void BuildMatchReport()

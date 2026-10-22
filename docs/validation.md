@@ -1104,3 +1104,11 @@ Segunda pasada sobre el concepto 05: marco doble con canal oscuro y luz superior
 - Inspeccionados inicio normal y con foco, nueva partida, ajustes de audio, guías, atajos, referencia de estructuras, HUD y selección rápida. Corregidos separación del pie, representación exacta del volumen y restauración de los controles Mover/Restablecer al cancelar interacción.
 - Última captura de contraste de opciones no disponibles y revisión estricta del español: **salida 0**, **328 comprobaciones / 0 desbordamientos** en `TestResults/unity-menu-polish-contrast-render.log`, con menús, replay y espectador aprobados. `git diff --check` aprobado.
 - Validación en Unity Editor **6000.3.26f1** con CLI **1.0.0-beta.14**, Burst desactivado solo durante los batches. Sin APK nuevo ni prueba de legibilidad, comodidad o rendimiento en Quest físico.
+
+## Menús de colores planos — 21 de octubre de 2026
+
+Se conserva la estructura del concepto 05 y se sustituye el acabado ornamental por rellenos uniformes y fondos opacos. Se retiran degradados, biseles, sombras, marcos y divisores/subrayados decorativos del panel, tarjetas, logo y rueda. El foco cambia el color completo; el suavizado de siluetas solo modifica alfa. Se mantienen la resolución de texto, los indicadores funcionales y los límites de interacción.
+
+- `MenuStylePreview.Validate`: **salida 0** en `TestResults/unity-flat-menus-validation.log`. Estilo **1.540 comprobaciones / 44 capturas**, localización **328 / 0 desbordamientos**, menús **366 / 61 paneles**, replay **30**, espectador **527 / 7**, selección **177 / 8**, producción **776 / 26**, recolección **18 paneles** y rueda **724 / 22** aprobados.
+- Inspeccionadas capturas del inicio, audio, HUD de trabajador, rueda de órdenes y selección rápida en español. La revisión comprueba rellenos uniformes, contraste, distribución y texto completo. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo para la validación. No se generó APK: la reducción del parpadeo y la legibilidad al mover la cabeza requieren comprobación física en Quest.

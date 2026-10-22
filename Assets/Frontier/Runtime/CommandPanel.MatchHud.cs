@@ -73,8 +73,7 @@ namespace Frontier.Runtime
         {
             var go=new GameObject(name,typeof(RectTransform),typeof(MenuSurface));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);
             var image=go.GetComponent<MenuSurface>();image.color=color??MenuPalette.Surface;image.raycastTarget=false;
-            image.Style=MenuSurface.SurfaceStyle.Inset;
-            if(Mathf.Min(size.x,size.y)<14){image.Style=MenuSurface.SurfaceStyle.Flat;image.Radius=0;image.BorderWidth=0;image.EdgeSoftness=0;image.BottomShade=1;}
+            if(Mathf.Min(size.x,size.y)<14){image.Radius=0;image.EdgeSoftness=0;}
             return rect;
         }
         private Text ResourceCard(string label,float x,Color tint,out Text hint)
@@ -308,10 +307,8 @@ namespace Frontier.Runtime
                     if(active)
                     {
                         detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
-                        target.rect.GetComponent<MenuSurface>().BorderColor=tint;
-                        Section(target.rect,"Selected bottom",new Vector2(12,4-buttonHeight),new Vector2(194,2),tint);
                     }
-                    Section(target.rect,"Category accent",new Vector2(4,-10),new Vector2(2,buttonHeight-20),tint);
+                    Section(target.rect,"Category accent",new Vector2(4,-10),new Vector2(4,buttonHeight-20),tint);
                     targets.Add(target);actionIndex++;
                     if(++column==3){column=0;y+=rowHeight;}
                 }
