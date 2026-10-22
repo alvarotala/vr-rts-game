@@ -170,7 +170,7 @@ namespace Frontier.Runtime
         private void CompleteStartRequest()
         {
             string replay=pendingReplay;bool online=pendingOnline;pendingStart=false;pendingReplay=null;pendingOnline=false;
-            if(replay!=null)Session.StartReplay(replay);else if(online)Session.ConnectOnline();else Session.StartMatch();
+            if(replay!=null)Session.StartReplay(replay);else if(online)Session.ConnectOnline();else Session.StartMatch(countdown:true);
         }
         private void ContinueStartRequest()
         {

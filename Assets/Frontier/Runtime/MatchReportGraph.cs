@@ -11,7 +11,7 @@ namespace Frontier.Runtime
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class MatchReportGraph : MaskableGraphic
     {
-        public static readonly Color PlayerColor=new Color(.35f,.9f,.88f), OpponentColor=new Color(1,.65f,.38f);
+        public static readonly Color PlayerColor=ConsoleTheme.Accent, OpponentColor=new Color(1,.65f,.38f);
         public MatchReport Report { get; private set; }
         public ReportMetric Metric { get; private set; }
         public float Maximum { get; private set; }
@@ -40,7 +40,7 @@ namespace Frontier.Runtime
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();if(Report==null)return;
-            var r=rectTransform.rect;var grid=new Color(.18f,.3f,.34f);
+            var r=rectTransform.rect;var grid=Color.Lerp(ConsoleTheme.Surface,ConsoleTheme.Muted,.18f);
             for(int i=0;i<=4;i++)
             {
                 float y=r.yMin+r.height*i/4;Line(mesh,new Vector2(r.xMin,y),new Vector2(r.xMax,y),1,grid);

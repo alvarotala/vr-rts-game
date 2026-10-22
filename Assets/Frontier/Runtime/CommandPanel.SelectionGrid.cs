@@ -8,13 +8,15 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private const int SelectionPageSize=20,SelectionColumns=10;
+        private const int SelectionPageSize=20,SelectionColumns=6;
         private RectTransform selectionGrid;
         private Text selectionGridTitle,selectionGridHint,selectionPageLabel;
         private readonly Target[] selectionTiles=new Target[SelectionPageSize];
         private readonly SelectionPortrait[] selectionPortraits=new SelectionPortrait[SelectionPageSize];
         private readonly Text[] selectionNames=new Text[SelectionPageSize],selectionCounts=new Text[SelectionPageSize];
+        private readonly Text[] selectionEnergy=new Text[SelectionPageSize];
         private readonly Image[] selectionHealthBars=new Image[SelectionPageSize];
+        private readonly RectTransform[] selectionHealthTracks=new RectTransform[SelectionPageSize];
         private Target previousSelectionPage,nextSelectionPage;
         private int selectionPage;
         private int[] gestureSelection=Array.Empty<int>();
@@ -27,27 +29,36 @@ namespace Frontier.Runtime
 
         private void CreateSelectionGrid()
         {
-            selectionGrid=Section(matchHud,"Selection grid",new Vector2(24,-484),new Vector2(1052,172));
-            selectionGridTitle=Label(selectionGrid,"SELECTED TYPES",new Vector2(16,-8),new Vector2(650,24),16,accent);
+            float width=HudInnerWidth-HudPadding*2,tileWidth=(width-(SelectionColumns-1)*HudGap)/SelectionColumns;
+            selectionGrid=Section(selectedCard,"Selection grid",new Vector2(HudPadding,-HudContentTop),new Vector2(width,136));
+            selectionGrid.GetComponent<Image>().enabled=false;
+            selectionGridTitle=Label(selectionGrid,"SELECTED TYPES",new Vector2(16,-8),new Vector2(650,24),16,ConsoleTheme.Muted);
+            selectionGridTitle.fontStyle=FontStyle.Bold;
+            selectionGridTitle.gameObject.SetActive(false);
             previousSelectionPage=HudButton(selectionGrid,"Previous selection page","",new Vector2(772,-6),new Vector2(80,28),()=>ChangeSelectionPage(-1),null,out _);
             nextSelectionPage=HudButton(selectionGrid,"Next selection page","",new Vector2(956,-6),new Vector2(80,28),()=>ChangeSelectionPage(1),null,out _);
             previousSelectionPage.rect.GetComponentInChildren<Text>().text="<";nextSelectionPage.rect.GetComponentInChildren<Text>().text=">";
-            selectionPageLabel=Label(selectionGrid,"",new Vector2(856,-6),new Vector2(96,28),15,Color.white,TextAnchor.MiddleCenter);
+            selectionPageLabel=Label(selectionGrid,"",new Vector2(856,-6),new Vector2(96,28),15,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             for(int i=0;i<SelectionPageSize;i++)
             {
-                var card=Section(selectionGrid,"Selection slot",new Vector2(16+(i%SelectionColumns)*102,-40-(i/SelectionColumns)*104),new Vector2(94,94),button);
+                var card=Section(selectionGrid,"Selection slot",new Vector2((i%SelectionColumns)*(tileWidth+HudGap),-(i/SelectionColumns)*(136+HudGap)),new Vector2(tileWidth,136),button);
                 var portraitObject=new GameObject("Portrait",typeof(RectTransform),typeof(SelectionPortrait));
                 var portrait=portraitObject.GetComponent<SelectionPortrait>();portrait.transform.SetParent(card,false);
-                TopLeft(portrait.rectTransform,new Vector2(6,-4),new Vector2(82,54));portrait.raycastTarget=false;selectionPortraits[i]=portrait;
-                selectionNames[i]=Label(card,"",new Vector2(3,-58),new Vector2(88,28),12,Color.white,TextAnchor.MiddleCenter);
-                Section(card,"Health track",new Vector2(5,-87),new Vector2(84,3),new Color(.12f,.22f,.25f));
-                selectionHealthBars[i]=Section(card,"Health",new Vector2(5,-87),new Vector2(84,3),SupplyTint).GetComponent<Image>();
-                var count=Section(card,"Count badge",new Vector2(52,-4),new Vector2(38,24),new Color(.025f,.08f,.12f,.95f));
-                selectionCounts[i]=Label(count,"",Vector2.zero,new Vector2(38,24),16,Color.white,TextAnchor.MiddleCenter);
+                TopLeft(portrait.rectTransform,new Vector2(16,-44),new Vector2(48,48));portrait.raycastTarget=false;selectionPortraits[i]=portrait;
+                selectionNames[i]=Label(card,"",new Vector2(76,-38),new Vector2(tileWidth-92,60),20,ConsoleTheme.Ink,TextAnchor.MiddleLeft);
+                selectionNames[i].fontStyle=FontStyle.Bold;
+                selectionHealthTracks[i]=Section(card,"Health track",new Vector2(16,-116),new Vector2(tileWidth-32,4),ConsoleTheme.Track);
+                selectionHealthBars[i]=Section(card,"Health",new Vector2(16,-116),new Vector2(tileWidth-32,4),SupplyTint).GetComponent<Image>();
+                var count=Section(card,"Count badge",new Vector2(tileWidth-70,-10),new Vector2(54,26),Color.clear);
+                selectionCounts[i]=Label(count,"",Vector2.zero,new Vector2(54,26),20,ConsoleTheme.Ink,TextAnchor.MiddleRight);
                 selectionCounts[i].fontStyle=FontStyle.Bold;
+                selectionEnergy[i]=Label(card,"",new Vector2(16,-10),new Vector2(Mathf.Min(130,tileWidth-102),26),18,new Color(.8f,.65f,1));
+                selectionEnergy[i].resizeTextForBestFit=true;selectionEnergy[i].resizeTextMinSize=16;selectionEnergy[i].resizeTextMaxSize=18;
+                selectionEnergy[i].gameObject.SetActive(false);
                 selectionTiles[i]=new Target{rect=card,image=card.GetComponent<Image>(),normal=button};
             }
-            selectionGridHint=Label(selectionGrid,"",new Vector2(16,-140),new Vector2(1020,26),15,new Color(.72f,.82f,.87f));
+            selectionGridHint=Label(selectionGrid,"",new Vector2(16,-140),new Vector2(1020,26),15,ConsoleTheme.Muted);
+            selectionGridHint.gameObject.SetActive(false);
         }
         private float LayoutSelectionGrid(bool hud)
         {
@@ -58,10 +69,14 @@ namespace Frontier.Runtime
             var groups=members.GroupBy(e=>e.definition).ToArray();
             int pages=(groups.Length+SelectionPageSize-1)/SelectionPageSize;
             selectionPage=Mathf.Clamp(selectionPage,0,pages-1);
-            int count=Mathf.Min(SelectionPageSize,groups.Length-selectionPage*SelectionPageSize),rows=(count+SelectionColumns-1)/SelectionColumns;
-            float height=68+rows*104;
-            selectionGrid.sizeDelta=new Vector2(1052,height);
-            selectionGridHint.rectTransform.anchoredPosition=new Vector2(16,-40-rows*104);
+            int count=Mathf.Min(SelectionPageSize,groups.Length-selectionPage*SelectionPageSize);
+            int rows=(count+SelectionColumns-1)/SelectionColumns;
+            float width=HudInnerWidth-HudPadding*2,tileWidth=(width-(SelectionColumns-1)*HudGap)/SelectionColumns,rowStride=136+HudGap;
+            selectionGrid.SetParent(selectedCard,false);
+            TopLeft(selectionGrid,new Vector2(HudPadding,-HudContentTop),new Vector2(width,136+(rows-1)*rowStride));
+            TopLeft(previousSelectionPage.rect,new Vector2(1016-HudPadding,HudContentTop-20),new Vector2(56,36));
+            TopLeft(selectionPageLabel.rectTransform,new Vector2(1080-HudPadding,HudContentTop-24),new Vector2(80,28));
+            TopLeft(nextSelectionPage.rect,new Vector2(1168-HudPadding,HudContentTop-20),new Vector2(56,36));
             selectionGridTitle.text=$"SELECTED · {members.Length} ITEMS · {groups.Length} TYPES";
             selectionPageLabel.text=$"{selectionPage+1} / {pages}";
             selectionPageLabel.gameObject.SetActive(pages>1);
@@ -71,11 +86,12 @@ namespace Frontier.Runtime
             {
                 var target=selectionTiles[i];target.rect.gameObject.SetActive(i<count);target.selectionType=null;
                 if(i>=count)continue;
+                TopLeft(target.rect,new Vector2((i%SelectionColumns)*(tileWidth+HudGap),-(i/SelectionColumns)*rowStride),new Vector2(tileWidth,136));
                 var group=groups[selectionPage*SelectionPageSize+i];var type=Session.Catalog[group.Key];
                 target.selectionType=group.Key;target.rect.name="Selection type "+group.Key;target.image.color=target.normal;
                 selectionNames[i].text=type.name;selectionPortraits[i].SetType(type);
             }
-            UpdateSelectionGrid();return height+12;
+            UpdateSelectionGrid();return (rows-1)*rowStride;
         }
         private void BindSelectionTargets()
         {
@@ -94,11 +110,33 @@ namespace Frontier.Runtime
             {
                 var tile=selectionTiles[i];if(tile.selectionType==null)continue;
                 var group=members.Where(e=>e.definition==tile.selectionType).ToArray();
-                float maximum=Session.Catalog[tile.selectionType].health*group.Length;
-                float ratio=maximum>0?Mathf.Clamp01(group.Sum(e=>e.health)/maximum):0;
+                var type=Session.Catalog[tile.selectionType];
+                float health=group.Sum(e=>e.health),maximum=type.health*group.Length;
+                float ratio=maximum>0?Mathf.Clamp01(health/maximum):0;
                 selectionCounts[i].text="×"+group.Length;
-                selectionHealthBars[i].rectTransform.sizeDelta=new Vector2(84*ratio,3);
+                selectionHealthBars[i].rectTransform.sizeDelta=new Vector2(selectionHealthTracks[i].rect.width*ratio,4);
                 selectionHealthBars[i].color=ratio<.3f?new Color(1,.3f,.2f):SupplyTint;
+                var stat=selectionEnergy[i];stat.text="";
+                if(type.energyMax>0)
+                {
+                    stat.text=$"{Mathf.FloorToInt(group.Sum(e=>e.energy))} / {Mathf.CeilToInt(type.energyMax*group.Length)}";
+                    stat.color=new Color(.8f,.65f,1);
+                }
+                else
+                {
+                    var unfinished=type.building?group.Where(e=>!e.complete).ToArray():Array.Empty<VisibleEntity>();
+                    if(unfinished.Length>0)
+                    {
+                        stat.text=$"{Mathf.Min(99,Mathf.FloorToInt(Mathf.Clamp01(unfinished.Average(e=>e.progress))*100))}%";
+                        stat.color=WarningTint;
+                    }
+                    else if(health<maximum)
+                    {
+                        stat.text=$"{Mathf.CeilToInt(health)} / {Mathf.CeilToInt(maximum)}";
+                        stat.color=ConsoleTheme.Muted;
+                    }
+                }
+                stat.gameObject.SetActive(!string.IsNullOrEmpty(stat.text));
             }
             UpdateSelectionHover();
         }
@@ -112,7 +150,7 @@ namespace Frontier.Runtime
                 var tile=selectionTiles[i];if(tile.selectionType==null)continue;
                 bool active=hovered==tile;
                 bool removing=pressed==tile?selectionRemove:RemoveSelectionTypeHeld;
-                tile.image.color=active?(removing?QueueCancelTint:new Color(.12f,.32f,.39f)):button;
+                tile.image.color=active?(removing?QueueCancelTint:ConsoleTheme.Primary):button;
                 if(active)hint=Session.Catalog[tile.selectionType].name+" "+selectionCounts[i].text+" · "+(removing?"Remove this type from selection":hint);
             }
             selectionGridHint.text=hint;

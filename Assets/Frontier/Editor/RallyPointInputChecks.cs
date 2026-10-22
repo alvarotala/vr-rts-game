@@ -113,11 +113,13 @@ namespace Frontier.Editor
                     // The console A alias must consume its press/release without setting a new rally point.
                     session.Select(hq.id, false); session.Context(first, 0, 0); Refresh(); Reset();
                     var clearAction = SelectionActions.For(session).Items.Single(a => a.Id == "clear-rally-point");
-                    var card = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == clearAction.Title && t.gameObject.activeInHierarchy);
+                    Check(!panel.GetComponentsInChildren<RectTransform>().Any(t => t.name == clearAction.Title && t.gameObject.activeInHierarchy),
+                        "HUD omits rally clearing while the shared action remains available to the wheel");
+                    var card = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == "Actions help" && t.gameObject.activeInHierarchy);
                     var panelRay = new Ray(card.TransformPoint(card.rect.center) - card.forward, card.forward);
                     var production = hq.queue.Select(q => q.id).ToArray();
-                    Check(PanelFrame(panelRay, true, false) && PanelFrame(panelRay, false, true), "Console A owns both Clear rally press and release");
-                    Check(!hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Console reset leaves production intact and does not leak A to the map");
+                    Check(PanelFrame(panelRay, true, false) && PanelFrame(panelRay, false, true), "Console A owns both Options help press and release");
+                    Check(hq.hasRallyPoint && hq.rallyPoint.Equals(first) && hq.queue.Select(q => q.id).SequenceEqual(production), "Console help preserves rally and production without leaking A to the map");
                     Check(Field<float>(input, "lastActionPress") < 0, "Console action leaves no pending double-A gesture");
 
                     // Reuse the real wheel route with a map ray underneath, so a leaked confirm is visible.
@@ -160,7 +162,7 @@ namespace Frontier.Editor
                     Array.Fill(session.View.visibility, (byte)2); Call(board, "LateUpdate"); Set(panel, "nextText", 0f); Call(panel, "LateUpdate");
                 }
                 void Reset()
-                { wheel.Close(); Call(input, "ClearPointer"); Set(input, "panelReleasePending", false); Set(input, "wheelReleasePending", false); }
+                { panel.CloseSectionHelp(); wheel.Close(); Call(input, "ClearPointer"); Set(input, "panelReleasePending", false); Set(input, "wheelReleasePending", false); }
                 bool PanelFrame(Ray ray, bool down, bool up)
                 {
                     bool consumed = (bool)Call(input, "RoutePanel", ray, false, false, false, down, up, down, 0f);

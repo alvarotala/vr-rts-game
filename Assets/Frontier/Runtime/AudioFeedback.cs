@@ -36,8 +36,9 @@ namespace Frontier.Runtime
             ui=Source("Interface audio",false);music=Source("Background score",false);
             music.loop=true;music.volume=0;SelectMusic();
             for(int i=0;i<voices.Length;i++)voices[i]=Source("Battle voice "+i,true);
-            Session.ReplayReset+=ResetReplay;Session.Feedback+=Feedback;Session.NewMatch+=BeginMatch;Session.MatchClosed+=CloseMatch;
+            Session.ReplayReset+=ResetReplay;Session.Feedback+=Feedback;Session.NewMatch+=BeginMatch;Session.MatchClosed+=CloseMatch;Session.CountdownChanged+=Countdown;
             SeedView();
+            if(Session.IsCountingDown)Countdown(Session.CountdownNumber);
         }
         private AudioSource Source(string name,bool spatial)
         {
@@ -46,7 +47,8 @@ namespace Frontier.Runtime
             source.rolloffMode=AudioRolloffMode.Linear;source.minDistance=.3f;source.maxDistance=5;source.priority=spatial?160:64;
             return source;
         }
-        private void BeginMatch(){SelectMusic();lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();PlayUi(SoundCue.Start);}
+        private void BeginMatch(){SelectMusic();lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();if(Session.IsCountingDown)Countdown(Session.CountdownNumber);else PlayUi(SoundCue.Start);}
+        private void Countdown(int number)=>PlayUi(number>0?SoundCue.Countdown:SoundCue.Start);
         private void ResetReplay(){lastAttack=lastAbility=lastCommand=0;result=-1;StopBattle();SeedView();if(Session.View!=null)ConsumeEvents(Session.View);}
         private void CloseMatch(){SelectMusic();StopBattle();lastView=null;owned.Clear();result=-1;}
         private void SelectMusic()
@@ -154,7 +156,7 @@ namespace Frontier.Runtime
         private void StopBattle(){foreach(var voice in voices)if(voice!=null)voice.Stop();}
         private void OnDestroy()
         {
-            if(Session!=null){Session.ReplayReset-=ResetReplay;Session.Feedback-=Feedback;Session.NewMatch-=BeginMatch;Session.MatchClosed-=CloseMatch;}
+            if(Session!=null){Session.ReplayReset-=ResetReplay;Session.Feedback-=Feedback;Session.NewMatch-=BeginMatch;Session.MatchClosed-=CloseMatch;Session.CountdownChanged-=Countdown;}
             if(ui!=null)ui.Stop();if(music!=null)music.Stop();StopBattle();
             // Imported map tracks belong to Resources; only procedural clips are ours.
             if(clips!=null)foreach(var clip in clips)Release(clip);Release(generatedScore);

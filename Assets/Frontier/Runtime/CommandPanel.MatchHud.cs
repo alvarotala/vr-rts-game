@@ -9,11 +9,17 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
+        private const float HudWidth=1480,HudInnerWidth=1416,HudBodyTop=188,HudSelectionHeight=236;
+        private const float HudPadding=24,HudContentTop=76,HudGap=16,HudTitleSize=20;
+        private const float HudActionWidth=328,HudActionHeight=112,HudActionStride=128;
+        // Match the physical height of the preceding HUD with its top logo/Pause row.
+        private const float HudWorldScale=1512f/1636f;
         private RectTransform matchHud, resourceStrip, selectedCard, actionCard, groupStrip, matchStrip, harvestingStrip;
-        private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, casterStatus, actionHeading, actionHint, matchClock;
+        private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, casterStatus, actionHeading, actionHint, matchClock, matchMap, matchInfo, optionsTitle, selectionFallbackTitle;
         private Image healthBackground, healthFill;
+        private SelectionPortrait selectedPortrait;
         private RectTransform orderPlanStrip;
-        private Text orderPlanCount, orderPlanSteps, orderPlanHint;
+        private Text orderPlanTitle, orderPlanCount, orderPlanSteps, orderPlanHint;
         private RectTransform rallyPointStrip;
         private Text rallyPointValue, rallyPointHint;
         private readonly Text[] groupCounts=new Text[GameSession.ControlGroupCount];
@@ -23,64 +29,92 @@ namespace Frontier.Runtime
         private void CreateMatchHud()
         {
             matchHud=new GameObject("Match HUD",typeof(RectTransform)).GetComponent<RectTransform>();matchHud.SetParent(root,false);TopLeft(matchHud,Vector2.zero,root.sizeDelta);
-            resourceStrip=Section(matchHud,"Resources",new Vector2(24,-72),new Vector2(1052,92),Color.clear);
-            mineralValue=ResourceCard("MINERALS",0,MineralTint,out _);
-            gasValue=ResourceCard("GAS",356,GasTint,out var gasHint);gasHint.text="CATALYST";
-            supplyValue=ResourceCard("SUPPLY / CAPACITY",712,SupplyTint,out supplyHint);
+            resourceStrip=Section(matchHud,"Resources",new Vector2(32,-44),new Vector2(HudInnerWidth,100),Color.clear);
+            FlatHud(resourceStrip);
+            mineralValue=ResourceCard("MINERALS",0,MineralTint,ConsoleGlyph.Kind.Mineral,out _);
+            gasValue=ResourceCard("GAS",368,GasTint,ConsoleGlyph.Kind.Gas,out _);
+            supplyValue=ResourceCard("POPULATION",736,SupplyTint,ConsoleGlyph.Kind.Supply,out supplyHint);
+            supplyHint.gameObject.SetActive(false);
 
-            selectedCard=Section(matchHud,"Selected item",new Vector2(24,-178),new Vector2(320,296));
-            selectedKind=Label(selectedCard,"SELECTION",new Vector2(16,-10),new Vector2(288,24),15,accent);
-            // The large name is the shared selection label; navigation pages reuse it as their description.
-            selectionRole=Label(selectedCard,"",new Vector2(16,-78),new Vector2(288,30),16,new Color(.72f,.82f,.87f));
-            var bar=Section(selectedCard,"Health bar",new Vector2(16,-115),new Vector2(288,6),new Color(.12f,.22f,.25f));healthBackground=bar.GetComponent<Image>();
-            healthFill=Section(bar,"Health",Vector2.zero,new Vector2(288,6),SupplyTint).GetComponent<Image>();
-            selectionHealth=Label(selectedCard,"",new Vector2(16,-125),new Vector2(288,26),17,Color.white);
-            selectionDetails=Label(selectedCard,"",new Vector2(16,-159),new Vector2(288,66),16,new Color(.72f,.82f,.87f),TextAnchor.UpperLeft);
-            casterStatus=Label(selectedCard,"",new Vector2(16,-228),new Vector2(288,32),14,new Color(.8f,.65f,1),TextAnchor.UpperLeft);
-            Label(selectedCard,"Hover an action to learn more",new Vector2(16,-262),new Vector2(288,24),14,accent);
-
-            actionCard=Section(matchHud,"Selected item actions",new Vector2(360,-178),new Vector2(716,296));
-            actionHeading=Label(actionCard,"ACTIONS",new Vector2(16,-10),new Vector2(684,24),15,accent);
-            actionHint=Label(actionCard,"",new Vector2(36,-66),new Vector2(644,122),22,new Color(.65f,.76f,.82f),TextAnchor.MiddleCenter);
-            harvestingStrip=Section(matchHud,"Harvesting information",new Vector2(24,-422),new Vector2(1052,36));
-
-            groupStrip=Section(matchHud,"Control groups",new Vector2(24,-470),new Vector2(716,100));
-            Label(groupStrip,"CONTROL GROUPS",new Vector2(14,-7),new Vector2(200,24),15,accent);
-            Label(groupStrip,"Tap to recall · Hold to save selection",new Vector2(222,-7),new Vector2(480,24),14,new Color(.65f,.76f,.82f),TextAnchor.MiddleRight);
+            selectedCard=Section(matchHud,"Selected item",new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,HudSelectionHeight));
+            selectedKind=HudTitle(selectedCard,"SELECTION");
+            selectionFallbackTitle=Label(selectedCard,"",new Vector2(112,-HudContentTop),new Vector2(560,32),24,ConsoleTheme.Ink);selectionFallbackTitle.fontStyle=FontStyle.Bold;
+            selectionRole=Label(selectedCard,"",new Vector2(20,-78),new Vector2(284,26),17,ConsoleTheme.Muted);
+            var bar=Section(selectedCard,"Health bar",new Vector2(20,-112),new Vector2(264,6),ConsoleTheme.Track);healthBackground=bar.GetComponent<Image>();
+            healthFill=Section(bar,"Health",Vector2.zero,new Vector2(264,6),SupplyTint).GetComponent<Image>();
+            selectionHealth=Label(selectedCard,"",new Vector2(20,-124),new Vector2(264,28),18,ConsoleTheme.Ink);selectionHealth.fontStyle=FontStyle.Bold;
+            selectionDetails=Label(selectedCard,"",new Vector2(492,-32),new Vector2(700,58),19,ConsoleTheme.Muted,TextAnchor.UpperLeft);
+            selectedPortrait=ModelPortrait(selectedCard,new Vector2(328,-24),new Vector2(128,128));
+            casterStatus=Label(selectedCard,"",new Vector2(492,-102),new Vector2(700,50),18,new Color(.8f,.65f,1),TextAnchor.UpperLeft);
+            actionCard=Section(matchHud,"Selected item actions",Vector2.zero,new Vector2(HudInnerWidth,468));
+            optionsTitle=HudTitle(actionCard,"OPTIONS");
+            actionHint=Label(actionCard,"",new Vector2(40,-48),new Vector2(HudInnerWidth-80,100),24,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
+            harvestingStrip=Section(matchHud,"Harvesting information",Vector2.zero,new Vector2(HudInnerWidth,28),Color.clear);
+            groupStrip=Section(matchHud,"Control groups",Vector2.zero,new Vector2(HudInnerWidth,184));
+            HudTitle(groupStrip,"CONTROL GROUPS");
+            HudSectionHelp(groupStrip,"Control groups help","CONTROL GROUPS",()=>Quest.Active?"Trigger: select · Grip + Trigger: assign":"Click: select · Ctrl + click: assign");
             for(int g=0;g<GameSession.ControlGroupCount;g++)
             {
                 int index=g;
-                groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(14+g*174,-36),new Vector2(166,54),()=>Session.Group(index,false),()=>Session.Group(index,true),out groupCounts[g]);
+                var target=groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(HudPadding+g*346,-HudContentTop),new Vector2(330,84),()=>Session.Group(index,false),null,out groupCounts[g]);
+                var number=target.rect.GetComponentInChildren<Text>();number.text=(g+1).ToString();number.fontSize=34;number.fontStyle=FontStyle.Bold;
+                TopLeft(number.rectTransform,new Vector2(16,-8),new Vector2(48,68));
+                TopLeft(groupCounts[g].rectTransform,new Vector2(84,-16),new Vector2(230,52));groupCounts[g].fontSize=20;groupCounts[g].alignment=TextAnchor.MiddleLeft;
+                CreateGroupFeedback(g,target);
             }
-            matchStrip=Section(matchHud,"Match controls",new Vector2(756,-470),new Vector2(320,100));
-            Label(matchStrip,"MATCH",new Vector2(14,-7),new Vector2(140,24),15,accent);
-            matchClock=Label(matchStrip,"00:00",new Vector2(164,-7),new Vector2(142,24),17,Color.white,TextAnchor.MiddleRight);
-            matchTargets[0]=HudButton(matchStrip,"Full map","Reset view",new Vector2(14,-36),new Vector2(140,54),()=>Board.Fit(),null,out _);
-            matchTargets[1]=HudButton(matchStrip,"Pause","Menu",new Vector2(166,-36),new Vector2(140,54),()=>Show(MenuPage.Pause),null,out _);
-            CreateProductionHud();
-            CreateSelectionGrid();
-            orderPlanStrip=Section(matchHud,"Unit order plan",new Vector2(24,-484),new Vector2(1052,96));
-            Label(orderPlanStrip,"UNIT ORDER PLAN",new Vector2(16,-7),new Vector2(320,24),16,accent);
-            orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-7),new Vector2(686,24),18,Color.white,TextAnchor.MiddleRight);
-            orderPlanSteps=Label(orderPlanStrip,"",new Vector2(16,-34),new Vector2(1020,28),18,Color.white);
-            orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,new Color(.65f,.76f,.82f));
-            rallyPointStrip=Section(matchHud,"Rally point",new Vector2(24,-484),new Vector2(1052,72));
+            matchStrip=Section(matchHud,"Match controls",Vector2.zero,new Vector2(HudInnerWidth,132));
+            matchMap=Label(matchStrip,"",new Vector2(HudPadding,-HudPadding),new Vector2(824,36),24,ConsoleTheme.Ink);matchMap.fontStyle=FontStyle.Bold;
+            matchInfo=Label(matchStrip,"",new Vector2(HudPadding,-68),new Vector2(824,40),20,ConsoleTheme.Muted);
+            actionHeading=Label(matchStrip,"ACTIONS",new Vector2(HudPadding,-68),new Vector2(824,40),20,ConsoleTheme.Ink);actionHeading.fontStyle=FontStyle.Bold;
+            matchClock=Label(matchStrip,"00:00",new Vector2(872,-HudPadding),new Vector2(224,84),32,ConsoleTheme.Ink,TextAnchor.MiddleRight);matchClock.fontStyle=FontStyle.Bold;
+            matchTargets[0]=HudButton(matchStrip,"Full map","",Vector2.zero,new Vector2(264,84),()=>Board.Fit(),null,out _);
+            matchTargets[0].rect.gameObject.SetActive(false);
+            var pause=matchTargets[1]=HudButton(matchStrip,"Pause","",new Vector2(1120,-HudPadding),new Vector2(272,84),()=>Show(MenuPage.Pause),null,out var pauseDetail);pauseDetail.gameObject.SetActive(false);
+            var pauseName=pause.rect.GetComponentInChildren<Text>();pauseName.fontSize=24;pauseName.fontStyle=FontStyle.Bold;
+            TopLeft(pauseName.rectTransform,new Vector2(76,0),new Vector2(180,84));
+            Glyph(pause.rect,ConsoleGlyph.Kind.Pause,new Vector2(24,-24),36,ConsoleTheme.Ink);
+            CreateProductionHud();CreateSelectionGrid();
+            HudSectionHelp(selectedCard,"Selection help","SELECTION",()=>((LocalizedText)selectionGridHint).Source+
+                (string.IsNullOrEmpty(casterStatus.text)?"":"\n\n"+((LocalizedText)casterStatus).Source)+
+                (SelectedMobileUnits().Any(e=>Session.Catalog[e.definition].role=="worker")?"\n\nOptimal: 2 workers per mineral patch · 3 per gas · Automatically assigned to nearby deposits":""));
+            HudSectionHelp(productionStrip,"Production help","PRODUCTION",()=>((LocalizedText)productionHint).Source);
+            HudSectionHelp(actionCard,"Actions help","OPTIONS",()=>"Hover an action to learn more");
+            orderPlanStrip=Section(matchHud,"Unit order plan",Vector2.zero,new Vector2(HudInnerWidth,132));
+            orderPlanTitle=HudTitle(orderPlanStrip,"QUEUED ORDERS");
+            orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-HudPadding),new Vector2(970,28),20,ConsoleTheme.Ink,TextAnchor.MiddleRight);
+            orderPlanSteps=Label(orderPlanStrip,"",new Vector2(HudPadding,-HudContentTop),new Vector2(HudInnerWidth-HudPadding*2,32),20,ConsoleTheme.Ink);
+            orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,ConsoleTheme.Muted);orderPlanHint.gameObject.SetActive(false);
+            HudSectionHelp(orderPlanStrip,"Orders help","QUEUED ORDERS",()=>((LocalizedText)orderPlanHint).Source);
+            rallyPointStrip=Section(matchHud,"Rally point",Vector2.zero,new Vector2(HudInnerWidth,52));FlatHud(rallyPointStrip);
             Label(rallyPointStrip,"RALLY POINT",new Vector2(16,-7),new Vector2(230,24),16,MineralTint);
-            rallyPointValue=Label(rallyPointStrip,"",new Vector2(260,-7),new Vector2(776,24),18,Color.white,TextAnchor.MiddleRight);
-            rallyPointHint=Label(rallyPointStrip,"",new Vector2(16,-38),new Vector2(1020,24),16,new Color(.65f,.76f,.82f));
+            rallyPointValue=Label(rallyPointStrip,"",new Vector2(260,-10),new Vector2(1090,30),20,ConsoleTheme.Ink,TextAnchor.MiddleRight);
+            rallyPointHint=Label(rallyPointStrip,"",new Vector2(16,-38),new Vector2(1020,24),16,ConsoleTheme.Muted);rallyPointHint.gameObject.SetActive(false);
+            rallyPointStrip.gameObject.SetActive(false);
+        }
+        private Text HudTitle(RectTransform parent,string title)
+        {
+            var label=Label(parent,title,new Vector2(HudPadding,-HudPadding),new Vector2(900,28),(int)HudTitleSize,ConsoleTheme.Muted);
+            label.fontStyle=FontStyle.Bold;return label;
+        }
+        private void HudSectionHelp(RectTransform parent,string name,string title,Func<string> hint)
+            =>HudHelpButton(parent,name,new Vector2(HudInnerWidth-HudPadding-44,-16),title,hint);
+        private static void FlatHud(RectTransform rect)
+        {
+            var fill=rect.GetComponent<Image>();fill.sprite=null;fill.type=Image.Type.Simple;
         }
         private RectTransform Section(RectTransform parent,string name,Vector2 position,Vector2 size,Color? color=null)
         {
             var go=new GameObject(name,typeof(RectTransform),typeof(Image));var rect=go.GetComponent<RectTransform>();rect.SetParent(parent,false);TopLeft(rect,position,size);
-            var image=go.GetComponent<Image>();image.color=color??new Color(.04f,.095f,.13f,.98f);image.raycastTarget=false;return rect;
+            var image=go.GetComponent<Image>();image.color=color??ConsoleTheme.Surface;image.raycastTarget=false;
+            ConsoleTheme.StyleSurface(image);return rect;
         }
-        private Text ResourceCard(string label,float x,Color tint,out Text hint)
+        private Text ResourceCard(string label,float x,Color tint,ConsoleGlyph.Kind icon,out Text hint)
         {
-            var card=Section(resourceStrip,label,new Vector2(x,0),new Vector2(340,92));
-            Section(card,"Accent",Vector2.zero,new Vector2(4,92),tint);
-            Label(card,label,new Vector2(18,-8),new Vector2(304,24),16,tint);
-            var value=Label(card,"0",new Vector2(16,-32),new Vector2(210,50),38,Color.white);
-            hint=Label(card,"",new Vector2(216,-36),new Vector2(108,44),14,tint,TextAnchor.MiddleRight);
+            var card=Section(resourceStrip,label,new Vector2(x,0),new Vector2(352,100),Color.clear);
+            Glyph(card,icon,new Vector2(0,-18),64,tint);
+            Label(card,label,new Vector2(84,-6),new Vector2(264,26),20,tint);
+            var value=Label(card,"0",new Vector2(84,-32),new Vector2(248,64),48,ConsoleTheme.Ink);value.fontStyle=FontStyle.Bold;
+            hint=Label(card,"",new Vector2(340,-38),new Vector2(124,44),16,tint,TextAnchor.MiddleRight);
             return value;
         }
         private SelectionPortrait ModelPortrait(RectTransform parent,Vector2 position,Vector2 size,Archetype model=null)
@@ -94,9 +128,9 @@ namespace Frontier.Runtime
         {
             var rect=Section(parent,title,position,size,button);
             bool compact=size.y<54;
-            var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,Color.white,TextAnchor.MiddleCenter);
+            var name=Label(rect,title,new Vector2(8,compact?-2:-3),new Vector2(size.x-16,compact?21:25),compact?16:18,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             if(compact){name.resizeTextForBestFit=true;name.resizeTextMinSize=13;name.resizeTextMaxSize=16;}
-            detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,new Color(.71f,.83f,.87f),TextAnchor.MiddleCenter);
+            detail=Label(rect,subtitle,new Vector2(8,compact?-23:-28),new Vector2(size.x-16,compact?18:21),compact?13:14,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
             if(model!=null)
             {
                 float portraitSize=Mathf.Min(44,size.y-10),left=portraitSize+16;
@@ -114,32 +148,48 @@ namespace Frontier.Runtime
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Hotkeys,guide=Page==MenuPage.Guide,reference=IsReferencePage,report=IsReportPage,history=Page==MenuPage.History,replay=Page==MenuPage.Replay;
             bool production=hud&&SelectedProducers().Length>0;
             bool orders=hud&&SelectedMobileUnits().Length>0;
-            bool rally=hud&&OrderQueueVisuals.RallyProducers(Session).Length>0;
             float selectionSpace=LayoutSelectionGrid(hud);
-            float queueSpace=selectionSpace+(production?180:0)+(orders?108:0)+(rally?84:0)+62;
             orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
-            rallyPointStrip.gameObject.SetActive(rally);
-            productionStrip.anchoredPosition=new Vector2(24,-484-selectionSpace);
-            orderPlanStrip.anchoredPosition=new Vector2(24,-484-selectionSpace-(production?180:0));
-            rallyPointStrip.anchoredPosition=new Vector2(24,-484-selectionSpace-(production?180:0)-(orders?108:0));
-            matchHud.gameObject.SetActive(hud);root.sizeDelta=new Vector2(1100,hud?632+queueSpace:guide?920:controls?1004:reference||history?966:report?1028:replay?1082:690);matchHud.sizeDelta=root.sizeDelta;
-            harvestingStrip.anchoredPosition=new Vector2(24,-422-queueSpace);
-            groupStrip.anchoredPosition=new Vector2(24,-470-queueSpace);
-            matchStrip.anchoredPosition=new Vector2(756,-470-queueSpace);
-            matchTargets[0].rect.gameObject.SetActive(!Quest.Active);
-            var pause=matchTargets[1].rect;
-            pause.GetComponentInChildren<Text>().text=Session.IsOnline?"Menu":"Pause";
-            TopLeft(pause,new Vector2(Quest.Active?14:166,-36),new Vector2(Quest.Active?292:140,54));
-            foreach(RectTransform label in pause)label.sizeDelta=new Vector2(pause.sizeDelta.x-16,label.sizeDelta.y);
+            rallyPointStrip.gameObject.SetActive(false);
+            matchHud.gameObject.SetActive(hud);
+            matchStrip.gameObject.SetActive(hud);
+            matchTargets[0].rect.gameObject.SetActive(false);
+            matchTargets[1].rect.GetComponentInChildren<Text>().text=Session.IsOnline?"Menu":"Pause";
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
-            selection.fontSize=hud?28:20;selection.color=hud?Color.white:new Color(.65f,.76f,.82f);
-            TopLeft(selection.rectTransform,hud?new Vector2(40,-211):new Vector2(30,-169),hud?new Vector2(288,42):new Vector2(1040,38));
-            harvesting.fontSize=hud?17:18;
-            TopLeft(harvesting.rectTransform,hud?new Vector2(40,-425-queueSpace):new Vector2(30,-207),hud?new Vector2(1020,30):new Vector2(1040,28));
+            selection.fontSize=20;selection.fontStyle=hud?FontStyle.Bold:FontStyle.Normal;selection.color=hud?ConsoleTheme.Ink:ConsoleTheme.Muted;
+            selection.alignment=TextAnchor.MiddleLeft;
+            TopLeft(selection.rectTransform,hud?new Vector2(1280,-HudBodyTop-HudPadding):new Vector2(30,-169),hud?new Vector2(72,28):new Vector2(1040,38));
+            harvesting.gameObject.SetActive(true);harvesting.fontSize=hud?18:18;
             status.fontSize=replay?16:hud?18:20;
-            TopLeft(statusBanner,hud?new Vector2(24,-581-queueSpace):new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(hud?1052:1040,48));
-            TopLeft(actions,hud?new Vector2(376,-218):new Vector2(30,guide?-786:controls?-866:reference?-840:-240),hud?new Vector2(684,240):new Vector2(1040,report?716:history?648:replay?756:controls||guide||reference?58:396));
+            if(hud)
+            {
+                float selectedHeight=HudSelectionHeight+selectionSpace;
+                TopLeft(selectedCard,new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,selectedHeight));
+                float next=HudBodyTop+selectedHeight+HudGap;
+                float actionHeight=MatchActionsHeight();
+                TopLeft(actionCard,new Vector2(32,-next),new Vector2(HudInnerWidth,HudContentTop+actionHeight+HudPadding));
+                TopLeft(actions,new Vector2(32+HudPadding,-next-HudContentTop),new Vector2(HudInnerWidth-HudPadding*2,actionHeight));
+                next+=actionCard.rect.height+HudGap;
+                if(production){productionStrip.anchoredPosition=new Vector2(32,-next);next+=productionStrip.rect.height+HudGap;}
+                if(orders){orderPlanStrip.anchoredPosition=new Vector2(32,-next);next+=orderPlanStrip.rect.height+HudGap;}
+                groupStrip.anchoredPosition=new Vector2(32,-next);next+=groupStrip.rect.height+HudGap;
+                TopLeft(harvestingStrip,new Vector2(32,-next),new Vector2(HudInnerWidth,28));
+                TopLeft(harvesting.rectTransform,new Vector2(48,-next-2),new Vector2(HudInnerWidth-32,24));next+=32;
+                TopLeft(statusBanner,new Vector2(32,-next),new Vector2(HudInnerWidth,48));
+                next+=48+HudGap;
+                matchStrip.anchoredPosition=new Vector2(32,-next);
+                root.sizeDelta=new Vector2(HudWidth,next+matchStrip.rect.height+32);
+            }
+            else
+            {
+                root.sizeDelta=new Vector2(1100,guide?920:controls?1004:reference||history?966:report?1028:replay?1082:690);
+                TopLeft(harvesting.rectTransform,new Vector2(30,-207),new Vector2(1040,28));
+                TopLeft(statusBanner,new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(1040,48));
+                TopLeft(actions,new Vector2(30,guide?-786:controls?-866:reference?-840:-240),new Vector2(1040,report?716:history?648:replay?756:controls||guide||reference?58:396));
+            }
+            matchHud.sizeDelta=root.sizeDelta;
+            LayoutConsoleChrome();
         }
         private void UpdateMatchHud()
         {
@@ -147,15 +197,15 @@ namespace Frontier.Runtime
             mineralValue.text=view.minerals.ToString("N0",CultureInfo.InvariantCulture);gasValue.text=view.catalyst.ToString("N0",CultureInfo.InvariantCulture);
             supplyValue.text=$"{view.supply} / {view.capacity}";
             bool full=view.supply>=view.capacity;
-            supplyValue.color=full?WarningTint:Color.white;supplyHint.color=full?WarningTint:SupplyTint;
-            supplyHint.text=full?"FULL":$"{view.capacity-view.supply} available";
+            supplyValue.color=full?WarningTint:ConsoleTheme.Ink;supplyHint.text="";
             matchClock.text=$"{view.tick/1200:00}:{view.tick/20%60:00}";
+            matchMap.text=Session.Map.title;matchInfo.text=MatchDescription;
             for(int g=0;g<GameSession.ControlGroupCount;g++){int count=Session.GroupSize(g);groupCounts[g].text=count==0?"Empty":count+" assigned";}
 
             var selected=view.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
             selectedKind.text="SELECTION";selectionRole.text="";selectionHealth.text="";selectionDetails.text="";casterStatus.text="";
-            healthBackground.gameObject.SetActive(false);
-            TopLeft(selectionDetails.rectTransform,new Vector2(16,-159),new Vector2(288,66));
+            healthBackground.gameObject.SetActive(false);selectedPortrait.gameObject.SetActive(false);
+            TopLeft(selectionDetails.rectTransform,new Vector2(492,-32),new Vector2(800,58));
             if(selected.Length==1)DescribeEntity(selected[0],false);
             else if(selected.Length>1)
             {
@@ -165,7 +215,7 @@ namespace Frontier.Runtime
                 var types=selected.GroupBy(e=>e.definition).OrderByDescending(g=>g.Count()).ToArray();
                 selectionDetails.text=string.Join("\n",types.Take(5).Select(g=>$"{g.Count()} × {Session.Catalog[g.Key].name}"));
                 if(types.Length>5)((LocalizedText)selectionDetails).Append($"\n+ {types.Skip(5).Sum(g=>g.Count())} other items");
-                TopLeft(selectionDetails.rectTransform,new Vector2(16,-107),new Vector2(288,118));
+                TopLeft(selectionDetails.rectTransform,new Vector2(492,-32),new Vector2(800,100));
             }
             else
             {
@@ -180,13 +230,34 @@ namespace Frontier.Runtime
                 else if(pointed!=null)DescribeEntity(pointed,true);
                 else{selection.text="No selection";selectionDetails.text="Select a unit or building to see its name and available orders.";}
             }
+            // Selected items occupy the whole row. Hover-only information uses
+            // the same content area when there are no selection cards.
+            bool fallback=selected.Length==0&&(view.resources.Any(r=>r.id==(Session.SelectedResource>0?Session.SelectedResource:Board.HoveredResource))
+                ||view.entities.Any(e=>e.id==Board.Hovered&&!e.remembered));
+            selectionFallbackTitle.text=selection.text;
+            selectionFallbackTitle.gameObject.SetActive(fallback);
+            selectionRole.gameObject.SetActive(fallback);selectionDetails.gameObject.SetActive(fallback);
+            TopLeft(selectionRole.rectTransform,new Vector2(112,-HudContentTop-40),new Vector2(560,28));
+            TopLeft(selectionDetails.rectTransform,new Vector2(704,-HudContentTop),new Vector2(664,100));
+            TopLeft(selectedPortrait.rectTransform,new Vector2(HudPadding,-HudContentTop),new Vector2(64,64));
+            selectedPortrait.gameObject.SetActive(fallback&&selectedPortrait.gameObject.activeSelf);
+            TopLeft(healthBackground.rectTransform,new Vector2(112,-HudContentTop-116),new Vector2(264,6));
+            TopLeft(selectionHealth.rectTransform,new Vector2(112,-HudContentTop-80),new Vector2(560,28));
+            healthBackground.gameObject.SetActive(fallback&&healthBackground.gameObject.activeSelf);
+            selectionHealth.gameObject.SetActive(fallback&&!string.IsNullOrEmpty(selectionHealth.text));
+            selectedKind.text="SELECTION";selection.text=selected.Length>0?selected.Length.ToString():"";
             UpdateCasterStatus(selected);
+            casterStatus.gameObject.SetActive(false);
             UpdateMatchActionDetails();
-            UpdateHarvesting(selected);harvestingStrip.gameObject.SetActive(!string.IsNullOrEmpty(harvesting.text));
+            UpdateHarvesting(selected);
+            bool contextualHarvesting=!string.IsNullOrEmpty(harvesting.text)&&harvesting.text!=Localization.Text("Optimal: 2 workers per mineral patch · 3 per gas · Automatically assigned to nearby deposits");
+            harvesting.gameObject.SetActive(contextualHarvesting);harvestingStrip.gameObject.SetActive(contextualHarvesting);
             UpdateProductionHud();
             UpdateSelectionGrid();
             UpdateOrderPlanHud();
             UpdateRallyPointHud();
+            LayoutHudCounters();
+            UpdateGroupFeedback();
             status.text=Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
             UpdateStatusStyle(!Session.IsPaused&&Session.MessageIsError);
         }
@@ -201,6 +272,7 @@ namespace Frontier.Runtime
                 var ability=Session.Catalog.Ability(id);if(ability==null)continue;total++;
                 if(caster.complete&&caster.health>0&&caster.energy>=ability.energyCost&&!caster.abilityCooldowns.Any(c=>c.ability==id&&c.readyTick>Session.View.tick))ready++;
             }
+            TopLeft(casterStatus.rectTransform,casters.Length>1?new Vector2(20,-100):new Vector2(492,-102),casters.Length>1?new Vector2(264,68):new Vector2(700,50));
             casterStatus.text=$"ENERGY {Mathf.FloorToInt(energy)} / {Mathf.CeilToInt(capacity)}"+(casters.Length>1?$" · {casters.Length} casters":"")+$"\n{ready} / {total} abilities ready";
         }
         private void UpdateMatchActionDetails()
@@ -210,6 +282,8 @@ namespace Frontier.Runtime
             var available=SelectionActions.For(Session);
             actionHeading.text=Session.BuildDefinition!=null?"PLACING · "+Session.Catalog[Session.BuildDefinition].name
                 :Session.AbilityDefinitionId!=null?"TARGET · "+Session.PendingAbility.name:available.Heading;
+            actionHeading.gameObject.SetActive(Session.BuildDefinition!=null||Session.AbilityDefinitionId!=null);
+            matchInfo.gameObject.SetActive(!actionHeading.gameObject.activeSelf);
             foreach(var target in targets.Where(t=>t.actionId!=null))
             {
                 var action=available.Items.FirstOrDefault(a=>a.Id==target.actionId);if(action==null)continue;
@@ -233,8 +307,8 @@ namespace Frontier.Runtime
         private void UpdateOrderPlanHud()
         {
             var units=SelectedMobileUnits();if(units.Length==0)return;
-            int count=units.Sum(e=>e.pendingOrders.Length),withOrders=units.Count(e=>e.pendingOrders.Length>0);
-            orderPlanCount.text=units.Length==1?$"{count} queued order{(count==1?"":"s")}":$"{count} queued orders across {withOrders} / {units.Length} units";
+            int count=units.Sum(e=>e.pendingOrders.Length);
+            orderPlanCount.text=count.ToString();
             var representative=OrderQueueVisuals.Representative(Session);
             if(representative==null)
             {
@@ -256,15 +330,17 @@ namespace Frontier.Runtime
             var type=Session.Catalog[entity.definition];
             selectedKind.text=pointing?"POINTING AT · "+(entity.owner==Session.View.player?"ALLY":"ENEMY"):type.building?"SELECTED BUILDING":"SELECTED UNIT";
             selection.text=type.name;
+            selectedPortrait.SetType(type);selectedPortrait.gameObject.SetActive(true);
+            TopLeft(selectionDetails.rectTransform,new Vector2(492,-32),new Vector2(800,72));
             selectionRole.text=(type.building?BuildingRole(type.role):UnitVisuals.RoleName(type.role))+" · "+ShortFaction(type.faction);
             float ratio=Mathf.Clamp01(entity.health/type.health);healthBackground.gameObject.SetActive(true);
-            healthFill.rectTransform.sizeDelta=new Vector2(288*ratio,6);healthFill.color=ratio<.3f?WarningTint:SupplyTint;
+            healthFill.rectTransform.sizeDelta=new Vector2(264*ratio,6);healthFill.color=ratio<.3f?WarningTint:SupplyTint;
             selectionHealth.text=$"{Mathf.CeilToInt(entity.health)} / {Mathf.CeilToInt(type.health)} HP";
             if(!entity.complete)selectionDetails.text=$"UNDER CONSTRUCTION · {Mathf.Min(99,Mathf.FloorToInt(entity.progress*100))}%\n"+
                 (type.role=="hq"?"Cannot receive resources yet": "Not operational yet");
             else if(entity.queue.Length>0)
             {
-                selectionDetails.text=pointing?$"{entity.queue.Length} queued\nSelect to view production":$"1 active · {entity.queue.Length-1} waiting\nSee production queue below";
+                selectionDetails.text=pointing?$"{entity.queue.Length} queued\nSelect to view production":$"1 active · {entity.queue.Length-1} waiting";
             }
             else selectionDetails.text=type.building?"Ready":OrderLabel(entity.order);
         }
@@ -276,54 +352,98 @@ namespace Frontier.Runtime
         {
             switch(order){case CommandKind.Move:return "Moving";case CommandKind.Attack:return "Attacking";case CommandKind.AttackMove:return "Attack move";case CommandKind.Gather:return "Gathering resources";case CommandKind.Build:return "Building";case CommandKind.Repair:return "Repairing";case CommandKind.Hold:return "Holding position";case CommandKind.Cast:return "Casting ability";default:return "Idle";}
         }
+        // The empty state and every selection share a fixed three-row grid.
+        private float MatchActionsHeight()=>HudActionHeight+HudActionStride*2;
         private void BuildMatchActions()
         {
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
-            BindProductionTargets();
-            BindSelectionTargets();
-            var available=SelectionActions.For(Session);
-            actionHint.text=available.Hint;actionHeading.text=available.Heading;
-            if(Session.BuildDefinition!=null)actionHeading.text="PLACING · "+Session.Catalog[Session.BuildDefinition].name;
-            var groups=available.Items.GroupBy(a=>a.Category).ToArray();
-            int rows=groups.Sum(g=>(g.Count()+2)/3);
-            float rowHeight=rows==0?60:Mathf.Min(60,(actions.rect.height-groups.Length*20)/rows);
-            // Four rows of mixed producer actions still need room for both text lines.
-            // Reduce only their spacing; ordinary 54-pixel cards keep their layout.
-            float buttonHeight=Mathf.Min(rowHeight-2,Mathf.Max(42,rowHeight-6)),y=0;
-            foreach(var group in groups)
+            BindProductionTargets();BindSelectionTargets();BindHudHelpTargets();
+            var available=SelectionActions.For(Session);actionHeading.text=available.Heading;
+            actionHint.text="";actionHint.gameObject.SetActive(false);
+            // Non-interactive slots remain visible, even when the selection has no commands.
+            var slots=new GameObject("Option placeholders",typeof(RectTransform)).GetComponent<RectTransform>();
+            slots.SetParent(actions,false);TopLeft(slots,Vector2.zero,actions.sizeDelta);
+            for(int row=0;row<3;row++)for(int column=0;column<4;column++)
+                Section(slots,"Empty option",new Vector2(column==3?1040:column*(HudActionWidth+HudGap),-row*HudActionStride),
+                    new Vector2(HudActionWidth,HudActionHeight),Color.Lerp(ConsoleTheme.Surface,button,.32f));
+            foreach(var action in available.Items.Where(a=>a.Category!=ActionCategory.Cancel))
             {
-                var tint=ActionTint(group.Key);
-                Label(actions,CategoryLabel(group.Key),new Vector2(8,-y),new Vector2(660,18),13,tint);
-                y+=18;int column=0;
-                foreach(var action in group)
+                var captured=action;
+                bool side=action.Category==ActionCategory.Orders||action.Category==ActionCategory.Research;
+                int slot=MatchActionSlot(action,available);
+                float x=side?1040:slot%3*(HudActionWidth+HudGap),y=(side?slot:slot/3)*HudActionStride;
+                bool active=captured.Building&&captured.Id=="build:"+Session.BuildDefinition;
+                var tint=ActionTint(action.Category);
+                var target=HudButton(actions,captured.Title,MatchActionDetail(captured,active),new Vector2(x,-y),new Vector2(HudActionWidth,HudActionHeight),()=>captured.Execute(),null,out var detail,captured.Model);
+                target.normal=active?ConsoleTheme.Primary:Color.Lerp(button,tint.linear,.12f);
+                target.image.color=target.normal;target.help=captured;target.actionId=captured.Id;
+                var name=target.rect.GetComponentInChildren<Text>();
+                name.fontSize=22;name.fontStyle=FontStyle.Bold;name.resizeTextForBestFit=false;
+                name.alignment=detail.alignment=TextAnchor.MiddleLeft;
+                detail.color=Color.Lerp(ConsoleTheme.Ink,tint,.35f);detail.fontSize=20;
+                if(captured.Model!=null)
                 {
-                    var captured=action;
-                    bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
-                    var target=HudButton(actions,action.Title,MatchActionDetail(action,active),new Vector2(column*230,-y),new Vector2(218,buttonHeight),()=>captured.Execute(),null,out var detail,action.Model);
-                    target.normal=Color.Lerp(button,tint,active ? .48f : .16f);target.image.color=target.normal;target.help=action;target.actionId=action.Id;
-                    if(active)
-                    {
-                        detail.color=Color.white;detail.fontStyle=FontStyle.Bold;
-                        Section(target.rect,"Selected top",Vector2.zero,new Vector2(218,3),tint);
-                        Section(target.rect,"Selected bottom",new Vector2(0,3-buttonHeight),new Vector2(218,3),tint);
-                        Section(target.rect,"Selected right",new Vector2(215,0),new Vector2(3,buttonHeight),tint);
-                    }
-                    Section(target.rect,"Category accent",Vector2.zero,new Vector2(3,buttonHeight),tint);
-                    targets.Add(target);actionIndex++;
-                    if(++column==3){column=0;y+=rowHeight;}
+                    var portrait=target.rect.GetComponentInChildren<SelectionPortrait>();
+                    TopLeft(portrait.rectTransform,new Vector2(16,-32),new Vector2(48,48));
+                    TopLeft(name.rectTransform,new Vector2(80,-16),new Vector2(HudActionWidth-96,48));
+                    TopLeft(detail.rectTransform,new Vector2(80,-68),new Vector2(HudActionWidth-96,28));
                 }
-                if(column!=0)y+=rowHeight;
-                y+=2;
+                else
+                {
+                    bool order=captured.Category==ActionCategory.Orders;
+                    detail.gameObject.SetActive(!order);
+                    TopLeft(name.rectTransform,new Vector2(24,order?0:-12),new Vector2(HudActionWidth-48,order?HudActionHeight:48));
+                    TopLeft(detail.rectTransform,new Vector2(24,-64),new Vector2(HudActionWidth-48,32));
+                }
+                if(active){detail.color=ConsoleTheme.Ink;detail.fontStyle=FontStyle.Bold;}
+                targets.Add(target);actionIndex++;
             }
-            actionHint.gameObject.SetActive(actionIndex==0);
+        }
+        private int MatchActionSlot(SelectionAction action,SelectionActions available)
+        {
+            // Use the faction catalog, never the currently available subset:
+            // selecting another producer cannot move a known action.
+            if(action.Category==ActionCategory.Orders)
+                return action.Id=="attack-move"?0:action.Id=="stop"?1:2;
+            if(action.Category==ActionCategory.Research)
+                return Array.FindIndex(Session.Catalog.Definition.upgrades,u=>action.Id=="research:"+u.id);
+            if(action.Category==ActionCategory.Abilities)
+                return Array.FindIndex(Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction)
+                    .SelectMany(t=>t.abilities).Distinct().ToArray(),id=>action.Id=="ability:"+id);
+            if(action.Category==ActionCategory.Train)
+            {
+                // A single producer uses its own compact roster. A multi-role
+                // selection uses the combined roster in the same catalog order.
+                var train=available.Items.Where(a=>a.Category==ActionCategory.Train).ToArray();
+                return Array.FindIndex(train,a=>a.Id==action.Id);
+            }
+            var roles=action.Category==ActionCategory.Build
+                ?new[]{"hq","extractor","supply","barracks","tech","academy","defense"}
+                :new[]{"worker","scout","melee","ranged","siege","caster"};
+            return Array.IndexOf(roles,action.Model.role);
+        }
+        private void LayoutHudCounter(Text title,Text count,RectTransform section)
+        {
+            float left=HudPadding+title.preferredWidth+12;
+            Vector2 position=new Vector2(left,-HudPadding);
+            if(count.transform.parent!=section)position+=(Vector2)section.anchoredPosition;
+            TopLeft(count.rectTransform,position,new Vector2(HudInnerWidth-left-HudPadding-60,28));
+            count.alignment=TextAnchor.MiddleLeft;
+        }
+        private void LayoutHudCounters()
+        {
+            if(Page!=MenuPage.Actions||root==null||!root.gameObject.activeInHierarchy)return;
+            LayoutHudCounter(selectedKind,selection,selectedCard);
+            LayoutHudCounter(productionTitle,productionCount,productionStrip);
+            LayoutHudCounter(orderPlanTitle,orderPlanCount,orderPlanStrip);
         }
         private static string MatchActionDetail(SelectionAction action,bool active)
         {
-            // The category already says Build / Train; leave room for the model
-            // and cost. Roles and requirements remain in the action's hover help.
+            // Keep costs readable; roles and requirements live in hover help.
             var model=action.Model;
-            string detail=model==null?action.Detail:model.minerals+"M"+(model.catalyst>0?" / "+model.catalyst+"G":"");
-            return (active?"SELECTED · ":"")+detail;
+            string detail=model==null?action.Detail:model.minerals+" M"+(model.catalyst>0?" / "+model.catalyst+" G":"");
+            if(action.Category==ActionCategory.Research)detail=detail.Substring(detail.IndexOf('·')+1).Trim();
+            return detail;
         }
     }
 }

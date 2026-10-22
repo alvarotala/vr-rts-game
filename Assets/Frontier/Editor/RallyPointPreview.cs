@@ -42,14 +42,17 @@ namespace Frontier.Editor
                     var supply=AddBuilding("supply",1002,new Point(8,8));
                     var tech=AddBuilding("tech",1003,new Point(20,24));Refresh();
                     session.Select(hq.id,false);Refresh();
-                    Check(Shown("rallyPointStrip")&&Text("rallyPointValue")=="DEFAULT · No rally point","Selected headquarters explains the default rally behavior");
-                    Check(Text("rallyPointHint").Contains("A on terrain: set rally point")&&!Plan().gameObject.activeInHierarchy,"Default rally needs no map marker and describes its shortcut");
+                    Check(!Shown("rallyPointStrip")&&session.CanSetRallyPoint&&!hq.hasRallyPoint,"Selected headquarters retains rally input without a dedicated HUD row");
+                    Check(!Plan().gameObject.activeInHierarchy,"Default rally needs no map marker");
+                    var optionsPosition=Field<RectTransform>(panel,"actionCard").anchoredPosition;
+                    var productionPosition=Field<RectTransform>(panel,"productionStrip").anchoredPosition;
                     CapturePanel(faction+"-default");
                     Check(session.Send(CommandKind.Train,worker.definition),"Training remains available before setting a rally point");
                     int productionId=hq.queue[0].id;
                     Check(session.Context(new Point(24,14),0,0)>0,"A contextual terrain action sets a headquarters rally point");Refresh();
                     Check(hq.hasRallyPoint&&hq.queue[0].id==productionId,"Setting a rally point preserves the active production item");
-                    Check(Text("rallyPointValue").Contains("SET")&&Text("rallyPointValue").Contains("24")&&Shown("productionStrip"),"Rally coordinates and production remain visible together");
+                    Check(Mathf.Abs(hq.rallyPoint.x-24.5f)<.01f&&Mathf.Abs(hq.rallyPoint.y-14.5f)<.01f&&Shown("productionStrip")&&!Shown("rallyPointStrip"),
+                        "Accepted rally coordinates remain in gameplay while the HUD keeps only production");
                     Check(Plan().gameObject.activeInHierarchy&&PlanMesh().vertexCount>0,"Selected producer draws a rally marker");
                     Check(Plan().GetComponentsInChildren<Collider>(true).Length==0,"Rally overlays never intercept selection rays");
                     Check(Plan().GetComponent<Renderer>().sharedMaterial.shader.name=="Frontier/Board","Rally overlays use the clipped board material");
@@ -65,34 +68,41 @@ namespace Frontier.Editor
                     for(float t=.3f;t<.75f;t+=.01f){if(OnMesh(Vector2.Lerp(origin,destination,t)))solid++;else gap++;}
                     Check(solid>0&&gap>0,"Rally connection has both visible dashes and empty gaps");
                     Check(OnMesh(destination),"Rally destination dot matches the accepted cell center");
-                    Check(PanelGap("productionStrip","rallyPointStrip")>=11&&PanelGap("rallyPointStrip","harvestingStrip")>=11,"Rally and production sections do not overlap each other or harvesting");
+                    Check(Field<RectTransform>(panel,"actionCard").anchoredPosition==optionsPosition
+                        &&Field<RectTransform>(panel,"productionStrip").anchoredPosition==productionPosition,
+                        "Setting a rally point does not move Options or production targets");
                     CaptureBoard(faction+"-rally");CapturePanel(faction+"-production");
 
                     session.Select(barracks.id,false);Check(session.Context(new Point(26,20),0,0)>0,"Barracks accepts its own independent rally point");
                     session.Select(hq.id,true);Refresh();
-                    Check(OrderQueueVisuals.RallyProducers(session).Length==2&&Text("rallyPointValue")=="2 / 2 rally points set","Multiple selected producers keep their individual destinations visible");
-                    Check(Shown("productionStrip")&&Shown("rallyPointStrip")&&Text("productionTitle")=="GROUP PRODUCTION"
-                        &&Text("productionCount")=="1 / 10"&&hq.queue[0].id==productionId&&barracks.queue.Count==0
-                        &&PanelGap("productionStrip","rallyPointStrip")>=11,"Multiple producers keep rally separate from their production summary and preserve individual queues");
+                    Check(OrderQueueVisuals.RallyProducers(session).Length==2&&hq.hasRallyPoint&&barracks.hasRallyPoint,
+                        "Multiple selected producers retain their individual rally destinations");
+                    Check(Shown("productionStrip")&&!Shown("rallyPointStrip")&&Text("productionTitle")=="PRODUCTION"
+                        &&Text("productionCount")=="1 / 10"&&hq.queue[0].id==productionId&&barracks.queue.Count==0,
+                        "Multiple producers preserve individual queues without restoring the removed rally row");
                     CaptureBoard(faction+"-multiple");
 
                     session.Select(tech.id,false);
                     Check(session.Context(new Point(26,20),0,0)>0&&session.Send(CommandKind.Research,"attack")&&session.Send(CommandKind.Train,session.Catalog.Role(faction,"siege").id),"Technology building combines rally, research and training");Refresh();
                     var actions=Field<RectTransform>(panel,"actions");
-                    Check(actions.GetComponentsInChildren<Text>().Where(t=>t.text=="Clear rally point"||t.text=="Clear Rally Point").Any(),"Technology building exposes its clear-rally action");
-                    Check(actions.Cast<Transform>().OfType<RectTransform>().All(r=>-r.anchoredPosition.y+r.sizeDelta.y<=actions.sizeDelta.y+.01f),"Technology actions fit inside their card with research, production and rally controls");
-                    Check(Text("productionName")=="Firepower I"&&Shown("rallyPointStrip"),"Research queue and rally remain separate readable sections");CapturePanel(faction+"-technology");
+                    Check(!actions.Cast<Transform>().Any(t=>t.name=="Clear Rally Point"||t.name=="Cancel / refund")
+                        &&SelectionActions.For(session).Items.Any(action=>action.Id=="clear-rally-point"&&action.Category==ActionCategory.Cancel),
+                        "Technology HUD hides redundant controls while shared rally clearing remains available");
+                    Check(actions.Cast<Transform>().OfType<RectTransform>().All(r=>-r.anchoredPosition.y+r.sizeDelta.y<=actions.sizeDelta.y+.01f),"Technology training and research actions fit inside Options");
+                    Check(Text("productionName")=="Firepower I"&&!Shown("rallyPointStrip")&&Plan().gameObject.activeInHierarchy,
+                        "Research remains visible while its rally is represented on the map");CapturePanel(faction+"-technology");
 
                     session.Select(worker.id,false);Check(session.Send(CommandKind.Move,position:new Point(22,18)),"Unit movement remains available");
                     Check(session.Send(CommandKind.AttackMove,position:new Point(25,23),append:true),"Unit attack waypoint is queued");Refresh();
                     int unitVertices=PlanMesh().vertexCount;session.Select(hq.id,true);Refresh();
-                    Check(Shown("orderPlanStrip")&&Shown("rallyPointStrip")&&PlanMesh().vertexCount>unitVertices,"Mixed selection displays the unit plan and producer rally simultaneously");
+                    Check(Shown("orderPlanStrip")&&!Shown("rallyPointStrip")&&PlanMesh().vertexCount>unitVertices,
+                        "Mixed selection keeps its unit plan and map rally without a separate rally HUD row");
                     Check(PlanMesh().colors.Any(c=>c.r>.9f&&c.g<.25f)&&PlanMesh().colors.Any(c=>c.b>.8f&&c.r<.4f),"Unit attack waypoints retain red beside the cyan rally flag");
-                    Check(Text("rallyPointHint").Contains("Select only production buildings")&&PanelGap("orderPlanStrip","rallyPointStrip")>=11,"Mixed selection explains the producer-only shortcut and avoids overlapping sections");
+                    Check(!session.CanSetRallyPoint&&!Shown("rallyPointStrip"),"Mixed selection does not arm the producer-only rally shortcut");
                     CaptureBoard(faction+"-mixed-map");CapturePanel(faction+"-mixed");
 
                     session.Select(hq.id,false);Check(session.ClearRallyPoint(),"Clear rally point action is accepted");Refresh();
-                    Check(!Plan().gameObject.activeInHierarchy&&Text("rallyPointValue").Contains("DEFAULT"),"Clearing the rally removes its map flag immediately");
+                    Check(!Plan().gameObject.activeInHierarchy&&!hq.hasRallyPoint,"Clearing the rally removes its map flag immediately");
                     session.Select(barracks.id,false);Refresh();board.SetVisible(false);
                     Check(!Plan().gameObject.activeInHierarchy,"Hidden board hides its rally overlay");board.SetVisible(true);Refresh();
                     Check(Plan().gameObject.activeInHierarchy,"Restored board restores the rally overlay");
@@ -121,11 +131,6 @@ namespace Frontier.Editor
                 }
                 string Text(string name)=>Field<Text>(panel,name).text;
                 bool Shown(string name)=>Field<RectTransform>(panel,name).gameObject.activeInHierarchy;
-                float PanelGap(string upper,string lower)
-                {
-                    var a=Field<RectTransform>(panel,upper);var b=Field<RectTransform>(panel,lower);
-                    return -b.anchoredPosition.y-(-a.anchoredPosition.y+a.sizeDelta.y);
-                }
                 Transform Plan()=>board.Content.Find("Unit order waypoints");
                 Mesh PlanMesh()=>Plan().GetComponent<MeshFilter>().sharedMesh;
                 bool OnMesh(Vector2 point)

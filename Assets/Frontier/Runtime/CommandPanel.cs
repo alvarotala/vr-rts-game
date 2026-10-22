@@ -38,17 +38,16 @@ namespace Frontier.Runtime
         private float menuMessageUntil;
         private RectTransform moveHandle, resetHandle;
         private Image moveImage, resetImage;
-        private bool moving, customPosition, positionInitialized;
-        private bool lobbyPositionInitialized;
-        private Vector3 lobbyPosition;
-        private const float LobbyRecallDistance=3.25f;
-        private bool UsesLobbyPosition=>Quest!=null&&Session!=null&&Quest.Active&&!Session.Running;
+        private bool moving, positionInitialized;
+        private Vector3 windowPosition, preferredWindowOffset=new Vector3(0,-.12f,1.25f);
+        private float windowScale;
+        private const float WindowRecallDistance=3.25f;
         private float grabDistance;
-        private Vector3 grabOffset, boardOffset;
+        private Vector3 grabOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
-        [Serializable] private sealed class PanelPlacement { public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; }
-        private readonly Color background = new Color(.025f,.055f,.085f,.97f), button = new Color(.075f,.15f,.21f,1), accent = new Color(.3f,.88f,.9f,1);
+        [Serializable] private sealed class PanelPlacement { public int version; public Vector3 offset; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; public string hintTitle; public Func<string> hint; }
+        private readonly Color background = ConsoleTheme.Background, button = ConsoleTheme.Card, accent = ConsoleTheme.Accent;
         private void Start()
         {
             Bindings=HotkeyBindings.Load();
@@ -56,8 +55,9 @@ namespace Frontier.Runtime
             font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
-            root=go.GetComponent<RectTransform>();root.sizeDelta=new Vector2(1100,526);
-            var image=go.AddComponent<Image>();image.color=background;
+            root=go.GetComponent<RectTransform>();root.pivot=Vector2.one*.5f;root.sizeDelta=new Vector2(1100,526);
+            windowScale=Mathf.Clamp(Board.Width/1300f,.00065f,.0012f)*HudWorldScale;
+            var image=go.AddComponent<Image>();image.color=background;ConsoleTheme.StyleSurface(image);
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
             headline=Label(root,"LITTLE LEGION",new Vector2(30,-84),new Vector2(1040,44),30,accent);
@@ -79,83 +79,76 @@ namespace Frontier.Runtime
             CreateControlGuide();
             CreateHotkeys();
             CreateReferenceGuide();
+            CreateConsoleChrome();
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
                 {
                     var saved=JsonUtility.FromJson<PanelPlacement>(PlayerPrefs.GetString(PlacementKey));
-                    if(saved!=null&&IsFinite(saved.offset)&&saved.offset.magnitude<8)
-                    {boardOffset=saved.offset;customPosition=true;positionInitialized=true;}
+                    // Version 1 was board-relative. It must not move the new shared window
+                    // to an unrelated room location when the board anchor restores.
+                    if(saved!=null&&saved.version==2&&IsFinite(saved.offset)&&saved.offset.magnitude<3.25f&&saved.offset.magnitude>.25f)
+                        preferredWindowOffset=saved.offset;
                 }
                 catch(ArgumentException){PlayerPrefs.DeleteKey(PlacementKey);}
             }
             Session.NewMatch+=OnMatchStarted;Session.MatchClosed+=OnMatchClosed;
             LoadOnlineEndpoint();
             Page=Session.IsReplay?MenuPage.Replay:Session.Running?(Session.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
+            Canvas.willRenderCanvases+=LayoutHudCounters;
             Rebuild();
         }
         private void OnDestroy()
         {
+            Canvas.willRenderCanvases-=LayoutHudCounters;
             if(Session==null)return;
             Session.NewMatch-=OnMatchStarted;Session.MatchClosed-=OnMatchClosed;
         }
-        private void OnMatchStarted(){shownReport=null;Show(Session.IsReplay?MenuPage.Replay:MenuPage.Actions);}
+        private void OnMatchStarted(){shownReport=null;Show(Session.IsReplay?MenuPage.Replay:MenuPage.Actions);UpdateCountdownPresentation();}
         private void OnMatchClosed(){shownReport=null;if(Session.LastClosedWasReplay)OpenHistory();else Show(MenuPage.Main);}
         private void LateUpdate()
         {
             if(root==null)return;
             Board.SetVisible(ShowsBoard);
-            if(!UpdatePosition(!UsesLobbyPosition||Quest.HeadTracked))return;
+            if(!UpdatePosition(!Quest.Active||Quest.HeadTracked))return;
+            if(UpdateCountdownPresentation())return;
             if(Session.IsConnecting&&!Session.Running&&Page!=MenuPage.OnlineSetup)Show(MenuPage.OnlineSetup);
             if(Session.Running&&!Session.IsReplay&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
-            if(!AcceptsGameInput||Quest.Placing)HideActionHelp();
+            if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
+            if(SectionHelpOpen)UpdateActionHelp();
+            UpdateGroupFeedback();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
             if(Page!=MenuPage.Actions){UpdateMenuText();return;}
             UpdateMatchHud();
         }
         private bool UpdatePosition(bool headTracked)
         {
-            if(UsesLobbyPosition)
+            if(!headTracked||(Quest.Active&&!Session.Running&&Session.HasSystemPause))
             {
-                // Wait for the real eye pose, never capture the rig's startup origin.
-                // The menu stays fixed in the room after placement, independent of
-                // asynchronous board-anchor restoration and normal head movement.
-                if(!headTracked||Session.HasSystemPause)
-                {
-                    if(moving){moving=false;SavePosition();}
-                    CancelPointerInteraction();
-                    root.gameObject.SetActive(false);return false;
-                }
-                var eye=Quest.Camera.transform;
-                // Preserve the user's lobby placement through matches and interruptions.
-                // A distant menu recovers after walking away or Quest relocalization;
-                // turning the head or returning to the lobby is not a placement reset.
-                if(lobbyPositionInitialized&&!moving&&Vector3.Distance(lobbyPosition,eye.position)>LobbyRecallDistance)
-                {lobbyPositionInitialized=false;moving=false;CancelPointerInteraction();}
-                if(!lobbyPositionInitialized)
-                {
-                    var forward=Vector3.ProjectOnPlane(eye.forward,Vector3.up);
-                    if(forward.sqrMagnitude<.01f)forward=Vector3.Cross(eye.right,Vector3.up);
-                    if(forward.sqrMagnitude<.01f)forward=Vector3.forward;
-                    lobbyPosition=eye.position+forward.normalized*1.25f+Vector3.down*.12f;
-                    lobbyPositionInitialized=true;
-                }
-                root.gameObject.SetActive(true);
-                root.localScale=Vector3.one*.0009f;
-                if(!moving){root.position=lobbyPosition;FaceViewer();}
-                return true;
+                if(moving){moving=false;SavePosition();}
+                CancelPointerInteraction();root.gameObject.SetActive(false);return false;
             }
-            root.gameObject.SetActive(true);
-            if(!positionInitialized||Quest.Placing)ResetPosition(false);
-            root.localScale=Vector3.one*Mathf.Clamp(Board.Width/1300f,.00065f,.0012f);
-            if(!moving)
+            var eye=Quest.Camera.transform;
+            // One center and scale for every page. Board placement, match transitions
+            // and different content heights never select a different anchor.
+            if(positionInitialized&&!moving&&Vector3.Distance(windowPosition,eye.position)>WindowRecallDistance)
+            {positionInitialized=false;preferredWindowOffset=new Vector3(0,-.12f,1.25f);CancelPointerInteraction();}
+            if(!positionInitialized)
             {
-                root.position=Board.transform.TransformPoint(new Vector3(boardOffset.x*Board.Width,boardOffset.y,boardOffset.z*Board.Depth));
-                FaceViewer();
+                windowPosition=eye.position+WindowFacing()*preferredWindowOffset;
+                positionInitialized=true;
             }
+            root.gameObject.SetActive(true);root.localScale=Vector3.one*windowScale;
+            if(!moving){root.position=windowPosition;FaceViewer();}
             return true;
+        }
+        private Quaternion WindowFacing()
+        {
+            var forward=Vector3.ProjectOnPlane(Quest.Camera.transform.forward,Vector3.up);
+            if(forward.sqrMagnitude<.01f)forward=Vector3.Cross(Quest.Camera.transform.right,Vector3.up);
+            return Quaternion.LookRotation(forward.normalized,Vector3.up);
         }
         private void UpdateHarvesting(VisibleEntity[] selected)
         {
@@ -276,7 +269,7 @@ namespace Frontier.Runtime
             status.fontStyle=error?FontStyle.Bold:FontStyle.Normal;
             status.fontSize=error?22:Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
             if(error)status.color=ErrorTint;
-            else if(Page!=MenuPage.Replay)status.color=accent;
+            else if(Page!=MenuPage.Replay)status.color=ConsoleTheme.Muted;
             TopLeft(status.rectTransform,new Vector2(error?46:0,0),new Vector2(statusBanner.sizeDelta.x-(error?60:0),statusBanner.sizeDelta.y));
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
@@ -287,13 +280,15 @@ namespace Frontier.Runtime
             float width=columns==1?600:columns==2?505:246,height=grid?49:58;
             var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
             TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
-            var image=go.GetComponent<Image>();image.color=primary?new Color(.1f,.32f,.36f):button;
-            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,Color.white,TextAnchor.MiddleCenter);
+            var image=go.GetComponent<Image>();image.color=primary?ConsoleTheme.Primary:button;ConsoleTheme.StyleSurface(image);
+            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
         }
         private void Rebuild()
         {
             if(actions==null)return;
+            RestoreCountdownPresentation();
+            ResetGroupGesture();
             CancelReplayScrub();
             // Hide the old controls immediately, including between pointer events in the same frame.
             for(int i=actions.childCount-1;i>=0;i--)
@@ -302,7 +297,7 @@ namespace Frontier.Runtime
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
             ClearProductionTargets();
             HideActionHelp();
-            moveHandle.GetComponentInChildren<Text>().text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
+            moveHandle.GetComponentInChildren<Text>(true).text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
             LayoutPage();
             BuildControlGuide();
             BuildHotkeys();
@@ -324,6 +319,8 @@ namespace Frontier.Runtime
         }
         private void Show(MenuPage page)
         {
+            if(moving){moving=false;SavePosition();}
+            CloseSectionHelp();
             if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.OnlineSetup||page==MenuPage.Result||page==MenuPage.Replay)menuHistory.Clear();
             if(page==MenuPage.Settings&&Page!=MenuPage.Hotkeys)settingsTab=SettingsTab.Controls;
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
@@ -347,6 +344,8 @@ namespace Frontier.Runtime
         }
         public void Back()
         {
+            if(Session.IsCountingDown&&!Quest.Placing)return;
+            if(SectionHelpOpen){CloseSectionHelp();return;}
             if(HotkeyModalOpen){CancelHotkeyChange();return;}
             if(Quest.Placing){Quest.CancelPlacement();return;}
             switch(Page)
@@ -367,6 +366,8 @@ namespace Frontier.Runtime
         }
         public void ToggleMenu()
         {
+            if(Session.IsCountingDown)return;
+            if(SectionHelpOpen){CloseSectionHelp();return;}
             if(Session.IsReplay){Session.ToggleReplayPause();return;}
             if(HotkeyModalOpen){CancelHotkeyChange();return;}
             if(Page==MenuPage.History||Page==MenuPage.HistoryReport||Page==MenuPage.Settings||Page==MenuPage.Hotkeys||Page==MenuPage.Guides||Page==MenuPage.Guide||IsReferencePage){Back();return;}
@@ -377,19 +378,20 @@ namespace Frontier.Runtime
         }
         public void ResetPosition(bool forgetSaved=true)
         {
-            if(UsesLobbyPosition){lobbyPositionInitialized=false;return;}
-            if(forgetSaved){customPosition=false;PlayerPrefs.DeleteKey(PlacementKey);PlayerPrefs.Save();}
-            if(customPosition)return;
-            var viewer=Board.transform.InverseTransformPoint(Quest.Camera.transform.position);
-            var away=new Vector2(-viewer.x,-viewer.z).normalized;
-            if(away.sqrMagnitude<.1f)away=Vector2.up;
-            boardOffset=new Vector3(away.x*.65f,Mathf.Max(.65f,viewer.y+.15f),away.y*.65f);
-            positionInitialized=true;
+            if(forgetSaved)
+            {
+                preferredWindowOffset=new Vector3(0,-.12f,1.25f);
+                PlayerPrefs.DeleteKey(PlacementKey);PlayerPrefs.Save();
+            }
+            positionInitialized=false;
         }
-        // Called on a controller shortcut even when the console has been moved out of view.
-        public void Recall(){moving=false;CancelPointerInteraction();ResetPosition();Session.Announce(UsesLobbyPosition?"Menu reset in front of you.":"Menu reset above the board.");}
+        // A shortcut can still recover the shared window if it is out of view.
+        public void Recall(){if(Session.IsCountingDown)return;moving=false;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset in front of you.");}
         public void CancelPointerInteraction()
         {
+            if(moving){moving=false;SavePosition();}
+            ResetGroupGesture();
+            CloseSectionHelp();
             CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
@@ -397,8 +399,9 @@ namespace Frontier.Runtime
             hovered=null;
             UpdateProductionHover();
             HideActionHelp();
+            UpdateMoveAffordance(false);
         }
-        public bool ContainsPointer(Ray ray)=>moving||Hit(root,ray,out _);
+        public bool ContainsPointer(Ray ray)=>SectionHelpOpen||moving||Hit(root,ray,out _)||Hit(moveHandle,ray,out _);
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -408,11 +411,9 @@ namespace Frontier.Runtime
         }
         private void SavePosition()
         {
-            if(UsesLobbyPosition){lobbyPosition=root.position;lobbyPositionInitialized=true;return;}
-            var local=Board.transform.InverseTransformPoint(root.position);
-            boardOffset=new Vector3(local.x/Board.Width,local.y,local.z/Board.Depth);
-            customPosition=true;
-            PlayerPrefs.SetString(PlacementKey,JsonUtility.ToJson(new PanelPlacement{offset=boardOffset}));PlayerPrefs.Save();
+            windowPosition=root.position;positionInitialized=true;
+            preferredWindowOffset=Quaternion.Inverse(WindowFacing())*(windowPosition-Quest.Camera.transform.position);
+            PlayerPrefs.SetString(PlacementKey,JsonUtility.ToJson(new PanelPlacement{version=2,offset=preferredWindowOffset}));PlayerPrefs.Save();
         }
         private void OnApplicationFocus(bool focused)
         {
@@ -428,26 +429,30 @@ namespace Frontier.Runtime
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
         private string DifficultyLabel=>Session.Difficulty=="hard"?"Hard":Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
-        public bool Point(Ray ray,bool down,bool up,float depth=0)
+        public bool Point(Ray ray,bool down,bool up,float depth=0,bool assignGroup=false)
         {
+            if(Session.IsCountingDown&&!Quest.Placing){CancelPointerInteraction();return true;}
             if(root==null||!root.gameObject.activeInHierarchy)return false;
+            if(SectionHelpOpen)return PointSectionHelp(ray,down,up);
             if(moving)
             {
+                UpdateMoveAffordance(true);
                 grabDistance=Mathf.Clamp(grabDistance+depth*Time.unscaledDeltaTime,.4f,3);
                 var position=ray.GetPoint(grabDistance)+grabOffset;
                 position.y=Mathf.Clamp(position.y,.25f,2.5f);
-                var origin=UsesLobbyPosition?Quest.Camera.transform.position:Board.transform.position;
+                var origin=Quest.Camera.transform.position;
                 root.position=origin+Vector3.ClampMagnitude(position-origin,3);
                 if(up){moving=false;SavePosition();}
                 return true;
             }
             bool onMove=Hit(moveHandle,ray,out float distance);
             bool onReset=Hit(resetHandle,ray,out _);
-            moveImage.color=onMove?new Color(.12f,.35f,.39f):button;
-            resetImage.color=onReset?new Color(.12f,.35f,.39f):button;
+            UpdateMoveAffordance(onMove);
+            resetImage.color=onReset?ConsoleTheme.Primary:background;
             if(down&&onMove)
             {
                 CancelPointerInteraction();moving=true;grabDistance=distance;grabOffset=root.position-ray.GetPoint(distance);
+                UpdateMoveAffordance(true);
                 return true;
             }
             if(down&&onReset){Recall();return true;}
@@ -457,26 +462,27 @@ namespace Frontier.Runtime
             {
                 if(target.rect.gameObject.activeInHierarchy&&Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??Color.Lerp(hovered.normal,Color.white,.2f);}
+            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??ConsoleTheme.Focus;}
             UpdateProductionHover();
             if(PointSelectionGrid(hit,down,up))return true;
-            if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;}}
+            if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;BeginGroupGesture(hit,assignGroup);}}
+            if(HandleGroupGesture(hit,up))return true;
             UpdateActionHelp();
             if(up&&pressed!=null)
             {var p=pressed;pressed=null;HideActionHelp();if(hit==p){Session.GetComponent<AudioFeedback>()?.Navigation(true);if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
             // Empty areas also consume the ray, preventing orders through the panel.
-            return pressed!=null||Hit(root,ray,out _);
+            return pressed!=null||onMove||Hit(root,ray,out _);
         }
         private static bool Hit(RectTransform rect,Ray ray,out float distance)
         {
-            distance=0;if(rect==null)return false;
+            distance=0;if(rect==null||!rect.gameObject.activeInHierarchy)return false;
             if(!new Plane(rect.forward,rect.position).Raycast(ray,out distance)||distance>8)return false;
             var local=rect.InverseTransformPoint(ray.GetPoint(distance));return rect.rect.Contains(new Vector2(local.x,local.y));
         }
         private RectTransform Handle(string name,Vector2 position,Vector2 size,string label,out Image image)
         {
             var go=new GameObject(name,typeof(RectTransform),typeof(Image));var rect=go.GetComponent<RectTransform>();rect.SetParent(root,false);TopLeft(rect,position,size);
-            image=go.GetComponent<Image>();image.color=button;
+            image=go.GetComponent<Image>();image.color=background;ConsoleTheme.StyleSurface(image);
             Label(rect,label,new Vector2(8,0),size-new Vector2(16,0),18,accent,TextAnchor.MiddleCenter);return rect;
         }
         private Text Label(RectTransform parent,string value,Vector2 position,Vector2 size,int fontSize,Color color,TextAnchor alignment=TextAnchor.MiddleLeft)

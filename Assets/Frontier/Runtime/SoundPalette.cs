@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Frontier.Runtime
 {
-    public enum SoundCue { Select, Move, Attack, Reject, Hover, Confirm, Kinetic, Organic, Melee, Siege, Ability, Ready, Start, Victory, Defeat }
+    public enum SoundCue { Select, Move, Attack, Reject, Hover, Confirm, Kinetic, Organic, Melee, Siege, Ability, Ready, Start, Victory, Defeat, Countdown }
 
     // Original synthesized sounds: generated once, reused by the bounded voice pool.
     public static class SoundPalette
@@ -32,6 +32,7 @@ namespace Frontier.Runtime
                     case SoundCue.Attack:value=(Wave(330*t-160*t*t)*.35f+Wave(495*t)*.2f);break;
                     case SoundCue.Hover:value=Wave(780*t)*Mathf.Exp(-t*40)*.25f;break;
                     case SoundCue.Confirm:value=Wave(660*t)*.35f+Wave(990*t)*.1f;break;
+                    case SoundCue.Countdown:value=Wave(520*t)*.42f+Wave(1040*t)*.06f;break;
                     case SoundCue.Ready:value=Chime(t,.12f,ReadyNotes);break;
                     case SoundCue.Start:value=Chime(t,.18f,StartNotes);break;
                     case SoundCue.Victory:value=Chime(t,.22f,VictoryNotes);break;

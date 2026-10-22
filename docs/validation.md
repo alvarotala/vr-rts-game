@@ -1150,3 +1150,107 @@ Por solicitud del usuario, se restaura la interfaz de `6cadbc4`, inmediatamente 
 - `SelectionGridPreview.RunValidation`: selección **177 / 8**, rueda unificada **724 / 22**, grupos **496 / 10**, rueda de acciones **466 / 20**, órdenes en cola **200**, rally **126** y menús **366 / 61** aprobados en `TestResults/unity-menu-rollback-controls.log`. El batch se detuvo al encontrar las expectativas antiguas de nombres de mapas en `HarvestingPreview`.
 - Tras conservar esas dos correcciones de nombres, `ProductionQueuePreview.Render`: **salida 0**, `TestResults/unity-menu-rollback-production.log`; producción **776 / 26**, recolección **18 capturas** y menús **366 / 61** aprobados. Esto completa las fases pendientes de la validación anterior.
 - `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo en los batches. Sin APK ni prueba física en Quest.
+
+## Nueva prueba de menús VR — 22 de octubre de 2026
+
+Rama `codex/vr-menu-design`, desde la restauración `5f77b66`. Menús y consola con rellenos planos de luminosidad media, esquinas suaves nativas, jerarquía de títulos/valores y tarjetas coherentes. Se conserva la tipografía UGUI original. Inicio reorganizado, retrato en la selección y franja compacta cuando hay un solo tipo; el objetivo sigue siendo de 94 × 94 y conserva sus gestos.
+
+- `LocalizationPreview.Run`: **salida 0**, `TestResults/unity-vr-menu-design-localization-final.log`; localización **328 / 0 desbordamientos**, menús **366 / 61 capturas**, replay **30** y espectador **528 / 7** aprobados. Se incorporan ocho traducciones de las nuevas descripciones del inicio y guías.
+- `SelectionGridPreview.RunValidation`: **salida 0**, `TestResults/unity-vr-menu-design-controls.log`; selección **177 / 8**, rueda unificada **724 / 22**, grupos **496 / 10**, rueda de acciones **466 / 20**, órdenes en cola **200**, rally **126**, producción **776 / 26**, recolección **18 capturas** y menús **366 / 61** aprobados.
+- Tras compactar la franja de un solo tipo, `SelectionGridPreview.Render`: **salida 0**, **177 comprobaciones / 8 vistas** en `TestResults/unity-vr-menu-design-selection-final.log`. La localización final indicada arriba también se ejecuta después de este ajuste.
+- Inspeccionadas capturas en español de inicio, pausa, audio, catálogo y HUD. La comparación Git confirma que `ActionWheel`, `RadialSector`, `ControllerVisuals` y `LocalizedText` no cambian. `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado solo durante los batches. Capturas y entrada sintética del Editor; sin APK ni prueba de comodidad, lectura en movimiento o rendimiento en Quest físico.
+
+## Revisión enfocada de la consola de partida — 22 de octubre de 2026
+
+Revisión limitada al HUD de partida sobre los cambios previos de `codex/vr-menu-design`. Selección de hasta cuatro tipos integrada en la tarjeta lateral, acciones en tres columnas con filas centradas, producción contextual con nombres y progreso, márgenes uniformes y ayuda mediante «?». Se conservan los gestos de selección, las acciones disponibles y el funcionamiento de la cola; no se incorporan pestañas ni paginación nuevas.
+
+- `SelectionGridPreview.Render`: **177 comprobaciones / 8 vistas**, salida 0 en `TestResults/unity-hud-polish-selection.log`. Incluye selección agrupada y modificadores sintéticos del mando.
+- `ActionHelpPreview.Render`, ejecución final: **202 comprobaciones / 38 capturas**, salida 0 en `TestResults/unity-hud-polish-help-final.log`. Comprueba hover y pulsación de «?», pausa/cancelación, ausencia de solapamiento con controles y tarjetas de producción, cambio español→inglés y conservación de selección/colas/estado de simulación al consultar ayuda.
+- La misma ejecución final encadena producción **776 / 28 capturas**, recolección **18 capturas**, flujo de menús **366 / 61** y rueda de acciones **466 / 20**, todos aprobados.
+- `LocalizationPreview.Run`: **328 comprobaciones / 0 desbordamientos**, salida 0 en `TestResults/unity-hud-polish-localization.log`; replay **30** y espectador **528 / 7**, aprobados. Después se acortó únicamente el título «Plan de órdenes» a «Órdenes en cola»; las capturas de producción en español se regeneraron en la ejecución final.
+- Inspeccionadas capturas reales del Canvas en español con trabajador, edificio y varios productores seleccionados. Captura de revisión: `TestResults/ProductionQueue/industrial-all-producers-es.png`. La rueda, las ayudas del mando y `LocalizedText` permanecen sin cambios. `git diff --check` aprobado.
+- Validación en Editor con Unity **6000.3.26f1**, Burst desactivado sólo durante los batches. Sin build de jugador ni prueba física en Quest; la captura permite evaluar distribución, no certificar comodidad o lectura en movimiento.
+
+## Consola con selección horizontal e iconos — 22 de octubre de 2026
+
+Cabecera ampliada, recursos con iconos geométricos nativos, selección horizontal, acciones altas alineadas a la izquierda, producción en bandeja y controles inferiores amplios. Mover abreviado; Restablecer posición pasa a icono con tooltip. Se retira Restablecer vista. Sólo cambia la presentación del HUD y ese control retirado; las colas y gestos conservan su comportamiento.
+
+- `SelectionGridPreview.Render`: **177 comprobaciones / 8 vistas**, salida 0 en `TestResults/unity-hud-row-selection.log`.
+- `ActionHelpPreview.Render`: **214 comprobaciones / 38 capturas**, salida 0 en `TestResults/unity-hud-row-help.log`, incluidos hover del icono de restablecer, idioma y separación de objetivos. La ejecución encadena producción **776 / 28**, recolección **18 capturas**, menús **366 / 61** y rueda de acciones **466 / 20**, todos aprobados.
+- `LocalizationPreview.Run`: **328 comprobaciones / 0 desbordamientos**, salida 0 en `TestResults/unity-hud-row-localization.log`; menús **366 / 61**, replay **30** y espectador **528 / 7**, aprobados. LITTLE y LEGION se reconocen como partes del nombre propio sin traducir.
+- Se actualizan las expectativas del título Producción y de la ausencia de Restablecer vista; el primer batch encontró precisamente esa expectativa antigua, corregida antes de las ejecuciones aprobadas. No se debilitan las comprobaciones de colas o gestos.
+- Captura revisada del Canvas real: `TestResults/ProductionQueue/industrial-all-producers-es.png` (1800 × 1600). `git diff --check` aprobado. La rueda, las ayudas del mando y el renderizado de texto permanecen sin cambios.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado sólo durante validación. Sin build de jugador ni comprobación de comodidad/lectura física en Quest.
+
+## Barra inferior de movimiento y cabecera despejada — 22 de octubre de 2026
+
+Pausa y reloj pasan a la derecha de la cabecera. Recursos con fondo transparente, iconos de 64 px y cifras de 48 px. Los grupos aprovechan todo el ancho inferior. La barra para mover vive debajo del panel: visual de 192 × 12 en reposo y 264 × 52 con «Mover» al apuntarla, con área estable de 320 × 80. Restablecer posición se oculta en el HUD y los rects inactivos ya no capturan rayos. Los demás menús conservan sus controles de posición.
+
+- `ActionHelpPreview.Render`: **210 comprobaciones / 39 capturas**, salida 0 en `TestResults/unity-hud-handle-help.log`. Incluye captura del primer hover fuera del cuerpo, cambio visual sin desplazar el objetivo, retorno a reposo, arrastre con A y ausencia de pulsaciones sobre el rect oculto de restablecer. Conserva el estado de selección, producción y simulación al apuntar.
+- La ejecución encadena producción **776 / 28**, recolección **18 capturas**, menús **367 / 61** y rueda **466 / 20**, aprobados.
+- `LocalizationPreview.Run`: **328 comprobaciones / 0 desbordamientos**, salida 0 en `TestResults/unity-hud-handle-localization.log`; menús **367 / 61**, replay **30**, espectador **528 / 7**, aprobados.
+- El encuadre del preview incorpora los gráficos activos fuera del rect principal para mostrar la barra completa. Inspeccionadas `TestResults/ProductionQueue/industrial-all-producers-es.png` (reposo) y `TestResults/ActionHelp/industrial-move-hover.png` (hover). `git diff --check` aprobado.
+- Unity **6000.3.26f1**, CLI **1.0.0-beta.14**, Burst desactivado sólo en validación. Capturas e interacción sintética de Editor; sin build ni prueba física en Quest. Rueda, ayudas del mando y tipografía sin cambios.
+
+
+## Opciones estables y boxes homogéneos — 22 de octubre de 2026
+
+La consola usa títulos de 20 px, padding de 24 px, espacio de 16 px entre boxes y contenido a 76 px bajo el borde superior. Selección tiene seis tarjetas anchas por fila y contador en cabecera. Opciones conserva 468 px de altura, también vacía o con selección mixta; entrenamiento/construcción y órdenes/investigación mantienen sus slots. Producción comparte tarjetas, con la activa más ancha y verde. Se retiran el resumen lateral de selección, el contador de capacidad disponible, los subtítulos de acciones, sus marcas laterales, Cancelar/reembolsar, Quitar puntos y el box de rally del HUD. La cola conserva cancelación por elemento; la rueda mantiene sus controles. La guía ya no anuncia los botones del HUD retirados.
+
+- `TestResults/unity-hud-options-final.log`: selección **205 / 8 vistas**, ayuda **260 / 39 capturas**, producción **844 / 28**, recolección **18 capturas**, menús **359 / 61**, rueda **480 / 20**, aprobados. Las pruebas comprueban ausencia de comandos en Opciones vacía/mixta, slots estables entre edificios individuales y grupos, y órdenes estables entre trabajador y soldado. La última fase de ese batch encontró una expectativa antigua del botón de rally y se corrigió para usar la ayuda de Opciones, manteniendo la prueba de captura de A y los controles de la rueda.
+- `TestResults/unity-hud-options-rally-final.log`: **128 comprobaciones**, salida 0. La ayuda captura A sin cambiar el destino ni la producción, y la rueda conserva su acción de rally. `git diff --check` aprobado.
+- `TestResults/unity-hud-options-localization.log`: localización **329 comprobaciones / 0 desbordamientos**, salida 0; replay **30**, espectador **528 / 7**, aprobados. Después de esta ejecución sólo se retiraron dos filas de guía sobre los botones eliminados; MenuFlow volvió a pasar con esa guía actualizada.
+- Inspeccionadas capturas reales con trabajador y grupo de productores en español. Revisión principal: `TestResults/ProductionQueue/industrial-all-producers-es.png` (1800 × 1600). Se conservan datos de salud, construcción y energía en las tarjetas de selección, y los datos de entidades apuntadas en la fila vacía.
+- Unity **6000.3.26f1**, Burst desactivado sólo para los batches. Sin build de jugador ni prueba física en Quest. La validación del Editor no demuestra comodidad o legibilidad en movimiento dentro del visor.
+
+
+## Recursos al inicio e información de partida al pie — 22 de octubre de 2026
+
+El HUD elimina logo y cabecera. Recursos conserva 44 px de margen arriba y debajo; luego aparecen los boxes. Una última fila reúne mapa, facciones/modo, reloj y Pausa. Las indicaciones de colocación/habilidades ocupan la segunda línea de esa fila cuando están activas, sin invadir recursos. Se conserva la barra de movimiento exterior.
+
+- `TestResults/unity-hud-footer.log`: ayuda **260 / 39 capturas**, producción **844 / 28** y recolección **18 capturas**, aprobadas. La comprobación nueva de margen mezclaba coordenadas locales del panel y del contenedor; se corrigió para comparar rects hermanos.
+- `TestResults/unity-hud-footer-localization.log`: salida 0, menús **361 / 61 capturas**, localización **329 / 0 desbordamientos**, replay **30** y espectador **528 / 7**, aprobados. Incluye Pausa al pie, ausencia del logo, separación de recursos y descripción de la partida.
+- Captura real revisada: `TestResults/hud-footer-es.png`, 1800 × 1600. `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**; sin build ni prueba en Quest.
+
+
+## Tamaño, ayuda centrada y asignación de grupos — 22 de octubre de 2026
+
+Se toma como referencia la versión inmediatamente anterior con logo y Pausa arriba. El HUD aplica una escala de 1512/1636, conserva su estructura actual y recupera aquella altura física para la composición habitual con producción. Barracas compacta sus tres opciones desde la primera columna; los slots vacíos muestran placeholders sin interacción. Los contadores siguen el ancho real del título, también al cambiar de idioma. «?» abre una ayuda centrada y persistente con cierre explícito. El hold de grupos llena una barra durante 0,65 s, guarda al alcanzar el umbral y confirma en verde durante 1,2 s con un solo evento Feedback hacia la vibración existente.
+
+- `TestResults/unity-hud-refinement-final.log`: salida 0; ayuda **324 comprobaciones / 45 capturas**, producción **924 / 28**, menús **361 / 61**, rueda **480 / 20** y recolección **18 capturas**. Comprueba placeholders, Barracas sin huecos, posiciones estables ante recursos y encolado, escala física, contadores, ayuda centrada, persistencia durante reconstrucción y bloqueo de órdenes mientras está abierta. También cubre Trigger+A simultáneos sin cerrar accidentalmente el diálogo al drenar el segundo botón.
+- `TestResults/unity-hud-groups-verified.log`: salida 0; grupos **526 / 14 vistas**, rueda unificada **724 / 22**, rueda de acciones **480 / 20**, entradas en cola **200**, rally **128**, menús **361 / 61** y recolección **18 capturas**. Verifica progreso a mitad del hold, guardado antes de soltar, un solo Feedback, liberación sin duplicado, tap para recordar, expiración de confirmación y cancelación al salir, cambiar selección, reconstruir o perder foco/tracking. La pérdida exclusiva del tracking del mando usa la misma rama de cancelación del runtime, sin simular pausa del visor.
+- `TestResults/unity-hud-refinement-localization.log`: salida 0; localización **330 comprobaciones / 0 desbordamientos**, menús **361 / 61**, replay **30** y espectador **528 / 7**. Los nueve textos idénticos entre idiomas son nombres/términos compartidos permitidos.
+- `TestResults/unity-hud-order-counters.log`: salida 0; órdenes en cola **68 comprobaciones / 9 vistas**, incluyendo contador conciso para selección individual, agregada y tras Detener.
+- Los primeros batches detectaron una referencia de cierre ya destruida en un fixture y dos problemas de preparación de pruebas: la captura cambiaba la pose del canvas y faltaba drenar una liberación entre facciones. Se corrigieron y los batches finales anteriores terminaron completos. La revisión de input también corrigió la cancelación al perder tracking del mando y la conservación del modal al drenar aliases simultáneos.
+- Inspeccionadas capturas reales: `TestResults/ProductionQueue/industrial-full-es.png`, ayuda de Selección/Producción en español y las tarjetas de grupo durante carga y confirmación. Unity **6000.3.26f1**, sin build de jugador ni prueba física en Quest; la vibración, comodidad y lectura en movimiento requieren comprobación en el visor.
+
+
+## Ventana compartida, menús coherentes y grupos con modificador — 22 de octubre de 2026
+
+Todas las páginas usan un único centro mundial y una escala fijada al crear la consola. El pivot central conserva el punto de mirada al cambiar de altura; iniciar, pausar, terminar y abandonar una partida no elige otra posición. Mover cualquier menú modifica la posición compartida y escribe una preferencia v2 relativa al marco horizontal del visor. Se ignora la preferencia v1 relativa al tablero sin borrarla hasta mover o restablecer. Recolocar/escalar el tablero no mueve la interfaz. El agarre inferior de 320 × 80 se conserva en todas las páginas, sin botones de Mover/Restablecer en cabecera. Cancelar un arrastre por pérdida del mando o navegación conserva su último centro y termina el gesto.
+
+El logo tipográfico grande sólo aparece en Inicio; las demás cabeceras usan títulos de página. Inicio, Nueva partida, LAN, Pausa y ajustes comparten superficies planas, márgenes y separación de tarjetas. Los recursos usan áreas de 352 px separadas por 16 px. Producción marca con borde verde de 4 px las tarjetas compactas activas de otros productores, sin marcar pedidos en espera. Los grupos del panel seleccionan con Gatillo y asignan con Grip + Gatillo (Ctrl + clic en escritorio), tomando el modificador al presionar y confirmando al soltar. Se elimina la asignación por tiempo y su loader; siguen la confirmación verde y un único evento de vibración. La rueda conserva sus gestos.
+
+- `TestResults/unity-shared-window-final.log`: salida 0; **327 comprobaciones / 4 capturas** con poses sintéticas. Centro geométrico, escala y parent estables entre Main/New/Settings/Hotkeys/Guides/Guide/Pause/Actions/Result; tamaños distintos, drag desde lobby y partida, cancelación y cambio de página durante drag, persistencia v2, recolocación del tablero y recuperación de foco/tracking.
+- `TestResults/unity-shared-menu-groups.log`: salida 0; grupos **546 / 12 vistas**, rueda unificada **724 / 22**, rueda de acciones **480 / 20**, entradas en cola **200**, rally **128**, menús **485 / 61** y recolección **18 capturas**. Comprueba que mantener sin Grip no asigna, modificador capturado al press, liberaciones cruzadas Trigger/A sin duplicar y cancelación ante salida, cambios de selección, foco o tracking.
+- `TestResults/unity-shared-menus-localization-final.log`: salida 0; localización **330 / 0 desbordamientos**, menús **485 / 61**, replay **30** y espectador **514 / 7**. Los diez textos compartidos son nombres/términos permitidos, incluyendo las dos partes del logo.
+- `TestResults/unity-shared-menus-hud-verified.log`: ayuda **324 / 45 capturas**, producción **1040 / 31** y recolección **18 capturas**, aprobadas. La fase de menús posterior detectó una diferencia de visibilidad del setup desktop durante una pausa sintética; se restauró su comportamiento anterior y la fase completa de menús pasó en los dos batches finales anteriores. Las primeras iteraciones también corrigieron una expectativa antigua de asignación por hold y una descripción española demasiado larga en la guía.
+- Capturas inspeccionadas: `TestResults/Localization/es-main.png`, `es-new-match.png`, `es-settings-Visuals.png`, `es-pause.png` y `TestResults/ProductionQueue/industrial-parallel-active-es.png`. `git diff --check` aprobado. Unity **6000.3.26f1**, CLI **1.0.0-beta.14**; sin build de jugador ni prueba física en Quest.
+
+## Conteo inicial 3–2–1 — 22 de octubre de 2026
+
+El flujo real de inicio y revancha muestra una tarjeta centrada en la misma posición de la consola después de confirmar el tablero. Cada número dura un segundo y reproduce un tono respetando el volumen de efectos; al terminar se reproduce la señal de inicio y reaparece el HUD. No hay animación de escala. Selección, órdenes, grupos, rueda, pausa, recolocación del menú y atajos quedan bloqueados, y se drenan botones mantenidos hasta soltarlos. Offline conserva simulación, IA y economía en tick 0; foco, visor y colocación suspenden el conteo. Replays quedan excluidos. Los fixtures que crean simulaciones directamente conservan el inicio inmediato; `QuestBridge` solicita explícitamente el conteo para las partidas del jugador.
+
+LAN comparte un instante de inicio usando el reloj de NGO: el servidor mantiene la simulación pausada, publica estados iniciales y rechaza comandos anticipados. La desconexión durante el conteo sigue resolviendo la concesión. El protocolo pasa a v2 para que cliente y servidor compartan este contrato; deben actualizarse juntos. Una interrupción local de un visor no pausa el reloj de la partida online.
+
+- `TestResults/unity-start-countdown.log`: salida 0; conteo **88 comprobaciones / 1 captura**, menús **485 / 61**, audio/confort **59 / 4**, adaptador multijugador **31** y ventana compartida **327 / 4**. Los fixtures de navegación avanzan explícitamente el conteo porque Edit Mode no ejecuta frames de juego.
+- `TestResults/unity-start-countdown-final.log`: salida 0; **88 comprobaciones** tras el ajuste final del gate del servidor. Cubre inicio real, secuencia temporal, bloqueo de todos los tipos de órdenes, selección y grupos, simulación congelada, audio y volumen, pausa/reanudación, recuperación por colocación, liberación de controles, revancha, abandono, exclusión de replay y apertura del servidor en su instante de inicio.
+- Captura real inspeccionada: `TestResults/StartCountdown/countdown-3-es.png`. `git diff --check` aprobado. Validación en Editor Unity **6000.3.26f1**; no se hizo build, sesión LAN con transporte real ni prueba física de comodidad/sonido en Quest.
+
+## Quinto espacio de Producción — 22 de octubre de 2026
+
+El quinto espacio muestra borde verde siempre que tenga una orden, tanto para un edificio como para una selección de productores. Cuando la cola conjunta tiene más de cinco órdenes, el borde pasa a amarillo junto al indicador «+N». Volver a cinco órdenes recupera el verde y vaciar ese espacio retira el borde.
+
+- `TestResults/unity-production-fifth-border.log`: salida 0; **1128 comprobaciones / 34 capturas** en ambas facciones. Incluye quinto ocupado, cancelación y reembolso, exactamente cinco órdenes, «+1», colas mayores, pausa y retorno de grupo a productor individual sin conservar el amarillo.
+- Inspeccionadas `TestResults/ProductionQueue/industrial-full-es.png` y `industrial-group-plus-one-es.png`. `git diff --check` aprobado; verificación en Editor, sin prueba física en Quest.

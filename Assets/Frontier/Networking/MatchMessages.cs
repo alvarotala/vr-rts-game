@@ -7,6 +7,7 @@ namespace Frontier.Networking
     {
         public int protocol, player;
         public string matchId, mapId, faction0, faction1;
+        public double startServerTime;
     }
     [Serializable] public sealed class CommandAck
     {

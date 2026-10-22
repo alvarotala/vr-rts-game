@@ -16,6 +16,8 @@ namespace Frontier.Networking
         public event Action<string> Disconnected;
         public bool IsConnected => manager != null && manager.IsConnectedClient;
         public bool MatchStarted => welcome != null;
+        public double CountdownRemaining => !IsConnected || welcome == null || ended ? 0
+            : Math.Max(0, welcome.startServerTime - manager.ServerTime.Time);
         public double RoundTripTimeSeconds => manager == null || !IsConnected ? 0 : manager.NetworkConfig.NetworkTransport.GetCurrentRtt(Unity.Netcode.NetworkManager.ServerClientId) / 1000d;
         private NetworkManager manager;
         private MatchWelcome welcome;
@@ -67,7 +69,7 @@ namespace Frontier.Networking
 
         public bool Send(GameCommand command)
         {
-            if (!IsConnected || welcome == null || ended || command == null || command.sequence <= 0 || pending.Count >= 128) return false;
+            if (!IsConnected || welcome == null || CountdownRemaining > 0 || ended || command == null || command.sequence <= 0 || pending.Count >= 128) return false;
             try
             {
                 if (!pending.TryGetValue(command.sequence, out var bytes))
@@ -89,6 +91,7 @@ namespace Frontier.Networking
             {
                 var value = MatchProtocol.Decode<MatchWelcome>(MatchProtocol.Read(reader, 1024));
                 if (value == null || value.protocol != MatchProtocol.Version || value.player < 0 || value.player > 1
+                    || double.IsNaN(value.startServerTime) || double.IsInfinity(value.startServerTime) || value.startServerTime < 0
                     || Resources.Load<TextAsset>("Maps/" + value.mapId) == null) throw new InvalidOperationException("Invalid match welcome.");
                 welcome = value; lastStateAt = Time.realtimeSinceStartupAsDouble;
                 MatchProtocol.Emit(Started, value);

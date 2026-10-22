@@ -20,9 +20,8 @@ namespace Frontier.Runtime
 
         private void ReportButton(string title,float x,float y,float width,Action click,bool selected=false)
         {
-            var rect=Section(actions,title,new Vector2(x,-y),new Vector2(width,48),selected?new Color(.075f,.27f,.3f):button);
-            Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,selected?accent:Color.white,TextAnchor.MiddleCenter);
-            if(selected)Section(rect,"Selected",new Vector2(0,-45),new Vector2(width,3),accent);
+            var rect=Section(actions,title,new Vector2(x,-y),new Vector2(width,48),selected?ConsoleTheme.Primary:button);
+            Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,selected?accent:ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=selected?FontStyle.Bold:FontStyle.Normal;
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
         }
         private void BuildMatchReport()
@@ -66,8 +65,8 @@ namespace Frontier.Runtime
             int row=0;
             void Row(string title,string own,string enemy)
             {
-                var rect=Section(actions,"Stat: "+title,new Vector2(0,-110-row++*44),new Vector2(1040,42),row%2==0?new Color(.04f,.095f,.13f,.98f):new Color(.055f,.12f,.155f));
-                Label(rect,title,new Vector2(18,0),new Vector2(430,42),20,Color.white);
+                var rect=Section(actions,"Stat: "+title,new Vector2(0,-110-row++*44),new Vector2(1040,42),row%2==0?ConsoleTheme.Surface:ConsoleTheme.Card);
+                Label(rect,title,new Vector2(18,0),new Vector2(430,42),20,ConsoleTheme.Ink);
                 Label(rect,own,new Vector2(452,0),new Vector2(280,42),23,MatchReportGraph.PlayerColor,TextAnchor.MiddleCenter);
                 Label(rect,enemy,new Vector2(746,0),new Vector2(280,42),23,MatchReportGraph.OpponentColor,TextAnchor.MiddleCenter);
             }
@@ -120,9 +119,9 @@ namespace Frontier.Runtime
                 var e=orders[resultBuildPage*pageSize+i];
                 var rect=Section(actions,"Build order row",new Vector2(0,-162-i*54),new Vector2(1040,50));
                 Label(rect,ReportTime(e.Tick),new Vector2(18,0),new Vector2(90,50),21,MenuMuted);
-                Label(rect,e.Supply.ToString(),new Vector2(128,0),new Vector2(80,50),21,Color.white);
+                Label(rect,e.Supply.ToString(),new Vector2(128,0),new Vector2(80,50),21,ConsoleTheme.Ink);
                 string verb=e.Kind==CommandKind.Build?"Build":e.Kind==CommandKind.Research?"Research":"Train";
-                Label(rect,verb+" · "+ReportDefinitionName(e.Definition),new Vector2(218,0),new Vector2(520,50),21,Color.white);
+                Label(rect,verb+" · "+ReportDefinitionName(e.Definition),new Vector2(218,0),new Vector2(520,50),21,ConsoleTheme.Ink);
                 string state=e.Status==BuildOrderStatus.Pending?(e.Kind==CommandKind.Build?"Unfinished":"In queue"):e.Status==BuildOrderStatus.Completed?"Ready":e.Status==BuildOrderStatus.Cancelled?"Cancelled":"Destroyed";
                 Label(rect,state+(e.EndTick>=0?" · "+ReportTime(e.EndTick):""),new Vector2(758,0),new Vector2(264,50),19,e.Status==BuildOrderStatus.Completed?accent:MenuMuted);
             }

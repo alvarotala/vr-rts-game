@@ -104,7 +104,7 @@ namespace Frontier.Editor
                     session.Select(session.View.entities.First(e=>e.owner==0&&!session.Catalog[e.definition].building).id,false);session.Send(CommandKind.Stop);
                     session.Selection.Clear();foreach(var unit in session.View.entities.Where(e=>e.owner==0&&!session.Catalog[e.definition].building))session.Selection.Add(unit.id);
                     Check(session.View.supply==session.View.capacity,"Full supply fixture not saturated");
-                    Capture("mixed-army","10 units","selection");
+                    Capture("mixed-army","10","selection");
                     session.Select(2002,false);session.Match.Entities[2002].health=3;session.Send(CommandKind.Stop);
                     Capture("damaged-soldier","3 / ","selectionHealth");
                     var supply=session.Catalog.Role(session.Faction,"supply");
@@ -127,7 +127,24 @@ namespace Frontier.Editor
                     if(panel.Page==CommandPanel.MenuPage.Actions)
                     {
                         var selected=session.View.entities.Where(e=>session.Selection.Contains(e.id)).ToArray();
-                        if(selected.Length==1)Check(Field<Text>(panel,"selection").text==session.Catalog[selected[0].definition].name,"Selected item name missing");
+                        Check(Field<Text>(panel,"selection").text==(selected.Length>0?selected.Length.ToString():""),"Selection header count does not match the selected entities");
+                        if(selected.Length>0)
+                        {
+                            var names=Field<Text[]>(panel,"selectionNames").Where(t=>t.gameObject.activeInHierarchy).Select(t=>t.text).OrderBy(t=>t).ToArray();
+                            var expectedNames=selected.Select(e=>e.definition).Distinct().Select(id=>Localization.Text(session.Catalog[id].name)).OrderBy(t=>t).ToArray();
+                            Check(names.SequenceEqual(expectedNames),"Selected item names are missing from the visible selection cards");
+                        }
+                        else
+                        {
+                            var resource=session.View.resources.FirstOrDefault(r=>r.id==(session.SelectedResource>0?session.SelectedResource:board.HoveredResource));
+                            var pointed=session.View.entities.FirstOrDefault(e=>e.id==board.Hovered&&!e.remembered);
+                            string title=resource!=null?(resource.kind=="mineral"?"Minerals":"Gas"):pointed!=null?session.Catalog[pointed.definition].name:null;
+                            if(title!=null)
+                            {
+                                var fallback=Field<Text>(panel,"selectionFallbackTitle");
+                                Check(fallback.gameObject.activeInHierarchy&&fallback.text==Localization.Text(title),"Pointed item name is missing from the visible fallback row");
+                            }
+                        }
                         Check(Field<Text>(panel,"mineralValue").text==session.View.minerals.ToString("N0",System.Globalization.CultureInfo.InvariantCulture),"Minerals counter does not match player view");
                         Check(Field<Text>(panel,"gasValue").text==session.View.catalyst.ToString("N0",System.Globalization.CultureInfo.InvariantCulture),"Gas counter does not match player view");
                         Check(Field<Text>(panel,"supplyValue").text==$"{session.View.supply} / {session.View.capacity}","Supply counter does not match player view");
@@ -137,7 +154,7 @@ namespace Frontier.Editor
                             int minerals=session.View.minerals;
                             Click("Train "+session.Catalog.Role(session.Faction,"worker").name);
                             Check(session.View.entities.First(e=>e.id==selected[0].id).queue.Length==1,"HUD production button did not queue a worker");
-                            Click("Cancel / refund");Check(session.View.minerals==minerals,"HUD cancellation did not refund production");
+                            Click("Current production");Check(session.View.minerals==minerals,"Queue-item cancellation did not refund production");
                         }
                         if(name=="industrial-worker")
                         {
@@ -151,7 +168,8 @@ namespace Frontier.Editor
                             var ids=session.Selection.ToArray();Click("Group 1",true);session.Select(0,false);Click("Group 1");
                             Check(session.Selection.SetEquals(ids)&&session.GroupSize(0)==10,"HUD control group did not save and restore selection");
                             Check(Field<Text[]>(panel,"groupCounts")[0].text=="10 assigned","HUD group count did not update");
-                            Check(Field<Text>(panel,"supplyHint").text=="FULL","Full supply warning missing");
+                            Check(Field<Text>(panel,"supplyValue").color!=ConsoleTheme.Ink&&!Field<Text>(panel,"supplyHint").gameObject.activeInHierarchy,
+                                "Full population keeps its counter warning without the removed subtitle");
                         }
                     }
                     var line=Field<Text>(panel,field);Check(line.text.Contains(expected),name+": "+line.text);
@@ -161,9 +179,8 @@ namespace Frontier.Editor
                     {
                         Refresh();var rect=panel.GetComponentsInChildren<RectTransform>().First(t=>t.name==title&&t.gameObject.activeInHierarchy);
                         var center=rect.TransformPoint(rect.rect.center);var ray=new Ray(center-rect.forward,rect.forward);
-                        Check(panel.Point(ray,true,false),"HUD pointer press missed "+title);
-                        if(hold)typeof(CommandPanel).GetField("pressedAt",Private).SetValue(panel,Time.unscaledTime-1);
-                        Check(panel.Point(ray,false,true),"HUD pointer release missed "+title);Refresh();
+                        Check(panel.Point(ray,true,false,assignGroup:hold),"HUD pointer press missed "+title);
+                        Check(panel.Point(ray,false,true,assignGroup:hold),"HUD pointer release missed "+title);Refresh();
                     }
                     void Refresh(){typeof(CommandPanel).GetField("nextText",Private).SetValue(panel,0f);Invoke(panel,"LateUpdate");}
                     Object.DestroyImmediate(panelObject);
@@ -179,17 +196,28 @@ namespace Frontier.Editor
         {
             foreach(var label in container.GetComponentsInChildren<Text>().Where(t=>!t.resizeTextForBestFit))
                 Check(label.preferredHeight<=label.rectTransform.rect.height+.5f,"Panel text overflows: "+label.text);
+            int effectiveHeight=height>0?height:root.rect.height>526?960:800;
             if(!preservePose)
             {
                 root.localPosition=Vector3.zero;root.localRotation=Quaternion.identity;root.localScale=Vector3.one*.001f;
-                preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,root.rect.height*.0005f+.03f);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
-                preview.camera.transform.SetPositionAndRotation(new Vector3(0,0,-2),Quaternion.identity);
+                Canvas.ForceUpdateCanvases();
+                var bounds=new Bounds(root.rect.center,new Vector3(root.rect.width,root.rect.height,0));
+                var corners=new Vector3[4];
+                foreach(var graphic in container.GetComponentsInChildren<Graphic>().Where(g=>g.isActiveAndEnabled))
+                {
+                    graphic.rectTransform.GetWorldCorners(corners);
+                    foreach(var corner in corners)bounds.Encapsulate(root.InverseTransformPoint(corner));
+                }
+                var size=Vector3.Scale(bounds.size,root.lossyScale);
+                float aspect=width/(float)effectiveHeight;
+                preview.camera.orthographic=true;preview.camera.orthographicSize=Mathf.Max(.30f,Mathf.Abs(size.y)*.5f+.03f,(Mathf.Abs(size.x)*.5f+.03f)/aspect);preview.camera.nearClipPlane=.01f;preview.camera.farClipPlane=10;
+                preview.camera.transform.SetPositionAndRotation(root.TransformPoint(bounds.center)+Vector3.back*2,Quaternion.identity);
             }
             preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.018f,.031f,.055f);
             // Preview cameras do not submit world-space Canvas batches. Draw the actual UI
             // meshes with their font textures, preserving hierarchy order and runtime layout.
             var meshes=new List<Mesh>();var materials=new List<Material>();
-            preview.BeginStaticPreview(new Rect(0,0,width,height>0?height:root.rect.height>526?960:800));Canvas.ForceUpdateCanvases();
+            preview.BeginStaticPreview(new Rect(0,0,width,effectiveHeight));Canvas.ForceUpdateCanvases();
             foreach(var graphic in container.GetComponentsInChildren<Graphic>())
             {
                 graphic.Rebuild(CanvasUpdate.PreRender);

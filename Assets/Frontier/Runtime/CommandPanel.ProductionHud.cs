@@ -9,51 +9,66 @@ namespace Frontier.Runtime
     {
         private RectTransform productionStrip;
         private Text productionCount, productionState, productionName, productionProgress, productionTitle, productionHint;
-        private Image productionFill, productionAccent, productionCard;
+        private Image productionFill, productionCard;
         private SelectionPortrait productionPortrait;
         private readonly SelectionPortrait[] queuedPortraits=new SelectionPortrait[4];
         private readonly Text[] queuedNames=new Text[4], queuedKinds=new Text[4], queuedPositions=new Text[4];
         private readonly Image[] queuedCards=new Image[4];
+        private readonly Image[] queuedActiveBorders=new Image[4];
         private readonly Image[] queuedProgress=new Image[4];
         private readonly Target[] productionTargets=new Target[5];
         private readonly RectTransform[] cancelHints=new RectTransform[5];
-        private static readonly Color QueueIdleTint=new Color(.52f,.65f,.72f);
-        private static readonly Color QueueCancelTint=new Color(.65f,.08f,.1f);
+        private static readonly Color QueueIdleTint=ConsoleTheme.Muted;
+        private static readonly Color QueueActiveTint=new Color(51/255f,108/255f,82/255f).linear;
+        private static readonly Color QueueActiveBorderTint=new Color(113/255f,202/255f,143/255f).linear;
+        private static readonly Color QueueOverflowBorderTint=new Color(240/255f,212/255f,103/255f).linear;
+        private static readonly Color QueueCancelTint=new Color(.24f,.055f,.065f,1);
 
         private void CreateProductionHud()
         {
-            productionStrip=Section(matchHud,"Production queue",new Vector2(24,-422),new Vector2(1052,168));
-            productionTitle=Label(productionStrip,"PRODUCTION QUEUE",new Vector2(16,-8),new Vector2(350,26),18,accent);
+            productionStrip=Section(matchHud,"Production queue",new Vector2(24,-422),new Vector2(HudInnerWidth,HudContentTop+136+HudPadding));
+            productionTitle=Label(productionStrip,"PRODUCTION",new Vector2(HudPadding,-HudPadding),new Vector2(350,28),20,ConsoleTheme.Muted);
+            productionTitle.fontStyle=FontStyle.Bold;
             productionHint=Label(productionStrip,"CLICK AN ITEM TO CANCEL",new Vector2(380,-8),new Vector2(370,26),15,QueueIdleTint);
-            productionCount=Label(productionStrip,"",new Vector2(802,-8),new Vector2(234,26),20,Color.white,TextAnchor.MiddleRight);
+            productionHint.gameObject.SetActive(false);
+            productionCount=Label(productionStrip,"",new Vector2(1130,-HudPadding),new Vector2(190,28),20,ConsoleTheme.Ink,TextAnchor.MiddleRight);
+            productionCount.fontStyle=FontStyle.Bold;
 
-            var active=Section(productionStrip,"Current production",new Vector2(14,-42),new Vector2(352,112),new Color(.055f,.18f,.22f));
+            var active=Section(productionStrip,"Current production",new Vector2(HudPadding,-HudContentTop),new Vector2(368,136),QueueActiveTint);
             productionCard=active.GetComponent<Image>();
-            productionAccent=Section(active,"Active accent",Vector2.zero,new Vector2(4,112),accent).GetComponent<Image>();
-            productionState=Label(active,"",new Vector2(16,-4),new Vector2(320,22),15,accent);
-            productionName=Label(active,"",new Vector2(16,-25),new Vector2(320,38),28,Color.white);
-            productionPortrait=ModelPortrait(active,new Vector2(16,-26),new Vector2(44,38));
-            var bar=Section(active,"Production progress track",new Vector2(16,-68),new Vector2(320,12),new Color(.12f,.28f,.31f));
+            productionState=Label(active,"",new Vector2(24,-8),new Vector2(320,24),17,accent);
+            productionName=Label(active,"",new Vector2(24,-34),new Vector2(320,56),20,ConsoleTheme.Ink);
+            productionName.fontStyle=FontStyle.Bold;
+            productionPortrait=ModelPortrait(active,new Vector2(24,-38),new Vector2(48,48));
+            var bar=Section(active,"Production progress track",new Vector2(24,-94),new Vector2(320,12),ConsoleTheme.Track);
             productionFill=Section(bar,"Production progress",Vector2.zero,new Vector2(0,12),accent).GetComponent<Image>();
-            productionProgress=Label(active,"",new Vector2(16,-84),new Vector2(320,24),19,Color.white);
-            cancelHints[0]=CreateCancelHint(active,352);
+            productionProgress=Label(active,"",new Vector2(24,-108),new Vector2(320,24),19,ConsoleTheme.Ink);
+            cancelHints[0]=CreateCancelHint(active,368);
             for(int i=0;i<4;i++)
             {
-                var card=Section(productionStrip,"Queue position "+(i+2),new Vector2(380+i*166,-42),new Vector2(160,112));
+                var card=Section(productionStrip,"Queue position "+(i+2),new Vector2(408+i*250,-HudContentTop),new Vector2(234,136),button);
                 queuedCards[i]=card.GetComponent<Image>();
-                queuedPositions[i]=Label(card,(i+2).ToString(),new Vector2(12,-5),new Vector2(136,22),16,QueueIdleTint);
-                queuedNames[i]=Label(card,"",new Vector2(12,-30),new Vector2(136,52),21,Color.white);
-                queuedPortraits[i]=ModelPortrait(card,new Vector2(8,-30),new Vector2(48,48));
-                queuedProgress[i]=Section(card,"Production progress",new Vector2(12,-82),new Vector2(0,3),accent).GetComponent<Image>();
-                queuedKinds[i]=Label(card,"",new Vector2(12,-87),new Vector2(136,22),14,QueueIdleTint);
-                cancelHints[i+1]=CreateCancelHint(card,160);
+                // Native rounded fills form a solid 4 px edge without affecting
+                // labels, cancellation targets or the card's outer dimensions.
+                var border=Section(card,"Active producer border",Vector2.zero,card.sizeDelta,QueueActiveBorderTint);
+                queuedActiveBorders[i]=border.GetComponent<Image>();
+                Section(border,"Card interior",new Vector2(4,-4),card.sizeDelta-Vector2.one*8,button);
+                border.gameObject.SetActive(false);
+                queuedPositions[i]=Label(card,(i+2).ToString(),new Vector2(16,-12),new Vector2(202,22),17,QueueIdleTint);
+                queuedNames[i]=Label(card,"",new Vector2(16,-36),new Vector2(202,52),20,ConsoleTheme.Ink,TextAnchor.MiddleLeft);
+                queuedNames[i].fontStyle=FontStyle.Bold;
+                queuedPortraits[i]=ModelPortrait(card,new Vector2(16,-40),new Vector2(48,48));
+                Section(card,"Queue progress track",new Vector2(49,-96),new Vector2(136,3),ConsoleTheme.Track);
+                queuedProgress[i]=Section(card,"Production progress",new Vector2(49,-96),new Vector2(0,3),accent).GetComponent<Image>();
+                queuedKinds[i]=Label(card,"",new Vector2(16,-104),new Vector2(202,24),17,QueueIdleTint,TextAnchor.MiddleCenter);
+                cancelHints[i+1]=CreateCancelHint(card,234);
             }
         }
 
         private RectTransform CreateCancelHint(RectTransform card,float width)
         {
-            var hint=Section(card,"Cancel hint",new Vector2(8,-82),new Vector2(width-16,30),QueueCancelTint);
-            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,30),14,Color.white,TextAnchor.MiddleCenter);
+            var hint=Section(card,"Cancel hint",new Vector2(8,-100),new Vector2(width-16,28),QueueCancelTint);
+            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,28),17,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             hint.gameObject.SetActive(false);return hint;
         }
         private void ClearProductionTargets()
@@ -64,6 +79,7 @@ namespace Frontier.Runtime
                 if(target!=null)target.image.color=target.normal;
                 productionTargets[i]=null;
                 if(cancelHints[i]!=null)cancelHints[i].gameObject.SetActive(false);
+                if(i>0&&queuedActiveBorders[i-1]!=null)queuedActiveBorders[i-1].gameObject.SetActive(false);
             }
         }
         private void BindProductionTargets()
@@ -75,7 +91,7 @@ namespace Frontier.Runtime
                 var order=producer.queue[i];int orderId=order.id;
                 if(orderId<=0)continue;
                 var card=i==0?productionCard:queuedCards[i-1];
-                var target=new Target{rect=card.rectTransform,image=card,normal=i==0?new Color(.055f,.18f,.22f):button,hoverColor=QueueCancelTint,
+                var target=new Target{rect=card.rectTransform,image=card,normal=i==0?QueueActiveTint:button,hoverColor=QueueCancelTint,
                     click=()=>
                     {
                         if(!AcceptsGameInput||Session.SessionIdentity!=match||SelectedProducer()?.id!=producerId)return;
@@ -117,11 +133,11 @@ namespace Frontier.Runtime
             if(producers.Length==0)return;
             if(Session.Selection.Count>1){UpdateGroupProductionHud(producers);return;}
             var producer=producers[0];
-            productionTitle.text="PRODUCTION QUEUE";
+            productionTitle.text="PRODUCTION";
             productionHint.text="CLICK AN ITEM TO CANCEL";
             var queue=producer.queue;
             productionCount.text=$"{queue.Length} / 5"+(queue.Length>=5?" · FULL":"");
-            productionCount.color=queue.Length>=5?WarningTint:Color.white;
+            productionCount.color=queue.Length>=5?WarningTint:ConsoleTheme.Ink;
             UpdateCurrentProduction(queue.FirstOrDefault());
             for(int i=0;i<4;i++)
             {
@@ -130,10 +146,12 @@ namespace Frontier.Runtime
                 var item=occupied?queue[i+1]:null;
                 UpdateQueuedPortrait(i,item);
                 queuedNames[i].text=occupied?QueueLabel(item.definition):"Empty";
-                queuedNames[i].color=occupied?Color.white:QueueIdleTint;
+                queuedNames[i].color=occupied?ConsoleTheme.Ink:QueueIdleTint;
                 queuedKinds[i].text=occupied?(item.research?"Research":UnitVisuals.RoleName(Session.Catalog[item.definition].role)):"Available slot";
                 queuedKinds[i].color=QueueIdleTint;
-                queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
+                queuedCards[i].color=button;
+                queuedActiveBorders[i].color=QueueActiveBorderTint;
+                queuedActiveBorders[i].gameObject.SetActive(i==3&&occupied);
                 queuedProgress[i].rectTransform.sizeDelta=new Vector2(0,3);
             }
             UpdateProductionHover();
@@ -144,7 +162,7 @@ namespace Frontier.Runtime
         private void UpdateCurrentProduction(ProductionOrder current,int producerNumber=0)
         {
             bool portrait=UpdateProductionPortrait(productionPortrait,current);
-            TopLeft(productionName.rectTransform,new Vector2(portrait?72:16,-25),new Vector2(portrait?264:320,38));
+            TopLeft(productionName.rectTransform,new Vector2(portrait?84:24,-34),new Vector2(portrait?260:320,56));
             var tint=accent;
             if(current==null)
             {
@@ -176,17 +194,17 @@ namespace Frontier.Runtime
             }
             if(producerNumber>0&&current!=null)((LocalizedText)productionState).Append(" · B"+producerNumber);
             if(producerNumber>0&&current==null&&Session.IsPaused&&!Session.IsOnline){productionState.text="PAUSED";tint=WarningTint;}
-            productionAccent.color=productionFill.color=productionState.color=tint;
+            productionFill.color=productionState.color=tint;
         }
 
         private void UpdateGroupProductionHud(VisibleEntity[] producers)
         {
             int queued=producers.Sum(e=>e.queue.Length),capacity=producers.Length*5;
             int full=producers.Count(e=>e.queue.Length>=5);
-            productionTitle.text="GROUP PRODUCTION";
+            productionTitle.text="PRODUCTION";
             productionHint.text=producers.Length+(producers.Length==1?" BUILDING":" BUILDINGS")+" · SELECT ONE TO CANCEL";
             productionCount.text=$"{queued} / {capacity}"+(full==producers.Length?" · FULL":"");
-            productionCount.color=full==producers.Length?WarningTint:Color.white;
+            productionCount.color=full==producers.Length?WarningTint:ConsoleTheme.Ink;
             // Show parallel work first, then each producer's pending orders in FIFO
             // order. Every visible slot is an actual order, including duplicates.
             var visible=new (ProductionOrder order,int producer,int depth)[5];int count=0;
@@ -203,11 +221,13 @@ namespace Frontier.Runtime
                 var tint=active?((Session.IsPaused&&!Session.IsOnline)||waiting?WarningTint:accent):QueueIdleTint;
                 queuedPositions[i].text=i==3&&queued>5?$"5 · +{queued-5} MORE":(i+2).ToString();
                 queuedNames[i].text=occupied?QueueLabel(item.order.definition):"Empty";
-                queuedNames[i].color=occupied?Color.white:QueueIdleTint;
+                queuedNames[i].color=occupied?ConsoleTheme.Ink:QueueIdleTint;
                 string state=!active?"QUEUED":Session.IsPaused&&!Session.IsOnline?"PAUSED":waiting?"READY":$"{Mathf.FloorToInt(progress*100)}%";
                 queuedKinds[i].text=occupied?$"B{item.producer} · {state}":"Available slot";
                 queuedKinds[i].color=tint;
-                queuedCards[i].color=occupied?button:new Color(.035f,.075f,.105f);
+                queuedCards[i].color=button;
+                queuedActiveBorders[i].color=i==3&&queued>5?QueueOverflowBorderTint:QueueActiveBorderTint;
+                queuedActiveBorders[i].gameObject.SetActive(active||(i==3&&occupied));
                 queuedProgress[i].rectTransform.sizeDelta=new Vector2(136*progress,3);queuedProgress[i].color=tint;
             }
             // Group cancellation remains an explicit single-building operation.
@@ -222,8 +242,7 @@ namespace Frontier.Runtime
         private void UpdateQueuedPortrait(int index,ProductionOrder order)
         {
             bool portrait=UpdateProductionPortrait(queuedPortraits[index],order);
-            TopLeft(queuedNames[index].rectTransform,new Vector2(portrait?62:12,-30),new Vector2(portrait?90:136,52));
-            queuedNames[index].fontSize=portrait?17:21;
+            TopLeft(queuedNames[index].rectTransform,new Vector2(portrait?76:16,-36),new Vector2(portrait?142:202,52));
         }
     }
 }

@@ -14,6 +14,7 @@ namespace Frontier.Runtime
         private bool wheelReleasePending;
         private OVRInput.Controller inputController=OVRInput.Controller.None;
         private bool controllerReleasePending;
+        private bool countdownReleasePending;
         private enum PanelButton { None, Trigger, Action }
         private PanelButton panelButton;
         private bool panelReleasePending;
@@ -63,7 +64,7 @@ namespace Frontier.Runtime
                 // Buttons, axes and the pointer always come from the chosen hand.
                 var primary=Quest.ActiveController;
                 if(inputController!=primary)ChangeInputController(primary);
-                if(!Quest.PointerTracked){laser.enabled=false;ResetWheelRouting();ClearPointer();placementInputReady=false;placementHeightDirection=0;controllerReleasePending=true;return;}
+                if(!ValidatePointerTracking(Quest.PointerTracked))return;
                 ray=Quest.PointerRay();
                 var select=HotkeyInput.Read(gameplay?bindings.Get(true,"select"):"touch:trigger",primary);
                 var action=HotkeyInput.Read(gameplay?bindings.Get(true,"order"):"touch:a",primary);
@@ -93,6 +94,8 @@ namespace Frontier.Runtime
                 pan=new Vector2((HotkeyInput.Read(bindings,false,"pan-right").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-left").Held?1:0),
                     (HotkeyInput.Read(bindings,false,"pan-up").Held?1:0)-(HotkeyInput.Read(bindings,false,"pan-down").Held?1:0));
             }
+            if((Session.IsCountingDown||countdownReleasePending)
+                &&BlockCountdownInput(HotkeyInput.AnyHeld(Quest.Active,Quest.ActiveController)||primaryStick.magnitude>=.25f))return;
             if(placementInputActive&&!Quest.Placing)
             {placementInputActive=placementInputReady=false;placementHeightDirection=0;controllerReleasePending=Quest.Active;ResetWheelRouting();CancelPanelInput();ClearPointer();}
             Wheel?.TickHint(ray,Quest.Active&&!controllerReleasePending);
@@ -108,6 +111,15 @@ namespace Frontier.Runtime
             {RoutePlacement(ray,primaryStick,Time.unscaledTime,Time.unscaledDeltaTime);return;}
             var menuSelect=HotkeyInput.Read(Quest.Active?"touch:trigger":"mouse:left",Quest.ActiveController);
             var menuAction=Quest.Active?HotkeyInput.Read("touch:a",Quest.ActiveController):default;
+            // Section guides own all input while open, including rays outside the
+            // console. Back dismisses help before it can cancel a targeting mode.
+            if(Panel.SectionHelpOpen)
+            {
+                if(cancel||toggleMenu||HotkeyInput.Read(Quest.Active?"touch:b":"key:Escape",Quest.ActiveController).Down)
+                {Panel.Back();CancelPanelInput();}
+                else RoutePanel(ray,menuSelect.Down,menuSelect.Up,menuSelect.Held,menuAction.Down,menuAction.Up,menuAction.Held,0);
+                ResetWheelRouting();ClearPointer();Wheel?.TickHint(ray,false);return;
+            }
             bool uiPointerInput=menuSelect.Down||menuSelect.Up||menuSelect.Held||menuAction.Down||menuAction.Up||menuAction.Held||panelButton!=PanelButton.None||Panel.IsDragging;
             bool interactingWithPanel=panelButton!=PanelButton.None||Panel.IsDragging||(uiPointerInput&&Panel.ContainsPointer(ray));
             if(!Quest.Active&&Panel.Page!=CommandPanel.MenuPage.Hotkeys&&!interactingWithPanel&&!panelReleasePending)
@@ -157,6 +169,19 @@ namespace Frontier.Runtime
                 Board.Navigate(pan,zoom,zoom!=0?1:Time.unscaledDeltaTime);
             if(!Panel.AcceptsGameInput){ClearPointer();return;}
             PointBoard(ray,down,up,order,add);
+        }
+        private bool BlockCountdownInput(bool held)
+        {
+            // Tracking recovery may require replacing the board; that system flow
+            // pauses the offline count and never enables gameplay commands.
+            if(Quest.Placing)return false;
+            if(Session.IsCountingDown)countdownReleasePending=true;
+            else if(!countdownReleasePending)return false;
+            else if(!held)countdownReleasePending=false;
+            ResetMapGestures();ResetWheelRouting();CancelPanelInput();ClearPointer();
+            Wheel?.TickHint(default,false);
+            if(laser!=null)laser.enabled=false;
+            return true;
         }
         private void RoutePlacement(Ray ray,Vector2 stick,float now,float delta)
         {
@@ -303,21 +328,27 @@ namespace Frontier.Runtime
             if(Quest.Active&&laser!=null)laser.SetPosition(1,hit);
         }
         private bool RoutePanel(Ray ray,bool triggerDown,bool triggerUp,bool triggerHeld,bool actionDown,bool actionUp,bool actionHeld,float depth)
+            =>RoutePanelInput(ray,triggerDown,triggerUp,triggerHeld,actionDown,actionUp,actionHeld,depth,
+                HotkeyInput.Read(Quest.Active?"touch:grip":"key:LeftCtrl",Quest.ActiveController).Held);
+        private bool RoutePanelInput(Ray ray,bool triggerDown,bool triggerUp,bool triggerHeld,bool actionDown,bool actionUp,bool actionHeld,float depth,bool assignGroup)
         {
             if(panelReleasePending)
             {
-                ResetMapGestures();Panel.CancelPointerInteraction();panelReleasePending=triggerHeld||actionHeld;return true;
+                // The owner release may just have opened a section guide. Drain
+                // the other alias without dismissing that newly opened dialog.
+                ResetMapGestures();if(!Panel.SectionHelpOpen)Panel.CancelPointerInteraction();
+                panelReleasePending=triggerHeld||actionHeld;return true;
             }
             if(panelButton!=PanelButton.None)
             {
                 // The button that started the interaction owns its release. Pressing both
                 // aliases must not execute twice, shorten a hold, or send an order to the map.
                 bool released=panelButton==PanelButton.Trigger?triggerUp:actionUp;
-                ResetMapGestures();Panel.Point(ray,false,released,depth);
+                ResetMapGestures();Panel.Point(ray,false,released,depth,assignGroup);
                 if(released){panelButton=PanelButton.None;panelReleasePending=triggerHeld||actionHeld;}
                 return true;
             }
-            bool consumed=Panel.Point(ray,triggerDown||actionDown,triggerUp||actionUp,depth);
+            bool consumed=Panel.Point(ray,triggerDown||actionDown,triggerUp||actionUp,depth,assignGroup);
             if(consumed)ResetMapGestures();
             if(consumed&&(triggerDown||actionDown))
             {
@@ -329,9 +360,18 @@ namespace Frontier.Runtime
         }
         private void CancelPanelInput()
         {panelButton=PanelButton.None;panelReleasePending=true;Panel?.CancelPointerInteraction();}
+        private bool ValidatePointerTracking(bool tracked)
+        {
+            if(tracked)return true;
+            if(laser!=null)laser.enabled=false;
+            ResetWheelRouting();CancelPanelInput();ClearPointer();
+            placementInputReady=false;placementHeightDirection=0;controllerReleasePending=true;
+            return false;
+        }
         private bool RouteWheel(Ray ray,Vector2 stick,bool press,bool mapInput,bool triggerDown,bool triggerHeld,bool cancel,bool grip,bool gripDown,float now,bool stickHeld,bool stickReleased)
         {
             if(Wheel==null)return false;
+            if(Panel!=null&&Panel.SectionHelpOpen){ResetWheelRouting();ClearPointer();return true;}
             // Wheel navigation always uses the physical trigger, independently of map
             // bindings. Infer its release here so the same router accepts synthetic edges.
             bool triggerUp=wheelTriggerHeld&&!triggerHeld;wheelTriggerHeld=triggerHeld;

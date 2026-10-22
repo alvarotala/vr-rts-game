@@ -54,7 +54,7 @@ namespace Frontier.Editor
                     Check(session.Send(CommandKind.Move,position:new Point(22,14)),"Initial MOVE accepted");
                     Check(session.Send(CommandKind.Move,position:new Point(25,22),append:true),"Second waypoint appended");
                     Check(session.Send(CommandKind.AttackMove,position:new Point(15,24),append:true),"Attack Move waypoint appended");Refresh();
-                    Check(Text("orderPlanCount")=="2 queued orders","HUD distinguishes queued orders from the active order");
+                    Check(Text("orderPlanCount")=="2","HUD counts pending orders beside its title, excluding the active order");
                     Check(Text("orderPlanSteps").Contains("1. Move")&&Text("orderPlanSteps").Contains("3. Attack Move"),"HUD lists upcoming order types in execution order");
                     Check(Plan().gameObject.activeInHierarchy&&PlanMesh().vertexCount>0,"A selected own unit draws its queued destinations");
                     Check(Plan().GetComponentsInChildren<Collider>(true).Length==0,"Order waypoints do not intercept selection rays");
@@ -71,12 +71,12 @@ namespace Frontier.Editor
                     session.Select(workers[0].id,false);session.Selection.Add(workers[1].id);
                     Check(session.Send(CommandKind.Move,position:new Point(22,14)),"Group MOVE accepted");
                     Check(session.Send(CommandKind.Move,position:new Point(25,22),append:true),"Group waypoint appended");Refresh();
-                    Check(Text("orderPlanCount")=="2 queued orders across 2 / 2 units","Group HUD identifies per-unit queue totals");
+                    Check(Text("orderPlanCount")=="2","Group HUD sums pending orders across the selected units");
                     Check(OrderQueueVisuals.Representative(session).id==workers[0].id,"One stable lowest-ID unit represents the selected group");
                     session.Selection.Remove(workers[0].id);Refresh();
                     Check(OrderQueueVisuals.Representative(session).id==workers[1].id,"Removing the representative changes the displayed plan");
                     Check(session.Send(CommandKind.Stop),"Stop accepted");Refresh();
-                    Check(Text("orderPlanCount")=="0 queued orders"&&!Plan().gameObject.activeInHierarchy,"Stop clears queued order feedback immediately");
+                    Check(Text("orderPlanCount")=="0"&&!Plan().gameObject.activeInHierarchy,"Stop clears queued order feedback immediately");
                     session.Select(workers[0].id,false);Refresh();
                     var selected=session.View.entities.First(e=>e.id==workers[0].id);selected.owner=1;
                     Invoke(board,"LateUpdate");Check(OrderQueueVisuals.Representative(session)==null&&!Plan().gameObject.activeInHierarchy,"Enemy data cannot become a displayed own plan even if selected");Refresh();

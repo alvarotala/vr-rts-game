@@ -33,6 +33,7 @@ namespace Frontier.Editor
                     f.Session.Select(workers[0].id, false); f.Refresh();
                     f.Check(UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts").Length == 4 && UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts").All(t => t.text == "1 assigned"), "HUD displays all four group counts");
                     f.CapturePanel(faction + "-hud");
+                    CheckHudAssignment();
                     CheckStickAssignment();
                     f.OpenGroups(); f.Choose("group-2"); f.Frame();
                     f.Check(f.Wheel.InGroupMenu && f.Wheel.Highlighted == -1 && f.Session.Selection.Contains(workers[0].id), "Centering a group highlight clears it without recalling the group");
@@ -72,7 +73,7 @@ namespace Frontier.Editor
                     }
                     for (int i = 0; i < 4; i++) { f.Session.Select(workers[i].id, false); f.Session.Group(i, true); }
                     f.Session.Select(hq.id, false); ClickGroup4(true); f.Session.Select(0, false); ClickGroup4(false);
-                    f.Check(f.Session.Selection.SetEquals(new[] { hq.id }) && f.Session.GroupSize(3) == 1, "The fourth HUD button still saves on hold and recalls on click");
+                    f.Check(f.Session.Selection.SetEquals(new[] { hq.id }) && f.Session.GroupSize(3) == 1, "The fourth HUD button saves with a modifier click and recalls with a plain click");
                     f.Session.Select(workers[0].id, false); f.Session.ChooseBuild(f.Session.Catalog.Role(faction, "supply").id); f.OpenGroups(); f.Enter("group-4"); f.Drain();
                     f.Check(f.Session.Selection.Contains(hq.id) && f.Session.BuildDefinition == null, "Recalling a group clears armed construction without placing a building");
                     f.Session.Select(workers[0].id, false); f.Session.ChooseAttackMove(); f.OpenGroups(); f.Enter("group-2"); f.Drain();
@@ -95,7 +96,7 @@ namespace Frontier.Editor
                     f.OpenGroups(); Save(3); f.Check(f.Session.GroupSize(3) == 2, "Groups save multiple buildings together");
                     f.Session.Select(workers[0].id, false); f.OpenGroups(); f.Enter("group-4"); f.Drain();
                     f.Check(f.Session.Selection.SetEquals(new[] { first.id, second.id }) && first.queue.Count + second.queue.Count == queued && first.hasRallyPoint && second.hasRallyPoint, "Recalling a barracks group preserves production and shared rally points");
-                    f.Refresh(); f.Check(UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts")[3].text == "2 assigned" && UnifiedWheelFixture.Field<Text>(f.Panel, "productionTitle").text == "GROUP PRODUCTION", "Recalled barracks refresh the HUD count and combined production summary"); f.CapturePanel(faction + "-barracks-group");
+                    f.Refresh(); f.Check(UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts")[3].text == "2 assigned" && UnifiedWheelFixture.Field<Text>(f.Panel, "productionTitle").text == "PRODUCTION", "Recalled barracks refresh the HUD count and combined production summary"); f.CapturePanel(faction + "-barracks-group");
                     f.OpenSelection(); f.Enter(trainId); f.Drain();
                     f.Check(first.queue.Count == 1 && second.queue.Count == 1 && f.Session.Selection.Count == 2, "Wheel training buys one unit at the idle barracks while retaining group selection");
                     foreach (string role in new[] { "tech", "academy" }) { var producer = f.Add(role, role == "tech" ? 2003 : 2004, new Point(18, role == "tech" ? 30 : 35)); f.Session.Select(producer.id, true); }
@@ -108,6 +109,130 @@ namespace Frontier.Editor
                     f.Check(f.Board.transform.localToWorldMatrix == boardPose, "Group navigation leaves board placement unchanged");
                     f.OpenGroups(); f.Choose("group-2"); f.Session.StartMatch(); f.Frame();
                     f.Check(!f.Wheel.IsOpen && Enumerable.Range(0, 4).All(i => f.Session.GroupSize(i) == 0), "A rematch resets all groups and invalidates the open wheel"); f.Drain();
+
+                    void CheckHudAssignment()
+                    {
+                        int feedback = 0;
+                        System.Action<bool> countFeedback = success => { if (success) feedback++; };
+                        f.Session.Feedback += countFeedback;
+                        try
+                        {
+                            PreparePair(); var pointer = GroupPointer();
+                            f.Panel.Point(pointer, true, false); Age(2); f.Panel.Point(pointer, false, false);
+                            UnifiedWheelFixture.Call(f.Panel, "UpdateGroupFeedback");
+                            f.Check(f.Session.GroupSize(3) == 1 && feedback == 0 && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id })
+                                && !f.Panel.GetComponentsInChildren<RectTransform>(true).Any(r => r.name == "Assignment progress track"),
+                                "A long plain Trigger press neither assigns nor shows an assignment loader");
+                            f.Panel.Point(pointer, false, true);
+                            f.Check(f.Session.Selection.SetEquals(new[] { workers[3].id }) && f.Session.GroupSize(3) == 1 && feedback == 1,
+                                "Releasing a long plain Trigger press recalls the group exactly once");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false); f.Panel.Point(pointer, false, true);
+                            f.Check(f.Session.Selection.SetEquals(new[] { workers[3].id }) && feedback == 1,
+                                "A short plain HUD click recalls the saved group");
+
+                            PreparePair(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            Age(2); f.Panel.Point(pointer, false, false, 0, true); UnifiedWheelFixture.Call(f.Panel, "UpdateGroupFeedback");
+                            f.Check(f.Session.GroupSize(3) == 1 && feedback == 0, "Grip plus Trigger waits for its owning release before assigning");
+                            f.Panel.Point(pointer, false, true, 0, false);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 1 && Count() == "Saved · 2"
+                                && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }),
+                                "Grip captured on press assigns once even when released before Trigger, with visual and haptic confirmation");
+                            f.CapturePanel(faction + "-hud-group-saved");
+                            // Flat previews move the canvas; use its current pose for later edges.
+                            pointer = GroupPointer(); f.Panel.Point(pointer, false, true);
+                            f.Check(feedback == 1, "Duplicate release never repeats the group assignment");
+                            UnifiedWheelFixture.Field<float[]>(f.Panel, "groupConfirmedUntil")[3] = Time.unscaledTime - 1;
+                            UnifiedWheelFixture.Call(f.Panel, "UpdateGroupFeedback");
+                            f.Check(Count() == "2 assigned", "The saved confirmation returns to the normal count after its display interval");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, false); f.Panel.Point(pointer, false, true, 0, true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 1 && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }),
+                                "Adding Grip after the press cannot turn a recall into assignment");
+
+                            Prepare(); pointer = GroupPointer(); Neutral(pointer);
+                            Route(pointer, true, false, true, true, false, true, true);
+                            Route(pointer, false, false, true, false, true, false, false);
+                            f.Check(feedback == 0 && f.Session.GroupSize(3) == 2, "The A alias release cannot confirm a Trigger-owned group assignment");
+                            Route(pointer, false, true, false, false, false, false, false);
+                            Route(pointer, false, true, false, false, true, false, false);
+                            f.Check(feedback == 1 && f.Session.GroupSize(3) == 1 && f.Session.Selection.SetEquals(new[] { workers[2].id }),
+                                "Simultaneous Trigger and A save only once on the owning release");
+
+                            PreparePair(); pointer = GroupPointer(); Neutral(pointer);
+                            Route(pointer, false, false, false, true, false, true, true);
+                            Route(pointer, true, false, true, false, false, true, false);
+                            Route(pointer, false, true, false, false, false, true, false);
+                            f.Check(feedback == 0 && f.Session.GroupSize(3) == 1, "Trigger cannot confirm an A-owned modifier click");
+                            Route(pointer, false, false, false, false, true, false, false);
+                            f.Check(feedback == 1 && f.Session.GroupSize(3) == 2, "The menu A alias also preserves the modifier captured at press");
+
+                            Prepare(); pointer = GroupPointer(); Neutral(pointer);
+                            Route(pointer, false, false, false, true, false, true, false);
+                            Route(pointer, false, false, false, false, true, false, false);
+                            f.Check(feedback == 1 && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }),
+                                "The unmodified A alias recalls the group without assigning");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            var outside = new Ray(pointer.origin + f.Panel.transform.right * 100, pointer.direction);
+                            f.Panel.Point(outside, false, false, 0, true); f.Panel.Point(pointer, false, false, 0, true); f.Panel.Point(pointer, false, true, 0, true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(),
+                                "Leaving a group cancels the modifier click and returning cannot resume it");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            UnifiedWheelFixture.Call(f.Panel, "OnApplicationFocus", false); f.Panel.Point(pointer, false, true, 0, true);
+                            UnifiedWheelFixture.Call(f.Panel, "OnApplicationFocus", true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(), "Focus loss cancels a pending modifier assignment");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            f.Session.Select(hq.id, false); feedback = 0; f.Panel.Point(pointer, false, true, 0, true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(), "A selection change invalidates the captured group gesture");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            f.Session.Pause("tracking", true); f.Refresh(); f.Session.Pause("tracking", false); f.Refresh();
+                            f.Panel.Point(GroupPointer(), false, true, 0, true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(), "Tracking interruption cancels a pending group assignment");
+
+                            Prepare(); pointer = GroupPointer(); Neutral(pointer);
+                            Route(pointer, true, false, true, false, false, false, true);
+                            f.Check(!f.Session.HasSystemPause && GestureActive(), "Controller tracking test starts a modifier click while the match remains unpaused");
+                            f.Check(!(bool)UnifiedWheelFixture.Call(f.Input, "ValidatePointerTracking", false), "Lost controller tracking stops input routing");
+                            Age(2); UnifiedWheelFixture.Call(f.Panel, "UpdateGroupFeedback");
+                            UnifiedWheelFixture.Call(f.Input, "ValidatePointerTracking", true);
+                            Route(pointer, false, true, false, false, false, false, true);
+                            f.Check(!f.Session.HasSystemPause && f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(),
+                                "Losing only controller tracking cancels assignment and drains the recovered release");
+
+                            Prepare(); pointer = GroupPointer(); f.Panel.Point(pointer, true, false, 0, true);
+                            UnifiedWheelFixture.Call(f.Panel, "Rebuild"); f.Panel.Point(GroupPointer(), false, true, 0, true);
+                            f.Check(f.Session.GroupSize(3) == 2 && feedback == 0 && !GestureActive(), "HUD rebuild cancels a modifier click without saving or recalling");
+                        }
+                        finally
+                        {
+                            f.Session.Feedback -= countFeedback; f.Panel.CancelPointerInteraction();
+                            System.Array.Clear(UnifiedWheelFixture.Field<float[]>(f.Panel, "groupConfirmedUntil"), 0, GameSession.ControlGroupCount);
+                            for (int i = 0; i < 4; i++) { f.Session.Select(workers[i].id, false); f.Session.Group(i, true); }
+                            f.Session.Select(workers[0].id, false); f.Refresh();
+                        }
+
+                        void Prepare() { f.Panel.CancelPointerInteraction(); f.Session.Select(workers[2].id, false); f.Refresh(); feedback = 0; }
+                        void PreparePair() { f.Panel.CancelPointerInteraction(); f.Session.Select(workers[0].id, false); f.Session.Select(workers[1].id, true); f.Refresh(); feedback = 0; }
+                        void Age(float elapsed) => typeof(CommandPanel).GetField("pressedAt", UnifiedWheelFixture.Private).SetValue(f.Panel, Time.unscaledTime - elapsed);
+                        bool GestureActive() => UnifiedWheelFixture.Field<object>(f.Panel, "groupGestureTarget") != null;
+                        string Count() => UnifiedWheelFixture.Field<Text[]>(f.Panel, "groupCounts")[3].text;
+                        bool Route(Ray pointer,bool down,bool up,bool held,bool aDown,bool aUp,bool aHeld,bool modifier)
+                            => (bool)UnifiedWheelFixture.Call(f.Input, "RoutePanelInput", pointer, down, up, held, aDown, aUp, aHeld, 0f, modifier);
+                        void Neutral(Ray pointer)
+                        {
+                            Route(pointer, false, false, false, false, false, false, false);
+                            f.Check(!UnifiedWheelFixture.Field<bool>(f.Input, "panelReleasePending"), "A neutral controller frame drains earlier panel releases");
+                        }
+                        Ray GroupPointer()
+                        {
+                            var rect = f.Panel.GetComponentsInChildren<RectTransform>().First(r => r.name == "Group 4" && r.gameObject.activeInHierarchy);
+                            var center = rect.TransformPoint(rect.rect.center); return new Ray(center - rect.forward, rect.forward);
+                        }
+                    }
 
                     void CheckStickAssignment()
                     {
@@ -156,9 +281,8 @@ namespace Frontier.Editor
                 {
                     f.Refresh(); var rect = f.Panel.GetComponentsInChildren<RectTransform>().First(r => r.name == "Group 4" && r.gameObject.activeInHierarchy);
                     var center = rect.TransformPoint(rect.rect.center); var pointer = new Ray(center - rect.forward, rect.forward);
-                    f.Check(f.Panel.Point(pointer, true, false), "Group 4 HUD press hits its target");
-                    if (save) typeof(CommandPanel).GetField("pressedAt", UnifiedWheelFixture.Private).SetValue(f.Panel, Time.unscaledTime - 1);
-                    f.Check(f.Panel.Point(pointer, false, true), "Group 4 HUD release hits its target"); f.Refresh();
+                    f.Check(f.Panel.Point(pointer, true, false, 0, save), "Group 4 HUD press hits its target");
+                    f.Check(f.Panel.Point(pointer, false, true, 0, save), "Group 4 HUD release hits its target"); f.Refresh();
                 }
             }
         }

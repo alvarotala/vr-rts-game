@@ -59,7 +59,9 @@ namespace Frontier.Runtime
             Map = JsonUtility.FromJson<MapDefinition>(asset.text); _ = new GridMap(Map); MapId = id;
         }
         public void CycleMap()=>LoadMap(MapId=="rift"?"training":MapId=="training"?"desert":"rift");
-        public void StartMatch()
+        // The player-facing flow requests the countdown after board placement.
+        // Direct simulation fixtures can start without presentation.
+        public void StartMatch(bool countdown = false)
         {
             if(IsReplay)StopReplay();
             DisconnectOnline();
@@ -72,13 +74,15 @@ namespace Frontier.Runtime
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
             BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
-            pauseReasons.Remove("menu"); Match.Paused=IsPaused; Running = true; View = Match.View(0);
+            PrepareCountdown(countdown ? StartCountdownSeconds : 0);
+            pauseReasons.Remove("menu"); Running = true; Match.Paused=IsPaused; View = Match.View(0);
             Announce(MapId == "training" ? $"1 · Select a worker. Build: {Catalog.Role(Faction, "supply").name} + {Catalog.Role(Faction, "barracks").name}." : "Expand your base. Scout before attacking.");
             NewMatch?.Invoke(); Changed?.Invoke();
         }
         public void LeaveMatch()
         {
             if(IsReplay){StopReplay();return;}
+            PrepareCountdown(0);
             DisconnectOnline();
             LastClosedWasReplay=false;
             CloseArchive();
@@ -94,9 +98,10 @@ namespace Frontier.Runtime
         private void Update()
         {
             if(IsReplay){UpdateReplay();return;}
+            if(IsCountingDown){AdvanceCountdown(Time.unscaledDeltaTime);accumulator=0;return;}
             if (!Running || Match == null) return;
             UpdateArchive();
-            Match.Paused = pauseReasons.Count > 0;
+            Match.Paused = IsPaused;
             if (Match.Paused || Match.Winner != -1) { accumulator = 0; return; }
             accumulator += Math.Min(Time.unscaledDeltaTime, .25f);
             int steps = 0;
@@ -117,7 +122,7 @@ namespace Frontier.Runtime
                 Changed?.Invoke();
             }
         }
-        public bool IsPaused => pauseReasons.Count > 0 || IsReplay && (Replay.Paused || Replay.Seeking || Replay.Ended || Replay.Error != null);
+        public bool IsPaused => IsCountingDown || pauseReasons.Count > 0 || IsReplay && (Replay.Paused || Replay.Seeking || Replay.Ended || Replay.Error != null);
         // Menus and board placement still accept controller input. System interruptions
         // must hide hand-attached UI even when one of those local menus is also open.
         public bool HasSystemPause => pauseReasons.Any(reason => reason != "menu" && reason != "placement");
@@ -127,6 +132,7 @@ namespace Frontier.Runtime
         public void Announce(string text, bool isError=false) { Message = text; MessageIsError=isError; MessageVersion=unchecked(MessageVersion+1); messageUntil = Time.unscaledTime + 6; }
         public void Select(int id, bool additive, int resourceId = 0)
         {
+            if(IsCountingDown)return;
             if (!additive) Selection.Clear();
             SelectedResource = 0;
             if (View != null && View.entities.Any(e => e.id == id && e.owner == LocalPlayer)) { if (!Selection.Add(id) && additive) Selection.Remove(id); }
@@ -135,6 +141,7 @@ namespace Frontier.Runtime
         }
         public void SelectRectangle(Point a, Point b, bool additive)
         {
+            if(IsCountingDown)return;
             SelectedResource = 0;
             if (!additive) Selection.Clear();
             if (View == null) return;
@@ -144,12 +151,14 @@ namespace Frontier.Runtime
         }
         public void Deselect(int id)
         {
+            if(IsCountingDown)return;
             bool removed=Selection.Remove(id);
             if(removed)SelectedResource=0;
             ValidateAbilitySelection();Feedback?.Invoke(removed);Changed?.Invoke();
         }
         public void SelectSameTypeOnMap(int id,bool additive)
         {
+            if(IsCountingDown)return;
             var source=View?.entities.FirstOrDefault(e=>e.id==id&&e.owner==View.player&&!e.remembered&&e.health>0);
             if(source==null)return;
             if(!additive)Selection.Clear();
@@ -161,6 +170,7 @@ namespace Frontier.Runtime
         }
         public void SelectTypeInSelection(string definition,bool remove)
         {
+            if(IsCountingDown)return;
             if(View==null)return;
             var members=new HashSet<int>(View.entities.Where(e=>Selection.Contains(e.id)&&e.owner==View.player&&!e.remembered&&e.definition==definition).Select(e=>e.id));
             if(members.Count==0)return;
@@ -184,6 +194,7 @@ namespace Frontier.Runtime
         }
         public void Group(int index, bool save)
         {
+            if(IsCountingDown)return;
             if(View==null||index<0||index>=groups.Length)return;
             if (save) { groups[index].Clear(); groups[index].AddRange(Selection.Where(OwnGroupMember)); Announce("Group " + (index + 1) + " saved."); }
             else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (OwnGroupMember(id)) Selection.Add(id);
@@ -192,10 +203,10 @@ namespace Frontier.Runtime
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { if(IsReplay)return; BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { if(IsReplay||IsCountingDown)return; BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void ChooseAttackMove()
         {
-            if(IsReplay)return;
+            if(IsReplay||IsCountingDown)return;
             BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null;
             Announce("Attack Move · Choose a point on the battlefield."); Changed?.Invoke();
         }
@@ -215,7 +226,7 @@ namespace Frontier.Runtime
         }
         public bool ChooseAbility(string id)
         {
-            if(IsReplay)return false;
+            if(IsReplay||IsCountingDown)return false;
             var ability=Catalog.Ability(id);
             if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
             {Announce(AbilityStatus(id),true);Feedback?.Invoke(false);Changed?.Invoke();return false;}
@@ -303,7 +314,7 @@ namespace Frontier.Runtime
         }
         public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0)
         {
-            if (IsReplay || !IsOnline && Match == null || IsOnline && !CanIssueOrders) return false;
+            if (IsReplay || IsCountingDown || !IsOnline && Match == null || IsOnline && !CanIssueOrders) return false;
             var selected = Selection.OrderBy(id=>id).ToArray();
             var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence };
             if(IsOnline)return SendOnline(command);

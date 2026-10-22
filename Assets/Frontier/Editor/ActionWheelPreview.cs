@@ -71,8 +71,8 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.IsOpen, "A 0.3-second neutral pause after production leaves the wheel available");
                     f.Frame(elapsed: .15f);
                     f.Check(!f.Wheel.IsOpen && f.Wheel.HintVisible, "Releasing the stick closes Selection after the shorter 0.4-second delay"); f.Drain();
-                    CancelFromPanel(f); CancelFromPanel(f); CancelFromPanel(f);
-                    f.Check(hq.queue.Count == 0 && f.Session.View.minerals == minerals, "The main panel still cancels and refunds each queued order");
+                    CancelLastQueueItem(f); CancelLastQueueItem(f); CancelLastQueueItem(f);
+                    f.Check(hq.queue.Count == 0 && f.Session.View.minerals == minerals, "Production cards cancel and refund each queued order");
                     f.Session.Match.Players[0].minerals = 0; f.Refresh(); f.OpenSelection(); f.Choose("train:" + worker.definition); f.Confirm();
                     f.Check(f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Selection && hq.queue.Count == 0 && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text == f.Session.Message, "Rejected production keeps its submenu and displays the reason");
                     f.Check(!UnifiedWheelFixture.Field<RectTransform>(f.Wheel, "confirmationRoot").gameObject.activeSelf, "Rejected production never displays a successful confirmation");
@@ -99,8 +99,18 @@ namespace Frontier.Editor
                     f.Capture(faction + "-automatic"); f.Dismiss(); supply.complete = false; f.Refresh();
                     f.OpenSelection();
                     f.Check(f.Wheel.Page == WheelPage.Root && !f.Wheel.Items.Any(a => a.Id == "cancel") && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text.Contains("No actions"), "An unfinished building does not expose a cancellation wheel");
-                    f.Dismiss(); f.CapturePanel(faction + "-construction-panel"); CancelFromPanel(f);
-                    f.Check(!f.Session.Match.Entities.ContainsKey(supply.id), "An unfinished building can still be cancelled from the main panel");
+                    f.Dismiss(); f.CapturePanel(faction + "-construction-panel");
+                    f.Check(!f.Panel.GetComponentsInChildren<RectTransform>().Any(r => r.name == "Cancel / refund" && r.gameObject.activeInHierarchy),
+                        "An unfinished building does not restore the removed HUD cancellation button");
+                    int constructionMinerals = f.Session.View.minerals, constructionGas = f.Session.View.catalyst;
+                    var supplyType = f.Session.Catalog[supply.definition];
+                    f.Check(SelectionActions.For(f.Session).Items.Single(a => a.Id == "cancel").Execute(),
+                        "The shared construction cancellation action remains available");
+                    f.Refresh();
+                    f.Check(!f.Session.Match.Entities.ContainsKey(supply.id)
+                        && f.Session.View.minerals == constructionMinerals + (int)(supplyType.minerals * .75f)
+                        && f.Session.View.catalyst == constructionGas + (int)(supplyType.catalyst * .75f),
+                        "Shared construction cancellation removes the unfinished building and refunds 75 percent of its cost");
                     f.Session.Select(0, false); f.OpenSelection();
                     f.Check(f.Wheel.Page == WheelPage.Root && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text.Contains("No actions"), "An empty selection keeps root navigation without executable selection commands"); f.Capture(faction + "-no-selection"); f.Dismiss();
                     f.Session.Select(worker.id, false); f.OpenOrders(); f.Choose("hold"); f.Session.Select(other.id, false); f.Frame(Vector2.up, down: true, held: true);
@@ -121,13 +131,22 @@ namespace Frontier.Editor
             }
         }
 
-        private static void CancelFromPanel(UnifiedWheelFixture f)
+        private static void CancelLastQueueItem(UnifiedWheelFixture f)
         {
             f.Refresh();
-            var rect = f.Panel.GetComponentsInChildren<RectTransform>().First(r => r.name == "Cancel / refund" && r.gameObject.activeInHierarchy);
+            var producer = f.Session.View.entities.Single(e => f.Session.Selection.Contains(e.id));
+            var remainingOrders = producer.queue.Take(producer.queue.Length - 1).Select(order => order.id).ToArray();
+            var card = producer.queue.Length == 1 ? UnifiedWheelFixture.Field<Image>(f.Panel, "productionCard")
+                : UnifiedWheelFixture.Field<Image[]>(f.Panel, "queuedCards")[producer.queue.Length - 2];
+            var rect = card.rectTransform;
+            f.Check(rect.gameObject.activeInHierarchy
+                && !f.Panel.GetComponentsInChildren<RectTransform>().Any(r => r.name == "Cancel / refund" && r.gameObject.activeInHierarchy),
+                "The last production item has a visible card without a separate HUD cancellation button");
             var pointer = new Ray(rect.TransformPoint(rect.rect.center) - rect.forward, rect.forward);
-            f.Check(f.Panel.Point(pointer, true, false) && f.Panel.Point(pointer, false, true), "Cancel / refund remains clickable on the main panel");
+            f.Check(f.Panel.Point(pointer, true, false) && f.Panel.Point(pointer, false, true), "The last production card captures cancellation input");
             f.Refresh();
+            f.Check(f.Session.View.entities.Single(e => e.id == producer.id).queue.Select(order => order.id).SequenceEqual(remainingOrders),
+                "Cancelling the last production card preserves all earlier queued orders");
         }
     }
 }

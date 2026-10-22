@@ -65,6 +65,7 @@ namespace Frontier.Runtime
                 Debug.Log($"FRONTIER_SMOKE_PROGRESS player={player} tick={view.tick} accepted={accepted} builds={builds} trains={trains} attacks={attacks}");
             }
             if(view.winner!=-1){TryFinish();return;}
+            if(client.CountdownRemaining>0)return;
             // Rendering/network samples need not land exactly on an AI decision tick.
             int decision=view.tick/Simulation.TickRate;
             if(decision!=lastDecision)

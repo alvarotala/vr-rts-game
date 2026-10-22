@@ -30,7 +30,7 @@ namespace Frontier.Runtime
         private Target ReplayButton(string name,string title,float x,float y,float width,Action click,out Text label)
         {
             var rect=Section(actions,name,new Vector2(x,-y),new Vector2(width,48),button);
-            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,Color.white,TextAnchor.MiddleCenter);
+            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             var target=new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click};targets.Add(target);return target;
         }
         private void BuildReplayPanel()
@@ -41,14 +41,14 @@ namespace Frontier.Runtime
             {
                 var tint=p==0?MatchReportGraph.PlayerColor:MatchReportGraph.OpponentColor;
                 var card=Section(actions,"Replay player "+p,new Vector2(p*528,0),new Vector2(512,546));
-                Section(card,"Player accent",Vector2.zero,new Vector2(4,546),tint);
-                Label(card,(p==0?"YOU · ":"AI · ")+ShortFaction(Session.Match.Players[p].faction),new Vector2(16,-10),new Vector2(480,30),24,tint);
+                Label(card,(p==0?"YOU · ":"AI · ")+ShortFaction(Session.Match.Players[p].faction),new Vector2(16,-10),new Vector2(480,30),24,tint).fontStyle=FontStyle.Bold;
                 Label(card,"MINERALS",new Vector2(16,-49),new Vector2(232,20),15,MineralTint);
                 Label(card,"GAS",new Vector2(264,-49),new Vector2(232,20),15,GasTint);
                 replayMinerals[p]=Label(card,"0",new Vector2(16,-69),new Vector2(232,40),30,MineralTint);
                 replayGas[p]=Label(card,"0",new Vector2(264,-69),new Vector2(232,40),30,GasTint);
-                replayWorkers[p]=Label(card,"Workers 0",new Vector2(16,-118),new Vector2(232,30),21,Color.white);
-                replayArmy[p]=Label(card,"Army 0",new Vector2(264,-118),new Vector2(232,30),21,Color.white);
+                replayMinerals[p].fontStyle=replayGas[p].fontStyle=FontStyle.Bold;
+                replayWorkers[p]=Label(card,"Workers 0",new Vector2(16,-118),new Vector2(232,30),21,ConsoleTheme.Ink);
+                replayArmy[p]=Label(card,"Army 0",new Vector2(264,-118),new Vector2(232,30),21,ConsoleTheme.Ink);
                 replaySupply[p]=Label(card,"",new Vector2(16,-150),new Vector2(480,26),18,MenuMuted);
                 replayProductionTitle[p]=Label(card,"PRODUCTION",new Vector2(16,-183),new Vector2(232,26),16,tint);
                 Label(card,"active + queued   /   next ready",new Vector2(240,-183),new Vector2(256,26),14,MenuMuted,TextAnchor.MiddleRight);
@@ -57,9 +57,9 @@ namespace Frontier.Runtime
                 {
                     var line=Section(card,"Production type "+row,new Vector2(16,-215-row*21),new Vector2(480,21),Color.clear);
                     replayProductionRows[p,row]=line;
-                    replayProductionNames[p,row]=Label(line,"",Vector2.zero,new Vector2(256,21),16,Color.white);
+                    replayProductionNames[p,row]=Label(line,"",Vector2.zero,new Vector2(256,21),16,ConsoleTheme.Ink);
                     replayProductionCounts[p,row]=Label(line,"",new Vector2(260,0),new Vector2(76,21),16,tint,TextAnchor.MiddleCenter);
-                    var track=Section(line,"Progress",new Vector2(344,-8),new Vector2(88,5),new Color(.12f,.22f,.25f));
+                    var track=Section(line,"Progress",new Vector2(344,-8),new Vector2(88,5),ConsoleTheme.Track);
                     replayProductionFills[p,row]=Section(track,"Fill",Vector2.zero,new Vector2(0,5),tint);
                     replayProductionProgress[p,row]=Label(line,"",new Vector2(438,0),new Vector2(42,21),15,MenuMuted,TextAnchor.MiddleRight);
                 }
@@ -69,18 +69,18 @@ namespace Frontier.Runtime
                 void PageButton(string title,float x,int delta)
                 {
                     var rect=Section(navigation,title,new Vector2(x,0),new Vector2(100,34),button);
-                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,Color.white,TextAnchor.MiddleCenter);
+                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>{replayProductionPage[player]+=delta;replayPanelView=null;UpdateReplayPanel();}});
                 }
                 PageButton("Previous",0,-1);PageButton("Next",380,1);
                 replayProductionPageLabel[p]=Label(navigation,"",new Vector2(108,0),new Vector2(264,34),16,MenuMuted,TextAnchor.MiddleCenter);
             }
             replayTimeline=Section(actions,"Replay timeline",new Vector2(0,-558),new Vector2(1040,70),Color.clear);
-            replayTime=Label(replayTimeline,"",Vector2.zero,new Vector2(510,30),23,Color.white);
+            replayTime=Label(replayTimeline,"",Vector2.zero,new Vector2(510,30),23,ConsoleTheme.Ink);
             replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,accent,TextAnchor.MiddleRight);
-            Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),new Color(.065f,.14f,.18f));
-            replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),new Color(.12f,.36f,.39f));
-            replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),accent);
+            Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),ConsoleTheme.Track);
+            replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),accent);
+            replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),ConsoleTheme.Ink);
             ReplayButton("Replay back 15s","−15 seconds",0,642,170,()=>Session.SeekReplay(ReplayTransportTick-Simulation.TickRate*15),out _);
             ReplayButton("Replay play / pause","Pause",182,642,220,Session.ToggleReplayPause,out replayPauseLabel);
             ReplayButton("Replay forward 15s","+15 seconds",414,642,170,()=>Session.SeekReplay(ReplayTransportTick+Simulation.TickRate*15),out _);
@@ -163,7 +163,7 @@ namespace Frontier.Runtime
             replayTimelineMarker.anchoredPosition=new Vector2(Mathf.Clamp(1040*fraction,0,1036),-34);
             for(int i=0;i<replaySpeedButtons.Length;i++)
             {
-                var target=replaySpeedButtons[i];target.normal=Mathf.Approximately(replay.Speed,ReplaySpeeds[i])?new Color(.075f,.27f,.3f):button;
+                var target=replaySpeedButtons[i];target.normal=Mathf.Approximately(replay.Speed,ReplaySpeeds[i])?ConsoleTheme.Primary:button;
                 if(hovered!=target)target.image.color=target.normal;
             }
         }

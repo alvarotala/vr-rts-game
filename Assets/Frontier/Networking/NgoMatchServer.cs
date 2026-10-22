@@ -40,7 +40,7 @@ namespace Frontier.Networking
         private Catalog catalog;
         private MapDefinition map;
         private string mapId, matchId;
-        private double lastTime, accumulator, nextSnapshot;
+        private double lastTime, accumulator, nextSnapshot, startServerTime;
         private long frame;
         private bool closing, finished;
 
@@ -121,11 +121,13 @@ namespace Frontier.Networking
                 if (seats.Count != 2 || seats.Values.Any(s => !s.ready || !s.connected)) return;
                 var ordered = seats.Values.OrderBy(s => s.player).ToArray();
                 Match = new Simulation(map, catalog, ordered[0].faction, ordered[1].faction);
+                Match.Paused = true;
+                startServerTime = manager.ServerTime.Time + MatchProtocol.StartCountdownSeconds;
                 lastTime = clock.Elapsed.TotalSeconds; accumulator = 0; nextSnapshot = lastTime;
                 foreach (var player in ordered)
                 {
                     var welcome = new MatchWelcome { protocol = MatchProtocol.Version, matchId = matchId, mapId = mapId,
-                        player = player.player, faction0 = ordered[0].faction, faction1 = ordered[1].faction };
+                        player = player.player, faction0 = ordered[0].faction, faction1 = ordered[1].faction, startServerTime = startServerTime };
                     MatchProtocol.Send(manager, MatchProtocol.Welcome, player.client, MatchProtocol.Encode(welcome, 1024));
                 }
                 Status("Match started · " + matchId);
@@ -154,7 +156,8 @@ namespace Frontier.Networking
             if (seat.tokens < 1) invalid = "Too many commands. Please slow down.";
             else seat.tokens -= 1;
             CommandResult result;
-            if (invalid != null) result = new CommandResult(false, invalid);
+            if (AwaitingStart(manager.ServerTime.Time)) result = new CommandResult(false, "The match is starting.");
+            else if (invalid != null) result = new CommandResult(false, invalid);
             else
             {
                 CommandBoundary.AssignAuthority(command, seat.player);
@@ -187,6 +190,12 @@ namespace Frontier.Networking
                     if (Match == null) seats.Remove(seat.client);
                 }
             if (Match == null) { lastTime = now; return; }
+            if (AwaitingStart(manager.ServerTime.Time))
+            {
+                accumulator = 0; lastTime = now;
+                if (now >= nextSnapshot) { PublishSnapshots(); nextSnapshot = now + .1; }
+                return;
+            }
             if (Match.Winner == -1)
             {
                 accumulator += Math.Min(.25, Math.Max(0, now - lastTime)) * Math.Max(1, Math.Min(20, SimulationSpeed));
@@ -223,6 +232,13 @@ namespace Frontier.Networking
             }
         }
 
+        private bool AwaitingStart(double serverTime)
+        {
+            bool waiting = Match.Winner == -1 && serverTime < startServerTime;
+            Match.Paused = waiting;
+            return waiting;
+        }
+
         private void Finish()
         {
             if (finished || Match == null || Match.Winner == -1) return;
@@ -256,6 +272,7 @@ namespace Frontier.Networking
             if (Match.Winner == -1)
             {
                 // Reconnection is deliberately not enabled in this first direct-connect protocol.
+                Match.Paused = false;
                 Match.Submit(new GameCommand { player = seat.player, kind = CommandKind.Surrender });
                 Finish();
             }

@@ -66,16 +66,18 @@ namespace Frontier.Editor
                     Select(all);Capture(faction+"-grouped");
                     var groups=session.View.entities.Where(e=>all.Contains(e.id)).GroupBy(e=>e.definition).ToArray();
                     Check(Cards().Length==groups.Length&&Cards().Length<all.Length,"One card per definition instead of one per selected entity");
+                    CheckSelectionLayout();
                     foreach(var group in groups)
                     {
                         var card=Card(group.Key);
-                        Check(card.rect.width==card.rect.height,"Portrait targets remain square");
+                        Check(card.rect.width>card.rect.height,"Selection cards leave horizontal room for the model and readable name");
                         Check(card.Find("Count badge").GetComponentInChildren<Text>().text=="×"+group.Count(),"Count includes every selected member of "+group.Key);
                     }
                     Check(!Has("Next selection page"),"The entire current catalog fits without paging through individual units");
                     Select(workers.Take(2).ToArray());
                     session.Match.Entities[workers[0]].health=workerType.health*.5f;Call(session,"RefreshView");Refresh();
-                    Check(Math.Abs(Card(workerType.id).Find("Health").GetComponent<RectTransform>().rect.width-63)<.01f,"Group health shows the average health of its members");
+                    Check(Math.Abs(Card(workerType.id).Find("Health").GetComponent<RectTransform>().rect.width-
+                        Card(workerType.id).Find("Health track").GetComponent<RectTransform>().rect.width*.75f)<.01f,"Group health shows the average health of its members");
                     session.Match.Entities[workers[0]].health=workerType.health;Call(session,"RefreshView");
                     foreach(bool useLeft in new[]{false,true})
                     {
@@ -135,7 +137,8 @@ namespace Frontier.Editor
                     session.Match.Entities.Remove(workers[0]);Call(session,"RefreshView");session.Selection.Remove(workers[0]);Refresh();panel.Point(deathRay,false,true);
                     Check(Count(workerType.id)==2&&session.Selection.SetEquals(workers.Skip(1).Take(2).Concat(hqs)),"A death updates the count and cancels the old gesture without losing survivors");
                     Select(hqs.Take(1).ToArray());session.Send(CommandKind.Train,definition:workerType.id);Refresh();Capture(faction+"-production");
-                    Check(Gap(Grid(),Field<RectTransform>(panel,"productionStrip"))>=11,"Grouped selection remains separate from production queue");
+                    Check(Gap(Field<RectTransform>(panel,"selectedCard"),Field<RectTransform>(panel,"productionStrip"))>=HudMetric("HudGap")-.01f,
+                        "Selection and production remain separate sections after nesting the type grid");
                     var lastRay=RayFor("Selection type "+hqType.id);panel.Point(lastRay,true,false);session.StartMatch();Refresh();panel.Point(lastRay,false,true);
                     Check(session.Selection.Count==0,"New match invalidates a press even when IDs are reused");
                     session.LeaveMatch();Refresh();Check(!Grid().gameObject.activeInHierarchy,"Leaving a match hides selection grid");
@@ -158,7 +161,36 @@ namespace Frontier.Editor
                     if(held)controller.currentState.Buttons=(uint)(useLeft?OVRInput.RawButton.LHandTrigger:OVRInput.RawButton.RHandTrigger);
                 }
                 bool Route(Ray ray,bool down,bool up,bool held,bool aDown,bool aUp,bool aHeld)=>(bool)Call(input,"RoutePanel",ray,down,up,held,aDown,aUp,aHeld,0f);
-                float Gap(RectTransform a,RectTransform b)=>-b.anchoredPosition.y-(-a.anchoredPosition.y+a.rect.height);
+                float HudMetric(string name)=>Convert.ToSingle(typeof(CommandPanel).GetField(name,BindingFlags.Static|BindingFlags.NonPublic).GetRawConstantValue());
+                Rect Bounds(RectTransform rect)
+                {
+                    var root=Field<RectTransform>(panel,"root");var corners=new Vector3[4];rect.GetWorldCorners(corners);
+                    var points=corners.Select(root.InverseTransformPoint).ToArray();
+                    return Rect.MinMaxRect(points.Min(p=>p.x),points.Min(p=>p.y),points.Max(p=>p.x),points.Max(p=>p.y));
+                }
+                float Gap(RectTransform a,RectTransform b)=>Bounds(a).yMin-Bounds(b).yMax;
+                void CheckSelectionLayout()
+                {
+                    var grid=Grid();var parent=Field<RectTransform>(panel,"selectedCard");
+                    var bounds=Bounds(grid);var parentBounds=Bounds(parent);float padding=HudMetric("HudPadding"),gap=HudMetric("HudGap");
+                    Check(grid.parent==parent&&Mathf.Abs(bounds.xMin-parentBounds.xMin-padding)<.01f
+                        &&Mathf.Abs(parentBounds.xMax-bounds.xMax-padding)<.01f
+                        &&Mathf.Abs(parentBounds.yMax-bounds.yMax-HudMetric("HudContentTop"))<.01f
+                        &&bounds.yMin-parentBounds.yMin>=padding-.01f,
+                        "Selection cards use the same inset and header clearance as the other sections");
+                    int columns=(int)HudMetric("SelectionColumns");var cards=Cards();
+                    float width=(grid.rect.width-(columns-1)*gap)/columns;
+                    for(int i=0;i<cards.Length;i++)
+                    {
+                        var card=cards[i];var cardBounds=Bounds(card);
+                        Check(Mathf.Abs(card.rect.width-width)<.01f&&card.rect.height==cards[0].rect.height
+                            &&Mathf.Abs(card.anchoredPosition.x-(i%columns)*(width+gap))<.01f
+                            &&Mathf.Abs(card.anchoredPosition.y+(i/columns)*(card.rect.height+gap))<.01f
+                            &&cardBounds.xMin>=bounds.xMin-.01f&&cardBounds.xMax<=bounds.xMax+.01f
+                            &&cardBounds.yMin>=bounds.yMin-.01f&&cardBounds.yMax<=bounds.yMax+.01f,
+                            "Type cards share one rectangular grid without overlaps or clipped targets: "+card.name);
+                    }
+                }
                 void Capture(string name,bool refresh=true)
                 {
                     if(refresh)Refresh();Canvas.ForceUpdateCanvases();

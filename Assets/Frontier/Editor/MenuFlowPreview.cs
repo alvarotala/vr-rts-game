@@ -15,7 +15,7 @@ namespace Frontier.Editor
     public static class MenuFlowPreview
     {
         private static readonly BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
-        private static void Invoke(object target,string method)=>target.GetType().GetMethod(method,Private).Invoke(target,null);
+        private static void Invoke(object target,string method,params object[] args)=>target.GetType().GetMethod(method,Private).Invoke(target,args);
         private static T Field<T>(object target,string name)=>(T)target.GetType().GetField(name,Private).GetValue(target);
 
         [MenuItem("Frontier/Preview and check menu flow")]
@@ -149,7 +149,7 @@ namespace Frontier.Editor
                 session.Pause("tracking",true);Click("START MATCH");
                 Check(session.Running&&panel.Page==CommandPanel.MenuPage.Actions&&session.IsPaused&&!panel.AcceptsGameInput,"Starting preserves tracking pause");
                 Check(Field<Strategist>(session,"bot").Difficulty==AiDifficulty.Hard,"Starting instantiates the selected Hard AI");
-                session.Pause("tracking",false);Refresh();
+                session.Pause("tracking",false);FinishCountdown();Refresh();
                 Check(panel.AcceptsGameInput&&!Has("New Match")&&Has("Pause"),"Match exposes action panel instead of main menu");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);Invoke(panel,"Rebuild");Refresh();
                 Check(!Has("Full map")&&Has("Pause"),"Quest HUD removes the obsolete map reset action");Capture("06-actions-touch");
@@ -205,7 +205,20 @@ namespace Frontier.Editor
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Guides Back returns to the original pause menu");
                 Click("Resume match");Check(!Field<RectTransform>(panel,"controlGuide").gameObject.activeInHierarchy,"Resuming hides the guide and removes its targets");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);Invoke(panel,"Rebuild");Refresh();
-                Check(Has("Full map")&&Has("Pause"),"Desktop retains its development view controls");
+                var desktopPause=panel.GetComponentsInChildren<RectTransform>().FirstOrDefault(t=>t.gameObject.activeInHierarchy&&t.name=="Pause");
+                Check(!Has("Full map")&&desktopPause!=null&&desktopPause.rect.height>=84,"Desktop HUD keeps a large Pause control without the removed Full map action");
+                var hudRoot=Field<RectTransform>(panel,"root");var resources=Field<RectTransform>(panel,"resourceStrip");
+                var footer=Field<RectTransform>(panel,"matchStrip");var clock=Field<Text>(panel,"matchClock");
+                var groups=Field<RectTransform>(panel,"groupStrip");var selectedBox=Field<RectTransform>(panel,"selectedCard");
+                Check(footer.gameObject.activeInHierarchy&&desktopPause.parent==footer&&clock.transform.parent==footer
+                    &&-footer.anchoredPosition.y>=-groups.anchoredPosition.y+groups.rect.height
+                    &&hudRoot.InverseTransformPoint(desktopPause.TransformPoint(desktopPause.rect.center)).x>hudRoot.rect.center.x&&!Has("Reset menu"),
+                    "HUD places Pause and elapsed time in the bottom row after the game sections");
+                Check(!Field<Text>(panel,"consoleBrand").gameObject.activeInHierarchy&&!Field<Text>(panel,"consoleBrandSmall").gameObject.activeInHierarchy
+                    &&-resources.anchoredPosition.y>=40&&-selectedBox.anchoredPosition.y+resources.anchoredPosition.y-resources.rect.height>=40,
+                    "Resources lead the HUD without a logo and keep breathing room above and below");
+                Check(Field<Text>(panel,"matchMap").text==session.Map.title&&Field<Text>(panel,"matchInfo").gameObject.activeInHierarchy,
+                    "Bottom row identifies the current map and match");
                 var match=session.Match;var worker=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");
                 session.Select(worker.id,false);session.Group(0,true);session.ChooseBuild(session.Catalog.Role(session.Faction,"supply").id);
                 Invoke(board,"LateUpdate");Refresh();Capture("06-actions");
@@ -259,7 +272,15 @@ namespace Frontier.Editor
                     if(button==null)throw new Exception("Menu button missing: "+name);
                     var center=button.TransformPoint(button.rect.center);var ray=new Ray(center-button.forward,button.forward);
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Menu ray did not hit: "+name);
+                    FinishCountdown();
                     Refresh();
+                }
+                // Edit-mode menus have no frame loop; countdown behavior is covered
+                // separately before these navigation and layout regressions run.
+                void FinishCountdown()
+                {
+                    if(session.IsCountingDown&&!session.HasSystemPause&&!quest.Placing)
+                        for(int i=0;i<12;i++)Invoke(session,"AdvanceCountdown",.25f);
                 }
                 void BrowseHotkeys(bool touch)
                 {
@@ -312,7 +333,21 @@ namespace Frontier.Editor
                 }
                 void Capture(string name)
                 {
-                    Refresh();var guide=Field<RectTransform>(panel,"controlGuide");
+                    Refresh();
+                    var window=Field<RectTransform>(panel,"root");var grip=Field<RectTransform>(panel,"moveHandle");
+                    bool main=panel.Page==CommandPanel.MenuPage.Main;
+                    Check(Field<Text>(panel,"consoleBrand").gameObject.activeInHierarchy==main
+                        &&Field<Text>(panel,"consoleBrandSmall").gameObject.activeInHierarchy==main,
+                        "Only the initial menu shows the game wordmark: "+panel.Page);
+                    Check(!Field<RectTransform>(panel,"resetHandle").gameObject.activeInHierarchy
+                        &&Field<RectTransform>(panel,"moveAffordance").gameObject.activeInHierarchy
+                        &&Mathf.Abs(grip.anchoredPosition.x+grip.rect.width*.5f-window.rect.width*.5f)<.01f
+                        &&-grip.anchoredPosition.y>window.rect.height,
+                        "Every page has the same centered lower grip, without a reset header: "+panel.Page);
+                    if(main)Check(Field<Text>(panel,"consoleBrand").fontSize>=70&&!Field<Text>(panel,"headline").gameObject.activeInHierarchy
+                        &&!Field<Text>(panel,"selection").gameObject.activeInHierarchy,
+                        "Initial menu has a large wordmark without duplicate title or introductory paragraph");
+                    var guide=Field<RectTransform>(panel,"controlGuide");
                     if(panel.Page==CommandPanel.MenuPage.Settings&&(Has("Lighting: Current")||Has("Lighting: Enhanced (experimental)")))
                     {
                         Canvas.ForceUpdateCanvases();

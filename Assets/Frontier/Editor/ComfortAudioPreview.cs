@@ -53,7 +53,7 @@ namespace Frontier.Editor
                 quest.RequestStartMatch();Check(quest.Placing&&quest.StartPending&&!session.Running,"Missing placement opens only when starting a match");
                 quest.CancelPlacement();Check(!quest.Placing&&!quest.StartPending&&!session.Running,"Cancel leaves the setup without a match");
                 quest.RequestStartMatch();quest.PlaceRay(new Ray(new Vector3(0,2,0),Vector3.down),0,Vector2.zero,true);
-                Check(board.Placed&&!quest.Placing&&!quest.StartPending&&session.Running&&!session.IsPaused,"Confirming the requested placement starts the match once");
+                Check(board.Placed&&!quest.Placing&&!quest.StartPending&&session.Running&&session.IsCountingDown,"Confirming placement starts the match countdown once");
                 var position=board.transform.position;session.LeaveMatch();quest.RequestStartMatch();
                 Check(session.Running&&!quest.Placing&&board.transform.position==position,"A retained board starts the next match directly");
                 session.LeaveMatch();Call(panel,"Show",CommandPanel.MenuPage.MatchSetup);board.Placed=false;Set(quest,"restoring",true);quest.RequestStartMatch();
@@ -61,6 +61,7 @@ namespace Frontier.Editor
                 panel.Back();Set(quest,"restoring",false);
                 Check(!quest.StartPending&&!session.Running,"Leaving setup cancels a start waiting for restoration");
                 board.Placed=true;quest.RequestStartMatch();
+                for(int i=0;i<12;i++)Call(session,"AdvanceCountdown",.25f);
 
                 typeof(QuestBridge).GetProperty("TrackingSpace").SetValue(quest,tracking.transform);
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);

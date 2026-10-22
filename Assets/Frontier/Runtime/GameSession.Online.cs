@@ -86,11 +86,15 @@ namespace Frontier.Runtime
             IsConnecting=false;Running=true;
             if(first)
             {
+                PrepareCountdown((float)(remoteClient?.CountdownRemaining ?? 0));
                 Announce("Connected · Your opponent is another player.");
                 NewMatch?.Invoke();
             }
             if(view.winner!=-1)
+            {
+                PrepareCountdown(0);
                 Announce(view.winner==view.player?"VICTORY · The territory is yours.":view.winner==2?"DRAW":"DEFEAT · Your colony has fallen.");
+            }
             Changed?.Invoke();
         }
 

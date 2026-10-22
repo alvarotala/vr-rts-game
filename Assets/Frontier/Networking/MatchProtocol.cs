@@ -12,7 +12,8 @@ namespace Frontier.Networking
 {
     internal static class MatchProtocol
     {
-        public const int Version = 1, MaxCommandBytes = 4096, MaxHelloBytes = 512;
+        public const int Version = 2, MaxCommandBytes = 4096, MaxHelloBytes = 512;
+        public const int StartCountdownSeconds = 3;
         public const string Ready = "frontier.ready", Welcome = "frontier.welcome", Command = "frontier.command", Ack = "frontier.ack";
         public const string Snapshot = "frontier.snapshot", Result = "frontier.result", ResultAck = "frontier.resultAck", Status = "frontier.status";
         public static readonly byte[] Signal = { 1 };

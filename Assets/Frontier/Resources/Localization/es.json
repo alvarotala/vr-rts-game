@@ -7,6 +7,16 @@
   ],
   "entries": [
     {
+      "key": "Match starts in",
+      "value": "La partida comienza en",
+      "template": false
+    },
+    {
+      "key": "QUEUED ORDERS",
+      "value": "ÓRDENES EN COLA",
+      "template": false
+    },
+    {
       "key": "← −15 seconds",
       "value": "← −15 segundos",
       "template": false
@@ -3540,6 +3550,14 @@
       "key": "Supply",
       "value": "Población",
       "template": false
+    },
+    {
+      "key": "OPTIONS",
+      "value": "OPCIONES"
+    },
+    {
+      "key": "POPULATION",
+      "value": "POBLACIÓN"
     },
     {
       "key": "SUPPLY / CAPACITY",
@@ -7714,6 +7732,131 @@
     {
       "key": "Temperate",
       "value": "Templado",
+      "template": false
+    },
+    {
+      "key": "Choose your army and map.\nPlay offline against the AI.",
+      "value": "Elige tu ejército y mapa.\nJuega sin conexión contra la IA.",
+      "template": false
+    },
+    {
+      "key": "Two players on the same network.",
+      "value": "Dos jugadores en la misma red.",
+      "template": false
+    },
+    {
+      "key": "Replays, results and build orders.",
+      "value": "Repeticiones, resultados y órdenes de construcción.",
+      "template": false
+    },
+    {
+      "key": "Controls, units and structures.",
+      "value": "Controles, unidades y estructuras.",
+      "template": false
+    },
+    {
+      "key": "Controls, sound, visuals and play space.",
+      "value": "Controles, sonido, imagen y espacio de juego.",
+      "template": false
+    },
+    {
+      "key": "Selection, orders and board gestures.",
+      "value": "Selección, órdenes y gestos del tablero.",
+      "template": false
+    },
+    {
+      "key": "Costs, combat and abilities.",
+      "value": "Costos, combate y habilidades.",
+      "template": false
+    },
+    {
+      "key": "Construction, requirements and production.",
+      "value": "Construcción, requisitos y producción.",
+      "template": false
+    },
+    {
+      "key": "HELP",
+      "value": "AYUDA",
+      "template": false
+    },
+    {
+      "key": "Reset the menu above the board.",
+      "value": "Restablecer el menú sobre el tablero.",
+      "template": false
+    },
+    {
+      "key": "Close",
+      "value": "Cerrar",
+      "template": false
+    },
+    {
+      "key": "Each card groups the selected units or buildings of one type. Its number shows how many are selected; the bar shows their combined health. Damaged units, unfinished buildings and casters also show health, construction progress or energy.",
+      "value": "Cada tarjeta reúne las unidades o edificios seleccionados de un mismo tipo. El número indica cuántos hay y la barra muestra su salud conjunta. También podés ver la salud de unidades dañadas, el progreso de edificios en construcción o la energía de las unidades con habilidades.",
+      "template": false
+    },
+    {
+      "key": "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. Mixed units and buildings leave this area empty. Pale slots are not buttons; point at a command for its cost and requirements.",
+      "value": "Las opciones dependen de tu selección: edificios para entrenar o investigar, obreros para construir y unidades para dar órdenes. Al mezclar unidades y edificios, esta zona queda vacía. Los espacios tenues no son botones. Apuntá a una opción para consultar su costo y requisitos.",
+      "template": false
+    },
+    {
+      "key": "The wide green card is the first active order. The other cards show active work from additional selected buildings, then waiting orders. Progress and time follow the match. Select one building to cancel a specific card and recover its cost; the other orders keep their place.",
+      "value": "La tarjeta verde y ancha muestra la primera orden activa. Las demás muestran el trabajo activo de otros edificios seleccionados y luego las órdenes en espera. Para cancelar una tarjeta y recuperar su costo, seleccioná un solo edificio. Las demás órdenes conservan su lugar.",
+      "template": false
+    },
+    {
+      "key": "Groups remember your selected units and buildings. Tap a group to recall its surviving members. Hold its button until the bar fills to replace that group with the current selection. A flash and controller vibration confirm the assignment. Holding with no selection clears the group.",
+      "value": "Los grupos guardan tu selección de unidades y edificios. Tocá uno para seleccionar sus miembros que siguen vivos. Mantené su botón hasta llenar la barra para guardar la selección actual. Un destello y una vibración confirman el cambio. Si no hay selección, mantenerlo vacía el grupo.",
+      "template": false
+    },
+    {
+      "key": "This row shows what selected mobile units will do after their current order. Add waypoints with the queue modifier to plan a route or a sequence of tasks. Attack Move engages enemies along the route; Stop clears current movement and queued orders.",
+      "value": "Esta fila muestra qué harán las unidades seleccionadas después de su orden actual. Agregá puntos con el modificador de cola para planificar rutas o tareas. Atacar al mover combate a los enemigos del camino. Detener interrumpe el movimiento y elimina las órdenes en cola.",
+      "template": false
+    },
+    {
+      "key": "Read these controls, then close this window to return to your selection. The match continues while this guide is open.",
+      "value": "Consultá estos controles y cerrá la ventana para volver a tu selección. La partida continúa mientras esta ayuda está abierta.",
+      "template": false
+    },
+    {
+      "key": "Assigning...",
+      "value": "Asignando...",
+      "template": false
+    },
+    {
+      "key": "Saved · {0}",
+      "value": "Guardado · {0}",
+      "template": true
+    },
+    {
+      "key": "Groups remember your selected units and buildings. Trigger recalls a group. Hold Grip before pressing Trigger to replace it with your current selection; on desktop, use Ctrl + click. Release over the same group to confirm. A flash and controller vibration confirm assignment. Assigning with no selection clears the group.",
+      "value": "Los grupos recuerdan tus unidades y edificios seleccionados. Gatillo selecciona un grupo. Mantené Grip antes de presionar Gatillo para reemplazarlo con tu selección actual; en computadora, usá Ctrl + clic. Soltá sobre el mismo grupo para confirmar. Un destello y una vibración confirman la asignación. Asignar sin selección vacía el grupo.",
+      "template": false
+    },
+    {
+      "key": "Grip + Trigger on a Group button",
+      "value": "Grip + Gatillo sobre un grupo",
+      "template": false
+    },
+    {
+      "key": "Ctrl + click on a Group button",
+      "value": "Ctrl + clic sobre un grupo",
+      "template": false
+    },
+    {
+      "key": "Hold the modifier before pressing, then release over the same group to assign your selection. A plain click recalls the group.",
+      "value": "Presioná con el modificador y soltá sobre el grupo para asignar. Un clic lo selecciona.",
+      "template": false
+    },
+    {
+      "key": "Trigger: select · Grip + Trigger: assign",
+      "value": "Gatillo: seleccionar · Grip + Gatillo: asignar",
+      "template": false
+    },
+    {
+      "key": "Click: select · Ctrl + click: assign",
+      "value": "Clic: seleccionar · Ctrl + clic: asignar",
       "template": false
     }
   ]
