@@ -20,6 +20,7 @@ namespace Frontier.Runtime
         public float FogDensity { get; private set; } = 1;
         public const string LightingKey="frontier.visuals.enhanced-lighting.v1";
         public bool EnhancedLighting { get; private set; }
+        public const float UnitRevealSeconds=.3f;
         public int Hovered;
         public int HoveredResource;
         public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
@@ -49,9 +50,11 @@ namespace Frontier.Runtime
         private sealed class VisualParts
         {
             public Transform selection, health, impact, model;
-            public Renderer healthRenderer, impactRenderer;
+            public Renderer healthRenderer, impactRenderer, selectionRenderer;
             public Renderer[] body;
             public Material[] visibleMaterials;
+            public Material[] revealMaterials;
+            public float revealAge=UnitRevealSeconds, revealOpacity=1;
             public bool remembered, hovered, receivingDamage, complete;
             public float damageAmount;
             public readonly UnitFacing facing = new UnitFacing();
@@ -59,7 +62,9 @@ namespace Frontier.Runtime
         }
         private Material ground, blue, red, neutral, resourceMaterial, highlight;
         private Material unitStructure, organicTissue, impactMaterial;
-        private MaterialPropertyBlock hoverProperties, impactProperties;
+        private MaterialPropertyBlock hoverProperties, impactProperties, revealProperties;
+        private readonly Dictionary<Material,Material> revealMaterials=new Dictionary<Material,Material>();
+        private static readonly int RevealOpacityProperty=Shader.PropertyToID("_RevealOpacity");
         private static readonly Color AllyHover=new Color(1,.92f,.32f),EnemyHover=new Color(1,.3f,.18f);
         private readonly UnitVisuals unitVisuals=new UnitVisuals();
         private readonly BuildingVisuals buildingVisuals=new BuildingVisuals();
@@ -94,6 +99,7 @@ namespace Frontier.Runtime
             FogDensity=ClampFogDensity(PlayerPrefs.GetFloat(FogDensityKey,1));
             EnhancedLighting=PlayerPrefs.GetInt(LightingKey,0)!=0;
             hoverProperties=new MaterialPropertyBlock();
+            revealProperties=new MaterialPropertyBlock();
             impactProperties=new MaterialPropertyBlock();
             impactProperties.SetFloat("_Ring",1);
             impactMaterial=new Material(Shader.Find("Frontier/Impact"));
@@ -131,6 +137,7 @@ namespace Frontier.Runtime
             creepVisuals?.Dispose();
             orderQueueVisuals?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
+            foreach(var material in revealMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
             if(constructionMaterials!=null)foreach(var material in constructionMaterials)Release(material);
             if(memoryMaterials!=null)Release(memoryMaterials[1]);
@@ -324,6 +331,8 @@ namespace Frontier.Runtime
                 var point=Session.PresentationPoint(e);float half=type.building?type.footprint*.5f:0;
                 var target=new Vector3(point.x+half,HeightAt(point),point.y+half);
                 var cached=parts[visual];
+                bool revealChanged=UpdateUnitReveal(cached,!type.building&&e.owner!=Session.View.player&&!Session.IsReplay
+                    &&(!Session.IsPaused||Session.IsOnline),newlyVisible,Time.unscaledDeltaTime);
                 bool ownWorker=type.role=="worker"&&e.owner==Session.View.player&&!e.remembered;
                 var work=ownWorker?WorkerVisuals.Describe(e,Session.View,Session.Catalog):default;
                 AttackEvent? attack=null;
@@ -371,10 +380,11 @@ namespace Frontier.Runtime
                 bool receivingDamage=!e.remembered&&e.damageTick>=0&&damageAge>=0&&damageAge<12;
                 float damageAmount=receivingDamage?Mathf.Clamp01(1-damageAge/4f)*.9f:0;
                 Color hoverColor=e.owner==Session.View.player?AllyHover:EnemyHover;
-                if(newlyVisible||cached.hovered!=hovered||cached.damageAmount!=damageAmount)
+                if(newlyVisible||revealChanged||cached.hovered!=hovered||cached.damageAmount!=damageAmount)
                 {
                     hoverProperties.SetFloat("_HoverAmount",hovered?1:0);hoverProperties.SetColor("_HoverColor",hoverColor);
                     hoverProperties.SetFloat("_DamageAmount",damageAmount);
+                    hoverProperties.SetFloat(RevealOpacityProperty,cached.revealOpacity);
                     foreach(var renderer in cached.body)renderer.SetPropertyBlock(hoverProperties);
                     cached.hovered=hovered;cached.damageAmount=damageAmount;
                 }
@@ -388,15 +398,20 @@ namespace Frontier.Runtime
                 }
                 cached.health.gameObject.SetActive(e.health<type.health-.5f||Session.Selection.Contains(e.id)||hovered||receivingDamage);
                 cached.health.localScale=new Vector3(Mathf.Max(.03f,e.health/type.health)*(type.building?type.footprint:1.4f),.1f,.12f);
-                if(newlyVisible||cached.receivingDamage!=receivingDamage)
-                {cached.healthRenderer.sharedMaterial=receivingDamage?impactMaterial:highlight;cached.receivingDamage=receivingDamage;}
+                if(newlyVisible||revealChanged||cached.receivingDamage!=receivingDamage)
+                {
+                    cached.healthRenderer.sharedMaterial=receivingDamage?impactMaterial:cached.revealOpacity<1?RevealMaterial(highlight):highlight;
+                    cached.receivingDamage=receivingDamage;
+                    revealProperties.SetFloat(RevealOpacityProperty,cached.revealOpacity);
+                    cached.healthRenderer.SetPropertyBlock(revealProperties);cached.selectionRenderer.SetPropertyBlock(revealProperties);
+                }
                 cached.impact.gameObject.SetActive(receivingDamage);
                 if(receivingDamage)
                 {
                     // One reusable marker per entity; simultaneous hits refresh it instead of stacking effects.
                     float diameter=type.building?type.footprint*1.25f:Mathf.Max(1.6f,.014f/CellScale);
                     cached.impact.localScale=Vector3.one*diameter;
-                    impactProperties.SetFloat("_Progress",damageAge/12f);cached.impactRenderer.SetPropertyBlock(impactProperties);
+                    impactProperties.SetFloat("_Progress",damageAge/12f);impactProperties.SetFloat(RevealOpacityProperty,cached.revealOpacity);cached.impactRenderer.SetPropertyBlock(impactProperties);
                 }
                 // Mobile units retain their role accents; only buildings become fog memories.
                 if(type.building&&(newlyVisible||cached.remembered!=e.remembered||cached.complete!=e.complete))
@@ -422,6 +437,7 @@ namespace Frontier.Runtime
                 visual.localPosition=new Vector3(resource.position.x,HeightAt(resource.position),resource.position.y);visual.gameObject.SetActive(resource.remaining!=0);
                 bool hovered=Hovered==0&&HoveredResource==resource.id&&Pointer.HasValue&&!Session.IsPaused&&ResourceVisible(resource,2);
                 hoverProperties.SetFloat("_HoverAmount",hovered?1:0);hoverProperties.SetFloat("_DamageAmount",0);hoverProperties.SetColor("_HoverColor",AllyHover);
+                hoverProperties.SetFloat(RevealOpacityProperty,1);
                 resourceRenderers[resource.id].SetPropertyBlock(hoverProperties);
                 if(hovered)
                 {
@@ -492,9 +508,34 @@ namespace Frontier.Runtime
             var hp=Primitive(PrimitiveType.Cube,root,highlight);hp.name="Health";hp.localPosition=new Vector3(0,height+1,0);
             var impact=Primitive(PrimitiveType.Quad,root,impactMaterial);impact.name="Damage impact";impact.localPosition=Vector3.up*(height+1.15f);impact.localRotation=Quaternion.Euler(90,0,0);impact.gameObject.SetActive(false);
             var animation=soldier?new SoldierAnimation(root,model.transform,type,unitVisuals,visibleMaterials):null;
-            parts[root]=new VisualParts{soldier=animation,model=model.transform,selection=ring,health=hp,impact=impact,healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=animation?.Renderers??new[]{model.GetComponent<Renderer>()},visibleMaterials=visibleMaterials};
+            parts[root]=new VisualParts{soldier=animation,model=model.transform,selection=ring,health=hp,impact=impact,selectionRenderer=ring.GetComponent<Renderer>(),healthRenderer=hp.GetComponent<Renderer>(),impactRenderer=impact.GetComponent<Renderer>(),body=animation?.Renderers??new[]{model.GetComponent<Renderer>()},visibleMaterials=visibleMaterials};
             return root;
         }
+        // Share transient alpha-blended variants; restore opaque depth writes once
+        // the reveal finishes. No screen-space dithering or per-frame materials.
+        private Material RevealMaterial(Material opaque)
+        {
+            if(revealMaterials.TryGetValue(opaque,out var material))return material;
+            material=new Material(opaque){name=opaque.name+" / unit reveal",renderQueue=(int)RenderQueue.Transparent};
+            material.SetOverrideTag("RenderType","Transparent");
+            material.SetFloat("_SrcBlend",(float)BlendMode.SrcAlpha);material.SetFloat("_DstBlend",(float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite",0);revealMaterials.Add(opaque,material);return material;
+        }
+        private bool UpdateUnitReveal(VisualParts visual,bool reveal,bool newlyVisible,float delta)
+        {
+            float previous=visual.revealOpacity;
+            if(newlyVisible)visual.revealAge=reveal?0:UnitRevealSeconds;
+            else if(!Session.IsPaused||Session.IsOnline)visual.revealAge=Mathf.Min(UnitRevealSeconds,visual.revealAge+Mathf.Max(0,delta));
+            visual.revealOpacity=Mathf.SmoothStep(0,1,visual.revealAge/UnitRevealSeconds);
+            if(newlyVisible||(previous<1)!=(visual.revealOpacity<1))
+            {
+                if(visual.revealOpacity<1&&visual.revealMaterials==null)visual.revealMaterials=visual.visibleMaterials.Select(RevealMaterial).ToArray();
+                foreach(var renderer in visual.body)renderer.sharedMaterials=visual.revealOpacity<1?visual.revealMaterials:visual.visibleMaterials;
+                visual.selectionRenderer.sharedMaterial=visual.revealOpacity<1?RevealMaterial(highlight):highlight;
+            }
+            return previous!=visual.revealOpacity;
+        }
+        internal float UnitRevealOpacity(int id)=>entities.TryGetValue(id,out var visual)?parts[visual].revealOpacity:0;
         private static Transform Primitive(PrimitiveType type,Transform parent,Material material)
         {var go=GameObject.CreatePrimitive(type);Release(go.GetComponent<Collider>());go.transform.SetParent(parent,false);go.GetComponent<Renderer>().sharedMaterial=material;return go.transform;}
         private void UpdateFog()

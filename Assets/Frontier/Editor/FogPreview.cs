@@ -117,8 +117,8 @@ namespace Frontier.Editor
                         var explored=SnapRgba(asset.name+"-terrain-explored-fog-off");
                         var solid=Enumerable.Range(0,clear.Length).Where(i=>i%7==0&&clear[i].a==255&&Luma(clear[i])>.025).ToArray();
                         double bright=solid.Average(i=>Luma(clear[i])),dark=solid.Average(i=>Luma(unseen[i])),remembered=solid.Average(i=>Luma(explored[i]));
-                        Check(dark/bright>.55&&dark/bright<.9,asset.name+": unseen terrain remains readable but dimmed with mist off; brightness="+(dark/bright).ToString("0.000"));
-                        Check(remembered>dark*1.06&&remembered<bright*.97,asset.name+": explored terrain has an intermediate brightness");
+                        Check(Math.Abs(dark/bright-1)<.001,asset.name+": unseen terrain keeps its normal brightness with mist off; ratio="+(dark/bright).ToString("0.000"));
+                        Check(Math.Abs(remembered/bright-1)<.001&&clear.SequenceEqual(unseen)&&clear.SequenceEqual(explored),asset.name+": visibility states do not add a dark overlay to terrain pixels");
                         double covariance=0,clearVariance=0,darkVariance=0;
                         foreach(int i in solid)
                         {

@@ -68,7 +68,7 @@ namespace Frontier.Runtime
                     var type = board.Session.Catalog[entity.definition];
                     float scale = Mathf.Max(Mathf.Abs(visual.localScale.x), Mathf.Abs(visual.localScale.z));
                     float radius = (type.building ? type.footprint * .68f : UnitVisuals.ModelScale(type) * .62f) * scale;
-                    if (Add(dynamic, center.x, center.z, radius, type.building ? .2f : .22f, view)) DynamicCasterCount++;
+                    if (Add(dynamic, center.x, center.z, radius, (type.building ? .2f : .22f)*board.UnitRevealOpacity(entity.id), view)) DynamicCasterCount++;
                 }
                 foreach (var resource in view.resources)
                 {

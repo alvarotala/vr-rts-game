@@ -4,6 +4,10 @@ Shader "Frontier/Board"
     {
         _BaseColor("Color", Color) = (1,1,1,1)
         _Gloss("Soft material highlight", Range(0, .3)) = 0
+        _RevealOpacity("Unit reveal opacity", Range(0,1)) = 1
+        [HideInInspector] _SrcBlend("Source blend", Float) = 1
+        [HideInInspector] _DstBlend("Destination blend", Float) = 0
+        [HideInInspector] _ZWrite("Depth write", Float) = 1
         _FogTex("Visibility", 2D) = "white" {}
         _UseFog("Fog", Float) = 0
         _Grid("Grid", Float) = 0
@@ -36,6 +40,8 @@ Shader "Frontier/Board"
         Pass
         {
             Tags { "LightMode"="UniversalForward" }
+            Blend [_SrcBlend] [_DstBlend], One OneMinusSrcAlpha
+            ZWrite [_ZWrite]
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -51,7 +57,7 @@ Shader "Frontier/Board"
             float4 _CommandPulse; float4 _CommandColor; float _CommandWidth;
             float4 _AbilityArea; float4 _AbilityRange; float4 _AbilityColor;
             float _DamageAmount;
-            float _Desaturate; float _CreepTime;
+            float _Desaturate; float _CreepTime; float _RevealOpacity;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             float _FrontierEnhancedLighting; float4 _FrontierLightColor;
@@ -168,13 +174,8 @@ Shader "Frontier/Board"
                         color=lerp(color,flesh*light,coverage);
                     }
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
-                    // Visibility dims the authored surface instead of replacing it
-                    // with a flat color: cliff shading, ramps, trees and floor details
-                    // remain readable even when the separate mist layer is disabled.
-                    // Decode states explicitly; the shared texture may be sampled as sRGB.
-                    half explored=step(.01,visibility),visible=step(.98,visibility);
-                    half terrainLight=lerp(lerp(.58,.78,explored),1,visible);
-                    color*=terrainLight;
+                    // The separate mist sheets communicate fog of war. Keep the
+                    // authored terrain lighting intact so cliffs and ramps stay readable.
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
                     float gridLine=step(.48,max(tile.x,tile.y));
                     color*=1-gridLine*.1*_Grid;
@@ -243,7 +244,7 @@ Shader "Frontier/Board"
                         color=lerp(color,lerp(_PointerColor.rgb,_PointerDotColor.rgb,dot),mark);
                     }
                 }
-                return half4(color,1);
+                return half4(color,_RevealOpacity);
             }
             ENDHLSL
         }
