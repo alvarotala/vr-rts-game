@@ -8,24 +8,40 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private const int OrderColumns=6,OrderCardCount=Simulation.UnitOrderLimit+1;
+        private const int OrderColumns=5,OrderCardCount=Simulation.UnitOrderLimit+1;
         private readonly Image[] orderCards=new Image[OrderCardCount];
         private readonly Text[] orderNames=new Text[OrderCardCount],orderNumbers=new Text[OrderCardCount];
         private readonly Target[] orderTargets=new Target[OrderCardCount];
+        private readonly Text[] orderArrows=new Text[Simulation.UnitOrderLimit-1];
         private string boundOrderSignature;
 
         private void CreateOrderCards()
         {
-            float width=(HudInnerWidth-HudPadding*2-HudGap*(OrderColumns-1))/OrderColumns;
+            const float currentWidth=300,arrowGap=24;
+            float width=(HudInnerWidth-HudPadding*2-currentWidth-arrowGap*OrderColumns)/OrderColumns;
             for(int i=0;i<OrderCardCount;i++)
             {
-                bool clear=i==Simulation.UnitOrderLimit;
-                var card=Section(orderPlanStrip,clear?"Cancel all orders":"Unit order "+(i+1),
-                    new Vector2(HudPadding+i%OrderColumns*(width+HudGap),-HudContentTop-i/OrderColumns*76),new Vector2(width,60),button);
+                bool clear=i==Simulation.UnitOrderLimit,current=i==0;
+                int slot=i-1;
+                var position=clear?new Vector2(HudInnerWidth-HudPadding-44-HudGap-200,-16):current?new Vector2(HudPadding,-HudContentTop):
+                    new Vector2(HudPadding+currentWidth+arrowGap+slot%OrderColumns*(width+arrowGap),-HudContentTop-slot/OrderColumns*76);
+                var size=clear?new Vector2(200,44):current?new Vector2(currentWidth,136):new Vector2(width,60);
+                var card=Section(orderPlanStrip,clear?"Cancel all orders":"Unit order "+(i+1),position,size,button);
                 orderCards[i]=card.GetComponent<Image>();
-                orderNumbers[i]=Label(card,clear?"×":(i+1).ToString(),new Vector2(12,-10),new Vector2(30,40),18,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
-                orderNames[i]=Label(card,clear?"Cancel all":"",new Vector2(48,-6),new Vector2(width-60,48),20,ConsoleTheme.Ink,TextAnchor.MiddleLeft);
+                orderNumbers[i]=Label(card,clear?"×":current?"1 · CURRENT":(i+1).ToString(),
+                    current?new Vector2(24,-12):new Vector2(8,-6),current?new Vector2(currentWidth-48,24):new Vector2(24,size.y-12),
+                    current?18:16,ConsoleTheme.Muted,TextAnchor.MiddleLeft);
+                orderNames[i]=Label(card,clear?"Cancel all":"",current?new Vector2(24,-44):new Vector2(40,-6),
+                    current?new Vector2(currentWidth-48,72):new Vector2(size.x-52,size.y-12),current?26:20,ConsoleTheme.Ink,TextAnchor.MiddleLeft);
                 orderNames[i].fontStyle=FontStyle.Bold;
+                if(!current&&!clear)
+                {
+                    orderArrows[slot]=Label(orderPlanStrip,slot==OrderColumns?"↳":"→",position+new Vector2(-arrowGap,-16),
+                        new Vector2(arrowGap,28),22,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
+                    orderArrows[slot].name="Order continuation "+(i+1);
+                    orderArrows[slot].gameObject.SetActive(false);
+                }
+                card.gameObject.SetActive(false);
             }
         }
 
@@ -71,7 +87,7 @@ namespace Frontier.Runtime
             var selected=Session.Selection.OrderBy(id=>id).ToArray();
             for(int i=0;i<OrderCardCount;i++)
             {
-                bool clear=i==Simulation.UnitOrderLimit;if(!clear&&i>=orders.Length)continue;
+                bool clear=i==Simulation.UnitOrderLimit;if(clear?orders.Length<=1:i>=orders.Length)continue;
                 var order=clear?null:orders[i];
                 // Sequence IDs identify the same command across a formation. Automatic
                 // orders have sequence zero, so only address the displayed unit for those.
@@ -102,6 +118,8 @@ namespace Frontier.Runtime
             for(int i=0;i<OrderCardCount;i++)
             {
                 bool clear=i==Simulation.UnitOrderLimit,occupied=i<orders.Length;
+                orderCards[i].gameObject.SetActive(clear?orders.Length>1:occupied);
+                if(i>0&&!clear)orderArrows[i-1].gameObject.SetActive(occupied);
                 orderNames[i].text=clear?"Cancel all":occupied?PlanOrderLabel(orders[i].kind):"";
                 orderNames[i].color=(clear?orders.Length>0:occupied)?ConsoleTheme.Ink:ConsoleTheme.Muted;
                 orderNumbers[i].color=occupied?ConsoleTheme.Ink:ConsoleTheme.Muted;

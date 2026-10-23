@@ -37,7 +37,7 @@ namespace Frontier.Editor
                 foreach(string faction in new[]{"industrial","biological"})
                 {
                     session.Faction=faction;session.StartMatch();session.Match.Players[0].minerals=5000;session.Match.Players[0].catalyst=5000;
-                    Add("supply",1000);var barracks=Add("barracks",1001);var tech=Add("tech",1002);
+                    Add("supply",1000);var barracks=Add("barracks",1001);var tech=Add("tech",1002);var lab=Add("research",1003);
                     var hq=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                     foreach(var producer in new[]{hq,barracks})
                     {
@@ -75,12 +75,14 @@ namespace Frontier.Editor
                         minerals=session.View.minerals;Click("Current production",false);
                         Check(producer.queue.Count==0&&session.View.minerals==minerals&&!IsHighlighted("Current production"),"Idle production card is inert");
                     }
-                    session.Select(tech.id,false);
-                    session.Send(CommandKind.Research,"attack");session.Send(CommandKind.Train,session.Catalog.Role(faction,"siege").id);session.Send(CommandKind.Research,"armor");Refresh();
+                    session.Select(tech.id,false);Check(session.Send(CommandKind.Train,session.Catalog.Role(faction,"siege").id),"Artillery trains independently");
+                    session.Select(lab.id,false);
+                    Check(session.Send(CommandKind.Research,"attack")&&session.Send(CommandKind.Research,"armor"),"Both upgrades queue at the research building");Refresh();
                     var armor=session.Catalog.Upgrade("armor");int gas=session.View.catalyst,money=session.View.minerals;
-                    panel.Point(RayTo("Queue position 3"),false,false);Capture(faction+"-research-hover");Click("Queue position 3",true);
-                    Check(tech.queue.Count==2&&tech.queue.All(q=>q.definition!="armor")&&session.View.catalyst==gas+armor.catalyst&&session.View.minerals==money+armor.minerals,"Click research refunds minerals and gas");
-                    Click("Current production",false);Check(tech.queue.Count==1&&!tech.queue[0].research&&session.Match.Players[0].attackLevel==0,"Cancelling active research leaves the next unit intact");
+                    panel.Point(RayTo("Queue position 2"),false,false);Capture(faction+"-research-hover");Click("Queue position 2",true);
+                    Check(lab.queue.Count==1&&lab.queue.All(q=>q.definition!="armor")&&session.View.catalyst==gas+armor.catalyst&&session.View.minerals==money+armor.minerals,"Click research refunds minerals and gas");
+                    Click("Current production",false);Check(lab.queue.Count==0&&tech.queue.Count==1&&session.Match.Players[0].attackLevel==0,"Cancelling active research preserves independent artillery production");
+                    session.Select(tech.id,false);Refresh();
                     panel.Point(RayTo("Current production"),false,false);panel.Back();Refresh();
                     Check(Hints().All(t=>!t.gameObject.activeSelf),"Pause clears queue hover");panel.Back();Refresh();
                     var heldRay=RayTo("Current production");Frame(heldRay,true,false,true);session.Select(hq.id,false);Refresh();Frame(RayTo("Current production"),false,true,true);

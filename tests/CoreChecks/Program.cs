@@ -15,6 +15,15 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--research-only"))
+{
+    ResearchBuildingChecks.Run(catalog,map,Check);
+    ProductionChecks.Run(catalog,map,Check);
+    GroupProductionChecks.Run(catalog,map,Check);
+    MatchReportChecks.Run(catalog,map,Check);
+    Console.WriteLine($"Research checks passed: {checks}");
+    return;
+}
 if(args.Contains("--queues-only"))
 {
     CommandQueueChecks.Run(catalog,Check);
@@ -171,13 +180,13 @@ foreach(string faction in new[]{"industrial","biological"})
     Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:barracks.id,position:new Point(18,8))).accepted,"barracks builds "+faction);
     for(int i=0;i<1000;i++)s.Step();
     Check(s.HasRole(0,"barracks"),"barracks completes "+faction);
-    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:catalog.Role(faction,"tech").id,position:new Point(8,8))).accepted,"tech prerequisites accepted "+faction);
+    Check(s.Submit(Cmd(CommandKind.Build,worker.id,definition:catalog.Role(faction,"research").id,position:new Point(8,8))).accepted,"research prerequisites accepted "+faction);
     for(int i=0;i<1200;i++)s.Step();
-    var tech=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="tech");
-    Check(tech.complete&&s.Submit(Cmd(CommandKind.Research,tech.id,definition:"attack")).accepted,"research starts "+faction);
-    Check(!s.Submit(Cmd(CommandKind.Research,tech.id,definition:"attack")).accepted,"duplicate queued research rejected "+faction);
+    var lab=s.Entities.Values.First(e=>e.owner==0&&s.Type(e).role=="research");
+    Check(lab.complete&&s.Submit(Cmd(CommandKind.Research,lab.id,definition:"attack")).accepted,"research starts "+faction);
+    Check(!s.Submit(Cmd(CommandKind.Research,lab.id,definition:"attack")).accepted,"duplicate queued research rejected "+faction);
     for(int i=0;i<800;i++)s.Step();
-    Check(s.Players[0].attackLevel==1&&!s.Submit(Cmd(CommandKind.Research,tech.id,definition:"attack")).accepted,"research applies once "+faction);
+    Check(s.Players[0].attackLevel==1&&!s.Submit(Cmd(CommandKind.Research,lab.id,definition:"attack")).accepted,"research applies once "+faction);
     var extractor=catalog.Role(faction,"extractor");
     var gasResource=s.Resources.First(r=>r.definition=="camp0.catalyst");
     var extractorPosition=new Point(gasResource.position.x-extractor.footprint*.5f,gasResource.position.y-extractor.footprint*.5f);
@@ -273,6 +282,7 @@ CombatMotionChecks.Run(catalog,Check);
 CombatBehaviorChecks.Run(catalog,Check);
 CasterChecks.Run(catalog,map,Check);
 ProductionChecks.Run(catalog,map,Check);
+ResearchBuildingChecks.Run(catalog,map,Check);
 MatchRecordingChecks.Run(catalog,map,Check);
 MatchReportChecks.Run(catalog,map,Check);
 GroupProductionChecks.Run(catalog,map,Check);

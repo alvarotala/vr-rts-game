@@ -51,7 +51,7 @@ namespace Frontier.Editor
                     session.Faction=faction;session.StartMatch();session.Match.Players[0].minerals=5000;session.Match.Players[0].catalyst=5000;
                     var worker=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="worker");
                     var hq=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
-                    var barracks=Add("barracks",1001);var tech=Add("tech",1002);
+                    var barracks=Add("barracks",1001);var tech=Add("tech",1002);var lab=Add("research",1003);
                     Select(worker.id);
                     if(faction=="industrial")
                     {
@@ -70,7 +70,7 @@ namespace Frontier.Editor
                     Check(!HelpVisible(),"Quick hover does not open help");
                     AgeHover(1.51f);panel.Point(buildRay,false,false);
                     Check(HelpVisible()&&Field<Text>(panel,"helpTitle").text==build.Label,"Sustained hover describes the pointed building");
-                    Check(session.BuildDefinition==null&&session.Match.Buildings(0)==3,"Hover never selects construction or spends resources");
+                    Check(session.BuildDefinition==null&&session.Match.Buildings(0)==4,"Hover never selects construction or spends resources");
                     Capture(faction+"-building-help");
                     panel.Point(RayTo("Stop"),false,false);Check(!HelpVisible(),"Switching buttons restarts the delay");
                     AgeHover(2);panel.Point(RayTo("Stop"),false,false);Check(HelpVisible(),"Orders also explain their behavior");
@@ -95,6 +95,7 @@ namespace Frontier.Editor
                     }
                     Select(barracks.id);CheckHelpForSelection(faction+"-army");
                     Select(tech.id);CheckHelpForSelection(faction+"-tech");
+                    Select(lab.id);CheckHelpForSelection(faction+"-research");
 
                     Select(hq.id);string train="Train "+session.Catalog[worker.definition].name;
                     var trainRay=RayTo(train);int minerals=session.View.minerals;
@@ -129,13 +130,13 @@ namespace Frontier.Editor
                     Hover(build.Title);var focus=typeof(CommanderInput).GetMethod("OnApplicationFocus",Private);focus.Invoke(input,new object[]{false});
                     Check(!HelpVisible()&&Frame(offPanel,aHeld:true)&&Frame(offPanel,aUp:true),"Focus loss cancels hover and consumes a held A");Frame(offPanel);
 
-                    Select(tech.id);Frame(RayTo("Firepower I"),aDown:true,aHeld:true);Frame(RayTo("Firepower I"),aUp:true);Refresh();
-                    Check(tech.queue.Count==1&&tech.queue[0].research,"A starts research through the shared command path");
+                    Select(lab.id);Frame(RayTo("Firepower I"),aDown:true,aHeld:true);Frame(RayTo("Firepower I"),aUp:true);Refresh();
+                    Check(lab.queue.Count==1&&lab.queue[0].research,"A starts research through the shared command path");
                     CheckLayout();Hover("Firepower I");Capture(faction+"-grouped-research");
                     Check(SelectionActions.For(session).Items.Any(a=>a.Id=="cancel")&&!HasButton("Cancel / refund"),
                         "Cancel remains in shared actions while the HUD uses production cards");
                     Frame(RayTo("Current production"),aDown:true,aHeld:true);Check(!HelpVisible(),"Pressing a production card dismisses help");Frame(RayTo("Current production"),aUp:true);
-                    Check(tech.queue.Count==0,"A on the production card cancels and refunds its queued item");Refresh();
+                    Check(lab.queue.Count==0,"A on the production card cancels and refunds its queued item");Refresh();
 
                     // An A press that begins on the map is still a contextual order, never a menu click.
                     Select(worker.id);var destination=new Point(12,12);var mapRay=new Ray(board.Content.TransformPoint(new Vector3(destination.x,0,destination.y))+Vector3.up,Vector3.down);
@@ -147,7 +148,7 @@ namespace Frontier.Editor
 
                     EntityState Add(string role,int id)
                     {
-                        var type=session.Catalog.Role(faction,role);var entity=new EntityState{id=id,owner=0,definition=type.id,health=type.health,position=new Point(22,role=="tech"?17:12)};
+                        var type=session.Catalog.Role(faction,role);var entity=new EntityState{id=id,owner=0,definition=type.id,health=type.health,position=new Point(22,8+(id-1000)*5)};
                         session.Match.Entities.Add(id,entity);return entity;
                     }
                 }

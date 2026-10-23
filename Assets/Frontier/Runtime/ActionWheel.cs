@@ -203,9 +203,9 @@ namespace Frontier.Runtime
         private static SelectionAction Navigation(string id, string label, string description)
             => new SelectionAction { Id = id, Title = label, Label = label, Detail = description };
 
-        // Refunds stay on the console so starting/finishing production never shifts sectors.
+        // Refunds and upgrades stay on the console; the wheel keeps unit training quick to reach.
         private IEnumerable<SelectionAction> AvailableActions()
-            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel");
+            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel" && a.Category != ActionCategory.Research);
 
         private IEnumerable<SelectionAction> QuickSelectActions()
         {
@@ -226,7 +226,7 @@ namespace Frontier.Runtime
             if (Page == WheelPage.Root)
             {
                 current.Add(Navigation("groups-menu", "Groups", "Select a control group"));
-                current.Add(Navigation("selection-menu", "Selection", "Build, train, research and abilities"));
+                current.Add(Navigation("selection-menu", "Selection", "Build, train and abilities"));
                 current.Add(Navigation("quick-select-menu", "Quick select", "Idle workers and all army units"));
                 current.Add(Navigation("orders-menu", "Unit orders", "Attack, stop and hold position"));
                 if (!available.Any(a => a.Category != ActionCategory.Orders)) disabled.Add("selection-menu");

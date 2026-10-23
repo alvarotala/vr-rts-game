@@ -23,16 +23,17 @@ namespace Frontier.Editor
                     var hq = f.Session.Match.Entities.Values.First(e => e.owner == 0 && f.Session.Catalog[e.definition].role == "hq");
                     var barracks = f.Add("barracks", 1001, new Point(22, 12));
                     var tech = f.Add("tech", 1002, new Point(22, 17));
+                    var lab = f.Add("research", 1004, new Point(28, 17));
                     var supply = f.Add("supply", 1003, new Point(20, 8));
                     f.Session.Select(worker.id, false);
                     f.Ray = new Ray(f.Board.Content.TransformPoint(new Vector3(worker.position.x, 0, worker.position.y)) + Vector3.up, Vector3.down);
                     f.OpenSelection();
                     f.Check(!f.Wheel.Items.Any(a => a.Id == "build-menu" || a.Id == "hold"), "Worker selection directly exposes construction and keeps unit orders separate");
-                    f.Check(f.Wheel.Page == WheelPage.Selection && f.Wheel.Items.Count(a => a.Building) == 7, "Selection offers all seven faction buildings without an intermediate menu");
+                    f.Check(f.Wheel.Page == WheelPage.Selection && f.Wheel.Items.Count(a => a.Building) == 8, "Selection offers all eight faction buildings without an intermediate menu");
                     f.Choose("build:" + f.Session.Catalog.Role(faction, "barracks").id); f.Capture(faction + "-build");
                     f.Enter("back"); f.Check(f.Wheel.Page == WheelPage.Root, "Back from worker actions returns directly to the root");
                     f.Session.Select(other.id, true); f.OpenSelection();
-                    f.Check(f.Wheel.Items.Count(a => a.Building) == 7, "Multiple workers also expose the same buildings directly");
+                    f.Check(f.Wheel.Items.Count(a => a.Building) == 8, "Multiple workers also expose the same buildings directly");
                     f.Session.Select(worker.id, false); f.OpenSelection();
                     f.Choose("build:" + f.Session.Catalog.Role(faction, "supply").id);
                     int buildings = f.Session.Match.Buildings(0);
@@ -80,10 +81,26 @@ namespace Frontier.Editor
                     f.Session.Match.Players[0].minerals = 5000; f.Refresh(); f.Choose(trainId); f.Confirm();
                     f.Check(hq.queue.Count == 1 && f.Wheel.IsOpen && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text == f.Wheel.Items.First(a => a.Id == trainId).Detail,
                         "Retrying after resources recover keeps Selection open and clears the old failure message");
-                    f.Session.Select(tech.id, false); f.OpenSelection(); f.Choose("research:" + f.Session.Catalog.Definition.upgrades[0].id); f.Capture(faction + "-research"); f.Confirm(); f.Drain();
-                    f.Check(tech.queue.Count == 1 && tech.queue[0].research && f.Wheel.IsOpen, "Research uses the shared command path while keeping Selection open");
-                    f.Choose("research:" + f.Session.Catalog.Definition.upgrades[1].id); f.Confirm();
-                    f.Check(tech.queue.Count == 2 && tech.queue.All(q => q.research), "Another research option can be queued in the same open wheel");
+                    f.Session.Select(tech.id, false); f.OpenSelection();
+                    f.Check(f.Wheel.Items.Where(a => a.Id != "back").All(a => a.Category == ActionCategory.Train),
+                        "Technology building wheel contains training only, with no Firepower or Armor upgrades");
+                    string siegeId="train:"+f.Session.Catalog.Role(faction,"siege").id;
+                    f.Choose(siegeId);f.Capture(faction+"-tech-training");f.Confirm();f.Drain();
+                    f.Check(tech.queue.Count==1&&!tech.queue[0].research&&f.Wheel.IsOpen,"Technology building still trains its unit through the wheel");
+                    f.Check(!SelectionActions.For(f.Session).Items.Any(a=>a.Category==ActionCategory.Research),"Artillery menu has no upgrades");
+                    f.Dismiss();f.Session.Select(lab.id,false);f.Refresh();
+                    foreach(var upgrade in f.Session.Catalog.Definition.upgrades)
+                    {
+                        var research=SelectionActions.For(f.Session).Items.Single(a=>a.Id=="research:"+upgrade.id);
+                        f.Check(f.Panel.GetComponentsInChildren<RectTransform>().Any(r=>r.name==research.Title&&r.gameObject.activeInHierarchy)
+                            &&research.Execute(),"Upgrade remains available and executable from the building menu: "+upgrade.name);
+                        f.Refresh();
+                    }
+                    f.Check(lab.queue.Count(q=>q.research)==2&&!f.Wheel.Items.Any(a=>a.Category==ActionCategory.Research),
+                        "Menu research does not introduce upgrades into the open wheel");
+                    f.Session.Select(tech.id,true);f.Session.Select(barracks.id,true);f.OpenSelection();
+                    f.Check(f.Wheel.Items.Where(a=>a.Id!="back").All(a=>a.Category==ActionCategory.Train)
+                        &&f.Wheel.Items.Any(a=>a.Id==siegeId),"Mixed producer selection retains training and excludes upgrades");
                     string rangedId = "train:" + f.Session.Catalog.Role(faction, "ranged").id;
                     f.Session.Select(barracks.id, false); f.OpenSelection(); f.Enter(rangedId);
                     f.Check(barracks.queue.Count == 1, "Barracks production is reachable from selection actions");

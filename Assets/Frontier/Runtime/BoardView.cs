@@ -104,7 +104,7 @@ namespace Frontier.Runtime
             unitStructure=Material(new Color(.12f,.17f,.22f),.16f);
             organicTissue=Material(Color.white,.08f);
             foreach(string role in new[]{"worker","scout","melee","ranged","siege","caster"})roleMaterials[role]=Material(UnitVisuals.Accent(role),.12f);
-            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","academy","defense"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role),.13f);
+            foreach(string role in new[]{"hq","barracks","extractor","supply","tech","academy","defense","research"})buildingMaterials[role]=Material(BuildingVisuals.Accent(role),.13f);
             var memoryStructure=Material(new Color(.12f,.17f,.22f));memoryStructure.SetFloat("_Desaturate",1);
             memoryMaterials=new[]{neutral,memoryStructure,neutral};
             constructionMaterials=new[]{Material(new Color(.52f,.52f,.52f)),Material(new Color(.19f,.19f,.19f)),Material(new Color(.78f,.78f,.78f))};

@@ -1,6 +1,6 @@
 # Hotkeys predeterminados
 
-Referencia de los valores predeterminados. **Settings → Controls → Hotkeys**, desde inicio o pausa, abre el editor de asignaciones. Las seis categorías de consulta y la guía muestran los controles actuales, incluidos los cambios guardados. Las entradas cubren gestos, acciones de menú y aclaraciones. Build, Train, Research, Stop y Hold se eligen desde el panel o la rueda; no tienen una tecla individual asignada.
+Referencia de los valores predeterminados. **Settings → Controls → Hotkeys**, desde inicio o pausa, abre el editor de asignaciones. Las seis categorías de consulta y la guía muestran los controles actuales, incluidos los cambios guardados. Las entradas cubren gestos, acciones de menú y aclaraciones. Build, Train, Stop y Hold se eligen desde el panel o la rueda; Research se elige en el panel del edificio de mejoras. No tienen una tecla individual asignada.
 
 **Edit bindings → Change** permite capturar una tecla o botón. Los cambios se guardan localmente; **Swap bindings** confirma un intercambio si la entrada está ocupada. **Restore device defaults** restaura solo el perfil elegido, después de confirmar. Los perfiles de Quest Touch y mouse/teclado son independientes. **Settings → Hand: Left/Right** elige el único mando de Quest que controla el juego. Hotkeys muestra solamente ese mando, o mouse/teclado en desktop; no permite capturar entradas de la mano inactiva. Cambiar la mano conserva las funciones configuradas y se guarda localmente.
 
@@ -75,7 +75,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 |---|---|---|
 | Build a structure | Worker > Selection > choose a building | Choose a valid foundation with Trigger / A. Keep a worker on site until complete. B cancels placement. |
 | Train a unit | Production building > Train | Spend resources and reserve supply to add a unit to the building's production queue. |
-| Research an upgrade | Technology building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
+| Research an upgrade | Research building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
 | Cancel one queued item | Trigger / A on its production card | The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order. |
 | Set a Rally Point | Select producer(s) · A on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
 | Read action details | Hover over an action for 1.5 s | See what the unit, building or upgrade does, along with its cost, timing and requirements. |
@@ -153,7 +153,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 |---|---|---|
 | Build a structure | Worker > Build > choose a building | Choose a valid foundation with Left mouse / Right mouse. Keep a worker on site until complete. Escape cancels placement. |
 | Train a unit | Production building > Train | Spend resources and reserve supply to add a unit to the building's production queue. |
-| Research an upgrade | Technology building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
+| Research an upgrade | Research building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
 | Cancel one queued item | Left-click on its production card | The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order. |
 | Set a Rally Point | Select producer(s) · Right mouse on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
 | Read action details | Hover over an action for 1.5 s | See what the unit, building or upgrade does, along with its cost, timing and requirements. |

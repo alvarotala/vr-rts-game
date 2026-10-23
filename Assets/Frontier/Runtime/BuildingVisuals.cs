@@ -17,6 +17,7 @@ namespace Frontier.Runtime
                 case "extractor":return new Color(.82f,.5f,1);
                 case "supply":return new Color(.5f,1,.55f);
                 case "tech":return new Color(.7f,.94f,1);
+                case "research":return new Color(1,.76f,.34f);
                 case "academy":return UnitVisuals.Accent("caster");
                 default:return new Color(1,.9f,.77f);
             }
@@ -85,6 +86,16 @@ namespace Frontier.Runtime
                     b.Tube(new Vector3(0,.42f,.11f),.29f,.24f,.07f,1);
                     b.Tube(new Vector3(0,.7f,.11f),.27f,.22f,.05f,0);
                     badgeHeight=.24f;break;
+                case "research": // Twin laboratory chambers joined by a low central spine.
+                    b.Box(new Vector3(0,.2f,.08f),new Vector3(.8f,.22f,.64f),0);
+                    for(int side=-1;side<=1;side+=2)
+                    {
+                        b.Prism(new Vector3(side*.23f,.4f,.1f),new Vector3(.31f,.38f,.4f),1,6);
+                        b.Lobe(new Vector3(side*.23f,.56f,.1f),new Vector3(.25f,.2f,.32f),2);
+                        b.Box(new Vector3(side*.23f,.68f,.1f),new Vector3(.29f,.045f,.36f),0);
+                    }
+                    b.Box(new Vector3(0,.39f,.1f),new Vector3(.12f,.32f,.44f),0);
+                    badgeHeight=.33f;break;
                 case "academy": // Three separate pylons frame a suspended resonance chamber.
                     b.Prism(new Vector3(0,.15f,.08f),new Vector3(.74f,.18f,.66f),0,6);
                     foreach(var p in new[]{new Vector3(-.3f,0,-.02f),new Vector3(.3f,0,-.02f),new Vector3(0,0,.32f)})
@@ -194,6 +205,9 @@ namespace Frontier.Runtime
                     case "tech":
                         Stroke(0,.14f,.12f,0);Stroke(.12f,0,0,-.14f);Stroke(0,-.14f,-.12f,0);Stroke(-.12f,0,0,.14f);
                         Stroke(-.05f,0,.05f,0);break;
+                    case "research":
+                        Stroke(0,-.11f,0,.12f,.05f);Stroke(-.1f,.02f,0,.12f);Stroke(0,.12f,.1f,.02f);
+                        Stroke(-.11f,-.12f,.11f,-.12f);break;
                     case "academy":
                         Polygon(h,new[]{new Vector2(0,z+.15f),new Vector2(.045f,z+.045f),new Vector2(.14f,z),new Vector2(.045f,z-.045f),new Vector2(0,z-.15f),new Vector2(-.045f,z-.045f),new Vector2(-.14f,z),new Vector2(-.045f,z+.045f)},2);break;
                     default:

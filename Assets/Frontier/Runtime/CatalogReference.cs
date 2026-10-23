@@ -39,6 +39,7 @@ namespace Frontier.Runtime
                 case "supply":return "Supply support";
                 case "barracks":return "Army production";
                 case "tech":return "Advanced production";
+                case "research":return "Army upgrades";
                 case "academy":return "Caster production";
                 case "defense":return "Base defense";
                 default:return type.role;
@@ -61,7 +62,8 @@ namespace Frontier.Runtime
                 case "extractor":return "Enables gas harvesting on a gas deposit. Assign workers once construction is complete.";
                 case "supply":return "Raises your army's supply capacity when complete. Build ahead of your next wave of units.";
                 case "barracks":return "Trains the core of your army and unlocks advanced structures. Keep production running.";
-                case "tech":return "Trains siege units and researches army upgrades. Unlocks caster production.";
+                case "tech":return "Trains siege units. Unlocks caster production.";
+                case "research":return "Researches faction-wide attack and armor upgrades. Improvements benefit your units and buildings.";
                 case "academy":return "Trains support casters. Add targeted damage and healing to a balanced army.";
                 case "defense":return "Stationary weapon that fires automatically. Protect workers, base entrances and narrow passages.";
                 default:return "";
@@ -128,7 +130,7 @@ namespace Frontier.Runtime
                 }
                 if(produced.Count>0)lines.Add("<b>Trains</b>  "+string.Join(" · ",produced));
                 if(unlocked.Count>0)lines.Add("<b>Unlocks</b>  "+string.Join(" · ",unlocked));
-                if(type.role=="tech")foreach(var upgrade in catalog.Definition.upgrades)
+                if(type.role=="research")foreach(var upgrade in catalog.Definition.upgrades)
                     lines.Add("<b>"+upgrade.name+"</b>  "+upgrade.minerals+" minerals · "+upgrade.catalyst+" gas · "+Seconds(upgrade.duration));
                 if(type.role=="hq")lines.Add("Workers return gathered minerals and gas here.");
                 if(type.role=="extractor")lines.Add("Build over a gas deposit. Best efficiency: "+Harvesting.OptimalWorkers("catalyst")+" workers per deposit.");

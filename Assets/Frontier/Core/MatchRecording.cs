@@ -22,7 +22,7 @@ namespace Frontier.Core
     public sealed partial class Simulation
     {
         // Bump when simulation/order semantics change. Saved catalogs/maps do not preserve old code.
-        public const int ReplayRulesVersion=2;
+        public const int ReplayRulesVersion=3;
         private readonly List<RecordedCommand> recordedCommands=new List<RecordedCommand>();
         private bool recordingCommands;
         public int RecordedCommandCount=>recordedCommands.Count;

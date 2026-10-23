@@ -319,6 +319,27 @@
       "vision": 12
     },
     {
+      "id": "industrial.research",
+      "faction": "industrial",
+      "name": "Upgrade Center",
+      "role": "research",
+      "building": true,
+      "minerals": 150,
+      "catalyst": 50,
+      "duration": 600,
+      "footprint": 3,
+      "health": 650,
+      "speed": 0,
+      "damage": 0,
+      "range": 0,
+      "attackPeriod": 20,
+      "producer": "",
+      "requires": "barracks",
+      "supply": 0,
+      "capacity": 0,
+      "vision": 11
+    },
+    {
       "id": "biological.worker",
       "faction": "biological",
       "name": "Seeder",
@@ -620,6 +641,27 @@
       "supply": 0,
       "capacity": 0,
       "vision": 12
+    },
+    {
+      "id": "biological.research",
+      "faction": "biological",
+      "name": "Evolution Chamber",
+      "role": "research",
+      "building": true,
+      "minerals": 150,
+      "catalyst": 50,
+      "duration": 600,
+      "footprint": 3,
+      "health": 650,
+      "speed": 0,
+      "damage": 0,
+      "range": 0,
+      "attackPeriod": 20,
+      "producer": "",
+      "requires": "barracks",
+      "supply": 0,
+      "capacity": 0,
+      "vision": 11
     }
   ],
   "upgrades": [

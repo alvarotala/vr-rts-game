@@ -10,7 +10,7 @@ static class GroupProductionChecks
             sim.Players[0].minerals=10000;sim.Players[0].catalyst=10000;
             for(int i=0;i<5;i++)Add("supply");
             var first=Add("barracks");var second=Add("barracks");
-            var tech=Add("tech");var otherTech=Add("tech");var academy=Add("academy");
+            var tech=Add("tech");var otherTech=Add("tech");var academy=Add("academy");var lab=Add("research");var otherLab=Add("research");
             var hq=sim.Entities.Values.First(e=>e.owner==0&&sim.Type(e).role=="hq");
             var worker=sim.Entities.Values.First(e=>e.owner==0&&sim.Type(e).role=="worker");
             var scout=catalog.Role(faction,"scout");var siege=catalog.Role(faction,"siege");
@@ -58,19 +58,19 @@ static class GroupProductionChecks
             foreach(var e in sim.Entities.Values)e.queue.Clear();
 
             int gas=sim.Players[0].catalyst;minerals=sim.Players[0].minerals;
-            SetQueue(tech,siege.id,1000);
-            var researchGroup=new[]{first.id,tech.id,otherTech.id};var attack=catalog.Upgrade("attack");
-            Check(Submit(CommandKind.Research,attack.id,researchGroup)&&otherTech.queue.Count==1
-                &&otherTech.queue[0].research&&otherTech.queue[0].definition==attack.id&&tech.queue.Count==1,
+            SetQueue(lab,"armor",1000);
+            var researchGroup=new[]{first.id,lab.id,otherLab.id};var attack=catalog.Upgrade("attack");
+            Check(Submit(CommandKind.Research,attack.id,researchGroup)&&otherLab.queue.Count==1
+                &&otherLab.queue[0].research&&otherLab.queue[0].definition==attack.id&&lab.queue.Count==1,
                 "research routes once to the compatible lab with the shortest wait");
             Check(sim.Players[0].minerals==minerals-attack.minerals&&sim.Players[0].catalyst==gas-attack.catalyst,
                 "group research charges exactly one upgrade");
-            Rejected(CommandKind.Research,attack.id,new[]{tech.id},"research queued at another selected or unselected lab cannot be duplicated");
-            otherTech.queue.Clear();sim.Players[0].attackLevel=1;
+            Rejected(CommandKind.Research,attack.id,new[]{lab.id},"research queued at another selected or unselected lab cannot be duplicated");
+            otherLab.queue.Clear();sim.Players[0].attackLevel=1;
             Rejected(CommandKind.Research,attack.id,researchGroup,"completed faction research cannot be duplicated");
             sim.Players[0].attackLevel=0;
-            SetQueue(tech,siege.id,0,0,0,0,0);
-            Check(Submit(CommandKind.Research,"armor",researchGroup)&&otherTech.queue.Count==1&&tech.queue.Count==5,
+            SetQueue(lab,"attack",0,0,0,0,0);
+            Check(Submit(CommandKind.Research,"armor",researchGroup)&&otherLab.queue.Count==1&&lab.queue.Count==5,
                 "research skips a full lab");
             Rejected(CommandKind.Research,"unknown",researchGroup,"unknown research leaves economy and queues unchanged");
             Rejected(CommandKind.Research,attack.id,new[]{first.id,unfinished.id},"research requires a completed research building");
@@ -149,9 +149,9 @@ static class GroupProductionChecks
                 &&sim.Players[0].catalyst==gas-type.catalyst,
                 "group training chooses the advancing producer instead of the stalled zero-time queue");
             if(role=="tech")
-                Check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Research,definition="attack",entities=group}).accepted
-                    &&blocked.queue.Count==1&&working.queue.Count==3&&working.queue.Last().research,
-                    "group research also avoids a lab stalled behind a finished unit");
+                Check(!sim.Submit(new GameCommand{player=0,kind=CommandKind.Research,definition="attack",entities=group}).accepted
+                    &&blocked.queue.Count==1&&working.queue.Count==2,
+                    "artillery buildings cannot research regardless of deployment state");
             Check(Train(new[]{blocked.id})&&blocked.queue.Count==2,
                 "explicit single-building training still accepts an order behind a blocked deployment");
             Border(working,9998);working.queue[0].remaining=1;sim.Step();
@@ -185,6 +185,6 @@ static class GroupProductionChecks
     private static void SetQueue(EntityState producer,string definition,params int[] remaining)
     {
         producer.queue.Clear();
-        for(int i=0;i<remaining.Length;i++)producer.queue.Add(new ProductionOrder{id=100+i,definition=definition,remaining=remaining[i],total=Math.Max(1,remaining[i])});
+        for(int i=0;i<remaining.Length;i++)producer.queue.Add(new ProductionOrder{id=100+i,definition=definition,research=definition=="attack"||definition=="armor",remaining=remaining[i],total=Math.Max(1,remaining[i])});
     }
 }

@@ -40,6 +40,7 @@ namespace Frontier.Editor
                     var supply=AddBuilding("supply",1000,new Point(20,8));
                     var barracks=AddBuilding("barracks",1001,new Point(22,12));
                     var tech=AddBuilding("tech",1002,new Point(22,17));
+                    var lab=AddBuilding("research",1008,new Point(34,18));
                     var hq=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
                     Refresh();session.Select(hq.id,false);Refresh();
                     var options=Field<RectTransform>(panel,"actionCard");var optionsPosition=options.anchoredPosition;
@@ -52,7 +53,7 @@ namespace Frontier.Editor
                     Check(options.gameObject.activeInHierarchy&&options.rect.height==468&&options.anchoredPosition==optionsPosition&&ActionCards().Length==0,
                         "Mixed units and buildings retain the same empty Options area");
                     var producerLayouts=new Dictionary<int,Dictionary<string,Vector2>>();
-                    foreach(var producer in new[]{hq,barracks,tech})
+                    foreach(var producer in new[]{hq,barracks,tech,lab})
                     {
                         session.Select(producer.id,false);Refresh();
                         producerLayouts[producer.id]=ActionLayout();
@@ -61,7 +62,7 @@ namespace Frontier.Editor
                         CheckSameActions(producerLayouts[producer.id],"Resource updates preserve the selected producer's action positions");
                         session.Match.Players[0].minerals+=7;
                     }
-                    session.Select(hq.id,false);session.Select(barracks.id,true);session.Select(tech.id,true);Refresh();
+                    session.Select(hq.id,false);session.Select(barracks.id,true);session.Select(tech.id,true);session.Select(lab.id,true);Refresh();
                     var groupedCards=ActionCards();
                     var expectedGroupActions=producerLayouts.Values.SelectMany(layout=>layout.Keys).Distinct().OrderBy(name=>name);
                     Check(groupedCards.Select(card=>card.name).OrderBy(name=>name).SequenceEqual(expectedGroupActions),
@@ -87,13 +88,13 @@ namespace Frontier.Editor
                     foreach(var role in roles)Click("Train "+session.Catalog.Role(faction,role).name);
                     CheckBarracksRoster();CheckSameActions(producerLayouts[barracks.id],"A full queue preserves all three barracks positions");
                     Check(Text("productionCount")=="5 / 5 · FULL"&&barracks.queue.Count==5,"Full queue is visible");
-                    CheckActiveBorders(false,false,false,true);
+                    CheckActiveBorders(true,true,true,true);
                     Check(Field<Text[]>(panel,"queuedNames").Select(t=>t.text).SequenceEqual(roles.Skip(1).Select(r=>session.Catalog.Role(faction,r).name)),"All four pending items preserve FIFO order, including duplicates");
                     Capture(faction+"-full");Click("Train "+session.Catalog.Role(faction,"scout").name);
                     Check(barracks.queue.Count==5&&Text("productionCount").Contains("FULL"),"Rejected sixth order leaves the displayed queue unchanged");
                     int minerals=session.View.minerals;Click("Queue position 5");
                     Check(barracks.queue.Count==4&&session.View.minerals==minerals+session.Catalog.Role(faction,"scout").minerals&&Field<Text[]>(panel,"queuedNames")[3].text=="Empty","Cancel refunds only the last item and clears its slot");
-                    CheckActiveBorders(false,false,false,false);
+                    CheckActiveBorders(true,true,true,false);
                     CheckQueueModels();
                     // Finish and enqueue between HUD refreshes: the length is unchanged, the active item is not.
                     barracks.queue[0].remaining=1;session.Match.Step();
@@ -108,36 +109,38 @@ namespace Frontier.Editor
                     Check(workerOrders.Count==3&&soldierOrders.Length==3&&soldierOrders.All(card=>workerOrders[card.name]==card.anchoredPosition),
                         "Attack Move, Stop and Hold keep their slots when switching from a worker to a soldier");
 
-                    session.Select(tech.id,false);Click("Firepower I");Click("Train "+session.Catalog.Role(faction,"siege").name);Click("Armor I");
-                    CheckSameActions(producerLayouts[tech.id],"Training and research preserve the technology building's compact layout");
+                    session.Select(tech.id,false);Click("Train "+session.Catalog.Role(faction,"siege").name);
+                    Check(!SelectionActions.For(session).Items.Any(a=>a.Category==ActionCategory.Research),"Artillery building offers training only");
+                    session.Select(lab.id,false);Click("Firepower I");Click("Armor I");
+                    CheckSameActions(producerLayouts[lab.id],"Research preserves the dedicated building's compact layout");
                     for(int i=0;i<175;i++)session.Match.Step();Refresh();
                     Check(Text("productionName")=="Firepower I"&&Text("productionState").Contains("RESEARCHING")&&Text("productionProgress").Contains("25%"),"Research shares the ordered queue and advances its progress");
                     Capture(faction+"-research");
-                    session.Pause("tracking",true);int remaining=tech.queue[0].remaining;session.Match.Step();Refresh();
-                    Check(Text("productionState").Contains("PAUSED")&&tech.queue[0].remaining==remaining,"External pause freezes production and labels it paused");Capture(faction+"-paused");session.Pause("tracking",false);
-                    session.Select(0,false);board.Hovered=tech.id;Refresh();
+                    session.Pause("tracking",true);int remaining=lab.queue[0].remaining;session.Match.Step();Refresh();
+                    Check(Text("productionState").Contains("PAUSED")&&lab.queue[0].remaining==remaining,"External pause freezes production and labels it paused");Capture(faction+"-paused");session.Pause("tracking",false);
+                    session.Select(0,false);board.Hovered=lab.id;Refresh();
                     Check(!QueueShown()&&Text("selectionDetails").Contains("Select to view production"),"Hover invites selection instead of referring to a hidden queue");
-                    Check(Field<Text>(panel,"selectionFallbackTitle").gameObject.activeInHierarchy&&Text("selectionFallbackTitle")==session.Catalog[tech.definition].name
+                    Check(Field<Text>(panel,"selectionFallbackTitle").gameObject.activeInHierarchy&&Text("selectionFallbackTitle")==session.Catalog[lab.definition].name
                         &&Text("selection")=="","Hover shows the producer name in the fallback row while the selection count stays empty");
                     board.Hovered=0;
                     var unit=session.View.entities.First(e=>e.owner==0&&!session.Catalog[e.definition].building);
                     session.Select(unit.id,false);Refresh();Check(!QueueShown(),"Units hide production queue");
                     session.Select(supply.id,false);Refresh();Check(!QueueShown(),"Non-producing buildings hide production queue");
-                    session.Select(tech.id,false);Refresh();
-                    var pendingCard=Field<Image[]>(panel,"queuedCards")[1].rectTransform;
+                    session.Select(lab.id,false);Refresh();
+                    var pendingCard=Field<Image[]>(panel,"queuedCards")[0].rectTransform;
                     var pendingCenter=pendingCard.TransformPoint(pendingCard.rect.center);
                     var pendingRay=new Ray(pendingCenter-pendingCard.forward,pendingCard.forward);
                     Check(panel.Point(pendingRay,true,false),"Pending item can be pressed before changing to a building group");
-                    int techOrders=tech.queue.Count,hqOrders=hq.queue.Count;
+                    int techOrders=lab.queue.Count,hqOrders=hq.queue.Count;
                     session.Select(hq.id,true);Refresh();
                     Check(QueueShown()&&Text("productionTitle")=="PRODUCTION"&&Text("productionName")=="Firepower I",
                         "Multiple producers show their actual production orders");
-                    Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text==session.Catalog.Role(faction,"siege").name,
+                    Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text=="Armor I",
                         "Group fills subsequent slots with actual orders and totals combined capacity");
                     Check(Text("productionHint").Contains("including the current one")&&Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==Math.Min(5,techOrders+hqOrders),
                         "Each occupied group card has an exact producer cancellation target");
                     panel.Point(pendingRay,false,true);Refresh();
-                    Check(tech.queue.Count==techOrders&&hq.queue.Count==hqOrders,"Changing selection invalidates a pressed individual queue item");
+                    Check(lab.queue.Count==techOrders&&hq.queue.Count==hqOrders,"Changing selection invalidates a pressed individual queue item");
                     Capture(faction+"-group");
                     session.Pause("tracking",true);Refresh();
                     Check(Text("productionState").Contains("PAUSED"),"Building group production displays the paused state");session.Pause("tracking",false);
@@ -153,26 +156,26 @@ namespace Frontier.Editor
                         "Nonproducing buildings do not hide or inflate a building group's production summary");
                     session.Select(unit.id,true);Refresh();Check(!QueueShown(),"A mixed unit and building selection hides the producer summary");
                     session.Match.Entities.Remove(foundation.id);session.Match.Map.Occupy(foundation.position,session.Catalog[foundation.definition].footprint,0);
-                    session.Select(tech.id,false);Refresh();
+                    session.Select(lab.id,false);Refresh();
                     Check(Text("productionTitle")=="PRODUCTION"&&Text("productionHint").Contains("including the current one")&&
                         Field<Text[]>(panel,"queuedPositions").Select(t=>t.text).SequenceEqual(new[]{"2","3","4","5"}),
                         "Returning to one building restores its individual queue labels");
                     pendingCenter=pendingCard.TransformPoint(pendingCard.rect.center);pendingRay=new Ray(pendingCenter-pendingCard.forward,pendingCard.forward);
                     Check(panel.Point(pendingRay,true,false)&&panel.Point(pendingRay,false,true),"Returning to one building restores its real cancellation target");Refresh();
-                    Check(tech.queue.Count==techOrders-1&&hq.queue.Count==hqOrders&&tech.queue[0].definition=="attack",
+                    Check(lab.queue.Count==techOrders-1&&hq.queue.Count==hqOrders&&lab.queue[0].definition=="attack",
                         "Individual cancellation after a group affects only the chosen item and producer");
-                    session.Select(tech.id,false);tech.complete=false;Refresh();Check(!QueueShown(),"Unfinished producer hides production queue");tech.complete=true;Refresh();
+                    session.Select(lab.id,false);lab.complete=false;Refresh();Check(!QueueShown(),"Unfinished producer hides production queue");lab.complete=true;Refresh();
                     panel.ToggleMenu();Refresh();Check(!QueueShown(),"Pause menu hides match production queue");panel.ToggleMenu();Refresh();
                     Check(QueueShown()&&Text("productionName")=="Firepower I","Resuming restores the selected building queue");
 
                     // Shared actions retain rally clearing; the HUD only renders training and research.
                     var academy=AddBuilding("academy",1004,new Point(28,18));
-                    var allProducers=new[]{hq,barracks,tech,academy};
-                    foreach(var producer in allProducers){producer.hasRallyPoint=true;producer.rallyPoint=new Point(20,20);}
+                    var allProducers=new[]{hq,barracks,tech,academy,lab};
+                    foreach(var producer in allProducers.Where(p=>session.Catalog.CanProduceUnits(p.definition))){producer.hasRallyPoint=true;producer.rallyPoint=new Point(20,20);}
                     Refresh();session.Select(0,false);foreach(var producer in allProducers)session.Select(producer.id,true);Refresh();
                     var groupActions=SelectionActions.For(session).Items;
-                    Check(groupActions.Count==9&&groupActions.Any(a=>a.Id=="clear-rally-point"),
-                        "All four producer roles expose six train actions, two upgrades and rally clearing");
+                    Check(groupActions.Count==8&&!groupActions.Any(a=>a.Id=="clear-rally-point"),
+                        "All five producer roles expose six train actions and two upgrades; research has no rally point");
                     Check(Text("productionState").Contains("TRAINING")&&Text("productionHint").Contains("including the current one"),
                         "Producer group shows current production and specific card cancellation");
                     Canvas.ForceUpdateCanvases();
@@ -200,10 +203,11 @@ namespace Frontier.Editor
                     Check(academy.queue.Count==1&&allProducers.Sum(producer=>producer.queue.Count)==totalOrders+1,
                         "The compact caster button queues exactly one order at the compatible selected producer");
                     if(hq.queue.Count==0)Click("Train "+session.Catalog.Role(faction,"worker").name);
-                    Check(allProducers.All(producer=>producer.queue.Count>0),"Four producers have concurrent real orders for active-card feedback");
+                    Check(allProducers.All(producer=>producer.queue.Count>0),"Five producers have concurrent real orders for active-card feedback");
                     CheckActiveBorders(true,true,true,true,true);
                     Capture(faction+"-parallel-active");
-                    Check(groupActions.Single(action=>action.Id=="clear-rally-point").Execute(),"Shared clear-rally action remains available outside the HUD");Refresh();
+                    session.Select(0,false);foreach(var producer in allProducers.Where(p=>session.Catalog.CanProduceUnits(p.definition)))session.Select(producer.id,true);Refresh();
+                    Check(SelectionActions.For(session).Items.Single(action=>action.Id=="clear-rally-point").Execute(),"Training producers retain their shared clear-rally action");Refresh();
                     Check(allProducers.All(producer=>!producer.hasRallyPoint),"Shared clear-rally action still clears every selected producer");
                     session.Match.Entities.Remove(academy.id);session.Match.Map.Occupy(academy.position,session.Catalog[academy.definition].footprint,0);
 
@@ -231,11 +235,11 @@ namespace Frontier.Editor
                         "Exactly five group orders fill all five slots without an overflow count");
                     Check(Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · 0%"&&Field<Text[]>(panel,"queuedKinds")[1].text=="B1 · QUEUED",
                         "Group cards distinguish a second active producer from pending production");
-                    CheckActiveBorders(true,false,false,true);
+                    CheckActiveBorders(true,true,true,true);
                     Capture(faction+"-group-five");
                     Click("Train "+session.Catalog.Role(faction,"ranged").name);
                     Check(Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +1 MORE","The sixth order appears as +1 on the fifth card");
-                    CheckActiveBorders(true,false,false,true,true);
+                    CheckActiveBorders(true,true,true,true,true);
                     Capture(faction+"-group-plus-one");
                     for(int i=0;i<2;i++)Click("Train "+session.Catalog.Role(faction,"ranged").name);
                     Check(barracks.queue.Count+second.queue.Count==8&&Text("productionCount")=="8 / 10"&&
@@ -251,7 +255,7 @@ namespace Frontier.Editor
                     Check(Field<Text[]>(panel,"queuedKinds")[1].text=="B3 · 0%"&&
                         Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==5,
                         "Third active order identifies its building and all five visible orders retain exact cancellation targets");
-                    CheckActiveBorders(true,true,false,true,true);
+                    CheckActiveBorders(true,true,true,true,true);
                     second.queue[0].remaining=second.queue[0].total/2;Refresh();
                     Check(Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · 50%"&&
                         Mathf.Abs(Field<Image[]>(panel,"queuedProgress")[0].rectTransform.rect.width-68)<.1f&&
@@ -260,7 +264,7 @@ namespace Frontier.Editor
                     session.Pause("tracking",true);Refresh();
                     Check(Text("productionState").Contains("PAUSED")&&Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · PAUSED",
                         "Pausing marks both primary and secondary active production cards");
-                    CheckActiveBorders(true,true,false,true,true);
+                    CheckActiveBorders(true,true,true,true,true);
                     session.Pause("tracking",false);Refresh();
                     int groupCount=barracks.queue.Count+second.queue.Count+third.queue.Count;
                     barracks.queue[0].remaining=1;session.Match.Step();
@@ -279,7 +283,7 @@ namespace Frontier.Editor
                     Check(Field<Text[]>(panel,"queuedPositions")[3].text=="5"&&Field<Image[]>(panel,"queuedProgress").All(p=>p.rectTransform.rect.width==0)&&
                         Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==second.queue.Count,
                         "Returning from overflow to one barracks removes group progress and restores all individual cancellation targets");
-                    CheckActiveBorders(false,false,false,true);
+                    CheckActiveBorders(true,true,true,true);
                     foreach(var extra in new[]{second,third,groupSupply})
                     {session.Match.Entities.Remove(extra.id);session.Match.Map.Occupy(extra.position,session.Catalog[extra.definition].footprint,0);}
                     barracks.queue.Clear();
@@ -320,7 +324,7 @@ namespace Frontier.Editor
                     var expected=new[]{second,third,fourth,fifth};
                     var borders=Field<Image[]>(panel,"queuedActiveBorders");
                     Check(borders.Select(border=>border.gameObject.activeSelf).SequenceEqual(expected),
-                        "Parallel producers and the occupied fifth card have borders: "+string.Join(",",expected));
+                        "Occupied production slots 2 through 5 have borders: "+string.Join(",",expected));
                     for(int i=0;i<borders.Length;i++)
                     {
                         var border=borders[i];if(!border.gameObject.activeSelf)continue;

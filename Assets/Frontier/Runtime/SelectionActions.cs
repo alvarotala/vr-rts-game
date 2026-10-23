@@ -31,7 +31,7 @@ namespace Frontier.Runtime
             {
                 var entity = selected[0]; bool single = selected.Length == 1;
                 var roles = new HashSet<string>(selected.Where(e => e.complete && e.health > 0).Select(e => session.Catalog[e.definition].role));
-                result.Heading = roles.Count == 0 ? "CONSTRUCTION" : roles.Contains("tech") ? "TRAIN & RESEARCH" : "BUILDING ACTIONS";
+                result.Heading = roles.Count == 0 ? "CONSTRUCTION" : roles.Contains("research") ? "TRAIN & RESEARCH" : "BUILDING ACTIONS";
                 if (!single) result.Hint = "Each command queues one unit or upgrade at a compatible building with the shortest wait.";
                 if (roles.Count > 0)
                 {
@@ -41,7 +41,7 @@ namespace Frontier.Runtime
                         result.Add("train:" + type.id, "Train " + type.name, type.name, UnitVisuals.RoleName(type.role) + " · " + Cost(type.minerals, type.catalyst), () => session.Send(CommandKind.Train, captured.id), ActionCategory.Train,
                             Describe(type, session.Catalog), Requirements(type, session.Catalog), type);
                     }
-                    if (roles.Contains("tech")) foreach (var upgrade in session.Catalog.Definition.upgrades)
+                    if (roles.Contains("research")) foreach (var upgrade in session.Catalog.Definition.upgrades)
                     {
                         var captured = upgrade;
                         result.Add("research:" + upgrade.id, upgrade.name, upgrade.name, "Research · " + Cost(upgrade.minerals, upgrade.catalyst), () => session.Send(CommandKind.Research, captured.id), ActionCategory.Research,
@@ -106,8 +106,9 @@ namespace Frontier.Runtime
                 case "extractor": return "Build directly over a gas deposit so workers can harvest it. Assign workers after completion; " + Harvesting.OptimalWorkers("catalyst") + " is optimal.";
                 case "supply": return "Adds " + type.capacity + " supply capacity when complete, allowing you to train more units. It does not produce units or gather resources.";
                 case "barracks": return "Trains scouts, close-range fighters and ranged attackers. Build your main army here. Unlocks advanced construction.";
-                case "tech": return "Trains long-range artillery and researches faction-wide attack and armor upgrades. Supports a stronger, more versatile army.";
-                case "academy": return "Trains casters with targeted damage and healing abilities. Requires your artillery and research building. Select a caster to use its abilities.";
+                case "tech": return "Trains long-range artillery and unlocks your caster building. Protect artillery with frontline units.";
+                case "research": return "Researches faction-wide attack and armor upgrades. Improvements benefit your units and buildings.";
+                case "academy": return "Trains casters with targeted damage and healing abilities. Requires your artillery building. Select a caster to use its abilities.";
                 case "defense": return "Stationary defense that automatically fires at enemies within range. Protect bases and narrow approaches; it cannot move.";
                 default: return type.building ? "A structure supporting your base." : "A mobile unit in your army.";
             }

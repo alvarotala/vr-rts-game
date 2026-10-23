@@ -120,6 +120,7 @@ namespace Frontier.Core
             if(Count("extractor")<gasSites&&view.tick>=Seconds(pace.extractor))priorities.Add("extractor");
             if(Count("tech")==0&&Complete("barracks")&&view.tick>=Seconds(pace.tech)&&militaryCount>=6)priorities.Add("tech");
             if(Count("academy")==0&&Complete("tech")&&view.tick>=Seconds(pace.academy)&&militaryCount>=10)priorities.Add("academy");
+            if(Count("research")==0&&Complete("barracks")&&view.tick>=Seconds(pace.research)-catalog.Role(view.faction,"research").duration&&militaryCount>=12)priorities.Add("research");
             int wantedBarracks=Math.Min(pace.barracks,1+readyBases.Length+(workers.Length>=18?1:0));
             if(Count("barracks")<wantedBarracks&&Complete("barracks")&&workers.Length>=8
                 &&(minerals>=225||Complete("tech")))priorities.Add("barracks");
@@ -144,7 +145,7 @@ namespace Frontier.Core
                 {
                     // Save for a reachable, almost affordable priority only when gas
                     // is already available. Missing tech never freezes all infantry.
-                    if(catalyst>=type.catalyst&&(role=="supply"||role=="barracks"||role=="tech"||role=="academy"))
+                    if(catalyst>=type.catalyst&&(role=="supply"||role=="barracks"||role=="tech"||role=="academy"||role=="research"))
                         saveMinerals=Math.Max(saveMinerals,Math.Min(minerals,type.minerals));
                     continue;
                 }
@@ -240,11 +241,11 @@ namespace Frontier.Core
             if(view.tick>=Seconds(pace.research)&&view.tick>=economyResearchAt&&producerCounts["siege"]>0&&militaryCount>=16)
             {
                 var upgrade=catalog.Definition.upgrades.FirstOrDefault(u=>!view.researched.Contains(u.id)&&!own.Any(e=>e.queue.Any(q=>q.research&&q.definition==u.id)));
-                var tech=own.FirstOrDefault(e=>e.complete&&Type(e).role=="tech"&&e.queue.Length<=1&&!e.queue.Any(q=>q.research));
-                if(upgrade!=null&&tech!=null&&minerals-saveMinerals>=upgrade.minerals&&catalyst>=upgrade.catalyst)
+                var research=own.FirstOrDefault(e=>e.complete&&Type(e).role=="research"&&e.queue.Length<=1&&!e.queue.Any(q=>q.research));
+                if(upgrade!=null&&research!=null&&minerals-saveMinerals>=upgrade.minerals&&catalyst>=upgrade.catalyst)
                 {
-                    minerals-=upgrade.minerals;catalyst-=upgrade.catalyst;usedProducers.Add(tech.id);economyResearchAt=view.tick+Seconds(30);
-                    orders.Add(Command(CommandKind.Research,tech.id,definition:upgrade.id));
+                    minerals-=upgrade.minerals;catalyst-=upgrade.catalyst;usedProducers.Add(research.id);economyResearchAt=view.tick+Seconds(30);
+                    orders.Add(Command(CommandKind.Research,research.id,definition:upgrade.id));
                 }
             }
             var readyProducers=own.Where(e=>e.complete&&e.health>0&&Type(e).building&&Type(e).role!="hq"&&e.queue.Length==0

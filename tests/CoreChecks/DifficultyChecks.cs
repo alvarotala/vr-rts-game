@@ -45,7 +45,7 @@ static class DifficultyChecks
                 var entity=new EntityState{id=id++,owner=0,definition=type.id,health=type.health,position=position};
                 sim.Entities.Add(entity.id,entity);return entity;
             }
-            foreach(var role in new[]{"barracks","barracks","barracks","supply","extractor","tech","academy","defense"})Add(role,new Point(20,8));
+            foreach(var role in new[]{"barracks","barracks","barracks","supply","extractor","tech","academy","defense","research"})Add(role,new Point(20,8));
             for(int i=6;i<mode.workers;i++)Add("worker",new Point(16,16));
             for(int i=0;i<mode.army;i++)Add(Roles[i%Roles.Length],new Point(15+i%5,16+i/5));
             PlayerView View(int seconds)
@@ -88,6 +88,9 @@ static class DifficultyChecks
                 var view=View(1200);view.researched=upgrade=="armor"?new[]{"attack"}:Array.Empty<string>();
                 check(Bot().Decide(view).Any(c=>c.kind==CommandKind.Research&&c.definition==upgrade),"Can research "+upgrade+": "+label);
             }
+            var researchPlan=View(1200);
+            researchPlan.entities=researchPlan.entities.Where(e=>catalog[e.definition].role!="research").ToArray();
+            check(Bot().Decide(researchPlan).Any(c=>c.kind==CommandKind.Build&&catalog[c.definition].role=="research"),"Builds a dedicated upgrade structure: "+label);
             // Replace live units with paid reservations. Neither multiple producers nor
             // several headquarters may exceed the strategy's target in a single decision.
             var queued=View(120);

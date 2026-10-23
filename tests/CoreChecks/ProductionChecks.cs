@@ -9,7 +9,7 @@ static class ProductionChecks
             var sim=new Simulation(map,catalog,faction);
             sim.Players[0].minerals=5000;sim.Players[0].catalyst=5000;
             var hq=sim.Entities.Values.First(e=>e.owner==0&&sim.Type(e).role=="hq");
-            var supply=Add("supply",1000);var tech=Add("tech",1001);
+            var supply=Add("supply",1000);var tech=Add("tech",1001);var lab=Add("research",1002);
             string worker=catalog.Role(faction,"worker").id;
             for(int i=0;i<5;i++)check(Train(hq,worker),"queue five identical workers "+faction);
             var original=hq.queue.ToArray();
@@ -39,16 +39,16 @@ static class ProductionChecks
             sim.Submit(new GameCommand{kind=CommandKind.Train,player=1,entities=new[]{enemyHq.id},definition=catalog.Role(sim.Players[1].faction,"worker").id});
             check(Train(hq,worker)&&hq.queue[0].id==last+1,"own order IDs reveal no gaps from enemy production "+faction);Cancel(hq,0);
 
-            check(Research("attack")&&Train(tech,catalog.Role(faction,"siege").id)&&Research("armor"),"mixed research and unit queue accepted "+faction);
-            var mixed=tech.queue.ToArray();int gas=sim.Players[0].catalyst;minerals=sim.Players[0].minerals;
+            check(Research("attack")&&Train(tech,catalog.Role(faction,"siege").id)&&Research("armor"),"independent research and unit queues accepted "+faction);
+            var mixed=lab.queue.ToArray();int gas=sim.Players[0].catalyst;minerals=sim.Players[0].minerals;
             var siege=catalog.Role(faction,"siege");
-            check(Cancel(tech,mixed[1].id)&&tech.queue.SequenceEqual(new[]{mixed[0],mixed[2]})&&sim.Players[0].minerals==minerals+siege.minerals&&sim.Players[0].catalyst==gas+siege.catalyst,
+            check(Cancel(tech,tech.queue[0].id)&&tech.queue.Count==0&&lab.queue.SequenceEqual(mixed)&&sim.Players[0].minerals==minerals+siege.minerals&&sim.Players[0].catalyst==gas+siege.catalyst,
                 "specific artillery cancellation refunds minerals and gas and preserves research "+faction);
             gas=sim.Players[0].catalyst;minerals=sim.Players[0].minerals;
-            check(Cancel(tech,mixed[0].id)&&sim.Players[0].attackLevel==0&&sim.Players[0].minerals==minerals+catalog.Upgrade("attack").minerals&&sim.Players[0].catalyst==gas+catalog.Upgrade("attack").catalyst&&Research("attack"),
+            check(Cancel(lab,mixed[0].id)&&sim.Players[0].attackLevel==0&&sim.Players[0].minerals==minerals+catalog.Upgrade("attack").minerals&&sim.Players[0].catalyst==gas+catalog.Upgrade("attack").catalyst&&Research("attack"),
                 "cancelled active research refunds fully and can be queued again "+faction);
             supply.complete=false;int buildings=sim.Buildings(0);minerals=sim.Players[0].minerals;
-            check(!Cancel(supply,mixed[2].id)&&sim.Buildings(0)==buildings&&sim.Players[0].minerals==minerals,"queue command cannot accidentally cancel a foundation "+faction);
+            check(!Cancel(supply,mixed[1].id)&&sim.Buildings(0)==buildings&&sim.Players[0].minerals==minerals,"queue command cannot accidentally cancel a foundation "+faction);
 
             // Exercise the actual cap, including reservations and deployment.
             sim=new Simulation(map,catalog,faction);sim.Players[0].minerals=5000;
@@ -71,11 +71,11 @@ static class ProductionChecks
 
             EntityState Add(string role,int id)
             {
-                var type=catalog.Role(faction,role);var e=new EntityState{id=id,owner=0,definition=type.id,health=type.health,position=new Point(25,id==1000?12:18)};
+                var type=catalog.Role(faction,role);var e=new EntityState{id=id,owner=0,definition=type.id,health=type.health,position=new Point(25,12+(id-1000)*6)};
                 sim.Entities.Add(id,e);return e;
             }
             bool Train(EntityState e,string definition)=>sim.Submit(new GameCommand{kind=CommandKind.Train,player=0,entities=new[]{e.id},definition=definition}).accepted;
-            bool Research(string id)=>sim.Submit(new GameCommand{kind=CommandKind.Research,player=0,entities=new[]{tech.id},definition=id}).accepted;
+            bool Research(string id)=>sim.Submit(new GameCommand{kind=CommandKind.Research,player=0,entities=new[]{lab.id},definition=id}).accepted;
             bool Cancel(EntityState e,int id)=>sim.Submit(new GameCommand{kind=CommandKind.Cancel,player=0,entities=new[]{e.id},queueOrderId=id}).accepted;
         }
     }

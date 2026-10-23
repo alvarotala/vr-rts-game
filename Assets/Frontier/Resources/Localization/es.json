@@ -702,8 +702,8 @@
       "template": false
     },
     {
-      "key": "Build, train, research and abilities",
-      "value": "Construcción, unidades, mejoras y habilidades",
+      "key": "Build, train and abilities",
+      "value": "Construir, entrenar y habilidades",
       "template": false
     },
     {
@@ -7965,13 +7965,58 @@
       "template": false
     },
     {
-      "key": "The wide green card is the first active order. Other green borders mark work in progress in additional buildings. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.",
-      "value": "La tarjeta verde ancha es la primera orden activa. Los otros bordes verdes indican trabajos en curso en otros edificios. Pulsa cualquier tarjeta ocupada para cancelar ese pedido y recuperar su costo, incluso con varios edificios seleccionados.",
+      "key": "The wide green card is the first active order. Green borders mark occupied slots 2 to 5; yellow on slot 5 means more orders. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.",
+      "value": "La tarjeta verde ancha es la primera orden activa. Los bordes verdes indican espacios ocupados del 2 al 5; el amarillo en el 5 indica pedidos adicionales. Pulsa cualquier tarjeta ocupada para cancelar ese pedido y recuperar su costo, incluso con varios edificios seleccionados.",
       "template": false
     },
     {
-      "key": "Read the grid from left to right, then the second row. The green first card is the current action. Empty spaces remain available for new orders; the last card always cancels the entire plan.",
-      "value": "Lee la grilla de izquierda a derecha y luego la segunda fila. La primera tarjeta verde es la acción actual. Los espacios vacíos quedan disponibles para nuevas órdenes; la última tarjeta siempre cancela todo el plan.",
+      "key": "The large green card is the current action. Follow the arrows through pending orders, left to right and then the second row. Click any card to cancel that order. Cancel all appears in the header only when there is more than one order.",
+      "value": "La tarjeta verde grande es la acción actual. Sigue las flechas entre las pendientes, de izquierda a derecha y luego la segunda fila. Pulsa una tarjeta para cancelar esa orden. Cancelar todo aparece en la cabecera solo cuando hay más de una orden.",
+      "template": false
+    },
+    {
+      "key": "1 · CURRENT",
+      "value": "1 · ACTUAL",
+      "template": false
+    },
+    {
+      "key": "Upgrade Center",
+      "value": "Centro de mejoras",
+      "template": false
+    },
+    {
+      "key": "Evolution Chamber",
+      "value": "Cámara evolutiva",
+      "template": false
+    },
+    {
+      "key": "Army upgrades",
+      "value": "Mejoras del ejército",
+      "template": false
+    },
+    {
+      "key": "Research building > Research",
+      "value": "Edificio de mejoras > Investigar",
+      "template": false
+    },
+    {
+      "key": "Trains long-range artillery and unlocks your caster building. Protect artillery with frontline units.",
+      "value": "Entrena artillería de largo alcance y desbloquea el edificio de lanzadores. Protege la artillería con unidades de primera línea.",
+      "template": false
+    },
+    {
+      "key": "Researches faction-wide attack and armor upgrades. Improvements benefit your units and buildings.",
+      "value": "Investiga mejoras de ataque y armadura para toda la facción. Benefician a tus unidades y edificios.",
+      "template": false
+    },
+    {
+      "key": "Trains casters with targeted damage and healing abilities. Requires your artillery building. Select a caster to use its abilities.",
+      "value": "Entrena lanzadores con habilidades de daño y curación. Requiere tu edificio de artillería. Selecciona un lanzador para usar sus habilidades.",
+      "template": false
+    },
+    {
+      "key": "Trains siege units. Unlocks caster production.",
+      "value": "Entrena unidades de asedio. Desbloquea la producción de lanzadores.",
       "template": false
     }
   ]

@@ -216,6 +216,17 @@ namespace Frontier.Runtime
                     for (int side = -1; side <= 1; side += 2) for (int i = 0; i < 4; i++)
                         b.Tendril(new[] { new Vector3(side * .1f, .2f + i * .16f, .25f), new Vector3(side * .25f, .23f + i * .16f, .08f), new Vector3(side * .13f, .26f + i * .16f, -.09f) }, .036f, 0, Shell);
                     b.Tendril(new[] { new Vector3(0, .76f, .1f), new Vector3(.07f, .92f, .13f), new Vector3(0, 1.04f, .18f) }, .07f, 1, Bone); break;
+                case "research":
+                    // Paired neural organs in a ribbed shell distinguish upgrades from the tall chrysalis.
+                    b.Lobe(new Vector3(0,.22f,.1f),new Vector3(.75f,.3f,.62f),0,Shell);
+                    for(int side=-1;side<=1;side+=2)
+                    {
+                        b.Lobe(new Vector3(side*.19f,.42f,.1f),new Vector3(.34f,.43f,.47f),1,Soft);
+                        for(int i=0;i<3;i++)
+                            b.Tendril(new[]{new Vector3(side*.07f,.54f,-.06f+i*.14f),new Vector3(side*.22f,.65f,-.06f+i*.14f),new Vector3(side*.36f,.36f,-.06f+i*.14f)},.025f,0,Shell);
+                        b.Lobe(new Vector3(side*.19f,.47f,-.13f),new Vector3(.12f,.16f,.09f),2,Color.white);
+                    }
+                    b.Tendril(new[]{new Vector3(0,.32f,-.12f),new Vector3(0,.53f,.08f),new Vector3(0,.3f,.33f)},.05f,1,Bone,false);break;
                 case "academy":
                     // An open flower of neural tissue surrounds a suspended spore focus.
                     b.Lobe(new Vector3(0, .23f, .09f), new Vector3(.61f, .35f, .56f), 1, Flesh);

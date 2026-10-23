@@ -122,7 +122,7 @@ namespace Frontier.Runtime
             var selected=Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).OrderBy(e=>e.id).ToArray();
             if(selected.Length!=Session.Selection.Count||selected.Any(e=>e.owner!=Session.View.player||e.remembered||e.health<=0||
                 !Session.Catalog[e.definition].building))return System.Array.Empty<VisibleEntity>();
-            return selected.Where(e=>e.complete&&Session.Catalog.CanProduceUnits(e.definition)).ToArray();
+            return selected.Where(e=>e.complete&&(Session.Catalog.CanProduceUnits(e.definition)||Session.Catalog[e.definition].role=="research")).ToArray();
         }
 
         private void UpdateProductionHud()
@@ -149,7 +149,7 @@ namespace Frontier.Runtime
                 queuedKinds[i].color=QueueIdleTint;
                 queuedCards[i].color=button;
                 queuedActiveBorders[i].color=QueueActiveBorderTint;
-                queuedActiveBorders[i].gameObject.SetActive(i==3&&occupied);
+                queuedActiveBorders[i].gameObject.SetActive(occupied);
                 queuedProgress[i].rectTransform.sizeDelta=new Vector2(0,3);
             }
             UpdateProductionHover();
@@ -222,7 +222,7 @@ namespace Frontier.Runtime
                 queuedKinds[i].color=tint;
                 queuedCards[i].color=button;
                 queuedActiveBorders[i].color=i==3&&queued>5?QueueOverflowBorderTint:QueueActiveBorderTint;
-                queuedActiveBorders[i].gameObject.SetActive(active||(i==3&&occupied));
+                queuedActiveBorders[i].gameObject.SetActive(occupied);
                 queuedProgress[i].rectTransform.sizeDelta=new Vector2(136*progress,3);queuedProgress[i].color=tint;
             }
             // Each visible card addresses its exact producer and production ID.

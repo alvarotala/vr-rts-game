@@ -1278,3 +1278,27 @@ El agarre mantiene el color de la raya cuando se expande a «Mover ventana», co
 - `OrderQueueGridValidationBatch.Run`: salida 0 en `TestResults/unity-order-grid-validation.log`, Unity 6000.3.26f1. Órdenes: **202 comprobaciones / 13 vistas**; dimensiones HUD: **2034 / 10**; cancelación de producción: **180 / 14**; producción: **1190 / 34**; ayuda: **328 / 45**; entradas en cola: **200**. Pasaron también menús, rueda, recolección, replay y panel espectador. Localización: **333 comprobaciones, cero desbordes**.
 - Las entradas sintéticas de Trigger/A verifican cancelación de tarjetas; se comprueba que un avance de cola con igual longitud invalida una pulsación vieja, que perder foco cancela el clic y que una cola vacía es inerte. En Producción se comprueba reembolso y avance de la actual, investigación, pedidos listos para desplegar y cancelación del trabajo activo de otro edificio sin modificar la selección.
 - Inspeccionadas las capturas `TestResults/OrderQueue/industrial-full-grid-es.png` e `industrial-current-hover-es.png`: dos filas completas, actual verde, acento al apuntar y cancelar todo fijo. La grilla, los textos en español y los márgenes caben sin alterar la altura de la ventana. Validación en Editor y núcleo; **sin APK nuevo ni prueba física en Quest**.
+
+
+## 2026-10-23 — Bordes de producción del 2 al 5
+
+Las tarjetas ocupadas 2–5 muestran borde verde, tanto en producción individual como grupal; la quinta pasa a amarillo cuando muestra +1 o más pedidos adicionales. Los espacios vacíos no llevan borde. Se actualizó también la ayuda en inglés y español. `ProductionQueuePreview.Render` terminó con salida 0: 1220 comprobaciones y 34 paneles, más recolección y menús. Log: `TestResults/unity-production-occupied-borders.log`. Inspeccionada `TestResults/ProductionQueue/industrial-group-plus-one.png`. Validación en Editor, sin prueba física en Quest.
+
+
+## 2026-10-23 — Acción actual destacada y cola sin placeholders
+
+Órdenes conserva su sección de 236 px, con la actual en una tarjeta de 300 × 136 px y hasta diez pendientes en dos filas de cinco. Flechas no interactivas indican la secuencia; tarjetas y flechas vacías se ocultan. Cancelar todo aparece en la cabecera únicamente con más de una orden; una sola sigue cancelándose desde su tarjeta. `OrderQueueGridValidationBatch.Run`: salida 0 en `TestResults/unity-order-queue-current-card.log`; órdenes 212 comprobaciones / 15 vistas, HUD 2034 / 10, cancelación de producción 180 / 14, producción 1220 / 34, ayuda 328 / 45, entradas 200 y localización 333 con cero desbordes. También pasaron menús, rueda, replay y espectador. Inspeccionadas las capturas `TestResults/OrderQueue/industrial-full-grid-es.png` e `industrial-single-current.png`. Prueba de Editor; sin validación física en Quest.
+
+
+## 2026-10-23 — Mejoras fuera de la rueda
+
+La rueda filtra Research (Firepower/Armor) y conserva entrenamiento; las mejoras permanecen en Opciones del menú del edificio. Se actualizó el texto de navegación en inglés y español. `ActionWheelPreview.Render`: salida 0, 478 comprobaciones y 20 vistas en `TestResults/unity-wheel-training-only-verified.log`. Ambas facciones: entrenamiento real desde tecnología, mejoras visibles/ejecutables en el panel y ausencia de investigación en selección individual y grupal de la rueda. Construcción, órdenes y habilidades siguen pasando sus comprobaciones. Validación de Editor, sin prueba física en Quest.
+
+
+### Edificio dedicado de mejoras · 2026-10-23
+
+- `industrial.research` / `biological.research`: 150 M, 50 G, 600 ticks, requiere barracas; 650 HP y huella 3 × 3 simétricos. Firepower/Armor mantienen sus costos, duración y efectos. La simulación rechaza investigar desde los productores anteriores. `ReplayRulesVersion=3` evita reproducir órdenes antiguas con estas reglas; el formato de informe y el protocolo de red no cambian.
+- `bash scripts/check-core.sh`: salida 0, **2205 comprobaciones**, en `TestResults/core-research-full.log`. Incluye construcción/requisitos reales, independencia de colas, efectos, cancelación y reembolso, selección grupal, paridad, informes, replay y construcción/investigación de IA en las tres dificultades. La pasada enfocada `--research-only` completó 250 comprobaciones.
+- NetworkChecks: salida 0, **2149 comprobaciones** en `TestResults/network-research-building.log`. El catálogo compartido incorpora ambos edificios.
+- `ResearchBuildingValidationBatch.Run`: salida 0 en `TestResults/unity-research-building-verified.log`. Modelos: 41 comprobaciones, 16 edificios y 12 vistas; cancelación: 184/14 vistas; ayudas: 330/47; Producción: 1194/34; rueda: 484/20; tamaño fijo del HUD: 2252/10; guía: 3311, 56 fichas recorridas entre inicio y pausa; localización: 335 sin desbordes. Incluye regresiones de menús, replays y espectador.
+- Inspeccionados `TestResults/BuildingRoles/upgrade-center.png`, `evolution-chamber.png` y `TestResults/ProductionQueue/industrial-research.png`. El octavo botón no desplaza los anteriores del HUD; la guía muestra las ocho estructuras; las mejoras permanecen fuera de la rueda. Validación en Editor, sin APK ni prueba física en Quest.

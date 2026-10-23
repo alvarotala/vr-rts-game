@@ -332,7 +332,7 @@ namespace Frontier.Runtime
         }
         private static string BuildingRole(string role)
         {
-            switch(role){case "hq":return "Headquarters";case "extractor":return "Gas extractor";case "supply":return "Supply";case "barracks":return "Production";case "tech":return "Technology";case "academy":return "Caster production";case "defense":return "Defense";default:return "Building";}
+            switch(role){case "hq":return "Headquarters";case "extractor":return "Gas extractor";case "supply":return "Supply";case "barracks":return "Production";case "tech":return "Technology";case "research":return "Research";case "academy":return "Caster production";case "defense":return "Defense";default:return "Building";}
         }
         private static string OrderLabel(CommandKind order)
         {
@@ -404,7 +404,7 @@ namespace Frontier.Runtime
                 return Array.FindIndex(train,a=>a.Id==action.Id);
             }
             var roles=action.Category==ActionCategory.Build
-                ?new[]{"hq","extractor","supply","barracks","tech","academy","defense"}
+                ?new[]{"hq","extractor","supply","barracks","tech","academy","defense","research"}
                 :new[]{"worker","scout","melee","ranged","siege","caster"};
             return Array.IndexOf(roles,action.Model.role);
         }

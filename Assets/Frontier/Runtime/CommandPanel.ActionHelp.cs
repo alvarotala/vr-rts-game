@@ -136,9 +136,9 @@ namespace Frontier.Runtime
             {
                 case "SELECTION":return "Each card groups the selected units or buildings of one type. Its number shows how many are selected; the bar shows their combined health. Damaged units, unfinished buildings and casters also show health, construction progress or energy.";
                 case "OPTIONS":return "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. Mixed units and buildings leave this area empty. Pale slots are not buttons; point at a command for its cost and requirements.";
-                case "PRODUCTION":return "The wide green card is the first active order. Other green borders mark work in progress in additional buildings. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.";
+                case "PRODUCTION":return "The wide green card is the first active order. Green borders mark occupied slots 2 to 5; yellow on slot 5 means more orders. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.";
                 case "CONTROL GROUPS":return "Groups remember your selected units and buildings. Trigger recalls a group. Hold Grip before pressing Trigger to replace it with your current selection; on desktop, use Ctrl + click. Release over the same group to confirm. A flash and controller vibration confirm assignment. Assigning with no selection clears the group.";
-                case "QUEUED ORDERS":return "Read the grid from left to right, then the second row. The green first card is the current action. Empty spaces remain available for new orders; the last card always cancels the entire plan.";
+                case "QUEUED ORDERS":return "The large green card is the current action. Follow the arrows through pending orders, left to right and then the second row. Click any card to cancel that order. Cancel all appears in the header only when there is more than one order.";
                 default:return "Read these controls, then close this window to return to your selection. The match continues while this guide is open.";
             }
         }

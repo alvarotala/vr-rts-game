@@ -76,7 +76,7 @@ namespace Frontier.Runtime
                 new Topic("Production",
                     new Command("production.build","Build a structure",touch?"Worker > Selection > choose a building":"Worker > Build > choose a building","Choose a valid foundation with "+select+" / "+order+". Keep a worker on site until complete. "+back+" cancels placement."),
                     new Command("production.train","Train a unit","Production building > Train","Spend resources and reserve supply to add a unit to the building's production queue."),
-                    new Command("production.research","Research an upgrade","Technology building > Research","Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help."),
+                    new Command("production.research","Research an upgrade","Research building > Research","Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help."),
                     new Command("production.cancel-item","Cancel one queued item",click+" on its production card","The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order."),
                     new Command("production.rally","Set a Rally Point","Select producer(s) · "+order+" on terrain","Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather."),
                     new Command("production.details","Read action details","Hover over an action for 1.5 s","See what the unit, building or upgrade does, along with its cost, timing and requirements.")),

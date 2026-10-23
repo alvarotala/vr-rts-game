@@ -68,14 +68,23 @@ namespace Frontier.Editor
                     var fixedSize=Field<RectTransform>(panel,"root").sizeDelta;
                     var fixedSection=Field<RectTransform>(panel,"orderPlanStrip").sizeDelta;
                     var cards=Field<Image[]>(panel,"orderCards");
-                    Check(cards.Length==12&&cards.Select(c=>c.rectTransform.anchoredPosition.y).Distinct().Count()==2,
-                        "Orders reserve exactly two rows including the permanent cancel-all card");
+                    Check(cards.Length==12&&cards.Skip(1).Take(10).Select(c=>c.rectTransform.anchoredPosition.y).Distinct().Count()==2
+                        &&cards[0].rectTransform.rect.height==136&&cards[0].rectTransform.rect.width>cards[1].rectTransform.rect.width,
+                        "Current action is larger; pending actions retain two fixed rows");
+                    Check(cards.Take(11).Count(c=>c.gameObject.activeSelf)==3&&cards[11].gameObject.activeSelf
+                        &&Field<Text[]>(panel,"orderArrows").Count(t=>t.gameObject.activeSelf)==2,
+                        "Only occupied cards and their connecting arrows appear; multiple orders enable cancel-all");
                     var last=currentUnit.pendingOrders[1].sourceSequence;
                     ClickOrder(1);Check(currentUnit.pendingOrders.Count==1&&currentUnit.pendingOrders[0].sourceSequence==last,
                         "Clicking a pending card removes only its order");
                     ClickOrder(0);Check(currentUnit.activeOrderSequence==last&&currentUnit.pendingOrders.Count==0,
                         "Clicking current advances to the next pending action immediately");
-                    ClickOrder(11);Check(currentUnit.order==CommandKind.Stop&&currentUnit.pendingOrders.Count==0,"Cancel-all stops current and pending actions");
+                    Check(!cards[11].gameObject.activeSelf&&Field<Text[]>(panel,"orderArrows").All(t=>!t.gameObject.activeSelf),
+                        "A lone current action hides cancel-all and every arrow");
+                    CapturePanel(faction+"-single-current");
+                    ClickOrder(11);Check(currentUnit.activeOrderSequence==last,"Hidden cancel-all cannot cancel the last action");
+                    ClickOrder(0);Check(currentUnit.order==CommandKind.Stop&&currentUnit.pendingOrders.Count==0,"The last current action can still be cancelled directly");
+                    Check(cards.All(c=>!c.gameObject.activeSelf),"Empty queue has no placeholder cards or cancel button");
                     ClickOrder(0);ClickOrder(11);Check(currentUnit.order==CommandKind.Stop,"Empty order slots and empty cancel-all are inert");
                     session.Send(CommandKind.Move,position:new Point(22,14));
                     for(int n=0;n<Simulation.UnitOrderLimit-1;n++)Check(session.Send(n%2==0?CommandKind.Move:CommandKind.AttackMove,position:new Point(25,22),append:true),"Fill bounded order grid");

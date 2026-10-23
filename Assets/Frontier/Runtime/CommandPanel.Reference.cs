@@ -10,8 +10,8 @@ namespace Frontier.Runtime
         private RectTransform referenceGuide;
         private string referenceFaction;
         private int referenceUnitIndex,referenceStructureIndex;
-        private readonly Target[] referenceFactionTabs=new Target[2],referenceEntries=new Target[7];
-        private readonly Text[] referenceFactionNames=new Text[2],referenceNames=new Text[7],referenceRoles=new Text[7];
+        private readonly Target[] referenceFactionTabs=new Target[2],referenceEntries=new Target[8];
+        private readonly Text[] referenceFactionNames=new Text[2],referenceNames=new Text[8],referenceRoles=new Text[8];
         private readonly RectTransform[] referenceStatCards=new RectTransform[12];
         private readonly Text[] referenceStatLabels=new Text[12],referenceStatValues=new Text[12];
         private Text referenceCount,referenceName,referenceRole,referenceDescription,referenceRequirements,referenceExtraTitle,referenceExtraDetails;
@@ -34,7 +34,7 @@ namespace Frontier.Runtime
             for(int i=0;i<referenceEntries.Length;i++)
             {
                 int index=i;
-                var entry=Section(referenceGuide,"Reference entry "+i,new Vector2(16,-82-i*70),new Vector2(254,62));
+                var entry=Section(referenceGuide,"Reference entry "+i,new Vector2(16,-82-i*64),new Vector2(254,56));
                 referenceNames[i]=Label(entry,"",new Vector2(12,-6),new Vector2(230,28),20,ConsoleTheme.Ink);
                 referenceRoles[i]=Label(entry,"",new Vector2(12,-34),new Vector2(230,22),15,ConsoleTheme.Muted);
                 referenceEntries[i]=new Target{rect=entry,image=entry.GetComponent<Image>(),normal=button,click=()=>{

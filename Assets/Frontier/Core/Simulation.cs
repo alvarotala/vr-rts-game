@@ -203,7 +203,7 @@ namespace Frontier.Core
             {
                 var upgrade = Catalog.Upgrade(command.definition);
                 if (upgrade == null) return Reject("Invalid upgrade.");
-                var producer = AvailableProducer(selected, "tech");
+                var producer = AvailableProducer(selected, "research");
                 if (producer == null) return Reject("Building unavailable or queue full.");
                 if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Upgrade already researched or queued.");
                 if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");

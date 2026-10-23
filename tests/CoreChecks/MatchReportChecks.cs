@@ -71,8 +71,9 @@ static class MatchReportChecks
         var barracks=Build("barracks");worker.position=sim.Center(barracks);barracks.remaining=1;sim.Step();
         var tech=Build("tech");worker.position=sim.Center(tech);tech.remaining=1;sim.Step();
         check(tech.complete,"report fixture completes technology structure");
-        check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Research,entities=new[]{tech.id},definition="attack"}).accepted,"research enters build order");
-        tech.queue[0].remaining=1;sim.Step();
+        var lab=Build("research");worker.position=sim.Center(lab);lab.remaining=1;sim.Step();
+        check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Research,entities=new[]{lab.id},definition="attack"}).accepted,"research enters build order");
+        lab.queue[0].remaining=1;sim.Step();
         string siege=catalog.Role("industrial","siege").id;
         check(sim.Submit(new GameCommand{player=0,kind=CommandKind.Train,entities=new[]{tech.id},definition=siege}).accepted,"army production enters build order");
         tech.queue[0].remaining=1;sim.Step();
@@ -83,9 +84,9 @@ static class MatchReportChecks
         foreach(var e in sim.Entities.Values.Where(e=>e.owner==1&&sim.Type(e).building))e.health=0;
         sim.Step();var r=sim.Report;var p=r.Players[0];
         check(r!=null&&r.Winner==0&&r.Tick==sim.Tick,"destroying the last enemy structure finalizes a report");
-        check(p.StructuresCompleted==3&&p.StructuresLost==1&&p.ArmyProduced==1&&p.ArmyLost==1&&p.PeakArmy==1,"completed structures, army and losses are counted at actual events");
-        check(r.BuildOrders[0].Count==8&&r.BuildOrders[0][0].Status==BuildOrderStatus.Cancelled&&r.BuildOrders[0][4].Kind==CommandKind.Research&&r.BuildOrders[0][4].Status==BuildOrderStatus.Completed,"construction, cancellation and research retain chronological entries");
-        check(r.BuildOrders[0][6].Status==BuildOrderStatus.Destroyed&&r.BuildOrders[0][7].Status==BuildOrderStatus.Pending,"destroyed producer and unfinished construction have distinct outcomes");
+        check(p.StructuresCompleted==4&&p.StructuresLost==1&&p.ArmyProduced==1&&p.ArmyLost==1&&p.PeakArmy==1,"completed structures, army and losses are counted at actual events");
+        check(r.BuildOrders[0].Count==9&&r.BuildOrders[0][0].Status==BuildOrderStatus.Cancelled&&r.BuildOrders[0][5].Kind==CommandKind.Research&&r.BuildOrders[0][5].Status==BuildOrderStatus.Completed,"construction, cancellation and research retain chronological entries");
+        check(r.BuildOrders[0][7].Status==BuildOrderStatus.Destroyed&&r.BuildOrders[0][8].Status==BuildOrderStatus.Pending,"destroyed producer and unfinished construction have distinct outcomes");
         check(r.BuildOrders[0].All(e=>e.EndTick<0||e.EndTick>=e.Tick),"completion timestamps never precede orders");
     }
 }

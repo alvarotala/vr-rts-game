@@ -29,7 +29,7 @@ namespace Frontier.Editor
                 var board=boardObject.AddComponent<BoardView>();board.Session=session;board.Viewer=preview.camera;Invoke(board,"Start");preview.AddSingleGO(boardObject);
                 var visuals=(Dictionary<int,Transform>)typeof(BoardView).GetField("entities",Private).GetValue(board);
                 var actors=new List<VisibleEntity>();
-                string[] roles={"hq","barracks","extractor","supply","tech","defense","academy"};
+                string[] roles={"hq","barracks","extractor","supply","tech","defense","academy","research"};
                 for(int i=0;i<roles.Length;i++)
                 {
                     var type=session.Catalog.Role("biological",roles[i]);
