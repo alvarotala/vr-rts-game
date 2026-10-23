@@ -7,6 +7,26 @@
   ],
   "entries": [
     {
+      "key": "One type: each card is an individual. Different types: each card summarizes a type.",
+      "value": "Un solo tipo: cada tarjeta muestra un individuo. Diferentes tipos: cada tarjeta resume un tipo.",
+      "template": false
+    },
+    {
+      "key": "Trigger / {0}: select individual · Grip + Trigger: remove individual",
+      "value": "Gatillo / {0}: seleccionar individuo · Grip + gatillo: quitar individuo",
+      "template": true
+    },
+    {
+      "key": "Click: select individual · Shift + click: remove individual",
+      "value": "Clic: seleccionar individuo · Shift + clic: quitar individuo",
+      "template": false
+    },
+    {
+      "key": "Remove this individual from selection",
+      "value": "Quitar este individuo de la selección",
+      "template": false
+    },
+    {
       "key": "The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order.",
       "value": "La tarjeta resaltada muestra Cancelar y reembolsar. Se cancela y devuelve su costo; las demás conservan el orden.",
       "template": false

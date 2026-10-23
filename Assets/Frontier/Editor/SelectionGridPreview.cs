@@ -21,6 +21,7 @@ namespace Frontier.Editor
         private static T Field<T>(object target,string name)=>(T)target.GetType().GetField(name,Private).GetValue(target);
         private static void Set(object target,string name,object value)=>target.GetType().GetField(name,Private).SetValue(target,value);
         public static void RunValidation(){Render();ControlGroupPreview.RunValidation();ProductionQueuePreview.Render();}
+        public static void ValidateIndividuals(){Render();HudLayoutPreview.Render();}
         [MenuItem("Frontier/Preview and check selection grid")]
         public static void Render()
         {
@@ -76,9 +77,35 @@ namespace Frontier.Editor
                     Check(!Has("Next selection page"),"The entire current catalog fits without paging through individual units");
                     Select(workers.Take(2).ToArray());
                     session.Match.Entities[workers[0]].health=workerType.health*.5f;Call(session,"RefreshView");Refresh();
-                    Check(Math.Abs(Card(workerType.id).Find("Health").GetComponent<RectTransform>().rect.width-
-                        Card(workerType.id).Find("Health track").GetComponent<RectTransform>().rect.width*.75f)<.01f,"Group health shows the average health of its members");
+                    Check(Cards().Length==2,"A single selected type shows each individual");
+                    Check(Math.Abs(HealthRatio(Individual(workers[0]))-.5f)<.01f&&Math.Abs(HealthRatio(Individual(workers[1]))-1)<.01f,
+                        "Individual cards show their own health instead of the group average");
+                    Select(workers.Take(2).Concat(hqs).ToArray());
+                    Check(Math.Abs(HealthRatio(Card(workerType.id))-.75f)<.01f,"Mixed selection still shows average health per type");
                     session.Match.Entities[workers[0]].health=workerType.health;Call(session,"RefreshView");
+                    var mobile=all.Where(i=>!session.Catalog[session.Match.Entities[i].definition].building).ToArray();
+                    var definitions=mobile.ToDictionary(i=>i,i=>session.Match.Entities[i].definition);
+                    foreach(int entity in mobile)session.Match.Entities[entity].definition=workerType.id;
+                    Call(session,"RefreshView");
+                    for(int count=1;count<=Simulation.UnitLimit;count++)
+                    {
+                        Select(mobile.Take(count).ToArray());CheckSelectionLayout();
+                        Check(Cards().Length==count&&Cards().Select(card=>int.Parse(card.name.Substring("Selection entity ".Length))).SequenceEqual(mobile.Take(count).OrderBy(i=>i)),
+                            "Every individual has a stable ID card at selection size "+count);
+                        Check(Field<RectTransform>(panel,"root").sizeDelta==new Vector2(1480,1636),"Individual selection never resizes the HUD");
+                        Check(Cards().All(card=>!card.Find("Count badge").gameObject.activeSelf),"Individual cards omit redundant count badges");
+                        if(new[]{1,6,7,14,15,Simulation.UnitLimit}.Contains(count))Capture(faction+"-individuals-"+count);
+                    }
+                    var end=mobile.Last();TapEntity(end);Check(session.Selection.SetEquals(new[]{end}),"The last card of a full army selects that exact individual");
+                    Select(mobile);Grip();TapEntity(end);Grip(false);Refresh();
+                    Check(session.Selection.SetEquals(mobile.Where(i=>i!=end))&&Cards().Length==mobile.Length-1,"Grip removes only the chosen individual from a full army");
+                    foreach(var definition in definitions)session.Match.Entities[definition.Key].definition=definition.Value;
+                    Call(session,"RefreshView");
+                    var casters=all.Where(i=>session.Catalog[session.Match.Entities[i].definition].energyMax>0).Take(2).ToArray();
+                    session.Match.Entities[casters[0]].energy=17;session.Match.Entities[casters[1]].energy=39;Call(session,"RefreshView");Select(casters);
+                    var energy=Field<Text[]>(panel,"selectionEnergy");
+                    Check(energy[0].text.StartsWith("17 /")&&energy[1].text.StartsWith("39 /"),"Same-type casters retain their individual energy values");
+                    Select(hqs);Check(Cards().Length==hqs.Length&&Cards().All(card=>card.name.StartsWith("Selection entity ")),"Identical buildings also retain individual cards");
                     foreach(bool useLeft in new[]{false,true})
                     {
                         var bindings=new HotkeyBindings();bindings.SelectHand(useLeft);bindings.Assign(true,"select","touch:a",true,out _);
@@ -86,15 +113,21 @@ namespace Frontier.Editor
                         var cohort=workers.Take(3).Concat(hqs).ToArray();
                         Select(cohort);Tap(workerType.id);
                         Check(session.Selection.SetEquals(workers.Take(3)),"One click immediately isolates selected workers, excluding other nearby workers");Refresh();
-                        Check(Cards().Length==1&&Count(workerType.id)==3,"Filtered type keeps its aggregate count");
+                        Check(Cards().Length==3&&Cards().All(card=>card.name.StartsWith("Selection entity ")),"Filtering a type expands its selected individuals");
+                        TapEntity(workers[1]);Check(session.Selection.SetEquals(new[]{workers[1]}),"Trigger selects only the pointed individual");
+                        Select(workers.Take(3).ToArray());Grip();TapEntity(workers[1]);Grip(false);Refresh();
+                        Check(session.Selection.SetEquals(new[]{workers[0],workers[2]})&&Cards().Length==2,"Grip + Trigger removes only that individual");
                         Select(cohort);Tap(hqType.id);Check(session.Selection.SetEquals(hqs),"One click also filters buildings by exact definition");
                         Select(cohort);Grip();int alive=session.Match.Entities.Count;
                         var ray=RayFor("Selection type "+workerType.id);panel.Point(ray,false,false);Capture(faction+(useLeft?"-left":"-right")+"-remove",false);
                         Tap(workerType.id);
                         Check(session.Selection.SetEquals(hqs)&&session.Match.Entities.Count==alive,"Grip + click removes only that type from selection, without deleting entities");
-                        Grip(false);Refresh();Check(!Has("Selection type "+workerType.id)&&Count(hqType.id)==hqs.Length,"Removed card disappears and remaining counts stay correct");
-                        Select(workers.Take(3).ToArray());Grip();Tap(workerType.id);Grip(false);Refresh();
-                        Check(session.Selection.Count==0&&!Grid().gameObject.activeInHierarchy,"Removing the last type clears the selection grid");
+                        Grip(false);Refresh();Check(!Has("Selection type "+workerType.id)&&Cards().Length==hqs.Length,"Removing a type expands the remaining type into its individuals");
+                        Select(new[]{workers[0]});Grip();TapEntity(workers[0]);Grip(false);Refresh();
+                        Check(session.Selection.Count==0&&!Grid().gameObject.activeInHierarchy,"Removing the last individual clears the selection grid");
+                        Select(workers.Take(3).ToArray());var individualRay=RayFor("Selection entity "+workers[1]);panel.Point(individualRay,true,false);
+                        panel.Point(new Ray(Vector3.one*100,Vector3.up),false,false);panel.Point(individualRay,false,true);
+                        Check(session.Selection.SetEquals(workers.Take(3)),"Leaving an individual card also cancels the gesture");
                         Select(cohort);ray=RayFor("Selection type "+workerType.id);panel.Point(ray,true,false);
                         Set(panel,"pressedAt",Time.unscaledTime-2);panel.Point(ray,false,false);
                         Check(session.Selection.SetEquals(cohort),"Holding Trigger alone no longer removes an individual unit");
@@ -131,7 +164,11 @@ namespace Frontier.Editor
                         InputSystem.QueueStateEvent(keyboard,new KeyboardState(shift));InputSystem.Update();Tap(workerType.id);
                         Check(session.Selection.SetEquals(hqs),"Desktop "+shift+" + click removes the complete type");
                         InputSystem.QueueStateEvent(keyboard,new KeyboardState());InputSystem.Update();
+                        Select(workers.Take(3).ToArray());InputSystem.QueueStateEvent(keyboard,new KeyboardState(shift));InputSystem.Update();TapEntity(workers[1]);
+                        Check(session.Selection.SetEquals(new[]{workers[0],workers[2]}),"Desktop "+shift+" + click removes only that individual");
+                        InputSystem.QueueStateEvent(keyboard,new KeyboardState());InputSystem.Update();
                     }
+                    Select(workers.Take(3).ToArray());TapEntity(workers[1]);Check(session.Selection.SetEquals(new[]{workers[1]}),"Desktop click selects only the pointed individual");
                     typeof(QuestBridge).GetProperty("Active").SetValue(quest,true);
                     Select(workers.Take(3).Concat(hqs).ToArray());var deathRay=RayFor("Selection type "+workerType.id);panel.Point(deathRay,true,false);
                     session.Match.Entities.Remove(workers[0]);Call(session,"RefreshView");session.Selection.Remove(workers[0]);Refresh();panel.Point(deathRay,false,true);
@@ -139,21 +176,24 @@ namespace Frontier.Editor
                     Select(hqs.Take(1).ToArray());session.Send(CommandKind.Train,definition:workerType.id);Refresh();Capture(faction+"-production");
                     Check(Gap(Field<RectTransform>(panel,"selectedCard"),Field<RectTransform>(panel,"productionStrip"))>=HudMetric("HudGap")-.01f,
                         "Selection and production remain separate sections after nesting the type grid");
-                    var lastRay=RayFor("Selection type "+hqType.id);panel.Point(lastRay,true,false);session.StartMatch();Refresh();panel.Point(lastRay,false,true);
+                    var lastRay=RayFor("Selection entity "+hqs[0]);panel.Point(lastRay,true,false);session.StartMatch();Refresh();panel.Point(lastRay,false,true);
                     Check(session.Selection.Count==0,"New match invalidates a press even when IDs are reused");
                     session.LeaveMatch();Refresh();Check(!Grid().gameObject.activeInHierarchy,"Leaving a match hides selection grid");
                 }
-                Debug.Log($"FRONTIER_SELECTION_GRID passed: {checks} checks, {captures} views; grouped selection, synthetic Touch modifiers; no player build");
+                Debug.Log($"FRONTIER_SELECTION_GRID passed: {checks} checks, {captures} views; individuals and mixed type groups, synthetic Touch modifiers; no player build");
                 void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;Debug.Log("SELECTION_GRID_PASS: "+message);}
                 void Refresh(){Set(panel,"nextText",0f);Call(panel,"LateUpdate");}
                 void Select(int[] ids){Grip(false);Grip(false,true);panel.CancelPointerInteraction();session.Selection.Clear();session.Selection.UnionWith(ids);Call(panel,"Rebuild");Refresh();}
                 RectTransform Grid()=>Field<RectTransform>(panel,"selectionGrid");
-                RectTransform[] Cards()=>Grid().GetComponentsInChildren<RectTransform>().Where(r=>r.gameObject.activeInHierarchy&&r.name.StartsWith("Selection type ")).ToArray();
+                RectTransform[] Cards()=>Grid().GetComponentsInChildren<RectTransform>().Where(r=>r.gameObject.activeInHierarchy&&(r.name.StartsWith("Selection type ")||r.name.StartsWith("Selection entity "))).ToArray();
                 RectTransform Card(string type)=>Cards().First(r=>r.name=="Selection type "+type);
+                RectTransform Individual(int id)=>Cards().First(r=>r.name=="Selection entity "+id);
+                float HealthRatio(RectTransform card)=>card.Find("Health").GetComponent<RectTransform>().rect.width/card.Find("Health track").GetComponent<RectTransform>().rect.width;
                 int Count(string type)=>int.Parse(Card(type).Find("Count badge").GetComponentInChildren<Text>().text.Substring(1));
                 bool Has(string name)=>panel.GetComponentsInChildren<RectTransform>().Any(r=>r.gameObject.activeInHierarchy&&r.name==name);
                 Ray RayFor(string name){var rect=panel.GetComponentsInChildren<RectTransform>().First(r=>r.gameObject.activeInHierarchy&&r.name==name);return new Ray(rect.TransformPoint(rect.rect.center)-rect.forward,rect.forward);}
                 void Tap(string type){var ray=RayFor("Selection type "+type);Check(panel.Point(ray,true,false)&&panel.Point(ray,false,true),"Type card consumes press and release");}
+                void TapEntity(int id){var ray=RayFor("Selection entity "+id);Check(panel.Point(ray,true,false)&&panel.Point(ray,false,true),"Individual card consumes press and release");}
                 void Grip(bool held=true,bool inactive=false)
                 {
                     bool useLeft=panel.Bindings.LeftHand!=inactive;var controller=useLeft?(OVRInput.OVRControllerBase)left:right;
@@ -179,13 +219,14 @@ namespace Frontier.Editor
                         &&bounds.yMin-parentBounds.yMin>=padding-.01f,
                         "Selection cards use the same inset and header clearance as the other sections");
                     int columns=Field<int>(panel,"selectionLayoutColumns");var cards=Cards();
-                    Check(grid.rect.height==136&&columns==(cards.Length>6?7:6),"Selection stays within one fixed region, using two compact rows only for more than six types");
-                    float width=(grid.rect.width-(columns-1)*gap)/columns;
+                    Check(grid.rect.height==136&&columns==(cards.Length>14?(cards.Length+1)/2:cards.Length>6?7:6),"Selection stays within one fixed region with at most two rows");
+                    float horizontalGap=cards.Length>14?6:gap;
+                    float width=(grid.rect.width-(columns-1)*horizontalGap)/columns;
                     for(int i=0;i<cards.Length;i++)
                     {
                         var card=cards[i];var cardBounds=Bounds(card);
                         Check(Mathf.Abs(card.rect.width-width)<.01f&&card.rect.height==cards[0].rect.height
-                            &&Mathf.Abs(card.anchoredPosition.x-(i%columns)*(width+gap))<.01f
+                            &&Mathf.Abs(card.anchoredPosition.x-(i%columns)*(width+horizontalGap))<.01f
                             &&Mathf.Abs(card.anchoredPosition.y+(i/columns)*(card.rect.height+gap))<.01f
                             &&cardBounds.xMin>=bounds.xMin-.01f&&cardBounds.xMax<=bounds.xMax+.01f
                             &&cardBounds.yMin>=bounds.yMin-.01f&&cardBounds.yMax<=bounds.yMax+.01f,

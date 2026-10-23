@@ -46,7 +46,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public int version; public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; public string hintTitle; public Func<string> hint; public Dictionary<Graphic,Color> hoverInk; public Graphic hoverExtra; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; public SelectionAction help; public string selectionType; public int selectionEntity; public string actionId; public Text detail; public string hintTitle; public Func<string> hint; public Dictionary<Graphic,Color> hoverInk; public Graphic hoverExtra; }
         private readonly Color background = ConsoleTheme.Background, button = ConsoleTheme.Card, accent = ConsoleTheme.Accent;
         private void Start()
         {
