@@ -275,6 +275,7 @@ namespace Frontier.Runtime
             Shader.SetGlobalMatrix("_FrontierWorldToBoard",transform.worldToLocalMatrix);
             Shader.SetGlobalVector("_FrontierBounds",new Vector4(Width*.5f,Depth*.5f,Session.Map.width,Session.Map.height));
             Shader.SetGlobalFloat("_FrontierEnhancedLighting",EnhancedLighting?1:0);
+            Shader.SetGlobalFloat("_FrontierFogDensity",FogDensity);
             Shader.SetGlobalColor("_FrontierLightColor",Session.Map.theme=="desert"?new Color(1.08f,1,.88f)
                 :Session.Map.theme=="forest"?new Color(1.02f,1.04f,.95f)
                 :Session.Map.theme=="neon"?new Color(.9f,.98f,1.12f):new Color(1,1.02f,1.04f));
@@ -448,9 +449,9 @@ namespace Frontier.Runtime
             if(Session.BuildDefinition!=null&&Pointer.HasValue)
             {
                 if(preview==null)preview=Primitive(PrimitiveType.Cube,Content,highlight);
-                int size=Session.Catalog[Session.BuildDefinition].footprint;Point p=Pointer.Value;
-                preview.gameObject.SetActive(true);preview.localPosition=new Vector3(Mathf.Floor(p.x)+size*.5f,HeightAt(p)+.15f,Mathf.Floor(p.y)+size*.5f);preview.localScale=new Vector3(size,.3f,size);
-                bool valid=Session.CanPreviewBuild(new Point(Mathf.Floor(p.x),Mathf.Floor(p.y)),size);
+                int size=Session.Catalog[Session.BuildDefinition].footprint;Point p=Session.BuildPlacement(Pointer.Value,HoveredResource);
+                preview.gameObject.SetActive(true);preview.localPosition=new Vector3(p.x+size*.5f,HeightAt(p)+.15f,p.y+size*.5f);preview.localScale=new Vector3(size,.3f,size);
+                bool valid=Session.CanPreviewBuild(p,size);
                 preview.GetComponent<Renderer>().sharedMaterial=valid?highlight:red;
             }
             else if(preview!=null)preview.gameObject.SetActive(false);
@@ -688,6 +689,7 @@ namespace Frontier.Runtime
         {
             FogDensity=ClampFogDensity(density);
             PlayerPrefs.SetFloat(FogDensityKey,FogDensity);PlayerPrefs.Save();
+            Shader.SetGlobalFloat("_FrontierFogDensity",FogDensity);
             fogVisuals?.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
         }
         private static float ClampFogDensity(float density) => float.IsNaN(density)||float.IsInfinity(density)?1:Mathf.Clamp01(density);

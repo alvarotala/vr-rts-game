@@ -284,7 +284,7 @@ namespace Frontier.Runtime
             }
             if (BuildDefinition != null)
             {
-                if(!Send(CommandKind.Build,definition:BuildDefinition,position:point,append:append))return 0;
+                if(!Send(CommandKind.Build,definition:BuildDefinition,position:BuildPlacement(point,resourceId),append:append))return 0;
                 Announce(Catalog[BuildDefinition].name + (IsOnline ? " construction requested." : append ? " construction queued." : " construction ordered."));
                 BuildDefinition=null;return sequence;
             }

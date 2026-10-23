@@ -60,7 +60,7 @@ Shader "Frontier/Board"
             float _Desaturate; float _CreepTime; float _RevealOpacity;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
-            float _FrontierEnhancedLighting; float4 _FrontierLightColor;
+            float _FrontierEnhancedLighting; float4 _FrontierLightColor; float _FrontierFogDensity;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
             TEXTURE2D(_CreepTex); SAMPLER(sampler_CreepTex);
             float TissueNoise(float2 p)
@@ -174,8 +174,12 @@ Shader "Frontier/Board"
                         color=lerp(color,flesh*light,coverage);
                     }
                     half visibility=SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.uv).r;
-                    // The separate mist sheets communicate fog of war. Keep the
-                    // authored terrain lighting intact so cliffs and ramps stay readable.
+                    // Mist and terrain shading share the visual load. With no mist,
+                    // restore the original darkening; full mist leaves a faint tint.
+                    // Decode states explicitly; the texture may be sampled as sRGB.
+                    half explored=step(.01,visibility),visible=step(.98,visibility);
+                    half darkness=lerp(lerp(.42,.22,explored),lerp(.10,.05,explored),saturate(_FrontierFogDensity));
+                    color*=1-darkness*(1-visible);
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
                     float gridLine=step(.48,max(tile.x,tile.y));
                     color*=1-gridLine*.1*_Grid;

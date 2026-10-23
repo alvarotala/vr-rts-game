@@ -82,10 +82,10 @@ Shader "Frontier/Fog"
                 half density = lerp(1, .42, explored);
                 float2 borderDistance = min(input.map, _MapSize.xy - input.map);
                 half borderFade = smoothstep(0, 1.5, min(borderDistance.x, borderDistance.y));
-                // Broad translucent wisps leave the terrain's relief visible through
-                // all three layers, rather than accumulating into an opaque blanket.
-                half alpha = input.opacity * density * lerp(.24, .7, billow) * edge * borderFade * _FogDensity;
-                half3 color = _FogColor.rgb * lerp(.92, 1.14, billow) * (1 + input.layer * .035);
+                // Full density is a thick, dark cloud bank. Scale every layer's
+                // opacity continuously down to zero with the existing density slider.
+                half alpha = input.opacity * density * lerp(.8, 1.65, billow) * edge * borderFade * _FogDensity;
+                half3 color = _FogColor.rgb * lerp(.34, .52, billow) * (1 + input.layer * .035);
                 return half4(color, alpha);
             }
             ENDHLSL

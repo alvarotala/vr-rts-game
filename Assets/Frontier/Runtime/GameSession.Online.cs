@@ -190,6 +190,26 @@ namespace Frontier.Runtime
             return new Point(Mathf.Lerp(previous.position.x,entity.position.x,t),Mathf.Lerp(previous.position.y,entity.position.y,t));
         }
 
+        // Resolve the same origin for the ghost and the submitted command. Only
+        // observed deposits participate, including direct hits on their raised model.
+        public Point BuildPlacement(Point point,int resourceId=0)
+        {
+            var origin=new Point(Mathf.Floor(point.x),Mathf.Floor(point.y));
+            if(View==null||BuildDefinition==null||Catalog[BuildDefinition].role!="extractor")return origin;
+            ResourceState nearest=null;float distance=2.5f;
+            foreach(var resource in View.resources)
+            {
+                if(resource.kind!="catalyst"||resource.remaining==0)continue;
+                if(resource.id==resourceId){nearest=resource;break;}
+                float candidate=resource.position.Distance(point);
+                if(candidate<distance||candidate==distance&&(nearest==null||resource.id<nearest.id))
+                {nearest=resource;distance=candidate;}
+            }
+            if(nearest==null)return origin;
+            float half=Catalog[BuildDefinition].footprint*.5f;
+            return new Point(Mathf.Floor(nearest.position.x-half),Mathf.Floor(nearest.position.y-half));
+        }
+
         // Placement preview uses public terrain and this player's observed buildings.
         // The authoritative server still checks occupancy, vision and resources.
         public bool CanPreviewBuild(Point point,int size)
@@ -200,6 +220,12 @@ namespace Frontier.Runtime
             int x=(int)Math.Floor(point.x),y=(int)Math.Floor(point.y);
             for(int dy=0;dy<size;dy++)for(int dx=0;dx<size;dx++)
                 if(View.visibility[(y+dy)*Map.width+x+dx]!=2)return false;
+            if(BuildDefinition!=null&&Catalog[BuildDefinition].role=="extractor")
+            {
+                var covered=View.resources.Where(r=>r.remaining!=0&&r.position.x>=point.x&&r.position.x<point.x+size
+                    &&r.position.y>=point.y&&r.position.y<point.y+size).ToArray();
+                if(covered.Length!=1||covered[0].kind!="catalyst")return false;
+            }
             foreach(var e in View.entities)
             {
                 var type=Catalog[e.definition];

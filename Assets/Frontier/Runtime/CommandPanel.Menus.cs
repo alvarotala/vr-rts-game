@@ -148,7 +148,7 @@ namespace Frontier.Runtime
                     Label(rect,title,Vector2.zero,new Vector2(195.2f,60),23,ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=active?FontStyle.Bold:FontStyle.Normal;
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{Board.SetFogDensity(percent/100f);Rebuild();}});
                 }
-                Label(actions,"0% removes the mist. 100% is the original density.",new Vector2(24,-302),new Vector2(992,24),16,MenuMuted);
+                Label(actions,"0% removes the mist. 100% is the densest, darkest mist.",new Vector2(24,-302),new Vector2(992,24),16,MenuMuted);
             }
             else if(settingsTab==SettingsTab.Language)
             {

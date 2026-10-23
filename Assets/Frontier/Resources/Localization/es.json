@@ -7,6 +7,11 @@
   ],
   "entries": [
     {
+      "key": "0% removes the mist. 100% is the densest, darkest mist.",
+      "value": "0 % elimina la bruma. 100 % es la bruma más densa y oscura.",
+      "template": false
+    },
+    {
       "key": "One type: each card is an individual. Different types: each card summarizes a type.",
       "value": "Un solo tipo: cada tarjeta muestra un individuo. Diferentes tipos: cada tarjeta resume un tipo.",
       "template": false
