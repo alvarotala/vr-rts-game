@@ -59,19 +59,73 @@ static class CommandQueueChecks
 
         sim=Fixture();unit=Unit(sim,new Point(20.5f,20.5f));
         sim.Submit(Order(unit,CommandKind.Move,1,new Point(30.5f,20.5f)));
-        bool capacity=true;for(int n=0;n<Simulation.UnitOrderLimit;n++)capacity&=sim.Submit(Order(unit,CommandKind.Move,n+2,new Point(30.5f,25.5f+n%2),true)).accepted;
-        check(capacity&&unit.pendingOrders.Count==32,"unit action queue accepts 32 pending orders");
-        check(!sim.Submit(Order(unit,CommandKind.Move,34,new Point(40.5f,20.5f),true)).accepted&&unit.pendingOrders.Count==32,"full action queue rejects without removing earlier orders");
-        check(sim.Submit(Order(unit,CommandKind.AttackMove,35,new Point(30.5f,25.5f),true,replace:2)).accepted&&unit.pendingOrders.Count==32,"upgrading a queued move still works at the queue limit");
+        bool capacity=true;for(int n=0;n<Simulation.UnitOrderLimit-1;n++)capacity&=sim.Submit(Order(unit,CommandKind.Move,n+2,new Point(30.5f,25.5f+n%2),true)).accepted;
+        check(capacity&&unit.pendingOrders.Count==Simulation.UnitOrderLimit-1,"unit action queue accepts 10 pending orders plus the current action");
+        check(!sim.Submit(Order(unit,CommandKind.Move,34,new Point(40.5f,20.5f),true)).accepted&&unit.pendingOrders.Count==Simulation.UnitOrderLimit-1,"full action queue rejects without removing earlier orders");
+        check(sim.Submit(Order(unit,CommandKind.AttackMove,35,new Point(30.5f,25.5f),true,replace:2)).accepted&&unit.pendingOrders.Count==Simulation.UnitOrderLimit-1,"upgrading a queued move still works at the queue limit");
         var own=sim.View(0).entities.Single(e=>e.id==unit.id);
-        check(own.pendingOrders.Length==32&&own.activeOrderSequence==1&&own.destination.Distance(unit.destination)<.001f,"own player view contains current destination and queued actions");
+        check(own.pendingOrders.Length==Simulation.UnitOrderLimit-1&&own.activeOrderSequence==1&&own.destination.Distance(unit.destination)<.001f,"own player view contains current destination and queued actions");
         own.pendingOrders[0].target=999;own.pendingOrders[0].position=new Point(-10,-10);
         check(unit.pendingOrders[0].target==0&&unit.pendingOrders[0].position.x>=0,"player view returns copies of queued action data");
         var enemyObserver=Unit(sim,new Point(22.5f,20.5f),owner:1);enemyObserver.order=CommandKind.Hold;Steps(sim,4);
         var observed=sim.View(1).entities.Single(e=>e.id==unit.id);
         check(observed.pendingOrders.Length==0&&observed.activeOrderSequence==0&&observed.destination.Distance(default)==0,"enemy view never reveals queued or active movement intent");
         var foreign=Order(unit,CommandKind.Move,36,new Point(40,40),true);foreign.player=1;
-        check(!sim.Submit(foreign).accepted&&unit.pendingOrders.Count==32,"queue validates ownership before mutating orders");
+        check(!sim.Submit(foreign).accepted&&unit.pendingOrders.Count==Simulation.UnitOrderLimit-1,"queue validates ownership before mutating orders");
+
+        // Cards address order identities, never a shifting queue index.
+        sim=Fixture();unit=Unit(sim,new Point(20.5f,20.5f));sim.BeginRecording();
+        sim.Submit(Order(unit,CommandKind.Move,1,new Point(30.5f,20.5f)));
+        for(int i=2;i<=5;i++)sim.Submit(Order(unit,CommandKind.Move,i,new Point(30.5f,25.5f),true));
+        GameCommand CancelOrder(int sequence,int orderSequence,params EntityState[] units)=>new GameCommand {
+            player=0,kind=CommandKind.CancelUnitOrder,sequence=sequence,unitOrderSequence=orderSequence,entities=units.Select(e=>e.id).ToArray() };
+        check(sim.Submit(CancelOrder(6,3,unit)).accepted&&unit.activeOrderSequence==1
+            &&unit.pendingOrders.Select(q=>q.sourceSequence).SequenceEqual(new[]{2,4,5}),"cancel a middle pending identity without changing current order or FIFO");
+        check(sim.Submit(CancelOrder(7,5,unit)).accepted&&sim.Submit(CancelOrder(8,2,unit)).accepted
+            &&unit.pendingOrders.Single().sourceSequence==4,"cancel last and first pending cards without disturbing the remaining one");
+        check(sim.Submit(CancelOrder(9,1,unit)).accepted&&unit.activeOrderSequence==4&&unit.pendingOrders.Count==0,
+            "cancelling current action immediately activates the next valid pending order");
+        check(!sim.Submit(CancelOrder(10,1,unit)).accepted&&unit.activeOrderSequence==4,"stale current identity never cancels its successor");
+        check(sim.Submit(CancelOrder(11,4,unit)).accepted&&unit.order==CommandKind.Stop&&unit.activeOrderSequence==0,
+            "cancelling the last active order stops the unit");
+        check(!sim.Submit(CancelOrder(12,0,unit)).accepted&&!sim.Submit(CancelOrder(13,-1,unit)).accepted,
+            "empty or malformed cancellation does not create an action");
+        check(sim.CopyRecordedCommands(0).Any(c=>c.accepted&&c.command.kind==CommandKind.CancelUnitOrder&&c.command.unitOrderSequence==3),
+            "recordings retain the exact cancelled order identity");
+        var replay=Fixture();var replayUnit=Unit(replay,new Point(20.5f,20.5f));
+        bool same=true;foreach(var recorded in sim.CopyRecordedCommands(0))same&=replay.Submit(recorded.command).accepted==recorded.accepted;
+        check(same&&replayUnit.order==unit.order&&replayUnit.pendingOrders.Count==0,"cancellation recording replays the same acceptances and final state");
+
+        sim=Fixture();unit=Unit(sim,new Point(20.5f,20.5f));var peer=Unit(sim,new Point(23.5f,20.5f));
+        sim.Submit(new GameCommand{player=0,kind=CommandKind.Move,sequence=1,entities=new[]{unit.id,peer.id},position=new Point(30.5f,20.5f)});
+        sim.Submit(Order(unit,CommandKind.Move,2,new Point(30.5f,28.5f),true));
+        sim.Submit(Order(peer,CommandKind.Move,3,new Point(35.5f,28.5f),true));
+        check(sim.Submit(CancelOrder(4,2,unit,peer)).accepted&&unit.pendingOrders.Count==0&&peer.pendingOrders.Single().sourceSequence==3,
+            "group cancellation removes the shared identity only, never an unrelated order at the same index");
+        check(sim.Submit(CancelOrder(5,1,unit,peer)).accepted&&unit.order==CommandKind.Stop&&peer.activeOrderSequence==3,
+            "cancelling shared current order advances each member's own FIFO");
+        var foreignCancel=CancelOrder(6,3,peer);foreignCancel.player=1;
+        check(!sim.Submit(foreignCancel).accepted&&peer.activeOrderSequence==3,"cancellation validates owner before changing any unit");
+        peer.activeOrderSequence=0;
+        check(sim.Submit(CancelOrder(7,0,peer)).accepted&&peer.order==CommandKind.Stop,"automatic orders with sequence zero can be cancelled explicitly");
+
+        foreach(string faction in new[]{"industrial","biological"})
+        {
+            sim=Fixture(faction);unit=Unit(sim,new Point(16.5f,20.5f));Steps(sim,4);sim.Players[0].minerals=1000;
+            check(sim.Submit(Order(unit,CommandKind.Build,1,new Point(20,19),definition:catalog.Role(faction,"supply").id)).accepted,"Start construction before cancelling its worker order "+faction);
+            int foundationId=unit.target,paid=sim.Players[0].minerals;
+            sim.Submit(Order(unit,CommandKind.Move,2,new Point(15.5f,26.5f),true));
+            check(sim.Submit(CancelOrder(3,1,unit)).accepted&&unit.activeOrderSequence==2&&sim.Entities.ContainsKey(foundationId)
+                &&!sim.Entities[foundationId].complete&&sim.Players[0].minerals==paid,
+                "Cancelling current worker order keeps the paid foundation and starts the next action "+faction);
+            sim=Fixture(faction);unit=Unit(sim,new Point(20.5f,20.5f),"caster");unit.energy=catalog[unit.definition].energyMax;Steps(sim,4);
+            sim.Submit(Order(unit,CommandKind.Move,1,new Point(30.5f,20.5f)));
+            sim.Submit(Order(unit,CommandKind.Move,2,new Point(30.5f,26.5f),true));
+            float energy=unit.energy;
+            check(sim.Submit(Order(unit,CommandKind.Cast,3,unit.position,definition:catalog[unit.definition].abilities[0])).accepted,"Start ability before cancelling its active order "+faction);
+            check(sim.Submit(CancelOrder(4,3,unit)).accepted&&unit.activeOrderSequence==2&&unit.castingAbility==null&&unit.castResume==null&&unit.energy==energy,
+                "Cancelling current cast clears its resume intent, preserves unspent energy and advances pending work "+faction);
+        }
 
         foreach(bool hidden in new[]{false,true})
         {

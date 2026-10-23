@@ -102,6 +102,9 @@ Console.WriteLine("FRONTIER_NETWORK_WIRE passed: " + checks + " checks");
 
 GameCommand Valid() => new() { kind = CommandKind.Move, player = 1, sequence = 1, entities = new[] { 1 }, position = new Point(4, 5) };
 Check(CommandBoundary.Validate(Valid()) == null, "Valid command envelope is allowed through to simulation validation.");
+var cancel = Valid(); cancel.kind = CommandKind.CancelUnitOrder; cancel.unitOrderSequence = 73;
+var cancellationCopy = JsonSerializer.Deserialize<GameCommand>(JsonSerializer.Serialize(cancel, new JsonSerializerOptions { IncludeFields = true }), new JsonSerializerOptions { IncludeFields = true });
+Check(CommandBoundary.Validate(cancellationCopy) == null && cancellationCopy.kind == CommandKind.CancelUnitOrder && cancellationCopy.unitOrderSequence == 73, "Cancellation identity survives network JSON round-trip.");
 var spoof = Valid(); spoof.player = 999; CommandBoundary.AssignAuthority(spoof, 0);
 Check(spoof.player == 0, "Network authority comes from the assigned seat, not the payload.");
 CommandBoundary.AssignAuthority(spoof, 1);
@@ -115,7 +118,7 @@ foreach (float invalid in new[] { float.NaN, float.NegativeInfinity, float.Posit
 }
 foreach (Action<GameCommand> damage in new Action<GameCommand>[] {
     c => c.sequence = 0, c => c.sequence = -1, c => c.kind = (CommandKind)999,
-    c => c.replacePendingSequence = -1, c => c.queueOrderId = -1, c => c.entities = null,
+    c => c.replacePendingSequence = -1, c => c.queueOrderId = -1, c => c.unitOrderSequence = -1, c => c.entities = null,
     c => c.entities = new int[Simulation.UnitLimit + Simulation.BuildingLimit + 1], c => c.definition = new string('x', 65) })
 {
     var command = Valid(); damage(command);

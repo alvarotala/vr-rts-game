@@ -13,7 +13,10 @@ namespace Frontier.Runtime
         public static readonly Color Ink = Rgb(242, 242, 232);
         public static readonly Color Muted = Rgb(209, 222, 224);
         public static readonly Color Accent = Rgb(177, 232, 221);
-        public static readonly Color Focus = Rgb(54, 92, 102);
+        public static readonly Color Focus = Accent;
+        public static readonly Color HoverInk = Rgb(25, 52, 60);
+        public static readonly Color Success = Rgb(48, 112, 78);
+        public static readonly Color Danger = Rgb(151, 57, 58);
         public static readonly Color Track = Rgb(38, 61, 72);
         // Keep generated assets out of saved files, but allow reclamation after a domain reload.
         private const HideFlags GeneratedAssetFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;

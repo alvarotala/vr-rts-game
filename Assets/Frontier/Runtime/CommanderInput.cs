@@ -332,6 +332,7 @@ namespace Frontier.Runtime
                 HotkeyInput.Read(Quest.Active?"touch:grip":"key:LeftCtrl",Quest.ActiveController).Held);
         private bool RoutePanelInput(Ray ray,bool triggerDown,bool triggerUp,bool triggerHeld,bool actionDown,bool actionUp,bool actionHeld,float depth,bool assignGroup)
         {
+            float scale=Quest.Active?OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick,Quest.ActiveController).x:0;
             if(panelReleasePending)
             {
                 // The owner release may just have opened a section guide. Drain
@@ -344,11 +345,11 @@ namespace Frontier.Runtime
                 // The button that started the interaction owns its release. Pressing both
                 // aliases must not execute twice, shorten a hold, or send an order to the map.
                 bool released=panelButton==PanelButton.Trigger?triggerUp:actionUp;
-                ResetMapGestures();Panel.Point(ray,false,released,depth,assignGroup);
+                ResetMapGestures();Panel.Point(ray,false,released,depth,assignGroup,scale);
                 if(released){panelButton=PanelButton.None;panelReleasePending=triggerHeld||actionHeld;}
                 return true;
             }
-            bool consumed=Panel.Point(ray,triggerDown||actionDown,triggerUp||actionUp,depth,assignGroup);
+            bool consumed=Panel.Point(ray,triggerDown||actionDown,triggerUp||actionUp,depth,assignGroup,scale);
             if(consumed)ResetMapGestures();
             if(consumed&&(triggerDown||actionDown))
             {

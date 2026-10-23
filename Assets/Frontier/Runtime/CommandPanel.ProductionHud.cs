@@ -22,7 +22,6 @@ namespace Frontier.Runtime
         private static readonly Color QueueActiveTint=new Color(51/255f,108/255f,82/255f).linear;
         private static readonly Color QueueActiveBorderTint=new Color(113/255f,202/255f,143/255f).linear;
         private static readonly Color QueueOverflowBorderTint=new Color(240/255f,212/255f,103/255f).linear;
-        private static readonly Color QueueCancelTint=new Color(.24f,.055f,.065f,1);
 
         private void CreateProductionHud()
         {
@@ -67,8 +66,8 @@ namespace Frontier.Runtime
 
         private RectTransform CreateCancelHint(RectTransform card,float width)
         {
-            var hint=Section(card,"Cancel hint",new Vector2(8,-100),new Vector2(width-16,28),QueueCancelTint);
-            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,28),17,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            var hint=Section(card,"Cancel hint",new Vector2(8,-100),new Vector2(width-16,28),ConsoleTheme.Accent);
+            Label(hint,"Cancel + refund",new Vector2(4,0),new Vector2(width-24,28),17,ConsoleTheme.HoverInk,TextAnchor.MiddleCenter);
             hint.gameObject.SetActive(false);return hint;
         }
         private void ClearProductionTargets()
@@ -76,7 +75,7 @@ namespace Frontier.Runtime
             for(int i=0;i<productionTargets.Length;i++)
             {
                 var target=productionTargets[i];
-                if(target!=null)target.image.color=target.normal;
+                ApplyTargetHover(target,false);
                 productionTargets[i]=null;
                 if(cancelHints[i]!=null)cancelHints[i].gameObject.SetActive(false);
                 if(i>0&&queuedActiveBorders[i-1]!=null)queuedActiveBorders[i-1].gameObject.SetActive(false);
@@ -84,18 +83,21 @@ namespace Frontier.Runtime
         }
         private void BindProductionTargets()
         {
-            var producer=SelectedProducer();if(producer==null)return;
-            var match=Session.SessionIdentity;int producerId=producer.id;
-            for(int i=0;i<producer.queue.Length&&i<productionTargets.Length;i++)
+            var producers=SelectedProducers();if(producers.Length==0)return;
+            var visible=VisibleProduction(producers);
+            var match=Session.SessionIdentity;var selectionIds=Session.Selection.OrderBy(id=>id).ToArray();
+            for(int i=0;i<visible.Length;i++)
             {
-                var order=producer.queue[i];int orderId=order.id;
+                var item=visible[i];var order=item.order;if(order==null)continue;
+                int orderId=order.id,producerId=producers[item.producer-1].id;
                 if(orderId<=0)continue;
                 var card=i==0?productionCard:queuedCards[i-1];
-                var target=new Target{rect=card.rectTransform,image=card,normal=i==0?QueueActiveTint:button,hoverColor=QueueCancelTint,
+                var target=new Target{rect=card.rectTransform,image=card,normal=i==0?QueueActiveTint:button,
                     click=()=>
                     {
-                        if(!AcceptsGameInput||Session.SessionIdentity!=match||SelectedProducer()?.id!=producerId)return;
-                        if(Session.Send(CommandKind.Cancel,queueOrderId:orderId))Session.Announce(Session.IsOnline?"Cancellation requested.":QueueLabel(order.definition)+" cancelled. Resources refunded.");
+                        if(!AcceptsGameInput||Session.SessionIdentity!=match||!Session.Selection.OrderBy(id=>id).SequenceEqual(selectionIds)
+                            ||!SelectedProducers().Any(p=>p.id==producerId&&p.queue.Any(q=>q.id==orderId)))return;
+                        if(Session.Send(CommandKind.Cancel,queueOrderId:orderId,entityIds:new[]{producerId}))Session.Announce(Session.IsOnline?"Cancellation requested.":QueueLabel(order.definition)+" cancelled. Resources refunded.");
                         nextText=0;
                     }};
                 productionTargets[i]=target;targets.Add(target);
@@ -108,14 +110,10 @@ namespace Frontier.Runtime
                 var target=productionTargets[i];
                 bool active=target!=null&&hovered==target&&AcceptsGameInput&&!Quest.Placing&&target.rect.gameObject.activeInHierarchy;
                 if(cancelHints[i]!=null)cancelHints[i].gameObject.SetActive(active);
-                if(target!=null)target.image.color=active?QueueCancelTint:target.normal;
+                ApplyTargetHover(target,active);
+                if(i>0&&queuedActiveBorders[i-1]!=null)
+                    queuedActiveBorders[i-1].transform.GetChild(0).GetComponent<Image>().color=active?ConsoleTheme.Accent:button;
             }
-        }
-
-        private VisibleEntity SelectedProducer()
-        {
-            if(Session.Selection.Count!=1)return null;
-            return SelectedProducers().FirstOrDefault();
         }
 
         private VisibleEntity[] SelectedProducers()
@@ -134,7 +132,7 @@ namespace Frontier.Runtime
             if(Session.Selection.Count>1){UpdateGroupProductionHud(producers);return;}
             var producer=producers[0];
             productionTitle.text="PRODUCTION";
-            productionHint.text="CLICK AN ITEM TO CANCEL";
+            productionHint.text="Click any item, including the current one, to cancel and refund it. The next item advances automatically.";
             var queue=producer.queue;
             productionCount.text=$"{queue.Length} / 5"+(queue.Length>=5?" · FULL":"");
             productionCount.color=queue.Length>=5?WarningTint:ConsoleTheme.Ink;
@@ -202,15 +200,12 @@ namespace Frontier.Runtime
             int queued=producers.Sum(e=>e.queue.Length),capacity=producers.Length*5;
             int full=producers.Count(e=>e.queue.Length>=5);
             productionTitle.text="PRODUCTION";
-            productionHint.text=producers.Length+(producers.Length==1?" BUILDING":" BUILDINGS")+" · SELECT ONE TO CANCEL";
+            productionHint.text="Click any item, including the current one, to cancel and refund it. The next item advances automatically.";
             productionCount.text=$"{queued} / {capacity}"+(full==producers.Length?" · FULL":"");
             productionCount.color=full==producers.Length?WarningTint:ConsoleTheme.Ink;
             // Show parallel work first, then each producer's pending orders in FIFO
             // order. Every visible slot is an actual order, including duplicates.
-            var visible=new (ProductionOrder order,int producer,int depth)[5];int count=0;
-            for(int depth=0;depth<5&&count<visible.Length;depth++)
-                for(int p=0;p<producers.Length&&count<visible.Length;p++)
-                    if(depth<producers[p].queue.Length)visible[count++]=(producers[p].queue[depth],p+1,depth);
+            var visible=VisibleProduction(producers);int count=visible.Count(item=>item.order!=null);
             UpdateCurrentProduction(visible[0].order,count>0?visible[0].producer:1);
             for(int i=0;i<4;i++)
             {
@@ -230,8 +225,16 @@ namespace Frontier.Runtime
                 queuedActiveBorders[i].gameObject.SetActive(active||(i==3&&occupied));
                 queuedProgress[i].rectTransform.sizeDelta=new Vector2(136*progress,3);queuedProgress[i].color=tint;
             }
-            // Group cancellation remains an explicit single-building operation.
+            // Each visible card addresses its exact producer and production ID.
             UpdateProductionHover();
+        }
+        private static (ProductionOrder order,int producer,int depth)[] VisibleProduction(VisibleEntity[] producers)
+        {
+            var visible=new (ProductionOrder order,int producer,int depth)[5];int count=0;
+            for(int depth=0;depth<5&&count<visible.Length;depth++)
+                for(int p=0;p<producers.Length&&count<visible.Length;p++)
+                    if(depth<producers[p].queue.Length)visible[count++]=(producers[p].queue[depth],p+1,depth);
+            return visible;
         }
         private bool UpdateProductionPortrait(SelectionPortrait portrait,ProductionOrder order)
         {

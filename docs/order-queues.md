@@ -14,13 +14,13 @@ Grip + mantener trigger quieto durante 0,5 segundos quita la unidad seleccionada
 
 ## Simulación
 
-- `GameCommand.append` conserva la acción actual y agrega una intención a cada unidad aplicable. `pendingOrders` admite 32 elementos por unidad, además de la acción activa. Producción sigue usando su cola independiente de cinco pedidos.
+- `GameCommand.append` conserva la acción actual y agrega una intención a cada unidad aplicable. `Simulation.UnitOrderLimit` limita el plan a 11 órdenes por unidad: la actual y hasta 10 pendientes. La simulación rechaza otra orden sin descartar las anteriores; reemplazar una orden existente sigue permitido con la cola llena. Producción sigue usando su cola independiente de cinco pedidos.
 - `activeOrderSequence` y `UnitOrder.sourceSequence` vinculan los toques de una misma intención. `replacePendingSequence` convierte una orden concreta sin borrar las demás.
 - Al encolar movimiento se asignan destinos de formación únicos y la misma identidad/prioridad de tráfico para todo el grupo. Al activar se recalcula el camino desde la posición real, conservando velocidad, masa y reglas de colisión. Las órdenes inmediatas reutilizan el camino calculado al planificar.
 - La ejecución revalida objetivos, visión, ocupación, requisitos y recursos. Una acción que dejó de ser válida se descarta con un aviso al propietario y se intenta la siguiente. Una orden inválida recibida no borra el plan válido existente.
 - La construcción encolada no reserva ni consume recursos. Cobra una sola vez al activarse; puede omitirse si faltan recursos o requisitos entonces. Gather de gas requiere un extractor operativo al encolarse.
 - Move y Attack Move terminan al llegar; Attack finaliza su foco cuando muere/desaparece el objetivo o acaba la búsqueda de hasta tres segundos sin visión; Repair cuando completa la reparación; Gather tras entregar una carga. Al terminar Attack, una orden pendiente tiene prioridad. Sin pendientes, una unidad lejana continúa en Attack Move hacia la última zona conocida, conservando la secuencia original y buscando objetivos al avanzar. Build espera la finalización del edificio en ambas facciones y mantiene al trabajador asignado durante toda la obra. Sin órdenes posteriores se conservan los comportamientos económicos previos.
-- Stop y Hold son inmediatos y vacían pendientes. Stop conserva frenado; Hold ancla. No hay persistencia de partidas ni edición individual de estas acciones en esta entrega.
+- Stop y Hold son inmediatos y vacían pendientes. Stop conserva frenado; Hold ancla. `CancelUnitOrder` usa `unitOrderSequence` para quitar una intención concreta, nunca un índice que pueda cambiar. Si es la actual, detiene esa acción y activa inmediatamente la siguiente válida. Cancelar la orden de un constructor deja su obra iniciada y pagada en el mapa; cancelar una habilidad aún no ejecutada no consume energía. No hay persistencia de partidas.
 
 ## Presentación y privacidad
 
@@ -28,7 +28,15 @@ Grip + mantener trigger quieto durante 0,5 segundos quita la unidad seleccionada
 
 Cada unidad propia seleccionada muestra una línea punteada y un punto para su acción activa, incluso sin órdenes pendientes. Se usa un anillo principal y puntos más pequeños para los demás miembros. El color indica su acción: cian para Move, rojo para Attack/Attack Move y verde para Gather/Build/Repair. La selección forma parte de la invalidación visual aunque no cambie la vista de simulación. Para un ataque activo cuyo enemigo dejó de verse, se conserva el destino conocido de la orden propia; no se consulta la posición oculta del enemigo.
 
-`UNIT ORDER PLAN` muestra el total pendiente y los próximos tres pedidos de una unidad representativa, indicando si hay más. Con grupos se agregan los conteos por unidad. El mapa añade hasta ocho destinos numerados, incluida la acción actual, para el menor ID seleccionado que tenga pendientes, con enlaces entre los siguientes objetivos. Los puntos, números y conexiones siguen terreno y rampas, se recortan al tablero y no tienen colliders. Las líneas indican la secuencia de objetivos, no un camino A* garantizado.
+`ÓRDENES EN COLA` comparte exactamente el mismo espacio de 236 px que Producción. Una grilla de seis columnas por dos filas muestra hasta 11 órdenes, incluida la actual en verde, y reserva siempre la casilla inferior derecha para «Cancelar todo». Cada tarjeta mide 60 px de alto; huecos vacíos y mensajes no cambian la altura de la sección ni del HUD. El contador muestra las órdenes del plan representativo, incluida la actual, sobre el límite de 11.
+
+Un clic con gatillo, A o ratón quita la orden de esa tarjeta. «Cancelar todo» detiene las unidades seleccionadas y borra sus pendientes. Con varios seleccionados se mantiene una unidad representativa: menor ID con pendientes, o menor ID con una acción actual. Cancelar una tarjeta quita la misma secuencia de las unidades seleccionadas que la compartan; no cancela otras órdenes por ocupar el mismo lugar. Las órdenes automáticas sin secuencia se cancelan solo en la unidad representada. La ayuda `?` explica el alcance. Las tarjetas se actualizan sin reconstruir Opciones; cambios de plan, selección, foco o partida invalidan clics pendientes para no cancelar una sucesora por accidente.
+
+En Producción, todas las tarjetas ocupadas son cancelables, incluidas las actuales y las de una selección de varios edificios. Cada tarjeta conserva el ID del pedido y el edificio que lo produce; cancela y reembolsa ese único pedido sin cambiar la selección. El siguiente avanza automáticamente.
+
+El protocolo LAN pasa a 3 y las reglas de replay a 2 para este cambio de semántica. Cliente y servidor deben compartir versión. Los informes antiguos siguen disponibles; sus replays requieren las reglas con que se grabaron.
+
+El mapa añade hasta ocho destinos numerados, incluida la acción actual, para el menor ID seleccionado que tenga pendientes, con enlaces entre los siguientes objetivos. Los puntos, números y conexiones siguen terreno y rampas, se recortan al tablero y no tienen colliders. Las líneas indican la secuencia de objetivos, no un camino A* garantizado.
 
 Se limpia al deseleccionar, morir, detenerse, salir de partida o esconder el tablero. Las órdenes futuras no giran anticipadamente el modelo: el evento de orientación inmediata se emite al cambiar la secuencia activa, tanto al recibir una orden como al avanzar la cola en simulación.
 

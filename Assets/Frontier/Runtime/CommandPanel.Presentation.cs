@@ -8,7 +8,7 @@ namespace Frontier.Runtime
         private Text consoleBrand,consoleBrandSmall;
         private RectTransform moveAffordance;
         private Image moveAffordanceImage;
-        private Text moveCaption;
+        private Text moveCaption,moveHints;
 
         private void CreateConsoleChrome()
         {
@@ -16,8 +16,10 @@ namespace Frontier.Runtime
             consoleBrand=Label(root,"LEGION",new Vector2(32,-40),new Vector2(330,50),38,ConsoleTheme.Ink);consoleBrand.fontStyle=FontStyle.Bold;
             moveAffordance=Section(moveHandle,"Move affordance",Vector2.zero,new Vector2(192,12),ConsoleTheme.Muted);
             moveAffordanceImage=moveAffordance.GetComponent<Image>();
-            moveCaption=Label(moveAffordance,"Move",Vector2.zero,new Vector2(232,52),23,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            moveCaption=Label(moveAffordance,"Move window",Vector2.zero,new Vector2(232,52),23,ConsoleTheme.Background,TextAnchor.MiddleCenter);
             moveCaption.fontStyle=FontStyle.Bold;
+            moveHints=Label(moveHandle,"",new Vector2(-290,-88),new Vector2(900,64),20,ConsoleTheme.Muted,TextAnchor.UpperCenter);
+            moveHints.gameObject.name="Move window hints";
         }
 
         private void LayoutConsoleChrome()
@@ -61,10 +63,16 @@ namespace Frontier.Runtime
             moveImage.color=Color.clear;
             var size=focused?new Vector2(264,52):new Vector2(192,12);
             TopLeft(moveAffordance,new Vector2((320-size.x)*.5f,-(80-size.y)*.5f),size);
-            moveAffordanceImage.color=focused?ConsoleTheme.Card:ConsoleTheme.Muted;
+            moveAffordanceImage.color=ConsoleTheme.Muted;
             ConsoleTheme.StylePill(moveAffordanceImage);
             moveCaption.gameObject.SetActive(focused);
             TopLeft(moveCaption.rectTransform,new Vector2(16,0),new Vector2(size.x-32,size.y));
+            moveHints.gameObject.SetActive(focused);
+            if(focused)
+            {
+                if(Quest.Active)((LocalizedText)moveHints).SetKey("Hold Trigger / {0} and move\nStick ← → Size · ↑ ↓ Distance · Release to place",Bindings.MenuConfirmName);
+                else moveHints.text="Hold left mouse and drag\nMouse wheel · Distance · Release to place";
+            }
         }
         private ConsoleGlyph Glyph(RectTransform parent,ConsoleGlyph.Kind kind,Vector2 position,float size,Color color)
         {

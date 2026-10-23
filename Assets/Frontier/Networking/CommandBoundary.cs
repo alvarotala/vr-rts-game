@@ -9,7 +9,7 @@ namespace Frontier.Networking
         public static string Validate(GameCommand command)
         {
             if (command == null || command.sequence <= 0 || !Enum.IsDefined(typeof(CommandKind), command.kind)
-                || command.replacePendingSequence < 0 || command.queueOrderId < 0
+                || command.replacePendingSequence < 0 || command.queueOrderId < 0 || command.unitOrderSequence < 0
                 || float.IsNaN(command.position.x) || float.IsInfinity(command.position.x) || float.IsNaN(command.position.y) || float.IsInfinity(command.position.y)
                 || command.definition != null && command.definition.Length > 64 || command.entities == null
                 || command.entities.Length > Simulation.UnitLimit + Simulation.BuildingLimit)

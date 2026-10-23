@@ -138,6 +138,17 @@ namespace Frontier.Editor
                             f.Check(f.Session.GroupSize(3) == 2 && feedback == 1 && Count() == "Saved · 2"
                                 && f.Session.Selection.SetEquals(new[] { workers[0].id, workers[1].id }),
                                 "Grip captured on press assigns once even when released before Trigger, with visual and haptic confirmation");
+                            var groupCard=f.Panel.GetComponentsInChildren<RectTransform>().Single(r=>r.name=="Group 4");
+                            f.Check(groupCard.GetComponent<Image>().color==ConsoleTheme.Accent
+                                &&groupCard.GetComponentsInChildren<Text>().All(t=>t.color==ConsoleTheme.HoverInk),
+                                "Saved groups retain the shared accent hover with readable confirmation text");
+                            f.Panel.Point(new Ray(pointer.origin+Vector3.right*100,pointer.direction),false,false);
+                            UnifiedWheelFixture.Call(f.Panel,"UpdateGroupFeedback");
+                            var savedFill=groupCard.GetComponent<Image>().color;
+                            f.Check(savedFill.g>savedFill.r&&savedFill.g>savedFill.b
+                                &&groupCard.GetComponentsInChildren<Text>().All(t=>t.color!=ConsoleTheme.HoverInk),
+                                "Leaving a hovered saved group restores its green confirmation and original text colors");
+                            f.Panel.Point(pointer,false,false);
                             f.CapturePanel(faction + "-hud-group-saved");
                             // Flat previews move the canvas; use its current pose for later edges.
                             pointer = GroupPointer(); f.Panel.Point(pointer, false, true);

@@ -134,8 +134,8 @@ namespace Frontier.Editor
                         "Multiple producers show their actual production orders");
                     Check(Text("productionCount")==$"{techOrders+hqOrders} / 10"&&Field<Text[]>(panel,"queuedNames")[0].text==session.Catalog.Role(faction,"siege").name,
                         "Group fills subsequent slots with actual orders and totals combined capacity");
-                    Check(Text("productionHint")=="2 BUILDINGS · SELECT ONE TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
-                        "Group production cards do not expose ambiguous cancel targets");
+                    Check(Text("productionHint").Contains("including the current one")&&Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==Math.Min(5,techOrders+hqOrders),
+                        "Each occupied group card has an exact producer cancellation target");
                     panel.Point(pendingRay,false,true);Refresh();
                     Check(tech.queue.Count==techOrders&&hq.queue.Count==hqOrders,"Changing selection invalidates a pressed individual queue item");
                     Capture(faction+"-group");
@@ -146,15 +146,15 @@ namespace Frontier.Editor
                     Check(QueueShown()&&Text("productionTitle")=="PRODUCTION"&&Text("productionName")==session.Catalog[barracks.queue[0].definition].name&&
                         Text("productionCount")==$"{barracks.queue.Count} / 5",
                         "A completed barracks and unfinished barracks show the available producer's actual queue");
-                    Check(Text("productionHint")=="1 BUILDING · SELECT ONE TO CANCEL"&&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
-                        "One eligible producer in a larger building selection never exposes individual cancellation");
+                    Check(Text("productionHint").Contains("including the current one")&&Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==barracks.queue.Count,
+                        "One eligible producer in a larger selection retains exact item cancellation");
                     session.Select(supply.id,true);Refresh();
                     Check(QueueShown()&&Text("productionCount")==$"{barracks.queue.Count} / 5"&&Text("productionTitle")=="PRODUCTION",
                         "Nonproducing buildings do not hide or inflate a building group's production summary");
                     session.Select(unit.id,true);Refresh();Check(!QueueShown(),"A mixed unit and building selection hides the producer summary");
                     session.Match.Entities.Remove(foundation.id);session.Match.Map.Occupy(foundation.position,session.Catalog[foundation.definition].footprint,0);
                     session.Select(tech.id,false);Refresh();
-                    Check(Text("productionTitle")=="PRODUCTION"&&Text("productionHint")=="CLICK AN ITEM TO CANCEL"&&
+                    Check(Text("productionTitle")=="PRODUCTION"&&Text("productionHint").Contains("including the current one")&&
                         Field<Text[]>(panel,"queuedPositions").Select(t=>t.text).SequenceEqual(new[]{"2","3","4","5"}),
                         "Returning to one building restores its individual queue labels");
                     pendingCenter=pendingCard.TransformPoint(pendingCard.rect.center);pendingRay=new Ray(pendingCenter-pendingCard.forward,pendingCard.forward);
@@ -173,8 +173,8 @@ namespace Frontier.Editor
                     var groupActions=SelectionActions.For(session).Items;
                     Check(groupActions.Count==9&&groupActions.Any(a=>a.Id=="clear-rally-point"),
                         "All four producer roles expose six train actions, two upgrades and rally clearing");
-                    Check(Text("productionState").Contains("TRAINING")&&Text("productionHint")=="4 BUILDINGS · SELECT ONE TO CANCEL",
-                        "Producer group shows current production without suggesting group cancellation");
+                    Check(Text("productionState").Contains("TRAINING")&&Text("productionHint").Contains("including the current one"),
+                        "Producer group shows current production and specific card cancellation");
                     Canvas.ForceUpdateCanvases();
                     var actionArea=Field<RectTransform>(panel,"actions");
                     var actionCards=actionArea.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null).ToArray();
@@ -187,12 +187,11 @@ namespace Frontier.Editor
                         new Rect(card.anchoredPosition-new Vector2(0,card.rect.height),card.rect.size).Overlaps(
                         new Rect(other.anchoredPosition-new Vector2(0,other.rect.height),other.rect.size)))).All(overlap=>!overlap),
                         "Compact production actions do not overlap");
-                    Check(Fits(Field<Text>(panel,"productionState"))&&Fits(Field<Text>(panel,"productionHint")),
-                        "Group dispatch and cancellation guidance fit in the production summary");
+                    Check(Fits(Field<Text>(panel,"productionState"))&&!Field<Text>(panel,"productionHint").gameObject.activeSelf,
+                        "Group status fits its card and detailed cancellation guidance stays in the help dialog");
                     var matchRoot=Field<RectTransform>(panel,"root");
-                    float previousMenuHeight=1512f*Mathf.Clamp(board.Width/1300f,.00065f,.0012f);
-                    Check(Mathf.Abs(matchRoot.rect.height*matchRoot.localScale.x-previousMenuHeight)<.001f,
-                        "The match HUD retains the physical height of the preceding menu with its logo and Pause header");
+                    Check(matchRoot.sizeDelta==new Vector2(1480,1636),
+                        "The fixed HUD preserves its previous design dimensions independently of the user's saved window scale");
                     Capture(faction+"-all-producers");
                     int totalOrders=allProducers.Sum(producer=>producer.queue.Count);
                     var allProducerLayout=ActionLayout();
@@ -250,8 +249,8 @@ namespace Frontier.Editor
                         Text("productionCount")=="12 / 15"&&Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +7 MORE",
                         "Three barracks show all three active orders before pending orders and keep the correct overflow total");
                     Check(Field<Text[]>(panel,"queuedKinds")[1].text=="B3 · 0%"&&
-                        Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),
-                        "Third active order identifies its building and aggregate cards never cancel unrelated orders");
+                        Field<Array>(panel,"productionTargets").Cast<object>().Count(t=>t!=null)==5,
+                        "Third active order identifies its building and all five visible orders retain exact cancellation targets");
                     CheckActiveBorders(true,true,false,true,true);
                     second.queue[0].remaining=second.queue[0].total/2;Refresh();
                     Check(Field<Text[]>(panel,"queuedKinds")[0].text=="B2 · 50%"&&
@@ -273,8 +272,8 @@ namespace Frontier.Editor
                     Check(Text("productionCount")=="15 / 15 · FULL"&&Field<Text[]>(panel,"queuedPositions")[3].text=="5 · +10 MORE",
                         "Three full barracks keep all five cards and a two-digit additional-order count");
                     Canvas.ForceUpdateCanvases();
-                    Check(Field<Text[]>(panel,"queuedPositions").Concat(Field<Text[]>(panel,"queuedKinds")).All(Fits)&&Fits(Field<Text>(panel,"productionHint")),
-                        "Overflow count, building state and group hint fit their card labels");
+                    Check(Field<Text[]>(panel,"queuedPositions").Concat(Field<Text[]>(panel,"queuedKinds")).All(Fits),
+                        "Overflow count and building state fit their visible card labels");
                     Capture(faction+"-three-barracks-full");
                     session.Select(second.id,false);Refresh();
                     Check(Field<Text[]>(panel,"queuedPositions")[3].text=="5"&&Field<Image[]>(panel,"queuedProgress").All(p=>p.rectTransform.rect.width==0)&&
@@ -390,6 +389,16 @@ namespace Frontier.Editor
                     Refresh();var rect=panel.GetComponentsInChildren<RectTransform>().First(t=>t.gameObject.activeInHierarchy&&t.name==title);
                     var hit=rect.GetComponentInChildren<SelectionPortrait>()?.rectTransform??rect;
                     var center=hit.TransformPoint(hit.rect.center);var ray=new Ray(center-rect.forward,rect.forward);
+                    var portraits=rect.GetComponentsInChildren<SelectionPortrait>(true).ToDictionary(p=>p,p=>p.color);
+                    var border=rect.GetComponentsInChildren<Image>(true).FirstOrDefault(image=>image.name=="Active producer border");
+                    var borderColor=border==null?Color.clear:border.color;
+                    panel.Point(ray,false,false);
+                    Check(rect.GetComponent<Image>().color==ConsoleTheme.Accent
+                        &&rect.GetComponentsInChildren<Text>(true).All(text=>text.color==ConsoleTheme.HoverInk)
+                        &&portraits.All(p=>p.Key.color==p.Value),"Production and option hovers use accent with readable text while preserving models");
+                    if(border!=null)
+                        Check(border.color==borderColor&&border.transform.GetChild(0).GetComponent<Image>().color==ConsoleTheme.Accent,
+                            "The fifth production edge retains its meaning while its interior follows the shared hover");
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Pointer missed "+title);Refresh();
                 }
                 void CheckQueueModels()

@@ -172,7 +172,7 @@ namespace Frontier.Core
         }
         public AbilityDefinition Ability(string id) => id != null && abilities.TryGetValue(id, out var ability) ? ability : null;
     }
-    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint, Cast }
+    public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint, Cast, CancelUnitOrder }
     [Serializable]
     public sealed class GameCommand
     {
@@ -182,6 +182,7 @@ namespace Frontier.Core
         public bool append;
         // A second tap upgrades this earlier action in place instead of adding a waypoint.
         public int replacePendingSequence;
+        public int unitOrderSequence;
         public int[] entities = Array.Empty<int>();
         public int target;
         // Zero preserves Cancel's legacy behavior (last queued item / unfinished building).

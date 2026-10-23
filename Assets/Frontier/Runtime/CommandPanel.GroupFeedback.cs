@@ -98,7 +98,7 @@ namespace Frontier.Runtime
             {
                 var target=groupTargets[index];if(target==null||target.image==null)continue;
                 bool confirmed=groupConfirmationMatch==Session.SessionIdentity&&Time.unscaledTime<groupConfirmedUntil[index];
-                target.image.color=confirmed?QueueActiveTint:hovered==target?ConsoleTheme.Focus:target.normal;
+                ApplyTargetHover(target,hovered==target,confirmed?QueueActiveTint:target.normal);
                 int count=Session.GroupSize(index);
                 groupCounts[index].text=confirmed?"Saved · "+count:count==0?"Empty":count+" assigned";
             }

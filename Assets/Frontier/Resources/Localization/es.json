@@ -7,6 +7,71 @@
   ],
   "entries": [
     {
+      "key": "The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order.",
+      "value": "La tarjeta resaltada muestra Cancelar y reembolsar. Se cancela y devuelve su costo; las demás conservan el orden.",
+      "template": false
+    },
+    {
+      "key": "Hold Trigger / {0} on the bar below the window",
+      "value": "Mantener gatillo / {0} en la barra debajo de la ventana",
+      "template": true
+    },
+    {
+      "key": "Move your hand to reposition the shared window center. Release to place it.",
+      "value": "Mueve el mando para colocar el centro compartido de las ventanas. Suelta para fijarlo.",
+      "template": false
+    },
+    {
+      "key": "Resize window",
+      "value": "Cambiar tamaño de ventana",
+      "template": false
+    },
+    {
+      "key": "{0} stick left / right while dragging menu",
+      "value": "Stick {0} a izquierda / derecha al mover la ventana",
+      "template": true
+    },
+    {
+      "key": "Each window remembers its own size. Other windows keep their sizes and the same center.",
+      "value": "Cada ventana recuerda su tamaño. Las demás conservan sus tamaños y el mismo centro.",
+      "template": false
+    },
+    {
+      "key": "Automatic when out of reach",
+      "value": "Automático al quedar fuera de alcance",
+      "template": false
+    },
+    {
+      "key": "A distant window returns in front of you after tracking recovery.",
+      "value": "Si una ventana queda lejos, vuelve frente a ti al recuperar el seguimiento.",
+      "template": false
+    },
+    {
+      "key": "Return the shared window in front of you.",
+      "value": "Coloca la ventana compartida frente a ti.",
+      "template": false
+    },
+    {
+      "key": "Hold left mouse on the bar below the window",
+      "value": "Mantener clic izquierdo en la barra debajo de la ventana",
+      "template": false
+    },
+    {
+      "key": "Move window",
+      "value": "Mover ventana",
+      "template": false
+    },
+    {
+      "key": "Hold Trigger / {0} and move\nStick ← → Size · ↑ ↓ Distance · Release to place",
+      "value": "Mantener gatillo / {0} y mover el mando\nStick ← → Tamaño · ↑ ↓ Distancia · Soltar para fijar",
+      "template": true
+    },
+    {
+      "key": "Hold left mouse and drag\nMouse wheel · Distance · Release to place",
+      "value": "Mantener clic izquierdo y arrastrar\nRueda del ratón · Distancia · Soltar para fijar",
+      "template": false
+    },
+    {
       "key": "Match starts in",
       "value": "La partida comienza en",
       "template": false
@@ -7857,6 +7922,56 @@
     {
       "key": "Click: select · Ctrl + click: assign",
       "value": "Clic: seleccionar · Ctrl + clic: asignar",
+      "template": false
+    },
+    {
+      "key": "Cancel all",
+      "value": "Cancelar todo",
+      "template": false
+    },
+    {
+      "key": "Unit action queue full (11 including current).",
+      "value": "Cola llena: 11 órdenes, incluida la actual.",
+      "template": false
+    },
+    {
+      "key": "Unit order no longer available.",
+      "value": "La orden ya no está disponible.",
+      "template": false
+    },
+    {
+      "key": "Current and queued orders cancelled.",
+      "value": "Orden actual y pendientes canceladas.",
+      "template": false
+    },
+    {
+      "key": "Unit order cancelled.",
+      "value": "Orden cancelada.",
+      "template": false
+    },
+    {
+      "key": "Click any item, including the current one, to cancel and refund it. The next item advances automatically.",
+      "value": "Pulsa cualquier pedido, incluido el actual, para cancelarlo y recuperar su costo. El siguiente avanza automáticamente.",
+      "template": false
+    },
+    {
+      "key": "Up to 11 orders including the current one. Click an order to remove it; cancelling the current one starts the next. Cancel all stops the selected units and clears their pending orders.",
+      "value": "Hasta 11 órdenes, incluida la actual. Pulsa una orden para quitarla; si cancelas la actual, comienza la siguiente. Cancelar todo detiene las unidades seleccionadas y vacía sus pendientes.",
+      "template": false
+    },
+    {
+      "key": "The grid shows one selected unit's plan. Removing a shared order removes that same command from the selected units, preserving their other orders.",
+      "value": "La grilla muestra el plan de una unidad seleccionada. Al quitar una orden compartida, se elimina esa misma orden de las unidades seleccionadas; las demás se conservan.",
+      "template": false
+    },
+    {
+      "key": "The wide green card is the first active order. Other green borders mark work in progress in additional buildings. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.",
+      "value": "La tarjeta verde ancha es la primera orden activa. Los otros bordes verdes indican trabajos en curso en otros edificios. Pulsa cualquier tarjeta ocupada para cancelar ese pedido y recuperar su costo, incluso con varios edificios seleccionados.",
+      "template": false
+    },
+    {
+      "key": "Read the grid from left to right, then the second row. The green first card is the current action. Empty spaces remain available for new orders; the last card always cancels the entire plan.",
+      "value": "Lee la grilla de izquierda a derecha y luego la segunda fila. La primera tarjeta verde es la acción actual. Los espacios vacíos quedan disponibles para nuevas órdenes; la última tarjeta siempre cancela todo el plan.",
       "template": false
     }
   ]

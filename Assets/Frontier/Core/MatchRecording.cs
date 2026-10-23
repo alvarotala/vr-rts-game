@@ -13,7 +13,7 @@ namespace Frontier.Core
         public string rejection;
         public static GameCommand Copy(GameCommand c)=>c==null?null:new GameCommand
         {
-            kind=c.kind, player=c.player, sequence=c.sequence, append=c.append, replacePendingSequence=c.replacePendingSequence,
+            kind=c.kind, player=c.player, sequence=c.sequence, append=c.append, replacePendingSequence=c.replacePendingSequence, unitOrderSequence=c.unitOrderSequence,
             entities=c.entities==null?null:(int[])c.entities.Clone(), target=c.target, queueOrderId=c.queueOrderId, position=c.position, definition=c.definition
         };
         internal RecordedCommand Copy()=>new RecordedCommand{tick=tick,order=order,command=Copy(command),accepted=accepted,rejection=rejection};
@@ -22,7 +22,7 @@ namespace Frontier.Core
     public sealed partial class Simulation
     {
         // Bump when simulation/order semantics change. Saved catalogs/maps do not preserve old code.
-        public const int ReplayRulesVersion=1;
+        public const int ReplayRulesVersion=2;
         private readonly List<RecordedCommand> recordedCommands=new List<RecordedCommand>();
         private bool recordingCommands;
         public int RecordedCommandCount=>recordedCommands.Count;

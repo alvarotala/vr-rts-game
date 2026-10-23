@@ -99,6 +99,13 @@ namespace Frontier.Editor
                 Click("Back");Click("New Match");
                 Check(panel.Page==CommandPanel.MenuPage.MatchSetup&&board.Content.gameObject.activeSelf,"New Match opens setup and map preview");
                 Check(Has("Faction: Consortium")&&Has("Opponent: Symbiosis")&&Has("AI: Normal")&&Has("Map: Forest Watch")&&Has("START MATCH")&&Has("Position board")&&Has("Back")&&!Has("Hotkeys")&&!Has("Settings")&&!Has("Reposition board")&&!Has("Detect surfaces")&&!Has("Table / height 75 cm")&&!Has("Floor / height 0"),"New Match includes direct board placement beside Start without adding advanced settings");
+                var factionCards=panel.GetComponentsInChildren<SelectionPortrait>();
+                Check(factionCards.Length==2&&factionCards.Any(p=>ProductionQueuePreview.MatchesModel(p,session.Catalog.Role(session.Faction,"hq")))
+                    &&factionCards.Any(p=>ProductionQueuePreview.MatchesModel(p,session.Catalog.Role(session.EnemyFaction,"hq"))),
+                    "New Match identifies both factions with their real headquarters models");
+                var startButton=panel.GetComponentsInChildren<RectTransform>().Single(t=>t.name=="START MATCH");
+                Check(startButton.rect.width==504&&startButton.rect.height==80&&startButton.GetComponent<Image>().color==ConsoleTheme.Success,
+                    "Start Match is the large green primary setup action");
                 Click("Position board");
                 Check(quest.Placing&&!quest.StartPending&&!session.Running&&panel.Page==CommandPanel.MenuPage.MatchSetup,
                     "Direct placement stays in setup and does not request a match");
@@ -237,7 +244,11 @@ namespace Frontier.Editor
                 Check(panel.Page==CommandPanel.MenuPage.Settings&&session.IsPaused&&!Field<RectTransform>(panel,"hotkeys").gameObject.activeInHierarchy,"B / Back returns Hotkeys to Settings and hides all reference targets");
                 Click("Back");Check(panel.Page==CommandPanel.MenuPage.Pause&&session.IsPaused,"Settings retains Pause as its caller after visiting Hotkeys");
                 typeof(QuestBridge).GetProperty("Active").SetValue(quest,false);
-                Click("Return to main menu");Check(panel.Page==CommandPanel.MenuPage.LeaveConfirmation&&session.Running,"Leaving an active match asks before losing progress");Capture("08-leave-confirmation");
+                Click("Return to main menu");Check(panel.Page==CommandPanel.MenuPage.LeaveConfirmation&&session.Running,"Leaving an active match asks before losing progress");
+                Check(!Has("Back")&&panel.GetComponentsInChildren<RectTransform>().Single(t=>t.name=="Keep playing").GetComponent<Image>().color==ConsoleTheme.Success
+                    &&panel.GetComponentsInChildren<RectTransform>().Single(t=>t.name=="Leave match").GetComponent<Image>().color==ConsoleTheme.Danger,
+                    "Leave confirmation has only green Keep playing and red Leave match choices");
+                Capture("08-leave-confirmation");
                 Click("Keep playing");Check(session.Match==match&&!session.IsPaused&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Cancel leaving resumes the same match and selection");
                 session.Pause("headset",true);panel.ToggleMenu();Refresh();Click("Resume match");
                 Check(session.IsPaused&&!panel.AcceptsGameInput,"Resume does not clear headset pause");
@@ -271,6 +282,17 @@ namespace Frontier.Editor
                     Refresh();var button=panel.GetComponentsInChildren<RectTransform>().FirstOrDefault(t=>t.gameObject.activeInHierarchy&&t.name==name);
                     if(button==null)throw new Exception("Menu button missing: "+name);
                     var center=button.TransformPoint(button.rect.center);var ray=new Ray(center-button.forward,button.forward);
+                    var miss=new Ray(center+button.right*100-button.forward,button.forward);
+                    // Consecutive clicks can leave the same button hovered; establish its resting colors first.
+                    panel.Point(miss,false,false);
+                    var resting=button.GetComponent<Image>().color;
+                    var ink=button.GetComponentsInChildren<Graphic>(true).Where(g=>g is Text||g is ConsoleGlyph).ToDictionary(g=>g,g=>g.color);
+                    var portraits=button.GetComponentsInChildren<SelectionPortrait>(true).ToDictionary(p=>p,p=>p.color);
+                    panel.Point(ray,false,false);
+                    Check(button.GetComponent<Image>().color==ConsoleTheme.Accent&&ink.Keys.All(g=>g.color==ConsoleTheme.HoverInk)
+                        &&portraits.All(p=>p.Key.color==p.Value),"Accent hover has dark readable ink and preserves model colors: "+name);
+                    panel.Point(miss,false,false);
+                    Check(button.GetComponent<Image>().color==resting&&ink.All(g=>g.Key.color==g.Value),"Leaving hover restores button and label colors: "+name);
                     if(!panel.Point(ray,true,false)||!panel.Point(ray,false,true))throw new Exception("Menu ray did not hit: "+name);
                     FinishCountdown();
                     Refresh();

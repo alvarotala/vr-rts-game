@@ -12,14 +12,14 @@ namespace Frontier.Runtime
         private const float HudWidth=1480,HudInnerWidth=1416,HudBodyTop=188,HudSelectionHeight=236;
         private const float HudPadding=24,HudContentTop=76,HudGap=16,HudTitleSize=20;
         private const float HudActionWidth=328,HudActionHeight=112,HudActionStride=128;
-        // Match the physical height of the preceding HUD with its top logo/Pause row.
+        // Preserve the previous physical window size at its default scale.
         private const float HudWorldScale=1512f/1636f;
         private RectTransform matchHud, resourceStrip, selectedCard, actionCard, groupStrip, matchStrip, harvestingStrip;
         private Text mineralValue, gasValue, supplyValue, supplyHint, selectedKind, selectionRole, selectionHealth, selectionDetails, casterStatus, actionHeading, actionHint, matchClock, matchMap, matchInfo, optionsTitle, selectionFallbackTitle;
         private Image healthBackground, healthFill;
         private SelectionPortrait selectedPortrait;
         private RectTransform orderPlanStrip;
-        private Text orderPlanTitle, orderPlanCount, orderPlanSteps, orderPlanHint;
+        private Text orderPlanTitle, orderPlanCount, orderPlanHint;
         private RectTransform rallyPointStrip;
         private Text rallyPointValue, rallyPointHint;
         private readonly Text[] groupCounts=new Text[GameSession.ControlGroupCount];
@@ -79,10 +79,10 @@ namespace Frontier.Runtime
                 (SelectedMobileUnits().Any(e=>Session.Catalog[e.definition].role=="worker")?"\n\nOptimal: 2 workers per mineral patch · 3 per gas · Automatically assigned to nearby deposits":""));
             HudSectionHelp(productionStrip,"Production help","PRODUCTION",()=>((LocalizedText)productionHint).Source);
             HudSectionHelp(actionCard,"Actions help","OPTIONS",()=>"Hover an action to learn more");
-            orderPlanStrip=Section(matchHud,"Unit order plan",Vector2.zero,new Vector2(HudInnerWidth,132));
+            orderPlanStrip=Section(matchHud,"Unit order plan",Vector2.zero,new Vector2(HudInnerWidth,236));
             orderPlanTitle=HudTitle(orderPlanStrip,"QUEUED ORDERS");
             orderPlanCount=Label(orderPlanStrip,"",new Vector2(350,-HudPadding),new Vector2(970,28),20,ConsoleTheme.Ink,TextAnchor.MiddleRight);
-            orderPlanSteps=Label(orderPlanStrip,"",new Vector2(HudPadding,-HudContentTop),new Vector2(HudInnerWidth-HudPadding*2,32),20,ConsoleTheme.Ink);
+            CreateOrderCards();
             orderPlanHint=Label(orderPlanStrip,"",new Vector2(16,-66),new Vector2(1020,23),14,ConsoleTheme.Muted);orderPlanHint.gameObject.SetActive(false);
             HudSectionHelp(orderPlanStrip,"Orders help","QUEUED ORDERS",()=>((LocalizedText)orderPlanHint).Source);
             rallyPointStrip=Section(matchHud,"Rally point",Vector2.zero,new Vector2(HudInnerWidth,52));FlatHud(rallyPointStrip);
@@ -148,7 +148,7 @@ namespace Frontier.Runtime
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Hotkeys,guide=Page==MenuPage.Guide,reference=IsReferencePage,report=IsReportPage,history=Page==MenuPage.History,replay=Page==MenuPage.Replay;
             bool production=hud&&SelectedProducers().Length>0;
             bool orders=hud&&SelectedMobileUnits().Length>0;
-            float selectionSpace=LayoutSelectionGrid(hud);
+            LayoutSelectionGrid(hud);
             orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
             rallyPointStrip.gameObject.SetActive(false);
@@ -164,19 +164,22 @@ namespace Frontier.Runtime
             status.fontSize=replay?16:hud?18:20;
             if(hud)
             {
-                float selectedHeight=HudSelectionHeight+selectionSpace;
+                float selectedHeight=HudSelectionHeight;
                 TopLeft(selectedCard,new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,selectedHeight));
                 float next=HudBodyTop+selectedHeight+HudGap;
                 float actionHeight=MatchActionsHeight();
                 TopLeft(actionCard,new Vector2(32,-next),new Vector2(HudInnerWidth,HudContentTop+actionHeight+HudPadding));
                 TopLeft(actions,new Vector2(32+HudPadding,-next-HudContentTop),new Vector2(HudInnerWidth-HudPadding*2,actionHeight));
                 next+=actionCard.rect.height+HudGap;
-                if(production){productionStrip.anchoredPosition=new Vector2(32,-next);next+=productionStrip.rect.height+HudGap;}
-                if(orders){orderPlanStrip.anchoredPosition=new Vector2(32,-next);next+=orderPlanStrip.rect.height+HudGap;}
+                // Production and unit orders use the same reserved region. Empty,
+                // resource and mixed selections never move the controls below it.
+                productionStrip.anchoredPosition=orderPlanStrip.anchoredPosition=new Vector2(32,-next);
+                next+=productionStrip.rect.height+HudGap;
                 groupStrip.anchoredPosition=new Vector2(32,-next);next+=groupStrip.rect.height+HudGap;
                 TopLeft(harvestingStrip,new Vector2(32,-next),new Vector2(HudInnerWidth,28));
-                TopLeft(harvesting.rectTransform,new Vector2(48,-next-2),new Vector2(HudInnerWidth-32,24));next+=32;
-                TopLeft(statusBanner,new Vector2(32,-next),new Vector2(HudInnerWidth,48));
+                TopLeft(harvesting.rectTransform,new Vector2(32+HudPadding,-next-2),new Vector2(HudInnerWidth-HudPadding*2,24));next+=32;
+                // Footer text follows the section content inset, without the resource icon offset.
+                TopLeft(statusBanner,new Vector2(32+HudPadding,-next),new Vector2(HudInnerWidth-HudPadding*2,48));
                 next+=48+HudGap;
                 matchStrip.anchoredPosition=new Vector2(32,-next);
                 root.sizeDelta=new Vector2(HudWidth,next+matchStrip.rect.height+32);
@@ -304,23 +307,6 @@ namespace Frontier.Runtime
             else rallyPointValue.text=$"{producers.Count(e=>e.hasRallyPoint)} / {producers.Length} rally points set";
             rallyPointHint.text=Session.CanSetRallyPoint?"A on terrain: set rally point · Newly trained units move to the cyan flag":"Select only production buildings to set rally points · Cyan flag: new-unit destination";
         }
-        private void UpdateOrderPlanHud()
-        {
-            var units=SelectedMobileUnits();if(units.Length==0)return;
-            int count=units.Sum(e=>e.pendingOrders.Length);
-            orderPlanCount.text=count.ToString();
-            var representative=OrderQueueVisuals.Representative(Session);
-            if(representative==null)
-            {
-                orderPlanSteps.text="No queued orders";
-                orderPlanHint.text="Hold right grip + A to append orders · Double A: Attack Move / attack target";
-                return;
-            }
-            orderPlanSteps.text="1. "+PlanOrderLabel(representative.order)+"  →  "+string.Join("  →  ",representative.pendingOrders.Take(3).Select((order,index)=>(index+2)+". "+PlanOrderLabel(order.kind)));
-            if(representative.pendingOrders.Length>3)((LocalizedText)orderPlanSteps).Append($"  →  +{representative.pendingOrders.Length-3} more");
-            orderPlanHint.text=$"Waypoints: {Session.Catalog[representative.definition].name} #{representative.id} · Cyan: Move · Red: Attack · Green: Work";
-            if(representative.pendingOrders.Length>=OrderQueueVisuals.MaximumWaypoints)((LocalizedText)orderPlanHint).Append($" · First {OrderQueueVisuals.MaximumWaypoints} shown");
-        }
         private static string PlanOrderLabel(CommandKind order)
         {
             switch(order){case CommandKind.Move:return "Move";case CommandKind.Attack:return "Attack";case CommandKind.AttackMove:return "Attack Move";case CommandKind.Gather:return "Gather";case CommandKind.Build:return "Build";case CommandKind.Repair:return "Repair";case CommandKind.Hold:return "Hold Position";case CommandKind.Cast:return "Cast";default:return "Stop";}
@@ -357,7 +343,7 @@ namespace Frontier.Runtime
         private void BuildMatchActions()
         {
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
-            BindProductionTargets();BindSelectionTargets();BindHudHelpTargets();
+            BindProductionTargets();BindOrderTargets();BindSelectionTargets();BindHudHelpTargets();
             var available=SelectionActions.For(Session);actionHeading.text=available.Heading;
             actionHint.text="";actionHint.gameObject.SetActive(false);
             // Non-interactive slots remain visible, even when the selection has no commands.

@@ -46,7 +46,7 @@ namespace Frontier.Runtime
         private Vector3 grabOffset;
         private const string PlacementKey="frontier.panel-placement.v1";
         [Serializable] private sealed class PanelPlacement { public int version; public Vector3 offset; }
-        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Color? hoverColor; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; public string hintTitle; public Func<string> hint; }
+        private sealed class Target { public RectTransform rect; public Image image; public Color normal; public Action click, hold; public SelectionAction help; public string selectionType; public string actionId; public Text detail; public string hintTitle; public Func<string> hint; public Dictionary<Graphic,Color> hoverInk; public Graphic hoverExtra; }
         private readonly Color background = ConsoleTheme.Background, button = ConsoleTheme.Card, accent = ConsoleTheme.Accent;
         private void Start()
         {
@@ -56,7 +56,8 @@ namespace Frontier.Runtime
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
             root=go.GetComponent<RectTransform>();root.pivot=Vector2.one*.5f;root.sizeDelta=new Vector2(1100,526);
-            windowScale=Mathf.Clamp(Board.Width/1300f,.00065f,.0012f)*HudWorldScale;
+            baseWindowScale=Mathf.Clamp(Board.Width/1300f,.00065f,.0012f)*HudWorldScale;
+            LoadWindowScales();ApplyWindowScale();
             var image=go.AddComponent<Image>();image.color=background;ConsoleTheme.StyleSurface(image);
             moveHandle=Handle("Move menu",new Vector2(20,-12),new Vector2(810,44),"MOVE MENU · hold Trigger / A and drag",out moveImage);
             resetHandle=Handle("Reset menu",new Vector2(844,-12),new Vector2(236,44),"Reset position",out resetImage);
@@ -68,6 +69,7 @@ namespace Frontier.Runtime
             statusAccent=Section(statusBanner,"Error accent",Vector2.zero,new Vector2(5,48),ErrorTint);
             statusIcon=Label(statusBanner,"!",new Vector2(12,0),new Vector2(24,48),26,ErrorTint,TextAnchor.MiddleCenter);
             statusIcon.fontStyle=FontStyle.Bold;
+            statusAccent.gameObject.SetActive(false);statusIcon.gameObject.SetActive(false);
             status=Label(statusBanner,"",Vector2.zero,new Vector2(1040,48),20,accent);
             actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
             CreateMatchHud();
@@ -95,6 +97,7 @@ namespace Frontier.Runtime
             Session.NewMatch+=OnMatchStarted;Session.MatchClosed+=OnMatchClosed;
             LoadOnlineEndpoint();
             Page=Session.IsReplay?MenuPage.Replay:Session.Running?(Session.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
+            ApplyWindowScale();
             Canvas.willRenderCanvases+=LayoutHudCounters;
             Rebuild();
         }
@@ -116,6 +119,7 @@ namespace Frontier.Runtime
             if(Session.Running&&!Session.IsReplay&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
+            RefreshOrderTargets();
             if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
             if(SectionHelpOpen)UpdateActionHelp();
             UpdateGroupFeedback();
@@ -131,8 +135,8 @@ namespace Frontier.Runtime
                 CancelPointerInteraction();root.gameObject.SetActive(false);return false;
             }
             var eye=Quest.Camera.transform;
-            // One center and scale for every page. Board placement, match transitions
-            // and different content heights never select a different anchor.
+            // Every page shares one center, with its own remembered scale.
+            // Board placement and match transitions never select another anchor.
             if(positionInitialized&&!moving&&Vector3.Distance(windowPosition,eye.position)>WindowRecallDistance)
             {positionInitialized=false;preferredWindowOffset=new Vector3(0,-.12f,1.25f);CancelPointerInteraction();}
             if(!positionInitialized)
@@ -264,13 +268,13 @@ namespace Frontier.Runtime
         }
         private void UpdateStatusStyle(bool error)
         {
-            statusBanner.GetComponent<Image>().color=error?new Color(.23f,.035f,.045f,1):Color.clear;
-            statusAccent.gameObject.SetActive(error);statusIcon.gameObject.SetActive(error);
-            status.fontStyle=error?FontStyle.Bold:FontStyle.Normal;
-            status.fontSize=error?22:Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
-            if(error)status.color=ErrorTint;
-            else if(Page!=MenuPage.Replay)status.color=ConsoleTheme.Muted;
-            TopLeft(status.rectTransform,new Vector2(error?46:0,0),new Vector2(statusBanner.sizeDelta.x-(error?60:0),statusBanner.sizeDelta.y));
+            error|=Page==MenuPage.Replay&&Session.Replay?.Error!=null;
+            statusBanner.GetComponent<Image>().color=Color.clear;
+            statusAccent.gameObject.SetActive(false);statusIcon.gameObject.SetActive(false);
+            status.fontStyle=FontStyle.Normal;
+            status.fontSize=Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
+            status.color=error?ErrorTint:ConsoleTheme.Muted;
+            TopLeft(status.rectTransform,Vector2.zero,statusBanner.sizeDelta);
         }
         private void Add(string label,Action action,Action hold=null,bool primary=false)
         {
@@ -293,9 +297,9 @@ namespace Frontier.Runtime
             // Hide the old controls immediately, including between pointer events in the same frame.
             for(int i=actions.childCount-1;i>=0;i--)
             {var child=actions.GetChild(i).gameObject;child.SetActive(false);if(Application.isPlaying)Destroy(child);else DestroyImmediate(child);}
-            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
+            ApplyTargetHover(hovered,false);
             targets.Clear();pressed=null;hovered=null;actionIndex=0;nextText=0;
-            ClearProductionTargets();
+            ClearProductionTargets();ClearOrderTargets();
             HideActionHelp();
             moveHandle.GetComponentInChildren<Text>(true).text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
             LayoutPage();
@@ -329,6 +333,7 @@ namespace Frontier.Runtime
             if(page==MenuPage.Guide&&Page!=MenuPage.Guide)controlGuidePage=0;
             if(page!=MenuPage.MatchSetup&&page!=MenuPage.OnlineSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
+            ApplyWindowScale();
             lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=0;
             ClearSelectionGesture();
             // Only this menu's pause is released. Tracking and headset pauses stay authoritative.
@@ -386,7 +391,7 @@ namespace Frontier.Runtime
             positionInitialized=false;
         }
         // A shortcut can still recover the shared window if it is out of view.
-        public void Recall(){if(Session.IsCountingDown)return;moving=false;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset in front of you.");}
+        public void Recall(){if(Session.IsCountingDown)return;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset in front of you.");}
         public void CancelPointerInteraction()
         {
             if(moving){moving=false;SavePosition();}
@@ -395,7 +400,7 @@ namespace Frontier.Runtime
             CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
-            if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;
+            ApplyTargetHover(hovered,false);
             hovered=null;
             UpdateProductionHover();
             HideActionHelp();
@@ -413,6 +418,7 @@ namespace Frontier.Runtime
         {
             windowPosition=root.position;positionInitialized=true;
             preferredWindowOffset=Quaternion.Inverse(WindowFacing())*(windowPosition-Quest.Camera.transform.position);
+            SaveWindowScale();
             PlayerPrefs.SetString(PlacementKey,JsonUtility.ToJson(new PanelPlacement{version=2,offset=preferredWindowOffset}));PlayerPrefs.Save();
         }
         private void OnApplicationFocus(bool focused)
@@ -429,7 +435,7 @@ namespace Frontier.Runtime
         private static string ShortFaction(string faction)=>faction=="industrial"?"Consortium":"Symbiosis";
         private string DifficultyLabel=>Session.Difficulty=="hard"?"Hard":Session.Difficulty=="easy"?"Easy":"Normal";
         private string QueueLabel(string id)=>Session.Catalog.Has(id)?Session.Catalog[id].name:Session.Catalog.Upgrade(id)?.name??id;
-        public bool Point(Ray ray,bool down,bool up,float depth=0,bool assignGroup=false)
+        public bool Point(Ray ray,bool down,bool up,float depth=0,bool assignGroup=false,float scale=0)
         {
             if(Session.IsCountingDown&&!Quest.Placing){CancelPointerInteraction();return true;}
             if(root==null||!root.gameObject.activeInHierarchy)return false;
@@ -437,6 +443,7 @@ namespace Frontier.Runtime
             if(moving)
             {
                 UpdateMoveAffordance(true);
+                AdjustWindowScale(scale,Time.unscaledDeltaTime);
                 grabDistance=Mathf.Clamp(grabDistance+depth*Time.unscaledDeltaTime,.4f,3);
                 var position=ray.GetPoint(grabDistance)+grabOffset;
                 position.y=Mathf.Clamp(position.y,.25f,2.5f);
@@ -462,7 +469,7 @@ namespace Frontier.Runtime
             {
                 if(target.rect.gameObject.activeInHierarchy&&Hit(target.rect,ray,out _)){hit=target;break;}
             }
-            if(hovered!=hit){if(hovered!=null&&hovered.image!=null)hovered.image.color=hovered.normal;hovered=hit;HideActionHelp();if(hovered!=null)hovered.image.color=hovered.hoverColor??ConsoleTheme.Focus;}
+            if(hovered!=hit){ApplyTargetHover(hovered,false);hovered=hit;HideActionHelp();ApplyTargetHover(hovered,true);}
             UpdateProductionHover();
             if(PointSelectionGrid(hit,down,up))return true;
             if(down){HideActionHelp();if(hit!=null){pressed=hit;pressedAt=Time.unscaledTime;BeginGroupGesture(hit,assignGroup);}}

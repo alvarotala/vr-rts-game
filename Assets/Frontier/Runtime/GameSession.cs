@@ -312,11 +312,13 @@ namespace Frontier.Runtime
             else sent=Send(CommandKind.Move,position:point,append:append,replaceSequence:replaceSequence);
             return sent?sequence:0;
         }
-        public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0)
+        public bool Send(CommandKind kind,string definition=null,int target=0,Point position=default,int queueOrderId=0,bool append=false,int replaceSequence=0,int unitOrderSequence=0,int[] entityIds=null)
         {
             if (IsReplay || IsCountingDown || !IsOnline && Match == null || IsOnline && !CanIssueOrders) return false;
-            var selected = Selection.OrderBy(id=>id).ToArray();
-            var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence };
+            // A queue card can address one producer or a shared unit order without changing selection.
+            if(entityIds!=null&&(entityIds.Length==0||entityIds.Any(id=>!Selection.Contains(id))))return false;
+            var selected = (entityIds??Selection.ToArray()).Distinct().OrderBy(id=>id).ToArray();
+            var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence,unitOrderSequence=unitOrderSequence };
             if(IsOnline)return SendOnline(command);
             var result = Match.Submit(command);
             if (!result.accepted) Announce(result.message,true);

@@ -46,9 +46,9 @@ namespace Frontier.Editor
                         for(int i=0;i<5;i++)Check(session.Send(CommandKind.Train,type.id),"Queue five "+type.name);
                         Refresh();var orders=producer.queue.ToArray();int minerals=session.View.minerals,supply=session.View.supply;
                         var ray=RayTo("Queue position 3");panel.Point(ray,false,false);
-                        Check(IsRed("Queue position 3")&&Hints()[2].gameObject.activeSelf&&!Hints()[1].gameObject.activeSelf,"Only the hovered duplicate is red and offers cancellation");
-                        Refresh();Check(IsRed("Queue position 3"),"Periodic progress refresh preserves red hover");Capture(faction+"-"+role+"-five");
-                        panel.Point(miss,false,false);Check(!IsRed("Queue position 3")&&Hints().All(t=>!t.gameObject.activeSelf),"Leaving the queue clears all cancel hints");
+                        Check(IsHighlighted("Queue position 3")&&Hints()[2].gameObject.activeSelf&&!Hints()[1].gameObject.activeSelf,"Only the hovered duplicate uses the accent and offers cancellation");
+                        Refresh();Check(IsHighlighted("Queue position 3"),"Periodic progress refresh preserves the accent hover");Capture(faction+"-"+role+"-five");
+                        panel.Point(miss,false,false);Check(!IsHighlighted("Queue position 3")&&Hints().All(t=>!t.gameObject.activeSelf),"Leaving the queue clears all cancel hints");
                         Click("Queue position 3",true);
                         Check(producer.queue.Select(q=>q.id).SequenceEqual(orders.Where((q,i)=>i!=2).Select(q=>q.id)),"A cancels the chosen middle duplicate only");
                         Check(session.View.minerals==minerals+type.minerals&&session.View.supply==supply-1&&panel.Page==CommandPanel.MenuPage.Actions,"One click refunds and releases supply without a confirmation page");
@@ -56,7 +56,7 @@ namespace Frontier.Editor
                         Click("Current production",false);Check(producer.queue[0].id==orders[1].id&&producer.queue.Count==3,"Trigger cancels the active item");
                         Click("Queue position 3",false);Check(producer.queue.Count==2&&producer.queue.Last().id==orders[3].id,"Clicking the last occupied card cancels that item");
                         minerals=session.View.minerals;ray=RayTo("Queue position 5");panel.Point(ray,false,false);Click("Queue position 5",true);
-                        Check(producer.queue.Count==2&&session.View.minerals==minerals&&!IsRed("Queue position 5"),"Empty slots have no red hover or cancellation");
+                        Check(producer.queue.Count==2&&session.View.minerals==minerals&&!IsHighlighted("Queue position 5"),"Empty slots have no accent hover or cancellation");
                         // Same length, different identities: no stale click on the new active item.
                         ray=RayTo("Current production");Frame(ray,true,false,true);
                         producer.queue[0].remaining=1;session.Match.Step();session.Send(CommandKind.Train,type.id);Refresh();
@@ -73,7 +73,7 @@ namespace Frontier.Editor
                         producer.queue[0].remaining=0;Refresh();panel.Point(RayTo("Current production"),false,false);Capture(faction+"-"+role+"-active-hover");
                         Click("Current production",true);Check(producer.queue.Count==0,"Ready-to-deploy item cancels directly");
                         minerals=session.View.minerals;Click("Current production",false);
-                        Check(producer.queue.Count==0&&session.View.minerals==minerals&&!IsRed("Current production"),"Idle production card is inert");
+                        Check(producer.queue.Count==0&&session.View.minerals==minerals&&!IsHighlighted("Current production"),"Idle production card is inert");
                     }
                     session.Select(tech.id,false);
                     session.Send(CommandKind.Research,"attack");session.Send(CommandKind.Train,session.Catalog.Role(faction,"siege").id);session.Send(CommandKind.Research,"armor");Refresh();
@@ -86,7 +86,16 @@ namespace Frontier.Editor
                     var heldRay=RayTo("Current production");Frame(heldRay,true,false,true);session.Select(hq.id,false);Refresh();Frame(RayTo("Current production"),false,true,true);
                     Check(tech.queue.Count==1&&hq.queue.Count==0,"Selection change cannot redirect a held cancellation");
                     session.Select(tech.id,false);Refresh();panel.Point(RayTo("Current production"),false,false);panel.CancelPointerInteraction();
-                    Check(Hints().All(t=>!t.gameObject.activeSelf)&&!IsRed("Current production"),"Pointer cancellation restores card color");
+                    Check(Hints().All(t=>!t.gameObject.activeSelf)&&!IsHighlighted("Current production"),"Pointer cancellation restores card color");
+                    session.Select(hq.id,false);var workerType=session.Catalog.Role(faction,"worker");
+                    session.Send(CommandKind.Train,workerType.id);session.Send(CommandKind.Train,workerType.id);session.Select(tech.id,true);Refresh();
+                    var groupIds=session.Selection.OrderBy(id=>id).ToArray();int techCount=tech.queue.Count;
+                    money=session.View.minerals;int nextHq=hq.queue[1].id;
+                    Click("Current production",false);
+                    Check(hq.queue.Count==1&&hq.queue[0].id==nextHq&&tech.queue.Count==techCount&&session.View.minerals==money+workerType.minerals
+                        &&session.Selection.OrderBy(id=>id).SequenceEqual(groupIds),"Current group production cancels and refunds only its exact producer without changing selection");
+                    Click("Queue position 2",true);
+                    Check(tech.queue.Count==0&&hq.queue.Count==1,"A second building's current production can also be cancelled directly from its group card");
                     session.LeaveMatch();Refresh();Check(Hints().All(t=>!t.gameObject.activeInHierarchy),"Leaving match clears cancellation UI");
 
                     EntityState Add(string role,int id)
@@ -105,7 +114,7 @@ namespace Frontier.Editor
                 }
                 RectTransform Card(string name)=>panel.GetComponentsInChildren<RectTransform>().First(t=>t.name==name&&t.gameObject.activeInHierarchy);
                 Ray RayTo(string name){var r=Card(name);return new Ray(r.TransformPoint(r.rect.center)-r.forward,r.forward);}
-                bool IsRed(string name){var c=Card(name).GetComponent<Image>().color;return c.r>.6f&&c.g<.15f;}
+                bool IsHighlighted(string name)=>Card(name).GetComponent<Image>().color==ConsoleTheme.Accent;
                 RectTransform[] Hints()=>Field<RectTransform[]>(panel,"cancelHints");
                 void Frame(Ray ray,bool down,bool up,bool a)
                 {Check((bool)typeof(CommanderInput).GetMethod("RoutePanel",Private).Invoke(input,new object[]{ray,!a&&down,!a&&up,!a&&down,a&&down,a&&up,a&&down,0f}),"Queue input consumed by console");}

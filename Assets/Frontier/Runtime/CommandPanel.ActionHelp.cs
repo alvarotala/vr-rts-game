@@ -69,10 +69,11 @@ namespace Frontier.Runtime
         {
             bool wasOpen=SectionHelpOpen;
             sectionHelpTarget=null;sectionHelpClosePressed=false;
+            ApplyTargetHover(sectionHelpClose,false);
             if(sectionHelpBackdrop!=null)sectionHelpBackdrop.gameObject.SetActive(false);
             if(sectionHelpClose!=null&&sectionHelpClose.rect!=null)sectionHelpClose.rect.gameObject.SetActive(false);
             if(!wasOpen)return;
-            if(hovered?.image!=null)hovered.image.color=hovered.normal;
+            ApplyTargetHover(hovered,false);
             hovered=null;pressed=null;HideActionHelp();
         }
         private bool PointSectionHelp(Ray ray,bool down,bool up)
@@ -81,7 +82,7 @@ namespace Frontier.Runtime
             UpdateActionHelp();
             if(!SectionHelpOpen)return true;
             bool close=Hit(sectionHelpClose.rect,ray,out _),outside=!Hit(actionHelp,ray,out _);
-            sectionHelpClose.image.color=close?ConsoleTheme.Focus:sectionHelpClose.normal;
+            ApplyTargetHover(sectionHelpClose,close);
             if(down)sectionHelpClosePressed=close||outside;
             if(up)
             {
@@ -135,9 +136,9 @@ namespace Frontier.Runtime
             {
                 case "SELECTION":return "Each card groups the selected units or buildings of one type. Its number shows how many are selected; the bar shows their combined health. Damaged units, unfinished buildings and casters also show health, construction progress or energy.";
                 case "OPTIONS":return "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. Mixed units and buildings leave this area empty. Pale slots are not buttons; point at a command for its cost and requirements.";
-                case "PRODUCTION":return "The wide green card is the first active order. The other cards show active work from additional selected buildings, then waiting orders. Progress and time follow the match. Select one building to cancel a specific card and recover its cost; the other orders keep their place.";
+                case "PRODUCTION":return "The wide green card is the first active order. Other green borders mark work in progress in additional buildings. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.";
                 case "CONTROL GROUPS":return "Groups remember your selected units and buildings. Trigger recalls a group. Hold Grip before pressing Trigger to replace it with your current selection; on desktop, use Ctrl + click. Release over the same group to confirm. A flash and controller vibration confirm assignment. Assigning with no selection clears the group.";
-                case "QUEUED ORDERS":return "This row shows what selected mobile units will do after their current order. Add waypoints with the queue modifier to plan a route or a sequence of tasks. Attack Move engages enemies along the route; Stop clears current movement and queued orders.";
+                case "QUEUED ORDERS":return "Read the grid from left to right, then the second row. The green first card is the current action. Empty spaces remain available for new orders; the last card always cancels the entire plan.";
                 default:return "Read these controls, then close this window to return to your selection. The match continues while this guide is open.";
             }
         }

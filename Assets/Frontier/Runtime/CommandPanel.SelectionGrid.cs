@@ -8,7 +8,7 @@ namespace Frontier.Runtime
 {
     public sealed partial class CommandPanel
     {
-        private const int SelectionPageSize=20,SelectionColumns=6;
+        private const int SelectionPageSize=14,SelectionColumns=6,CompactSelectionColumns=7;
         private RectTransform selectionGrid;
         private Text selectionGridTitle,selectionGridHint,selectionPageLabel;
         private readonly Target[] selectionTiles=new Target[SelectionPageSize];
@@ -18,7 +18,7 @@ namespace Frontier.Runtime
         private readonly Image[] selectionHealthBars=new Image[SelectionPageSize];
         private readonly RectTransform[] selectionHealthTracks=new RectTransform[SelectionPageSize];
         private Target previousSelectionPage,nextSelectionPage;
-        private int selectionPage;
+        private int selectionPage,selectionLayoutColumns=SelectionColumns;
         private int[] gestureSelection=Array.Empty<int>();
         private object selectionGestureMatch;
         private bool selectionRemove;
@@ -60,20 +60,22 @@ namespace Frontier.Runtime
             selectionGridHint=Label(selectionGrid,"",new Vector2(16,-140),new Vector2(1020,26),15,ConsoleTheme.Muted);
             selectionGridHint.gameObject.SetActive(false);
         }
-        private float LayoutSelectionGrid(bool hud)
+        private void LayoutSelectionGrid(bool hud)
         {
             var members=SelectionMembers();
             string roster=string.Join(",",members.Select(e=>e.id));
             if(roster!=selectionRoster){selectionRoster=roster;selectionPage=0;ClearSelectionGesture();}
-            bool show=hud&&members.Length>0;selectionGrid.gameObject.SetActive(show);if(!show)return 0;
+            bool show=hud&&members.Length>0;selectionGrid.gameObject.SetActive(show);if(!show)return;
             var groups=members.GroupBy(e=>e.definition).ToArray();
             int pages=(groups.Length+SelectionPageSize-1)/SelectionPageSize;
             selectionPage=Mathf.Clamp(selectionPage,0,pages-1);
             int count=Mathf.Min(SelectionPageSize,groups.Length-selectionPage*SelectionPageSize);
-            int rows=(count+SelectionColumns-1)/SelectionColumns;
-            float width=HudInnerWidth-HudPadding*2,tileWidth=(width-(SelectionColumns-1)*HudGap)/SelectionColumns,rowStride=136+HudGap;
+            bool compact=groups.Length>SelectionColumns;
+            selectionLayoutColumns=compact?CompactSelectionColumns:SelectionColumns;
+            float tileHeight=compact?60:136,width=HudInnerWidth-HudPadding*2;
+            float tileWidth=(width-(selectionLayoutColumns-1)*HudGap)/selectionLayoutColumns,rowStride=tileHeight+HudGap;
             selectionGrid.SetParent(selectedCard,false);
-            TopLeft(selectionGrid,new Vector2(HudPadding,-HudContentTop),new Vector2(width,136+(rows-1)*rowStride));
+            TopLeft(selectionGrid,new Vector2(HudPadding,-HudContentTop),new Vector2(width,136));
             TopLeft(previousSelectionPage.rect,new Vector2(1016-HudPadding,HudContentTop-20),new Vector2(56,36));
             TopLeft(selectionPageLabel.rectTransform,new Vector2(1080-HudPadding,HudContentTop-24),new Vector2(80,28));
             TopLeft(nextSelectionPage.rect,new Vector2(1168-HudPadding,HudContentTop-20),new Vector2(56,36));
@@ -86,12 +88,29 @@ namespace Frontier.Runtime
             {
                 var target=selectionTiles[i];target.rect.gameObject.SetActive(i<count);target.selectionType=null;
                 if(i>=count)continue;
-                TopLeft(target.rect,new Vector2((i%SelectionColumns)*(tileWidth+HudGap),-(i/SelectionColumns)*rowStride),new Vector2(tileWidth,136));
+                TopLeft(target.rect,new Vector2((i%selectionLayoutColumns)*(tileWidth+HudGap),-(i/selectionLayoutColumns)*rowStride),new Vector2(tileWidth,tileHeight));
+                LayoutSelectionTile(i,tileWidth,compact);
                 var group=groups[selectionPage*SelectionPageSize+i];var type=Session.Catalog[group.Key];
                 target.selectionType=group.Key;target.rect.name="Selection type "+group.Key;target.image.color=target.normal;
                 selectionNames[i].text=type.name;selectionPortraits[i].SetType(type);
             }
-            UpdateSelectionGrid();return (rows-1)*rowStride;
+            UpdateSelectionGrid();
+        }
+        private void LayoutSelectionTile(int index,float width,bool compact)
+        {
+            TopLeft(selectionPortraits[index].rectTransform,compact?new Vector2(8,-6):new Vector2(16,-44),compact?new Vector2(32,32):new Vector2(48,48));
+            var name=selectionNames[index];name.fontSize=compact?16:20;
+            TopLeft(name.rectTransform,compact?new Vector2(48,-18):new Vector2(76,-38),compact?new Vector2(width-56,38):new Vector2(width-92,60));
+            var count=selectionCounts[index];count.fontSize=compact?16:20;count.alignment=compact?TextAnchor.MiddleLeft:TextAnchor.MiddleRight;
+            var countSize=compact?new Vector2(36,20):new Vector2(54,26);
+            TopLeft((RectTransform)count.transform.parent,compact?new Vector2(8,-38):new Vector2(width-70,-10),countSize);
+            TopLeft(count.rectTransform,Vector2.zero,countSize);
+            var energy=selectionEnergy[index];energy.fontSize=compact?16:18;energy.resizeTextMinSize=compact?14:16;energy.resizeTextMaxSize=compact?16:18;
+            TopLeft(energy.rectTransform,compact?new Vector2(48,0):new Vector2(16,-10),compact?new Vector2(width-56,18):new Vector2(Mathf.Min(130,width-102),26));
+            var healthPosition=compact?new Vector2(48,-58):new Vector2(16,-116);
+            var healthSize=compact?new Vector2(width-56,2):new Vector2(width-32,4);
+            TopLeft(selectionHealthTracks[index],healthPosition,healthSize);
+            TopLeft(selectionHealthBars[index].rectTransform,healthPosition,healthSize);
         }
         private void BindSelectionTargets()
         {
@@ -114,7 +133,7 @@ namespace Frontier.Runtime
                 float health=group.Sum(e=>e.health),maximum=type.health*group.Length;
                 float ratio=maximum>0?Mathf.Clamp01(health/maximum):0;
                 selectionCounts[i].text="×"+group.Length;
-                selectionHealthBars[i].rectTransform.sizeDelta=new Vector2(selectionHealthTracks[i].rect.width*ratio,4);
+                selectionHealthBars[i].rectTransform.sizeDelta=new Vector2(selectionHealthTracks[i].rect.width*ratio,selectionHealthTracks[i].rect.height);
                 selectionHealthBars[i].color=ratio<.3f?new Color(1,.3f,.2f):SupplyTint;
                 var stat=selectionEnergy[i];stat.text="";
                 if(type.energyMax>0)
@@ -150,7 +169,7 @@ namespace Frontier.Runtime
                 var tile=selectionTiles[i];if(tile.selectionType==null)continue;
                 bool active=hovered==tile;
                 bool removing=pressed==tile?selectionRemove:RemoveSelectionTypeHeld;
-                tile.image.color=active?(removing?QueueCancelTint:ConsoleTheme.Primary):button;
+                ApplyTargetHover(tile,active);
                 if(active)hint=Session.Catalog[tile.selectionType].name+" "+selectionCounts[i].text+" · "+(removing?"Remove this type from selection":hint);
             }
             selectionGridHint.text=hint;

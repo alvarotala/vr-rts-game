@@ -178,7 +178,8 @@ namespace Frontier.Editor
                         &&Mathf.Abs(parentBounds.yMax-bounds.yMax-HudMetric("HudContentTop"))<.01f
                         &&bounds.yMin-parentBounds.yMin>=padding-.01f,
                         "Selection cards use the same inset and header clearance as the other sections");
-                    int columns=(int)HudMetric("SelectionColumns");var cards=Cards();
+                    int columns=Field<int>(panel,"selectionLayoutColumns");var cards=Cards();
+                    Check(grid.rect.height==136&&columns==(cards.Length>6?7:6),"Selection stays within one fixed region, using two compact rows only for more than six types");
                     float width=(grid.rect.width-(columns-1)*gap)/columns;
                     for(int i=0;i<cards.Length;i++)
                     {

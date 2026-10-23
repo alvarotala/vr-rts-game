@@ -15,6 +15,14 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--queues-only"))
+{
+    CommandQueueChecks.Run(catalog,Check);
+    GroupProductionChecks.Run(catalog,map,Check);
+    MatchRecordingChecks.Run(catalog,map,Check);
+    Console.WriteLine($"{checks} queue, production and recording checks passed.");
+    return;
+}
 if(args.Contains("--maps-only"))
 {
     ResourceLayoutChecks.Run(catalog,new[]{map,training},Check);

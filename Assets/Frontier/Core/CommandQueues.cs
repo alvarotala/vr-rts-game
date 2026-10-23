@@ -6,7 +6,8 @@ namespace Frontier.Core
 {
     public sealed partial class Simulation
     {
-        public const int UnitOrderLimit = 32;
+        // Current action plus pending actions; the HUD reserves its twelfth slot for Clear all.
+        public const int UnitOrderLimit = 11;
 
         private static bool IsUnitAction(CommandKind kind) => kind == CommandKind.Move || kind == CommandKind.AttackMove
             || kind == CommandKind.Attack || kind == CommandKind.Gather || kind == CommandKind.Repair || kind == CommandKind.Build;
@@ -117,9 +118,9 @@ namespace Frontier.Core
             if (!validation.accepted) return validation;
             // Construction uses one builder, like the immediate Build command.
             if (command.kind == CommandKind.Build) selected = new List<EntityState> { selected[0] };
-            if (command.append && selected.Any(e => e.pendingOrders.Count >= UnitOrderLimit
+            if (command.append && selected.Any(e => e.pendingOrders.Count >= UnitOrderLimit - 1
                 && !(command.replacePendingSequence > 0 && (e.activeOrderSequence == command.replacePendingSequence || e.pendingOrders.Any(q => q.sourceSequence == command.replacePendingSequence)))))
-                return Reject("Unit action queue full (32).");
+                return Reject("Unit action queue full (11 including current).");
             List<(EntityState unit, UnitOrder order, List<int> path)> plan;
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
             {
@@ -157,6 +158,24 @@ namespace Frontier.Core
                 else { unit.pendingOrders.Add(item.order); accepted++; }
             }
             return accepted > 0 ? Accept() : Reject("The action is no longer available.");
+        }
+
+        private CommandResult CancelUnitOrder(GameCommand command, List<EntityState> selected)
+        {
+            if (selected.Any(e => !e.complete || Type(e).building || e.health <= 0)) return Reject("Select completed units.");
+            int cancelled = 0;
+            foreach (var unit in selected)
+            {
+                int index = unit.pendingOrders.FindIndex(q => q.sourceSequence == command.unitOrderSequence);
+                if (index >= 0) { unit.pendingOrders.RemoveAt(index); cancelled++; continue; }
+                if (unit.order == CommandKind.Stop || unit.activeOrderSequence != command.unitOrderSequence) continue;
+                // Stop only this action, preserving the FIFO and clearing casting/travel state.
+                ExecuteCommand(new GameCommand { kind = CommandKind.Stop, player = unit.owner, sequence = command.sequence },
+                    new List<EntityState> { unit }, true);
+                AdvanceUnitOrders(unit);
+                cancelled++;
+            }
+            return cancelled > 0 ? Accept() : Reject("Unit order no longer available.");
         }
 
         private CommandResult ActivateUnitOrder(EntityState unit, UnitOrder order)

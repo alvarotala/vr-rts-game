@@ -8,7 +8,7 @@ Al inclinar el joystick desde el centro se entra directamente en Groups (arriba)
 
 Los botones de navegación del menú permanecen fijos: gatillo/A y B en el mando derecho, gatillo/X y Y en el izquierdo, clic izquierdo y Escape en desktop. En la rueda solo gatillo confirma y B/Y vuelve; A/X y grip no navegan. Fuera de Groups, el clic de stick muestra u oculta todos los hints y se edita como **Show / hide hints**; admite clic de stick, A/X o grip. Los remaps anteriores conservan su botón, ahora para alternar la ayuda. Asignar grupos usa el stick físico dentro de Groups: arriba → elegir grupo → pulsar stick. Los modificadores aceptan Shift, Ctrl o Alt de ambos lados. Arrastre, mantener/soltar y doble pulsación siguen al botón de su función; los ejes del joystick y la rueda del mouse no se reasignan. El tablero confirmado permanece fijo. Contrato técnico: [arquitectura](architecture.md).
 
-Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa. En las tarjetas del panel, **Grip + Trigger** (desktop: **Shift + clic**) quita el tipo completo sin espera. Guardar desde un botón de grupo requiere más de **0,65 s**, y la descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
+Dobles pulsaciones: hasta **0,35 s** entre pulsaciones. Para doble orden contextual, conservar objetivo o apuntar a un punto cercano (hasta 1,5 celdas). Quitar con pulsación mantenida requiere **0,5 s** en el mapa. En las tarjetas del panel, **Grip + Trigger** (desktop: **Shift + clic**) quita el tipo completo sin espera. En los botones de grupos, **gatillo** recupera y **Grip + gatillo** asigna al soltar; en escritorio, **Ctrl + clic** asigna. La descripción de acciones aparece tras **1,5 s** de hover. La captura de una nueva entrada se cancela después de **12 s**, con **Cancel change** o Escape. Las pruebas de Editor no verifican comodidad ni pulsaciones físicas en Quest.
 
 La tabla muestra los valores del mando derecho; para el izquierdo, A/B pasan a X/Y y se usa el stick izquierdo. Se genera desde `DefaultControlCatalog` mediante `MenuFlowPreview.Render`.
 
@@ -37,7 +37,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 |---|---|---|
 | Move | A on terrain | Selected units move to that location using their movement and collision rules. |
 | Attack a target | A on a visible enemy | Focus attacks on that enemy. Double A over an enemy also attacks directly. |
-| Attack Move | Double A / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
+| Attack Move | Double A / Attack Move action | Double A issues at the cursor immediately. Menu action: choose a destination. |
 | Gather resources | Worker selected · A on minerals / gas | Assign workers automatically among nearby deposits. Gas needs a completed extractor. |
 | Repair / resume construction | Worker · A on damaged ally / construction | Both factions: repair allies with minerals or resume construction. Keep a worker on site. |
 | Queue orders | Grip + A / double A | Append movement, work or attack orders. Without Grip, a new order replaces the plan. |
@@ -53,7 +53,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Execute an action | Trigger in the wheel | Selection stays open: press Trigger again to repeat or choose another action. Release the stick to hide. |
 | Back in the wheel | B / Back sector | B returns or closes root. Down: Quick select at root, idle workers there, group 3 in Groups, Back in actions. |
 | Use menu buttons | Trigger / A | Press and release on the same button. Empty menu areas never send orders through to the map. |
-| Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
+| Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
@@ -65,8 +65,8 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Choose a group | 1 up · 2 right · 3 down · 4 left | Tilt to choose. Trigger recalls; Stick click assigns your selection. |
 | Confirm recall | Trigger on a group | Recall the group's surviving members. Empty groups show an empty message. |
 | Replace a group | Wheel up > group > Stick click | Press the stick to replace this group with your selection. No hold or release needed. |
-| Cancel group choice | B | Return to the root without recalling or saving. Centering for 0.8 s closes the wheel. |
-| Save from the panel | Hold a Group button (over 0.65 s) | Replace that group's members with your current selection. Tap instead to recall it. |
+| Cancel group choice | B | Return to the root without recalling or saving. Centering for 0.4 s closes the wheel. |
+| Save from the panel | Grip + Trigger on a Group button | Hold the modifier before pressing, then release over the same group to assign your selection. A plain click recalls the group. |
 | Group lifetime | Applies to all four groups | Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups. |
 
 ### Production
@@ -76,19 +76,18 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Build a structure | Worker > Selection > choose a building | Choose a valid foundation with Trigger / A. Keep a worker on site until complete. B cancels placement. |
 | Train a unit | Production building > Train | Spend resources and reserve supply to add a unit to the building's production queue. |
 | Research an upgrade | Technology building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
-| Cancel one queued item | Trigger / A on its production card | The card turns red on hover. Cancel immediately and refund its cost; other items keep their order. |
-| Cancel / refund | Cancel / refund on the main panel | Remove the last queued item, or cancel unfinished construction with a partial refund. |
+| Cancel one queued item | Trigger / A on its production card | The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order. |
 | Set a Rally Point | Select producer(s) · A on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
-| Clear a Rally Point | Clear Rally Point action | Restore default exits. New workers auto-gather again; production stays queued. |
 | Read action details | Hover over an action for 1.5 s | See what the unit, building or upgrade does, along with its cost, timing and requirements. |
 
 ### Board
 
 | Command | Default input / menu action | Context |
 |---|---|---|
-| Move the menu | Hold Trigger / A on MOVE MENU + drag | Place the menu wherever it is comfortable. This does not move the battlefield. |
+| Move window | Hold Trigger / A on the bar below the window | Move your hand to reposition the shared window center. Release to place it. |
 | Adjust menu distance | Right stick up / down while dragging menu | Bring the grabbed menu closer or move it farther away. |
-| Recover the menu | Reset position button | Before a match: bring the menu in front of you. During a match: reset above the board. |
+| Resize window | Right stick left / right while dragging menu | Each window remembers its own size. Other windows keep their sizes and the same center. |
+| Recover the menu | Automatic when out of reach | A distant window returns in front of you after tracking recovery. |
 | Reposition the board | Settings > Play space > Reposition board | Enter placement. The confirmed battlefield stays fixed while you walk around it. |
 | Place the board | Point at a surface + A | A confirms. The controller shows placement hints; Stick click hides or shows them. |
 | Placement size / rotation | Grip / Trigger · Right stick left / right | Hold Grip to shrink or Trigger to enlarge. Stick left / right rotates. These controls only adjust the board during placement. |
@@ -116,7 +115,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 |---|---|---|
 | Move | Right mouse on terrain | Selected units move to that location using their movement and collision rules. |
 | Attack a target | Right mouse on a visible enemy | Focus attacks on that enemy. Double Right mouse over an enemy also attacks directly. |
-| Attack Move | Double Right mouse / Attack Move action | Move toward the point and attack enemies along the way. The action button needs a destination. |
+| Attack Move | Double Right mouse / Attack Move action | Double Right mouse issues at the cursor immediately. Menu action: choose a destination. |
 | Gather resources | Worker selected · Right mouse on minerals / gas | Assign workers automatically among nearby deposits. Gas needs a completed extractor. |
 | Repair / resume construction | Worker · Right mouse on damaged ally / construction | Both factions: repair allies with minerals or resume construction. Keep a worker on site. |
 | Queue orders | Shift + Right mouse / double Right mouse | Append movement, work or attack orders. Without Shift, a new order replaces the plan. |
@@ -132,7 +131,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Execute an action | Left-click the action | Execute the highlighted action. Building and Attack Move then need a point on the map. |
 | Cancel a pending action | Escape | Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus. |
 | Use menu buttons | Left-click | Press and release on the same button. Empty menu areas never send orders through to the map. |
-| Pause / resume | Escape / Space / Pause button | Cancel an armed action first, or pause. Menus: B / Escape goes back; Resume continues the match. |
+| Pause / resume | Escape / Space / Pause button | Cancel an armed action first, or pause. Menus: Escape goes back; Resume continues the match. |
 | Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
@@ -145,7 +144,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Confirm recall | Tap a Group button | Recall the group's surviving members. Empty groups show an empty message. |
 | Replace a group | Ctrl + 1 / 2 / 3 / 4 | Replace ALL previous members with your current selection. This does not merge selections. |
 | Cancel group choice | Release mouse outside the Group button | A button press released outside its target does not recall or replace a group. |
-| Save from the panel | Hold a Group button (over 0.65 s) | Replace that group's members with your current selection. Tap instead to recall it. |
+| Save from the panel | Ctrl + click on a Group button | Hold the modifier before pressing, then release over the same group to assign your selection. A plain click recalls the group. |
 | Group lifetime | Applies to all four groups | Only your units and buildings can belong to groups. Dead members drop out; a new match clears groups. |
 
 ### Production
@@ -155,10 +154,8 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Build a structure | Worker > Build > choose a building | Choose a valid foundation with Left mouse / Right mouse. Keep a worker on site until complete. Escape cancels placement. |
 | Train a unit | Production building > Train | Spend resources and reserve supply to add a unit to the building's production queue. |
 | Research an upgrade | Technology building > Research | Queue a faction-wide attack or armor upgrade. Requirements and costs appear in the action help. |
-| Cancel one queued item | Left-click on its production card | The card turns red on hover. Cancel immediately and refund its cost; other items keep their order. |
-| Cancel / refund | Cancel / refund on the main panel | Remove the last queued item, or cancel unfinished construction with a partial refund. |
+| Cancel one queued item | Left-click on its production card | The highlighted card shows Cancel + refund. Cancel immediately and refund its cost; other items keep their order. |
 | Set a Rally Point | Select producer(s) · Right mouse on terrain | Newly trained units move to the cyan flag. Existing units keep their orders; workers move, not gather. |
-| Clear a Rally Point | Clear Rally Point action | Restore default exits. New workers auto-gather again; production stays queued. |
 | Read action details | Hover over an action for 1.5 s | See what the unit, building or upgrade does, along with its cost, timing and requirements. |
 
 ### Board
@@ -167,9 +164,9 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 |---|---|---|
 | Pan the map | W / A / S / D | Move the desktop development view across the battlefield. |
 | Zoom the map | Mouse wheel | Change the desktop map scale. Quest keeps the placed board fixed. |
-| See the full map | F / Full map button | Reset the desktop view to show the whole battlefield. |
-| Recover the menu | M / Reset position | Return the menu above the board. |
-| Move the menu | Drag MOVE MENU with left mouse button | Move the console without changing the board position. |
+| See the full map | F | Reset the desktop view to show the whole battlefield. |
+| Recover the menu | M | Return the shared window in front of you. |
+| Move window | Hold left mouse on the bar below the window | Move the console without changing the board position. |
 | Adjust menu distance | Mouse wheel while dragging menu | Bring the grabbed console closer or move it farther away. |
 | Place or reposition the board | Settings > Play space > Reposition board | Point and left-click to confirm. Adjust height directly during placement. |
 | Placement height | Page Up raise / Page Down lower | Tap for 2.5 cm; hold to keep adjusting while placing the board. |

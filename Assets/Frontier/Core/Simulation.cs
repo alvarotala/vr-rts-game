@@ -70,7 +70,7 @@ namespace Frontier.Core
         private CommandResult SubmitCommand(GameCommand command)
         {
             if (command == null || command.player < 0 || command.player > 1) return Reject("Invalid player.");
-            if (command.replacePendingSequence < 0) return Reject("Invalid action sequence.");
+            if (command.replacePendingSequence < 0 || command.unitOrderSequence < 0) return Reject("Invalid action sequence.");
             if (Winner != -1 || Paused) return Reject("The match is not active.");
             if (command.sequence > 0 && command.sequence <= lastSequences[command.player]) return Reject("Duplicate command.");
             if (command.sequence > 0) lastSequences[command.player] = command.sequence;
@@ -90,6 +90,7 @@ namespace Frontier.Core
         private CommandResult ExecuteCommand(GameCommand command, List<EntityState> selected, bool preserveQueue)
         {
             EntityState first = selected[0];
+            if (command.kind == CommandKind.CancelUnitOrder) return CancelUnitOrder(command, selected);
             if (command.kind == CommandKind.Cast) return BeginCast(command, selected);
             if (command.kind == CommandKind.Build)
             {

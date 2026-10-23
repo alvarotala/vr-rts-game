@@ -23,11 +23,14 @@ namespace Frontier.Editor
         {
             const string key="frontier.panel-placement.v1",output="TestResults/StartupMenu";
             bool had=PlayerPrefs.HasKey(key);string saved=PlayerPrefs.GetString(key,"");
+            var scaleKeys=Enum.GetValues(typeof(CommandPanel.MenuPage)).Cast<CommandPanel.MenuPage>().Select(page=>"frontier.panel-scale.v1."+page).ToArray();
+            var savedScales=scaleKeys.ToDictionary(scaleKey=>scaleKey,scaleKey=>(exists:PlayerPrefs.HasKey(scaleKey),value:PlayerPrefs.GetFloat(scaleKey)));
             var preview=new PreviewRenderUtility();var fixture=new GameObject("Startup menu fixture");
             GameObject console=null;Camera createdCamera=null;int checks=0,captures=0;
             try
             {
                 Directory.CreateDirectory(output);
+                foreach(string scaleKey in scaleKeys)PlayerPrefs.DeleteKey(scaleKey);
                 const string legacyProfile="{\"offset\":{\"x\":0.45,\"y\":0.9,\"z\":-0.6}}";
                 PlayerPrefs.SetString(key,legacyProfile);
                 var session=fixture.AddComponent<GameSession>();if(session.Catalog==null)Call(session,"Awake");session.LoadMap("training");
@@ -230,7 +233,9 @@ namespace Frontier.Editor
             {
                 if(console!=null)Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);
                 if(createdCamera!=null)Object.DestroyImmediate(createdCamera.gameObject);preview.Cleanup();
-                if(had)PlayerPrefs.SetString(key,saved);else PlayerPrefs.DeleteKey(key);PlayerPrefs.Save();
+                if(had)PlayerPrefs.SetString(key,saved);else PlayerPrefs.DeleteKey(key);
+                foreach(var item in savedScales){if(item.Value.exists)PlayerPrefs.SetFloat(item.Key,item.Value.value);else PlayerPrefs.DeleteKey(item.Key);}
+                PlayerPrefs.Save();
             }
         }
 

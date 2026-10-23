@@ -231,6 +231,10 @@ namespace Frontier.Editor
                         target+": Close has a distinct button fill against the dialog");
                     Capture("industrial-section-help-"+title.ToLowerInvariant().Replace(' ','-'));
                     var closeRay=RayTo("Close help");
+                    panel.Point(closeRay,false,false);
+                    Check(Button("Close help").GetComponent<Image>().color==ConsoleTheme.Accent
+                        &&Button("Close help").GetComponentsInChildren<Text>().All(t=>t.color==ConsoleTheme.HoverInk),
+                        target+": modal Close uses the same readable accent hover as all other buttons");
                     Check(Frame(closeRay,aDown:true,aHeld:true)&&Frame(closeRay,aUp:true)&&!panel.SectionHelpOpen&&!HelpVisible()&&!session.IsPaused,
                         target+": Close returns to the match without pausing it");
                     ray=RayTo(target);
@@ -309,8 +313,8 @@ namespace Frontier.Editor
                     Check(panel.ContainsPointer(ray)&&panel.Point(ray,false,false),
                         "Move handle: a first hover outside the panel body is captured by the panel");
                     Check(affordance.rect.width>idleSize.x&&affordance.rect.height>idleSize.y
-                        &&caption.gameObject.activeInHierarchy&&((LocalizedText)caption).Source=="Move"&&handle.rect.size==hitSize,
-                        "Move handle: hover expands the visible bar and shows Move without resizing its target");
+                        &&caption.gameObject.activeInHierarchy&&((LocalizedText)caption).Source=="Move window"&&handle.rect.size==hitSize,
+                        "Move handle: hover expands the visible bar and shows Move window without resizing its target");
                     Check(!reset.gameObject.activeInHierarchy,"Move handle: the old Reset control is hidden during a match");
                     // Move the inactive legacy rect away from live controls, so a
                     // ghost hit cannot be mistaken for a click on the header Pause.

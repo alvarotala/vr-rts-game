@@ -50,7 +50,7 @@ namespace Frontier.Runtime
                 int slot=i;
                 var change=Section(row,"Change binding",new Vector2(240,-4),new Vector2(304,72),ConsoleTheme.Surface);
                 hotkeyBindings[i].transform.SetAsLastSibling();
-                hotkeyChangeButtons[i]=new Target{rect=change,image=change.GetComponent<Image>(),normal=ConsoleTheme.Surface,click=()=>BeginHotkeyChange(HotkeyBindings.Definitions(hotkeysTouch)[hotkeysPage*HotkeyRowsPerPage+slot].Id)};
+                hotkeyChangeButtons[i]=new Target{rect=change,image=change.GetComponent<Image>(),normal=ConsoleTheme.Surface,hoverExtra=hotkeyBindings[i],click=()=>BeginHotkeyChange(HotkeyBindings.Definitions(hotkeysTouch)[hotkeysPage*HotkeyRowsPerPage+slot].Id)};
             }
             hotkeysPrevious=HotkeyButton("Previous",new Vector2(16,-580),new Vector2(155,38),()=>{hotkeysPage--;Rebuild();});
             hotkeysNext=HotkeyButton("Next",new Vector2(869,-580),new Vector2(155,38),()=>{hotkeysPage++;Rebuild();});
@@ -177,6 +177,7 @@ namespace Frontier.Runtime
         {Bindings.Save();DismissHotkeyModal();hotkeyMessage="Saved locally. Gameplay and the control guide now use these bindings.";Rebuild();}
         private void DismissHotkeyModal()
         {
+            ApplyTargetHover(hotkeyCancel,false);ApplyTargetHover(hotkeyConfirm,false);
             if(HotkeyModalOpen)hotkeyReleasePending=true;
             editingHotkey=pendingHotkey=null;hotkeyResetPending=hotkeyCaptureReady=false;
         }
@@ -192,6 +193,7 @@ namespace Frontier.Runtime
                 return true;
             }
             if(Page!=MenuPage.Hotkeys||editingHotkey==null||pendingHotkey!=null)return false;
+            ApplyTargetHover(hotkeyCancel,Hit(hotkeyCancel.rect,ray,out _));
             if(HotkeyInput.Read("key:Escape").Down){CancelHotkeyChange();return true;}
             float remaining=hotkeyDeadline-Time.unscaledTime;
             if(remaining<=0){CancelHotkeyChange();return true;}
