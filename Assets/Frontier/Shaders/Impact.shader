@@ -20,6 +20,7 @@ Shader "Frontier/Impact"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float2 uv:TEXCOORD1; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
@@ -44,7 +45,7 @@ Shader "Frontier/Impact"
                     float aa=max(fwidth(distance),.001);
                     alpha=(1-smoothstep(.028-aa,.028+aa,distance))*(1-smoothstep(.35,1,_Progress));
                 }
-                return half4(1,.3,.045,alpha*_RevealOpacity);
+                return half4(FrontierTutorialFocus(half3(1,.3,.045)),alpha*_RevealOpacity);
             }
             ENDHLSL
         }

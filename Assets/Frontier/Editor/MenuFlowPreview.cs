@@ -252,7 +252,9 @@ namespace Frontier.Editor
                     &&panel.GetComponentsInChildren<RectTransform>().Single(t=>t.name=="Leave match").GetComponent<Image>().color==ConsoleTheme.Danger,
                     "Leave confirmation has only green Keep playing and red Leave match choices");
                 Capture("08-leave-confirmation");
-                Click("Keep playing");Check(session.Match==match&&!session.IsPaused&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Cancel leaving resumes the same match and selection");
+                Click("Keep playing");for(int i=0;i<30;i++)match.Step();
+                Check(panel.Page==CommandPanel.MenuPage.Pause&&session.Match==match&&session.IsPaused&&match.Tick==tick&&!panel.AcceptsGameInput&&session.Selection.Contains(worker.id)&&session.GroupSize(0)==1,"Cancel leaving returns to Pause without resuming or changing the match, selection or groups");
+                Click("Resume match");
                 session.Pause("headset",true);panel.ToggleMenu();Refresh();Click("Resume match");
                 Check(session.IsPaused&&!panel.AcceptsGameInput,"Resume does not clear headset pause");
                 panel.ToggleMenu();Refresh();Click("Return to main menu");Click("Leave match");

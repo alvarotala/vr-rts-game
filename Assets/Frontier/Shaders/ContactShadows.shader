@@ -21,6 +21,7 @@ Shader "Frontier/ContactShadows"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION; float2 uv:TEXCOORD0; half4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float2 map:TEXCOORD1; float2 radial:TEXCOORD2; half2 shadow:TEXCOORD3; UNITY_VERTEX_OUTPUT_STEREO };
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -48,7 +49,7 @@ Shader "Frontier/ContactShadows"
                 // Broad soft edges with a restrained contact core. Public scenery
                 // casts a weaker shadow in unseen terrain to keep it readable.
                 half opacity = input.shadow.y * softness * softness * lerp(.55, 1, step(.98, visibility));
-                return half4(.035, .045, .06, opacity);
+                return half4(FrontierTutorialFocus(half3(.035, .045, .06)), opacity);
             }
             ENDHLSL
         }

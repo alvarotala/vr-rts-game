@@ -73,7 +73,18 @@ static class GuidedTutorialChecks
                             guide.NotifyMenu(true);
                             break;
                         case TutorialStep.ResumeMenu: guide.NotifyMenu(false); break;
-                        case TutorialStep.OpenWheel: guide.NotifyWheel(); break;
+                        case TutorialStep.OpenWheel:
+                            guide.NotifyWheel(false);
+                            check(guide.Step == step && !guide.WheelExplored, label + ": closing an unseen wheel cannot skip its lesson");
+                            guide.NotifyWheel();
+                            check(guide.Step == step && !guide.Briefing && guide.WheelExplored,
+                                label + ": opening the selection wheel leaves time to read and explore it");
+                            guide.Observe(selected);
+                            check(guide.Step == step, label + ": observing an open wheel never advances the lesson automatically");
+                            guide.NotifyWheel(false);
+                            check(guide.Step == TutorialStep.BuildSupply && guide.Briefing && !guide.WheelExplored,
+                                label + ": deliberate wheel dismissal starts the following briefing");
+                            break;
                         case TutorialStep.BuildSupply: case TutorialStep.BuildBarracks: case TutorialStep.BuildExtractor:
                             selected = new[] { Own("worker").id };
                             Point point = guide.FocusPoint.Value;

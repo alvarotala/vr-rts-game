@@ -119,7 +119,7 @@ namespace Frontier.Runtime
             if(UpdateCountdownPresentation()){HideTutorialPresentation();return;}
             if(Session.IsConnecting&&!Session.Running&&Page!=MenuPage.OnlineSetup)Show(MenuPage.OnlineSetup);
             if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
-            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
             if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
@@ -249,7 +249,7 @@ namespace Frontier.Runtime
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
                     selection.text=Session.IsTutorial?"Leave this guided practice and return to the main menu? You can restart the tutorial there.":
                         Session.IsOnline?"Leaving concedes this match to your opponent.":"Leave this match and return to the main menu? It will be recorded as abandoned.";
-                    status.text="Choose Keep playing to resume the match.";break;
+                    status.text="Choose Keep playing to return to the pause menu.";break;
                 case MenuPage.Result:
                     headline.text=Session.Winner==Session.LocalPlayer?"VICTORY":Session.Winner==2?"DRAW":"DEFEAT";
                     economy.text="MATCH COMPLETE · "+Session.Map.title+" · "+ReportTime(Session.Tick);
@@ -291,7 +291,7 @@ namespace Frontier.Runtime
             var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
             TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
             var image=go.GetComponent<Image>();image.color=primary?ConsoleTheme.Primary:button;ConsoleTheme.StyleSurface(image);
-            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,primary?ConsoleTheme.Ink:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
+            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
         }
         private void Rebuild()
@@ -464,8 +464,9 @@ namespace Frontier.Runtime
                 if(up){moving=false;SavePosition();}
                 return true;
             }
-            bool onMove=Hit(moveHandle,ray,out float distance);
-            bool onReset=Hit(resetHandle,ray,out _);
+            bool onTutorial=Hit(tutorialCard,ray,out _);
+            bool onMove=Hit(moveHandle,ray,out float distance)&&!onTutorial;
+            bool onReset=Hit(resetHandle,ray,out _)&&!onTutorial;
             UpdateMoveAffordance(onMove);
             resetImage.color=onReset?ConsoleTheme.Primary:background;
             if(down&&onMove)
@@ -479,6 +480,9 @@ namespace Frontier.Runtime
             Target hit=null;
             foreach(var target in targets)
             {
+                // The guide can now sit over the console. Its solid background
+                // must consume the ray instead of activating a covered command.
+                if(onTutorial&&!target.rect.IsChildOf(tutorialCard))continue;
                 if(target.rect.gameObject.activeInHierarchy&&Hit(target.rect,ray,out _)){hit=target;break;}
             }
             if(hovered!=hit){ApplyTargetHover(hovered,false);hovered=hit;HideActionHelp();ApplyTargetHover(hovered,true);}

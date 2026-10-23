@@ -57,7 +57,7 @@ namespace Frontier.Runtime
             {
                 int index=g;
                 var target=groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(HudPadding+g*346,-HudContentTop),new Vector2(330,84),()=>Session.Group(index,false),null,out groupCounts[g]);
-                var number=target.rect.GetComponentInChildren<Text>();number.text=(g+1).ToString();number.fontSize=34;number.fontStyle=FontStyle.Bold;number.color=ConsoleTheme.SecondaryInk;
+                var number=target.rect.GetComponentInChildren<Text>();number.text=(g+1).ToString();number.fontSize=42;number.fontStyle=FontStyle.Bold;number.color=ConsoleTheme.Ink;
                 TopLeft(number.rectTransform,new Vector2(16,-8),new Vector2(48,68));
                 TopLeft(groupCounts[g].rectTransform,new Vector2(84,-16),new Vector2(230,52));groupCounts[g].fontSize=20;groupCounts[g].alignment=TextAnchor.MiddleLeft;
                 CreateGroupFeedback(g,target);
@@ -146,8 +146,8 @@ namespace Frontier.Runtime
         private void LayoutPage()
         {
             bool hud=Page==MenuPage.Actions,controls=Page==MenuPage.Hotkeys,guide=Page==MenuPage.Guide,reference=IsReferencePage,report=IsReportPage,history=Page==MenuPage.History,replay=Page==MenuPage.Replay;
-            bool production=hud&&SelectedProducers().Length>0;
             bool orders=hud&&SelectedMobileUnits().Length>0;
+            bool production=hud&&!orders&&SelectedProducers().Length>0;
             LayoutSelectionGrid(hud);
             orderPlanStrip.gameObject.SetActive(orders);
             productionStrip.gameObject.SetActive(production);
@@ -289,13 +289,13 @@ namespace Frontier.Runtime
             // which would invalidate a press that is still held on the console.
             var available=SelectionActions.For(Session);
             actionHeading.text=Session.BuildDefinition!=null?"PLACING · "+Session.Catalog[Session.BuildDefinition].name
-                :Session.AbilityDefinitionId!=null?"TARGET · "+Session.PendingAbility.name:available.Heading;
-            actionHeading.gameObject.SetActive(Session.BuildDefinition!=null||Session.AbilityDefinitionId!=null);
+                :Session.AbilityDefinitionId!=null?"TARGET · "+Session.PendingAbility.name:Session.RallyPointMode?"TARGET · Rally point":available.Heading;
+            actionHeading.gameObject.SetActive(Session.BuildDefinition!=null||Session.AbilityDefinitionId!=null||Session.RallyPointMode);
             matchInfo.gameObject.SetActive(!actionHeading.gameObject.activeSelf);
             foreach(var target in targets.Where(t=>t.actionId!=null))
             {
                 var action=available.Items.FirstOrDefault(a=>a.Id==target.actionId);if(action==null)continue;
-                bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition;
+                bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition||action.Id=="set-rally-point"&&Session.RallyPointMode;
                 target.help=action;target.detail.text=MatchActionDetail(action,active);
             }
         }
@@ -363,7 +363,7 @@ namespace Frontier.Runtime
                 bool side=action.Category==ActionCategory.Orders||action.Category==ActionCategory.Research||action.Category==ActionCategory.Cancel;
                 int slot=MatchActionSlot(action,available);
                 float x=side?1040:slot%3*(HudActionWidth+HudGap),y=(side?slot:slot/3)*HudActionStride;
-                bool active=captured.Building&&captured.Id=="build:"+Session.BuildDefinition;
+                bool active=captured.Building&&captured.Id=="build:"+Session.BuildDefinition||captured.Id=="set-rally-point"&&Session.RallyPointMode;
                 var tint=ActionTint(action.Category);
                 var target=HudButton(actions,captured.Title,MatchActionDetail(captured,active),new Vector2(x,-y),new Vector2(HudActionWidth,HudActionHeight),()=>captured.Execute(),null,out var detail,captured.Model);
                 target.normal=active?ConsoleTheme.Primary:Color.Lerp(button,tint.linear,.12f);
@@ -393,7 +393,7 @@ namespace Frontier.Runtime
         private int MatchActionSlot(SelectionAction action,SelectionActions available)
         {
             if(action.Id=="cancel-construction")return 0;
-            if(action.Id=="clear-rally-point")return 2;
+            if(action.Id=="clear-rally-point"||action.Id=="set-rally-point")return 2;
             // Use the faction catalog, never the currently available subset:
             // selecting another producer cannot move a known action.
             if(action.Category==ActionCategory.Orders)

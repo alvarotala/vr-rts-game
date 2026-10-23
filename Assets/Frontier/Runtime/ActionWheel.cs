@@ -126,7 +126,7 @@ namespace Frontier.Runtime
             if (IsOpen && stick.magnitude < .25f && !triggerHeld && !stickHeld)
             {
                 if (neutralSince < 0) neutralSince = now;
-                else if (now - neutralSince >= NeutralCloseDelay) Close();
+                else if (now - neutralSince >= NeutralCloseDelay && !TeachingWheel) Close();
             }
             else neutralSince = -1;
             TickHint(pointer, true, now);
@@ -201,10 +201,22 @@ namespace Frontier.Runtime
             selectedIds.SequenceEqual(Session.Selection.OrderBy(id => id)) &&
             selectedIds.All(id => Session.View.entities.Any(e => e.id == id && e.owner == Session.View.player));
 
+        // The first lesson leaves the wheel on screen while the player reads and
+        // explores. Only deliberately closing it completes the lesson; context
+        // loss (tracking, pause or selection changes) must not skip the objective.
+        private bool TeachingWheel => Session.Tutorial != null && Session.Tutorial.Step == TutorialStep.OpenWheel
+            && !Session.Tutorial.Briefing && Session.Tutorial.WheelExplored;
+
         private void Back(Vector2 stick)
         {
             HideConfirmation();
-            if (Page == WheelPage.Root) { Close(); return; }
+            if (Page == WheelPage.Root)
+            {
+                bool completedLesson = TeachingWheel;
+                Close();
+                if (completedLesson) Session.NotifyTutorialWheel(false);
+                return;
+            }
             Enter(WheelPage.Root, stick);
         }
 
@@ -216,16 +228,16 @@ namespace Frontier.Runtime
             // Deliberate navigation preserves the held direction, including Back.
             // Unexpected action-list changes still invalidate a stale highlight.
             stickReady = true; Aim(stick);
-            if(page==WheelPage.Selection)Session.NotifyTutorialWheel();
+            if(page==WheelPage.Selection){Session.NotifyTutorialWheel();UpdateDescription();}
         }
 
         private static SelectionAction Navigation(string id, string label, string description)
             => new SelectionAction { Id = id, Title = label, Label = label, Detail = description };
 
-        // Production refunds, rally clearing and upgrades stay off the wheel. Unfinished buildings
+        // Production refunds, rally controls and upgrades stay off the wheel. Unfinished buildings
         // expose their separate cancel-construction action here as well as in Options.
         private IEnumerable<SelectionAction> AvailableActions()
-            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel" && a.Id != "clear-rally-point" && a.Category != ActionCategory.Research);
+            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel" && a.Id != "clear-rally-point" && a.Id != "set-rally-point" && a.Category != ActionCategory.Research);
 
         private IEnumerable<SelectionAction> QuickSelectActions()
         {
@@ -375,13 +387,18 @@ namespace Frontier.Runtime
                 title.text = Highlighted >= 0 ? "GROUP " + (Highlighted + 1) : "CONTROL GROUPS";
                 detail.text = Highlighted < 0 ? "Tilt to choose a group" : Session.GroupSize(Highlighted) + " assigned\n" + Session.Selection.Count + " selected";
                 help.text = "Trigger · Select     Stick click · Assign\n" + Panel.Bindings.MenuBackName + " · Back     Center stick to hide";
+                if(TeachingWheel)TutorialCloseHint();
                 return;
             }
             title.text = Highlighted >= 0 ? items[Highlighted].Title : Page == WheelPage.Root ? "COMMANDS" : Page==WheelPage.QuickSelect ? "QUICK SELECT" : Page == WheelPage.Selection ? "SELECTION" : "UNIT ORDERS";
             detail.text = Highlighted >= 0 ? disabled.Contains(items[Highlighted].Id)&&Page!=WheelPage.QuickSelect ? "No actions for this selection" : items[Highlighted].Detail : "Tilt to choose\nTrigger to enter";
             help.text = Page == WheelPage.Root ? "Trigger · Enter     " + Panel.Bindings.MenuBackName + " · Close\nCenter stick to hide" : Page==WheelPage.QuickSelect ? "Trigger · Select     "+Panel.Bindings.MenuBackName+" · Back\nCenter stick to hide" : "Trigger · Confirm     Down · Back\nCenter stick to hide";
+            if(TeachingWheel)TutorialCloseHint();
             if (failedAction != null && failedAction == HighlightedId) { detail.text = failureMessage; detail.color = Save; }
         }
+
+        private void TutorialCloseHint()
+            => ((LocalizedText)help).SetKey("{0} · {1}", Panel.Bindings.MenuBackName, Localization.Text(Page == WheelPage.Root ? "Close" : "Back"));
 
         private void ConfirmGroup(int group, bool save, float now)
         {

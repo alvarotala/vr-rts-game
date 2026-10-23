@@ -50,6 +50,12 @@ namespace Frontier.Editor
                         session.Select(producer.id, false); Reset();
                         Check(session.CanSetRallyPoint, "A completed " + session.Catalog[producer.definition].name + " accepts a rally point");
                         Check(!SelectionActions.For(session).Items.Any(a => a.Id == "clear-rally-point"), "An unset rally point has no Clear action");
+                        var setRally = SelectionActions.For(session).Items.Single(a => a.Id == "set-rally-point");
+                        Check(setRally.Execute() && session.RallyPointMode && session.HasTargetingMode && !producer.hasRallyPoint,
+                            "The menu Set rally action waits for a separate map destination");
+                        session.CancelMode();
+                        Check(!session.RallyPointMode && !session.HasTargetingMode && !producer.hasRallyPoint,
+                            "Cancelling rally targeting leaves the producer unchanged");
                         string role = session.Catalog[producer.definition].role == "hq" ? "worker" : session.Catalog[producer.definition].role == "tech" ? "siege" : "ranged";
                         Check(session.Send(CommandKind.Train, session.Catalog.Role(faction, role).id), "Producer has an actual paid training order");
                         int[] queue = producer.queue.Select(q => q.id).ToArray(); int minerals = session.View.minerals, gas = session.View.catalyst;
@@ -72,19 +78,60 @@ namespace Frontier.Editor
                         Check(clear.Category == ActionCategory.Cancel && clear.Execute() && !producer.hasRallyPoint, "Shared Clear rally action resets the destination");
                         Check(producer.queue.Select(q => q.id).SequenceEqual(queue), "Clear rally does not cancel a production queue item");
                         Check(!SelectionActions.For(session).Items.Any(a => a.Id == "clear-rally-point"), "Clear action disappears after reset");
+                        Check(SelectionActions.For(session).Items.Any(a => a.Id == "set-rally-point"), "Set rally returns after clearing the destination");
                     }
 
-                    session.Select(hq.id, false); session.Select(barracks.id, true); Reset();
+                    session.Select(hq.id, false); session.Select(barracks.id, true); session.Select(supply.id, true); Reset();
                     Check(session.CanSetRallyPoint && session.Context(second, 0, 0) > 0,
-                        "A selection consisting only of producers can share one rally destination");
-                    Check(hq.hasRallyPoint && barracks.hasRallyPoint && hq.rallyPoint.Distance(second) < .01f && barracks.rallyPoint.Distance(second) < .01f && !tech.hasRallyPoint,
-                        "A group rally changes exactly the selected producers");
+                        "A building group can share one rally destination even with a nonproducer selected");
+                    Check(hq.hasRallyPoint && barracks.hasRallyPoint && hq.rallyPoint.Distance(second) < .01f && barracks.rallyPoint.Distance(second) < .01f && !tech.hasRallyPoint && !supply.hasRallyPoint,
+                        "A group rally changes exactly the selected eligible producers");
                     Check(SelectionActions.For(session).Items.Single(a => a.Id == "clear-rally-point").Execute() && !hq.hasRallyPoint && !barracks.hasRallyPoint,
                         "The shared Clear action resets every selected producer");
+                    Check(session.ChooseRallyPoint() && session.RallyPointMode, "A group can enter rally targeting");
+                    session.Deselect(barracks.id);
+                    Check(!session.RallyPointMode && !hq.hasRallyPoint && !barracks.hasRallyPoint,
+                        "Changing the target group cancels its armed rally destination");
+                    Check(session.ChooseRallyPoint(), "Rally can be armed again after a selection change");
+                    session.Select(worker.id, true);
+                    Check(!session.RallyPointMode && !session.CanSetRallyPoint, "Adding a mobile unit cancels rally targeting and gives units priority");
+
                     session.Select(hq.id, false); session.Context(first, 0, 0); session.Select(worker.id, true);
                     Check(!session.CanSetRallyPoint, "A mixed building and mobile-unit selection does not silently become rally input");
-                    session.Context(second, 0, 0);
-                    Check(hq.hasRallyPoint && hq.rallyPoint.Distance(first) < .01f, "A mixed selection leaves the producer's rally point intact");
+                    Check(session.Context(second, 0, 0) > 0 && worker.order == CommandKind.Move,
+                        "A map order moves the unit in a mixed selection");
+                    Check(session.Context(first, 0, 0, append: true) > 0 && worker.pendingOrders.Count == 1,
+                        "A mixed selection can append a unit movement order");
+                    Check(session.Context(second, 0, 0, attack: true) > 0 && worker.order == CommandKind.AttackMove,
+                        "An attack-move map order ignores the buildings in a mixed selection");
+                    var enemyUnit = session.Match.Entities.Values.First(e => e.owner == 1 && session.Catalog[e.definition].role == "worker");
+                    enemyUnit.position = new Point(worker.position.x + 2, worker.position.y);
+                    Call(session.Match, "UpdateVision"); Refresh();
+                    Check(session.Context(enemyUnit.position, enemyUnit.id, 0) > 0 && worker.order == CommandKind.Attack && worker.target == enemyUnit.id,
+                        "A contextual enemy click attacks with the mobile part of a mixed selection");
+                    var mixedActions = SelectionActions.For(session).Items;
+                    Check(mixedActions.Any(a => a.Id == "attack-move") && mixedActions.Any(a => a.Category == ActionCategory.Build)
+                        && !mixedActions.Any(a => a.Category == ActionCategory.Train || a.Category == ActionCategory.Research || a.Id.Contains("rally-point")),
+                        "Mixed selection actions match the selected worker and omit building actions and rallies");
+                    Check(mixedActions.Single(a => a.Id == "hold").Execute() && worker.order == CommandKind.Hold,
+                        "The mixed-selection Hold menu action affects the mobile unit");
+                    Check(mixedActions.Single(a => a.Id == "stop").Execute() && worker.order == CommandKind.Stop,
+                        "The mixed-selection Stop menu action affects the mobile unit");
+                    Refresh();
+                    Check(panel.GetComponentsInChildren<RectTransform>().Any(t => t.name == "Attack Move" && t.gameObject.activeInHierarchy)
+                        && !Field<RectTransform>(panel, "productionStrip").gameObject.activeSelf && Field<RectTransform>(panel, "orderPlanStrip").gameObject.activeSelf,
+                        "Mixed HUD shows unit Options and queued orders, with no production overlap");
+                    Reset(); WheelFrame(); WheelFrame(stick: Vector2.right);
+                    Check(wheel.IsOpen && wheel.Page == WheelPage.Selection && wheel.Items.Any(a => a.Category == ActionCategory.Build)
+                        && !wheel.Items.Any(a => a.Category == ActionCategory.Train || a.Id.Contains("rally-point")),
+                        "The mixed-selection wheel exposes worker construction instead of building training or rallies");
+                    Reset(); WheelFrame(); WheelFrame(stick: Vector2.left);
+                    Check(wheel.IsOpen && wheel.Items.Any(a => a.Id == "attack-move") && wheel.Items.Any(a => a.Id == "hold"),
+                        "The mixed-selection wheel retains mobile orders");
+                    Check(hq.hasRallyPoint && hq.rallyPoint.Distance(first) < .01f && hq.order != CommandKind.Attack && hq.order != CommandKind.AttackMove
+                        && hq.pendingOrders.Count == 0 && session.Selection.SetEquals(new[] { hq.id, worker.id }),
+                        "Mixed orders preserve the producer's rally and the full visible selection");
+                    Reset();
                     session.Select(hq.id, false); session.ClearRallyPoint();
 
                     // Rally input must not change the existing immediate/queued unit-order controls.
@@ -100,10 +147,15 @@ namespace Frontier.Editor
                     session.Select(supply.id, false); Reset();
                     Check(!session.CanSetRallyPoint && !session.Send(CommandKind.SetRallyPoint, position: first) && !supply.hasRallyPoint,
                         "Nonproducing buildings cannot receive a rally point");
-                    Check(!SelectionActions.For(session).Items.Any(a => a.Id == "clear-rally-point"), "Nonproducers expose no rally reset action");
+                    Check(!SelectionActions.For(session).Items.Any(a => a.Id.Contains("rally-point")) && !session.ChooseRallyPoint(),
+                        "Nonproducers expose no rally actions or targeting mode");
                     barracks.complete = false; Refresh(); session.Select(barracks.id, false);
                     Check(!session.CanSetRallyPoint && !session.Send(CommandKind.SetRallyPoint, position: first) && !barracks.hasRallyPoint,
                         "An unfinished producer cannot receive a rally point");
+                    session.Select(hq.id, true);
+                    Check(session.CanSetRallyPoint && session.Context(first, 0, 0) > 0 && hq.hasRallyPoint && !barracks.hasRallyPoint,
+                        "A building group excludes unfinished producers from rally commands");
+                    session.ClearRallyPoint();
                     barracks.complete = true; Refresh();
                     var enemy = session.Match.Entities.Values.First(e => e.owner == 1 && session.Catalog[e.definition].role == "hq");
                     session.Selection.Clear(); session.Selection.Add(enemy.id);
@@ -122,11 +174,47 @@ namespace Frontier.Editor
                     Check(!hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Options clears rally and preserves production without leaking A to the map");
                     Check(Field<float>(input, "lastActionPress") < 0, "Console action leaves no pending double-A gesture");
 
+                    // Setting from Options arms a mode, then a fresh map trigger confirms exactly the selected group.
+                    session.Select(barracks.id, true); session.Select(supply.id, true); Refresh(); Reset();
+                    var setAction = SelectionActions.For(session).Items.Single(a => a.Id == "set-rally-point");
+                    var setCard = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == setAction.Title && t.gameObject.activeInHierarchy);
+                    var setRay = new Ray(setCard.TransformPoint(setCard.rect.center) - setCard.forward, setCard.forward);
+                    var groupSelection = session.Selection.ToArray(); var barracksProduction = barracks.queue.Select(q => q.id).ToArray();
+                    Check(PanelFrame(setRay, true, false) && PanelFrame(setRay, false, true) && session.RallyPointMode
+                        && !hq.hasRallyPoint && !barracks.hasRallyPoint,
+                        "Options owns the Set rally A press and release without assigning a destination underneath the menu");
+                    Call(input, "PointBoard", RayAt(second), true, false, false, false);
+                    Check(!session.RallyPointMode && hq.hasRallyPoint && barracks.hasRallyPoint && !supply.hasRallyPoint
+                        && hq.rallyPoint.Distance(second) < .01f && barracks.rallyPoint.Distance(second) < .01f,
+                        "A separate map trigger confirms the menu rally destination for every selected producer");
+                    Call(input, "PointBoard", RayAt(second), false, true, false, false);
+                    Check(session.Selection.SetEquals(groupSelection) && hq.queue.Select(q => q.id).SequenceEqual(production)
+                        && barracks.queue.Select(q => q.id).SequenceEqual(barracksProduction),
+                        "The targeting trigger release preserves selection and every production queue");
+                    Check(!SelectionActions.For(session).Items.Any(a => a.Id == "set-rally-point")
+                        && SelectionActions.For(session).Items.Single(a => a.Id == "clear-rally-point").Execute(),
+                        "Assigned group rallies replace Set with Clear in Options");
+                    Refresh(); Reset();
+                    setAction = SelectionActions.For(session).Items.Single(a => a.Id == "set-rally-point");
+                    setCard = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == setAction.Title && t.gameObject.activeInHierarchy);
+                    setRay = new Ray(setCard.TransformPoint(setCard.rect.center) - setCard.forward, setCard.forward);
+                    Check(PanelTriggerFrame(setRay, true, false) && PanelTriggerFrame(setRay, false, true)
+                        && session.RallyPointMode && !hq.hasRallyPoint && !barracks.hasRallyPoint,
+                        "The menu Trigger alias also arms rally without leaking its confirmation to the map");
+                    session.CancelMode();
+                    Check(!session.HasTargetingMode && !hq.hasRallyPoint && !barracks.hasRallyPoint,
+                        "Cancelling a menu rally keeps every selected producer at its default exit");
+                    session.Select(hq.id, false); Refresh(); Reset();
+                    WheelFrame(); WheelFrame(stick: Vector2.right);
+                    Check(wheel.IsOpen && !wheel.Items.Any(a => a.Id.Contains("rally-point")),
+                        "The producer wheel omits Set rally when no destination is assigned");
+                    Reset();
+
                     // Reuse the real wheel route with a map ray underneath, so a leaked confirm is visible.
                     session.Context(first, 0, 0); Refresh(); Reset();
                     WheelFrame();
                     Check(WheelFrame(stick: Vector2.right) && wheel.IsOpen && wheel.Page==WheelPage.Selection && wheel.Highlighted>=0, "Right tilt directly opens producer selection actions with its direction highlighted");
-                    Check(!wheel.Items.Any(a=>a.Id=="clear-rally-point"), "Producer wheel omits Clear rally even when a destination is set");
+                    Check(!wheel.Items.Any(a=>a.Id.Contains("rally-point")), "Producer wheel omits both rally actions even when a destination is set");
                     string train="train:"+worker.definition;var direction=wheel.DirectionFor(train);WheelFrame(stick: direction);
                     Check(wheel.HighlightedId==train, "Right stick still highlights training with an active rally point");
                     Check(WheelFrame(stick:direction,down:true,held:true)&&wheel.IsOpen&&hq.hasRallyPoint&&hq.rallyPoint.Equals(first)
@@ -144,8 +232,8 @@ namespace Frontier.Editor
                         "A newly trained unit publishes rally heading before its first movement step");
                     Call(session,"RefreshView");Check(moveEvents==1,"The same spawned rally does not reset facing on every view refresh");
                     session.UnitMoveOrdered-=heading;
-                    Reset(); session.LeaveMatch();
-                    Check(!session.CanSetRallyPoint, "Leaving a match disables rally input");
+                    Reset(); Check(session.ChooseRallyPoint(), "Rally can be armed before leaving the match"); session.LeaveMatch();
+                    Check(!session.CanSetRallyPoint && !session.RallyPointMode, "Leaving a match disables and clears rally input");
 
                     EntityState Add(string role, int id, Point point)
                     {
@@ -168,6 +256,12 @@ namespace Frontier.Editor
                 {
                     bool consumed = (bool)Call(input, "RoutePanel", ray, false, false, false, down, up, down, 0f);
                     if (!consumed) Call(input, "PointBoard", RayAt(second), false, false, down, false);
+                    return consumed;
+                }
+                bool PanelTriggerFrame(Ray ray, bool down, bool up)
+                {
+                    bool consumed = (bool)Call(input, "RoutePanelInput", ray, down, up, down, false, false, false, 0f, false);
+                    if (!consumed) Call(input, "PointBoard", RayAt(second), down, up, false, false);
                     return consumed;
                 }
                 bool WheelFrame(Vector2 stick = default, bool down = false, bool held = false, bool up = false)

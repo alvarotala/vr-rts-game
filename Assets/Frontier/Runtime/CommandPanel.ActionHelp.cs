@@ -23,11 +23,11 @@ namespace Frontier.Runtime
             // Action hover replaces the first selection row. Section guides use
             // the same readable text in a centered dialog, with explicit dismissal.
             actionHelp=Section(root,"Action help",new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,HudSelectionHeight),ConsoleTheme.Card);
-            helpCategory=Label(actionHelp,"",new Vector2(24,-12),new Vector2(HudInnerWidth-48,24),16,ConsoleTheme.SecondaryInk);
+            helpCategory=Label(actionHelp,"",new Vector2(24,-12),new Vector2(HudInnerWidth-48,24),16,ConsoleTheme.Ink);
             helpTitle=Label(actionHelp,"",new Vector2(24,-48),new Vector2(280,88),28,ConsoleTheme.Ink);
             helpTitle.fontStyle=FontStyle.Bold;
             helpDescription=Label(actionHelp,"",new Vector2(340,-44),new Vector2(HudInnerWidth-364,76),20,ConsoleTheme.Muted,TextAnchor.UpperLeft);
-            helpDetail=Label(actionHelp,"",new Vector2(340,-124),new Vector2(HudInnerWidth-364,44),18,ConsoleTheme.SecondaryInk,TextAnchor.UpperLeft);
+            helpDetail=Label(actionHelp,"",new Vector2(340,-124),new Vector2(HudInnerWidth-364,44),18,ConsoleTheme.Ink,TextAnchor.UpperLeft);
             sectionHelpClose=HudButton(actionHelp,"Close help","",new Vector2(768,-524),new Vector2(240,64),CloseSectionHelp,null,out var closeDetail);
             closeDetail.gameObject.SetActive(false);
             sectionHelpClose.normal=ConsoleTheme.Secondary;sectionHelpClose.image.color=sectionHelpClose.normal;
@@ -39,7 +39,7 @@ namespace Frontier.Runtime
         private Target HudHelpButton(RectTransform parent,string name,Vector2 position,string title,Func<string> hint)
         {
             var rect=Section(parent,name,position,new Vector2(44,44),ConsoleTheme.Card);
-            var label=Label(rect,"?",Vector2.zero,new Vector2(44,44),22,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
+            var label=Label(rect,"?",Vector2.zero,new Vector2(44,44),22,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             label.fontStyle=FontStyle.Bold;
             var target=new Target { rect=rect,image=rect.GetComponent<Image>(),normal=ConsoleTheme.Card,hintTitle=title,hint=hint };
             target.click=()=>OpenSectionHelp(target);
@@ -109,7 +109,7 @@ namespace Frontier.Runtime
                 TopLeft(helpTitle.rectTransform,new Vector2(32,-60),new Vector2(976,40));
                 TopLeft(helpDescription.rectTransform,new Vector2(32,-124),new Vector2(976,176));helpDescription.fontSize=24;
                 TopLeft(helpDetail.rectTransform,new Vector2(32,-320),new Vector2(976,176));helpDetail.fontSize=20;
-                helpCategory.text="HELP";helpCategory.color=ConsoleTheme.SecondaryInk;
+                helpCategory.text="HELP";helpCategory.color=ConsoleTheme.Ink;
                 helpTitle.text=sectionHelpTarget.hintTitle;
                 helpDescription.text=SectionHelpDescription(sectionHelpTarget.hintTitle);
                 helpDetail.text=sectionHelpTarget.hint();helpDetail.color=ConsoleTheme.Muted;
@@ -126,7 +126,8 @@ namespace Frontier.Runtime
             TopLeft(helpDescription.rectTransform,new Vector2(340,-44),new Vector2(HudInnerWidth-364,76));helpDescription.fontSize=20;
             TopLeft(helpDetail.rectTransform,new Vector2(340,-124),new Vector2(HudInnerWidth-364,44));helpDetail.fontSize=18;
             var tint=ActionTint(help.Category);
-            helpCategory.text=CategoryLabel(help.Category)+" · FIELD GUIDE";helpCategory.color=tint;
+            string category=help.Id=="set-rally-point"||help.Id=="clear-rally-point"?"RALLY POINT":CategoryLabel(help.Category);
+            helpCategory.text=category+" · FIELD GUIDE";helpCategory.color=tint;
             helpTitle.text=help.Label;helpDescription.text=help.Description;
             helpDetail.text=help.HelpDetail;helpDetail.color=tint;
         }
@@ -135,7 +136,7 @@ namespace Frontier.Runtime
             switch(title)
             {
                 case "SELECTION":return "Each card groups the selected units or buildings of one type. Its number shows how many are selected; the bar shows their combined health. Damaged units, unfinished buildings and casters also show health, construction progress or energy.";
-                case "OPTIONS":return "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. Mixed units and buildings leave this area empty. Pale slots are not buttons; point at a command for its cost and requirements.";
+                case "OPTIONS":return "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. When units and buildings are selected together, units take priority. Rally controls only appear for production buildings without mobile units selected. Pale slots are not buttons; point at a command for its cost and requirements.";
                 case "PRODUCTION":return "The wide green card is the first active order. Green borders mark occupied slots 2 to 5; yellow on slot 5 means more orders. Click any occupied card to cancel that exact item and recover its cost, even with several buildings selected.";
                 case "CONTROL GROUPS":return "Groups remember your selected units and buildings. Trigger recalls a group. Hold Grip before pressing Trigger to replace it with your current selection; on desktop, use Ctrl + click. Release over the same group to confirm. A flash and controller vibration confirm assignment. Assigning with no selection clears the group.";
                 case "QUEUED ORDERS":return "The large green card is the current action. Follow the arrows through pending orders, left to right and then the second row. Click any card to cancel that order. Cancel all appears in the header only when there is more than one order.";

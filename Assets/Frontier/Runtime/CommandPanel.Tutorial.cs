@@ -11,16 +11,16 @@ namespace Frontier.Runtime
         private static readonly Color TutorialViolet=ConsoleTheme.SecondaryAccent;
         private static readonly Color TutorialDark=new Color(.065f,.05f,.105f).linear;
         private static readonly Color TutorialButtonFill=ConsoleTheme.Secondary;
-        private RectTransform tutorialCard,tutorialCueTargetRect;
+        private RectTransform tutorialCard,tutorialCueTargetRect,tutorialInstructionBox;
         private Text tutorialTitle,tutorialDescription,tutorialInstruction,tutorialProgress,tutorialState,tutorialNumber;
         private Target tutorialContinue,tutorialRepeat,tutorialLeave;
         private Image tutorialProgressFill;
         private LineRenderer tutorialConnector,tutorialDestination;
         private Material tutorialLineMaterial;
         public ActionWheel TutorialWheel { get; set; }
-        private bool TutorialCardVisible=>Session.IsTutorial&&Session.Running&&!Session.IsCountingDown&&!Session.HasSystemPause&&!Quest.Placing;
+        private bool TutorialCardVisible=>Session.IsTutorial&&Session.Running&&!Session.IsCountingDown&&!Session.HasSystemPause&&!Quest.Placing&&Page!=MenuPage.LeaveConfirmation;
         private bool TutorialResumeBriefing=>Session.IsTutorial&&Session.Tutorial.Step==TutorialStep.ResumeMenu&&Session.Tutorial.Briefing;
-        private string TutorialSignature=>Session.Tutorial==null?"":Session.Tutorial.Step+":"+Session.Tutorial.Briefing+":"+Session.Tutorial.AcceptedOrderCount+":"+Session.AttackMoveMode+":"+Localization.Code+":"+Bindings.ToJson();
+        private string TutorialSignature=>Session.Tutorial==null?"":Session.Tutorial.Step+":"+Session.Tutorial.Briefing+":"+Session.Tutorial.AcceptedOrderCount+":"+Session.Tutorial.WheelExplored+":"+(TutorialWheel!=null&&TutorialWheel.IsOpen)+":"+Session.AttackMoveMode+":"+Localization.Code+":"+Bindings.ToJson();
 
         private void CreateTutorialCard()
         {
@@ -41,6 +41,7 @@ namespace Frontier.Runtime
             tutorialTitle.fontStyle=FontStyle.Bold;
             tutorialDescription=Label(tutorialCard,"",new Vector2(24,-143),new Vector2(572,64),22,Color.white,TextAnchor.UpperLeft);
             var action=Section(tutorialCard,"Your next move",new Vector2(24,-216),new Vector2(572,104),new Color(.12f,.075f,.20f).linear);
+            tutorialInstructionBox=action;
             Section(action,"Violet accent",new Vector2(0,-8),new Vector2(4,88),TutorialViolet);
             tutorialInstruction=Label(action,"",new Vector2(20,-14),new Vector2(530,78),25,Color.white,TextAnchor.MiddleLeft);
             tutorialInstruction.fontStyle=FontStyle.Bold;
@@ -57,6 +58,7 @@ namespace Frontier.Runtime
             tutorialLineMaterial.renderQueue=4000;tutorialLineMaterial.SetFloat("_ZWrite",0);
             tutorialConnector=TutorialLine("Tutorial connector",false);
             tutorialDestination=TutorialLine("Tutorial target highlight",true);
+            CreateTutorialFocus();
             HideTutorialPresentation();
         }
 
@@ -106,6 +108,11 @@ namespace Frontier.Runtime
             tutorialNumber.text=tutorial.Complete?"!":tutorial.StepNumber.ToString("00");
             tutorialProgressFill.rectTransform.sizeDelta=new Vector2(508*tutorial.Progress,4);
             UpdateTutorialContent();
+            bool briefing=tutorial.Briefing&&!tutorial.Complete;
+            tutorialInstructionBox.gameObject.SetActive(!briefing);
+            tutorialState.gameObject.SetActive(!briefing&&!tutorial.Complete);
+            tutorialCard.sizeDelta=new Vector2(TutorialCardWidth,briefing?300:TutorialCardHeight);
+            TopLeft(tutorialContinue.rect,new Vector2(348,briefing?-228:-336),new Vector2(248,48));
             UpdateTutorialPresentation();
         }
 
@@ -115,6 +122,7 @@ namespace Frontier.Runtime
             if(tutorialCard!=null)tutorialCard.gameObject.SetActive(false);
             if(tutorialConnector!=null)tutorialConnector.gameObject.SetActive(false);
             if(tutorialDestination!=null)tutorialDestination.gameObject.SetActive(false);
+            ResetTutorialFocus();
         }
 
         private void UpdateTutorialPresentation()
@@ -122,24 +130,19 @@ namespace Frontier.Runtime
             if(tutorialCard==null)return;
             if(!TutorialCardVisible||!root.gameObject.activeInHierarchy){HideTutorialPresentation();return;}
             tutorialCard.gameObject.SetActive(true);
-            // Beside the console with a visible air gap, facing the same viewer.
-            // Moving/resizing the console carries its companion without growing the HUD.
-            tutorialCard.rotation=root.rotation;tutorialCard.localScale=root.localScale;
-            tutorialCard.position=root.TransformPoint(new Vector3(root.rect.xMax+40+TutorialCardWidth*.5f,0,-12));
             Vector3 destination=Vector3.zero;
             bool connected=!Session.Tutorial.Complete&&TryTutorialCue(out destination);
+            PositionTutorialCard(destination,connected);
             tutorialConnector.gameObject.SetActive(connected);tutorialDestination.gameObject.SetActive(connected);
             if(!connected)return;
-            var destinationInConsole=root.InverseTransformPoint(destination);
-            bool aroundConsole=tutorialCueTargetRect==null&&!tutorialCueWheel&&string.IsNullOrEmpty(tutorialCueAction)&&destinationInConsole.y<root.rect.yMin;
-            var bend=aroundConsole?root.TransformPoint(new Vector3(root.rect.xMax+24,root.rect.yMin-28,-16)):destination;
-            var local=tutorialCard.InverseTransformPoint(bend);
+            if(tutorialCueTargetRect!=null)destination=TutorialTargetEdge();
+            var local=tutorialCard.InverseTransformPoint(destination);
             var direction=new Vector2(local.x,local.y);
-            float edge=Mathf.Max(Mathf.Abs(direction.x)/(TutorialCardWidth*.5f),Mathf.Abs(direction.y)/(TutorialCardHeight*.5f));
+            float edge=Mathf.Max(Mathf.Abs(direction.x)/(tutorialCard.rect.width*.5f),Mathf.Abs(direction.y)/(tutorialCard.rect.height*.5f));
             if(edge<.001f){direction=Vector2.left;edge=1/(TutorialCardWidth*.5f);}
             var start=tutorialCard.TransformPoint(new Vector3(direction.x/edge,direction.y/edge,-3));
-            tutorialConnector.positionCount=3;
-            tutorialConnector.SetPositions(new[]{start,aroundConsole?bend:start+(destination-start).normalized*.045f,destination});
+            tutorialConnector.positionCount=2;
+            tutorialConnector.SetPositions(new[]{start,destination});
             if(tutorialCueTargetRect!=null)
             {
                 var corners=new Vector3[4];tutorialCueTargetRect.GetWorldCorners(corners);
@@ -159,11 +162,27 @@ namespace Frontier.Runtime
             }
         }
 
+        private Vector3 TutorialTargetEdge()
+        {
+            var rect=tutorialCueTargetRect.rect;
+            var local=tutorialCueTargetRect.InverseTransformPoint(tutorialCard.position);
+            float x=Mathf.Clamp(local.x,rect.xMin,rect.xMax),y=Mathf.Clamp(local.y,rect.yMin,rect.yMax);
+            // During a smooth transition the card may briefly cross the target.
+            // Keep the connector on its perimeter rather than over its label.
+            if(rect.Contains(new Vector2(local.x,local.y)))
+            {
+                float edgeX=local.x<rect.center.x?rect.xMin:rect.xMax;
+                float edgeY=local.y<rect.center.y?rect.yMin:rect.yMax;
+                if(Mathf.Abs(local.x-edgeX)<Mathf.Abs(local.y-edgeY))x=edgeX;else y=edgeY;
+            }
+            return tutorialCueTargetRect.TransformPoint(new Vector3(x,y,-4));
+        }
+
         private bool TryTutorialCue(out Vector3 position)
         {
             position=Vector3.zero;tutorialCueTargetRect=null;
             Board.ShowTutorialCue(null,false);
-            if(!TutorialCardVisible||Session.Tutorial.Complete)return false;
+            if(!TutorialCardVisible||Session.Tutorial.Complete||Session.Tutorial.Briefing)return false;
             if(tutorialCueAction=="cancel")
             {
                 if(!Quest.Active||Quest.TrackingSpace==null||!Quest.PointerTracked)return false;
@@ -191,7 +210,7 @@ namespace Frontier.Runtime
                 {
                     tutorialCueTargetRect=target.rect;
                     // Attach at the edge nearest the instructions, leaving the label clear.
-                    position=target.rect.TransformPoint(new Vector3(target.rect.rect.xMax,target.rect.rect.center.y,-4));return true;
+                    position=TutorialTargetEdge();return true;
                 }
                 return false;
             }
@@ -208,8 +227,6 @@ namespace Frontier.Runtime
                 }
             }
             if(tutorialCueResource>0)point=Session.View.resources.FirstOrDefault(r=>r.id==tutorialCueResource)?.position;
-            // Briefings can identify the subject while its action buttons are locked.
-            if(!point.HasValue&&Session.Tutorial.Briefing)point=Session.Tutorial.FocusPoint;
             if(!point.HasValue||Board.Content==null||!Board.Content.gameObject.activeInHierarchy)return false;
             bool foundation=Session.BuildDefinition!=null&&Session.BuildDefinition==Session.Tutorial.ExpectedDefinition&&!Session.Tutorial.Briefing&&Session.Tutorial.AcceptedOrderCount==0;
             Board.ShowTutorialCue(point,foundation,radius);

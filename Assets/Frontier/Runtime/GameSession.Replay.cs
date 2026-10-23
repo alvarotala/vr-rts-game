@@ -28,7 +28,7 @@ namespace Frontier.Runtime
             Replay=playback;Match=playback.Match;Catalog=Match.Catalog;Map=Match.Map.Definition;
             Faction=playback.Info.Header.faction;EnemyFaction=playback.Info.Header.enemyFaction;Difficulty=playback.Info.Header.difficulty;MapId=Map.id;
             Selection.Clear();SelectedResource=0;foreach(var group in groups)group.Clear();
-            BuildDefinition=null;AbilityDefinitionId=null;AttackMoveMode=false;LastCommandSequence=0;sequence=0;accumulator=0;bot=null;
+            rallySelection=null;BuildDefinition=null;AbilityDefinitionId=null;AttackMoveMode=false;LastCommandSequence=0;sequence=0;accumulator=0;bot=null;
             pauseReasons.Remove("menu");Running=true;LastClosedWasReplay=false;
             RefreshReplayView();Announce("Replay · Spectator controls active.");NewMatch?.Invoke();Changed?.Invoke();return true;
         }
@@ -37,7 +37,7 @@ namespace Frontier.Runtime
             if(!IsReplay)return;
             Replay=null;Match=null;View=null;ReplayPlayerViews=null;Running=false;LastClosedWasReplay=true;
             Catalog=setupCatalog;Map=setupMap;Faction=setupFaction;EnemyFaction=setupEnemy;Difficulty=setupDifficulty;MapId=setupMapId;
-            setupCatalog=null;setupMap=null;Selection.Clear();SelectedResource=0;BuildDefinition=null;AbilityDefinitionId=null;AttackMoveMode=false;LastCommandSequence=0;
+            setupCatalog=null;setupMap=null;Selection.Clear();SelectedResource=0;rallySelection=null;BuildDefinition=null;AbilityDefinitionId=null;AttackMoveMode=false;LastCommandSequence=0;
             pauseReasons.Remove("menu");Announce("Replay closed.");MatchClosed?.Invoke();Changed?.Invoke();
         }
         public void ToggleReplayPause()

@@ -21,7 +21,7 @@ namespace Frontier.Runtime
         private void ReportButton(string title,float x,float y,float width,Action click,bool selected=false)
         {
             var rect=Section(actions,title,new Vector2(x,-y),new Vector2(width,48),selected?ConsoleTheme.Primary:button);
-            Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,selected?accent:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter).fontStyle=selected?FontStyle.Bold:FontStyle.Normal;
+            Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,selected?accent:ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=selected?FontStyle.Bold:FontStyle.Normal;
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
         }
         private void BuildMatchReport()
@@ -59,7 +59,7 @@ namespace Frontier.Runtime
         private void BuildReportOverview(MatchReport report)
         {
             var a=report.Players[ReportPlayer];var b=report.Players[1-ReportPlayer];
-            Label(actions,"MATCH TOTALS",new Vector2(18,-68),new Vector2(430,30),18,ConsoleTheme.SecondaryInk);
+            Label(actions,"MATCH TOTALS",new Vector2(18,-68),new Vector2(430,30),18,ConsoleTheme.Ink);
             Label(actions,"YOU · "+ShortFaction(a.Faction),new Vector2(452,-68),new Vector2(280,30),21,MatchReportGraph.PlayerColor,TextAnchor.MiddleCenter);
             Label(actions,ReportOpponent+" · "+ShortFaction(b.Faction),new Vector2(746,-68),new Vector2(280,30),21,MatchReportGraph.OpponentColor,TextAnchor.MiddleCenter);
             int row=0;
@@ -112,8 +112,8 @@ namespace Frontier.Runtime
             {int side=column==0?ReportPlayer:1-ReportPlayer;ReportButton((column==0?"You · ":ReportOpponent+" · ")+ShortFaction(report.Players[side].Faction),column*528,64,512,()=>{resultBuildPlayer=side;resultBuildPage=0;Rebuild();},side==resultBuildPlayer);}
             var orders=report.BuildOrders[resultBuildPlayer];const int pageSize=7;
             int pages=Math.Max(1,(orders.Count+pageSize-1)/pageSize);resultBuildPage=Mathf.Clamp(resultBuildPage,0,pages-1);
-            Label(actions,"TIME       SUPPLY     ORDER",new Vector2(18,-126),new Vector2(700,28),17,ConsoleTheme.SecondaryInk);
-            Label(actions,"OUTCOME / TIME",new Vector2(758,-126),new Vector2(264,28),17,ConsoleTheme.SecondaryInk);
+            Label(actions,"TIME       SUPPLY     ORDER",new Vector2(18,-126),new Vector2(700,28),17,ConsoleTheme.Ink);
+            Label(actions,"OUTCOME / TIME",new Vector2(758,-126),new Vector2(264,28),17,ConsoleTheme.Ink);
             for(int i=0;i<pageSize&&resultBuildPage*pageSize+i<orders.Count;i++)
             {
                 var e=orders[resultBuildPage*pageSize+i];

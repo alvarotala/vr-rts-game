@@ -21,6 +21,10 @@ namespace Frontier.Runtime
         public const string LightingKey="frontier.visuals.enhanced-lighting.v1";
         public bool EnhancedLighting { get; private set; }
         public const float UnitRevealSeconds=.3f;
+        private const float TutorialFocusSeconds=.28f;
+        private static readonly int TutorialFocusProperty=Shader.PropertyToID("_FrontierTutorialFocus");
+        private static BoardView tutorialFocusOwner;
+        private float tutorialFocus;
         public int Hovered;
         public int HoveredResource;
         public static readonly Color NormalPointerColor = new Color(.3f,.95f,.94f);
@@ -128,6 +132,7 @@ namespace Frontier.Runtime
         }
         private void OnDestroy()
         {
+            ResetTutorialFocus();
             foreach(var visual in parts.Values)visual.soldier?.Dispose();
             if(Session!=null){Session.ReplayReset-=ResetReplayPresentation;Session.NewMatch-=Rebuild;Session.MatchClosed-=Rebuild;Session.UnitMoveOrdered-=FaceMoveOrder;}
             unitVisuals.Dispose();
@@ -160,6 +165,7 @@ namespace Frontier.Runtime
         private Material Material(Color color,float gloss=0) { var m=new Material(Shader.Find("Frontier/Board")){enableInstancing=true};m.SetColor("_BaseColor",color);m.SetFloat("_Gloss",gloss);return m; }
         public void Rebuild()
         {
+            ResetTutorialFocus();
             if(Content==null)return;
             foreach(var visual in parts.Values)visual.soldier?.Dispose();
             weapons?.Dispose();weapons=null;firing.Clear();
@@ -256,12 +262,33 @@ namespace Frontier.Runtime
             Hovered=0;Pointer=null;DrawSelection(default,default,false);fogTick=-1;UpdateFog();
         }
         private void FaceMoveOrder(int id,Point destination) => pendingMoveFacing[id]=destination;
+        private void OnDisable()=>ResetTutorialFocus();
+        private void ResetTutorialFocus()
+        {
+            tutorialFocus=0;
+            if(tutorialFocusOwner!=null&&tutorialFocusOwner!=this)return;
+            tutorialFocusOwner=null;
+            Shader.SetGlobalFloat(TutorialFocusProperty,0);
+        }
+        private void AdvanceTutorialFocus(float delta)
+        {
+            // Reading a lesson pauses simulation, but the presentation transition
+            // follows real time. This affects only board shaders, never MR/UI.
+            bool reading=Session!=null&&Session.Running&&Session.IsTutorial
+                &&Session.Tutorial.Briefing&&!Session.Tutorial.Complete
+                &&!Session.IsCountingDown&&!Session.HasSystemPause
+                &&Content!=null&&Content.gameObject.activeInHierarchy;
+            tutorialFocus=Mathf.MoveTowards(tutorialFocus,reading?1:0,Mathf.Max(0,delta)/TutorialFocusSeconds);
+            tutorialFocusOwner=this;
+            Shader.SetGlobalFloat(TutorialFocusProperty,Mathf.SmoothStep(0,1,tutorialFocus));
+        }
         public void SetVisible(bool visible)
         {
             if(Content==null)return;
             Content.gameObject.SetActive(visible);
             if(!visible)
             {
+                ResetTutorialFocus();
                 weapons?.Clear();
                 abilityEffects?.Clear();
                 fogVisuals?.Hide();
@@ -319,6 +346,7 @@ namespace Frontier.Runtime
         private void LateUpdate()
         {
             UpdateTransform();
+            AdvanceTutorialFocus(Time.unscaledDeltaTime);
             // Keep the last drawn scene during reconstruction, including interpolated poses
             // and effects. Board navigation and the headset camera remain independent.
             if(Session.IsReplay&&Session.Replay.Seeking)return;

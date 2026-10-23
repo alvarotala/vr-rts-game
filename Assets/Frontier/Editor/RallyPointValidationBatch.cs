@@ -3,6 +3,13 @@ namespace Frontier.Editor
     public static class RallyPointValidationBatch
     {
         public static void RunWheelAndMenu(){RallyPointInputChecks.Run();ActionWheelPreview.Render();}
+        public static void RunMixedSelection()
+        {
+            RallyPointInputChecks.Run();
+            HudLayoutPreview.Render();
+            // Help validation also runs the production and wheel previews.
+            ActionHelpPreview.Render();
+        }
         public static void Run()
         {
             RallyPointInputChecks.Run();

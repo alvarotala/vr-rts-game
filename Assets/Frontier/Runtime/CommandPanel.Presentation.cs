@@ -18,7 +18,7 @@ namespace Frontier.Runtime
             moveAffordanceImage=moveAffordance.GetComponent<Image>();
             moveCaption=Label(moveAffordance,"Move window",Vector2.zero,new Vector2(232,52),23,ConsoleTheme.HoverInk,TextAnchor.MiddleCenter);
             moveCaption.fontStyle=FontStyle.Bold;
-            moveHints=Label(moveHandle,"",new Vector2(-290,-88),new Vector2(900,64),20,ConsoleTheme.SecondaryInk,TextAnchor.UpperCenter);
+            moveHints=Label(moveHandle,"",new Vector2(-290,-88),new Vector2(900,64),20,ConsoleTheme.Ink,TextAnchor.UpperCenter);
             moveHints.gameObject.name="Move window hints";
         }
 

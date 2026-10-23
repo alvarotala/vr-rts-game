@@ -50,8 +50,9 @@ namespace Frontier.Editor
                     Check(options.gameObject.activeInHierarchy&&options.rect.height==468&&options.anchoredPosition==optionsPosition&&ActionCards().Length==0,
                         "Empty selection retains the fixed Options area without action cards");
                     session.Select(hq.id,false);session.Select(mobile.id,true);Refresh();
-                    Check(options.gameObject.activeInHierarchy&&options.rect.height==468&&options.anchoredPosition==optionsPosition&&ActionCards().Length==0,
-                        "Mixed units and buildings retain the same empty Options area");
+                    Check(options.gameObject.activeInHierarchy&&options.rect.height==468&&options.anchoredPosition==optionsPosition
+                        &&ActionCards().Any(card=>card.name=="Attack Move")&&!QueueShown(),
+                        "Mixed units and buildings retain the fixed Options area with unit commands and no production");
                     var producerLayouts=new Dictionary<int,Dictionary<string,Vector2>>();
                     foreach(var producer in new[]{hq,barracks,tech,lab})
                     {
@@ -64,7 +65,8 @@ namespace Frontier.Editor
                     }
                     session.Select(hq.id,false);session.Select(barracks.id,true);session.Select(tech.id,true);session.Select(lab.id,true);Refresh();
                     var groupedCards=ActionCards();
-                    var expectedGroupActions=producerLayouts.Values.SelectMany(layout=>layout.Keys).Distinct().OrderBy(name=>name);
+                    var expectedGroupActions=producerLayouts.Values.SelectMany(layout=>layout.Keys).Where(name=>name!="Set Rally Point")
+                        .Append("Set Rally Points").Distinct().OrderBy(name=>name);
                     Check(groupedCards.Select(card=>card.name).OrderBy(name=>name).SequenceEqual(expectedGroupActions),
                         "Combined producers expose every distinct option without duplicating cards");
                     Check(options.rect.height==468&&options.anchoredPosition==optionsPosition,"Grouping producers keeps Options in the same fixed position");
@@ -168,22 +170,22 @@ namespace Frontier.Editor
                     panel.ToggleMenu();Refresh();Check(!QueueShown(),"Pause menu hides match production queue");panel.ToggleMenu();Refresh();
                     Check(QueueShown()&&Text("productionName")=="Firepower I","Resuming restores the selected building queue");
 
-                    // Shared actions retain rally clearing; the HUD only renders training and research.
+                    // Training and research share Options with one rally control for eligible producers.
                     var academy=AddBuilding("academy",1004,new Point(28,18));
                     var allProducers=new[]{hq,barracks,tech,academy,lab};
                     foreach(var producer in allProducers.Where(p=>session.Catalog.CanProduceUnits(p.definition))){producer.hasRallyPoint=true;producer.rallyPoint=new Point(20,20);}
                     Refresh();session.Select(0,false);foreach(var producer in allProducers)session.Select(producer.id,true);Refresh();
                     var groupActions=SelectionActions.For(session).Items;
-                    Check(groupActions.Count==8&&!groupActions.Any(a=>a.Id=="clear-rally-point"),
-                        "All five producer roles expose six train actions and two upgrades; research has no rally point");
+                    Check(groupActions.Count==9&&groupActions.Count(a=>a.Id=="clear-rally-point")==1,
+                        "All five building roles expose six train actions, two upgrades and one shared rally control");
                     Check(Text("productionState").Contains("TRAINING")&&Text("productionHint").Contains("including the current one"),
                         "Producer group shows current production and specific card cancellation");
                     Canvas.ForceUpdateCanvases();
                     var actionArea=Field<RectTransform>(panel,"actions");
                     var actionCards=actionArea.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null).ToArray();
-                    Check(actionCards.Length==8&&actionCards.All(card=>card.name!="Clear Rally Points"&&card.name!="Cancel / refund")
+                    Check(actionCards.Length==9&&actionCards.Count(card=>card.name=="Clear Rally Points")==1&&actionCards.All(card=>card.name!="Cancel / refund")
                         &&Inside(Field<RectTransform>(panel,"root"),actionArea)&&actionCards.All(card=>Inside(actionArea,card)),
-                        "All eight training and research actions fit in Options without redundant cancellation or rally controls");
+                        "Training, research and shared rally control fit the fixed Options area without production cancellation");
                     Check(actionCards.All(card=>card.GetComponentsInChildren<Text>().All(text=>Inside(card,text.rectTransform)&&Fits(text))),
                         "Names and costs fit completely inside every production action");
                     Check(actionCards.SelectMany((card,i)=>actionCards.Skip(i+1).Select(other=>
@@ -349,7 +351,7 @@ namespace Frontier.Editor
                 {
                     var cards=ActionCards();
                     var expected=new[]{"scout","melee","ranged"}.Select(role=>"Train "+session.Catalog.Role(session.Faction,role).name).ToArray();
-                    var ordered=cards.OrderBy(card=>card.anchoredPosition.x).ToArray();
+                    var ordered=cards.Where(card=>expected.Contains(card.name)).OrderBy(card=>card.anchoredPosition.x).ToArray();
                     Check(ordered.Length==3&&ordered.Select(card=>card.name).SequenceEqual(expected)
                         &&ordered[0].anchoredPosition==Vector2.zero
                         &&ordered.All(card=>Mathf.Abs(card.anchoredPosition.y)<.01f),
@@ -452,10 +454,10 @@ namespace Frontier.Editor
         internal static void CheckActionModels(CommandPanel panel,GameSession session,Action<bool,string> check)
         {
             Canvas.ForceUpdateCanvases();var area=Field<RectTransform>(panel,"actions");
-            var available=SelectionActions.For(session).Items.Where(action=>action.Category!=ActionCategory.Cancel).ToArray();
+            var available=SelectionActions.For(session).Items.Where(action=>action.Id!="cancel").ToArray();
             var cards=area.Cast<RectTransform>().Where(card=>card.GetComponent<Image>()!=null).ToArray();
             check(cards.Length==available.Length&&cards.Select(card=>card.name).OrderBy(name=>name).SequenceEqual(available.Select(action=>action.Title).OrderBy(name=>name)),
-                "HUD contains every eligible action and excludes cancellation and rally clearing");
+                "HUD contains every eligible action including rally controls, with production cancellation left on queue cards");
             check(cards.All(card=>card.rect.size==new Vector2(328,112)),"All Options actions use the same readable target size");
             foreach(var action in available.Where(a=>a.Category==ActionCategory.Build||a.Category==ActionCategory.Train))
             {

@@ -24,6 +24,7 @@ Shader "Frontier/Fog"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION; float2 uv:TEXCOORD0; half4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float2 map:TEXCOORD1; float layer:TEXCOORD2; half opacity:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
@@ -86,7 +87,7 @@ Shader "Frontier/Fog"
                 // opacity continuously down to zero with the existing density slider.
                 half alpha = input.opacity * density * lerp(.8, 1.65, billow) * edge * borderFade * _FogDensity;
                 half3 color = _FogColor.rgb * lerp(.34, .52, billow) * (1 + input.layer * .035);
-                return half4(color, alpha);
+                return half4(FrontierTutorialFocus(color), alpha);
             }
             ENDHLSL
         }

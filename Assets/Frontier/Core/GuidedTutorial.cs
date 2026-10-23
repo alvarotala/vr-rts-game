@@ -32,6 +32,7 @@ namespace Frontier.Core
         public TutorialStep Step { get; private set; } = TutorialStep.Welcome;
         public bool Briefing { get; private set; } = true;
         public bool Complete => Step == TutorialStep.Complete;
+        public bool WheelExplored { get; private set; }
         public int AcceptedOrderCount => acceptedOrders;
         public int StepCount => Enum.GetValues(typeof(TutorialStep)).Length - (touch ? 0 : 1);
         public int StepNumber => (int)Step + 1 - (!touch && Step > TutorialStep.OpenWheel ? 1 : 0);
@@ -246,8 +247,12 @@ namespace Frontier.Core
             if (Step == TutorialStep.OpenMenu && open || Step == TutorialStep.ResumeMenu && !open) Advance();
         }
 
-        public void NotifyWheel()
-        { if (!Briefing && Step == TutorialStep.OpenWheel) Advance(); }
+        public void NotifyWheel(bool open = true)
+        {
+            if (Briefing || Step != TutorialStep.OpenWheel) return;
+            if (open) WheelExplored = true;
+            else if (WheelExplored) Advance();
+        }
 
         public void NotifyGroup(int index, bool save)
         {
@@ -271,7 +276,7 @@ namespace Frontier.Core
         }
         private void Enter(TutorialStep step)
         {
-            Step = step; Briefing = true; acceptedOrders = 0; building = 0; sawCargo = false; groupNotified = false;
+            Step = step; Briefing = true; acceptedOrders = 0; building = 0; sawCargo = false; groupNotified = false; WheelExplored = false;
             orderedUnits = Array.Empty<int>();
         }
     }

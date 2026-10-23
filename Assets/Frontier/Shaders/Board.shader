@@ -50,6 +50,7 @@ Shader "Frontier/Board"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; float2 uv:TEXCOORD0; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float3 world:TEXCOORD0; float3 normal:TEXCOORD1; float2 uv:TEXCOORD2; float topSurface:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
@@ -279,7 +280,7 @@ Shader "Frontier/Board"
                         color=lerp(color,lerp(_PointerColor.rgb,_PointerDotColor.rgb,dot),mark);
                     }
                 }
-                return half4(color,_RevealOpacity);
+                return half4(FrontierTutorialFocus(color),_RevealOpacity);
             }
             ENDHLSL
         }

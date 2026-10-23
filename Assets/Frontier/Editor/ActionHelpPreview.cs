@@ -174,8 +174,14 @@ namespace Frontier.Editor
                 {
                     var card=Field<RectTransform>(panel,"actionCard");var area=Field<RectTransform>(panel,"actions");
                     var cardSize=card.rect.size;var areaSize=area.rect.size;
+                    var workerActions=area.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null)
+                        .ToDictionary(t=>t.name,t=>t.anchoredPosition);
                     Select(0);CheckEmpty("No selection");
-                    session.Select(workerId,false);session.Select(buildingId,true);Refresh();CheckEmpty("Mixed selection");
+                    session.Select(workerId,false);session.Select(buildingId,true);Refresh();CheckLayout();
+                    var mixedActions=area.Cast<RectTransform>().Where(t=>t.GetComponent<Image>()!=null).ToArray();
+                    Check(card.gameObject.activeInHierarchy&&card.rect.size==cardSize&&area.rect.size==areaSize
+                        &&mixedActions.Length==workerActions.Count&&mixedActions.All(t=>workerActions.TryGetValue(t.name,out var position)&&position==t.anchoredPosition),
+                        "Mixed selection retains the worker's options and their positions within the fixed area");
                     Select(workerId);
                     void CheckEmpty(string state)
                     {

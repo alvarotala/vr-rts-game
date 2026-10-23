@@ -38,7 +38,7 @@ namespace Frontier.Runtime
             if(Session.IsConnecting)
             {
                 Label(actions,"Waiting for the server and your opponent",new Vector2(24,-32),new Vector2(992,64),27,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
-                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(24,-112),new Vector2(992,44),24,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
+                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(24,-112),new Vector2(992,44),24,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
                 Label(actions,"Keep this app open. Both players need to join the same server.",new Vector2(40,-188),new Vector2(960,70),21,MenuMuted,TextAnchor.MiddleCenter);
                 MenuFooter("Cancel connection",CancelOnlineSetup,352,336);return;
             }

@@ -41,7 +41,7 @@ namespace Frontier.Runtime
         private readonly HashSet<int> actionSelection=new HashSet<int>(),selectSelection=new HashSet<int>();
         private void Start()
         {
-            Panel.PlaceRequested=Quest.BeginPlacement;Session.Feedback+=Haptic;
+            Panel.PlaceRequested=Quest.BeginPlacement;Panel.TutorialInput=this;Session.Feedback+=Haptic;
             controllerVisuals=new ControllerVisuals(transform);
             var go=new GameObject("Pointer ray");laser=go.AddComponent<LineRenderer>();laser.sharedMaterial=new Material(Shader.Find("Universal Render Pipeline/Unlit"));laser.sharedMaterial.color=new Color(.3f,.95f,.94f);laser.positionCount=2;laser.widthMultiplier=.002f;laser.enabled=Quest.Active;
         }
@@ -546,6 +546,11 @@ namespace Frontier.Runtime
         }
         private void Haptic(bool success)
         {PulseHaptic(success ? .2f : .65f,.07f);}
+        public void TutorialTransitionHint()
+        {
+            if(Session==null||Session.HasSystemPause||Quest==null||!Quest.PointerTracked)return;
+            PulseHaptic(.28f,.1f);
+        }
         private void PulseHaptic(float amplitude,float duration)
         {
             if(!isActiveAndEnabled||Quest==null||!Quest.Active)return;

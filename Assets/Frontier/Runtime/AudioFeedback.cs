@@ -90,6 +90,7 @@ namespace Frontier.Runtime
             if(Time.unscaledTime-lastNavigation<.065f)return;lastNavigation=Time.unscaledTime;
             PlayUi(confirm?SoundCue.Confirm:SoundCue.Hover);
         }
+        public void TutorialTransition() => PlayUi(SoundCue.Ready);
         private void PlayUi(SoundCue cue)
         {
             if(ui==null||Session.HasSystemPause)return;LastCue=cue;

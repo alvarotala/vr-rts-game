@@ -26,9 +26,11 @@ namespace Frontier.Runtime
         public event Action<int, Point> UnitMoveOrdered;
         public string BuildDefinition { get; private set; }
         public bool AttackMoveMode;
+        private HashSet<int> rallySelection;
+        public bool RallyPointMode => rallySelection != null;
         public string AbilityDefinitionId { get; private set; }
         public AbilityDefinition PendingAbility => Catalog?.Ability(AbilityDefinitionId);
-        public bool HasTargetingMode => BuildDefinition != null || AttackMoveMode || AbilityDefinitionId != null;
+        public bool HasTargetingMode => BuildDefinition != null || AttackMoveMode || AbilityDefinitionId != null || RallyPointMode;
         public bool AbilityPointerActive => CanIssueOrders && PendingAbility != null;
         public bool AttackPointerActive => CanIssueOrders
             && AttackMoveMode;
@@ -73,7 +75,7 @@ namespace Frontier.Runtime
             bot = new Strategist(1, Difficulty == "hard" ? AiDifficulty.Hard : Difficulty == "easy" ? AiDifficulty.Easy : AiDifficulty.Normal, Catalog, Map);
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
+            rallySelection=null; BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
             // A rematch must not override tracking, headset or application pauses.
             PrepareCountdown(countdown ? StartCountdownSeconds : 0);
             pauseReasons.Remove("menu"); Running = true; Match.Paused=IsPaused; View = Match.View(0);
@@ -91,7 +93,7 @@ namespace Frontier.Runtime
             if (Match != null) Match.Paused = true;
             Running = false; Match = null; View = null; bot = null;
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
+            rallySelection=null; BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; LastCommandSequence = 0; sequence = 0; accumulator = 0;
             // Closing a match must not dismiss headset, focus or tracking interruptions.
             pauseReasons.Remove("menu");
             Announce("Ready for a new match.");
@@ -226,12 +228,12 @@ namespace Frontier.Runtime
         }
         private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
         public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
-        public void ChooseBuild(string id) { if(IsReplay||IsCountingDown)return; if(!TutorialCanChooseBuild(id)){TutorialRejectOrder();return;} BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
+        public void ChooseBuild(string id) { if(IsReplay||IsCountingDown)return; if(!TutorialCanChooseBuild(id)){TutorialRejectOrder();return;} rallySelection=null; BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void ChooseAttackMove()
         {
             if(IsReplay||IsCountingDown)return;
             if(!TutorialCanChooseAttack){TutorialRejectOrder();return;}
-            BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null;
+            rallySelection=null; BuildDefinition = null; AttackMoveMode = true; AbilityDefinitionId = null;
             Announce("Attack Move · Choose a point on the battlefield."); Changed?.Invoke();
         }
         public IEnumerable<VisibleEntity> AbilityCasters(string id) => View == null ? Enumerable.Empty<VisibleEntity>() : View.entities.Where(e =>
@@ -255,17 +257,21 @@ namespace Frontier.Runtime
             var ability=Catalog.Ability(id);
             if(ability==null||!AbilityCasters(id).Any(e=>AbilityReady(e,ability)))
             {Announce(AbilityStatus(id),true);Feedback?.Invoke(false);Changed?.Invoke();return false;}
-            BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=id;
+            rallySelection=null;BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=id;
             Announce(ability.name+" · Choose a visible point. One caster will move into range and cast.");Changed?.Invoke();return true;
         }
         private void ValidateAbilitySelection()
-        { if(AbilityDefinitionId!=null&&!AbilityCasters(AbilityDefinitionId).Any())AbilityDefinitionId=null; }
+        {
+            if(AbilityDefinitionId!=null&&!AbilityCasters(AbilityDefinitionId).Any())AbilityDefinitionId=null;
+            if(RallyPointMode&&(!CanSetRallyPoint||!rallySelection.SetEquals(Selection)))rallySelection=null;
+        }
         public void CancelMode()
         {
             if (BuildDefinition != null) Announce("Construction placement cancelled.");
             else if (AttackMoveMode) Announce("Attack destination cancelled.");
             else if (PendingAbility != null) Announce(PendingAbility.name+" targeting cancelled.");
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; Changed?.Invoke();
+            else if (RallyPointMode) Announce("Rally point placement cancelled.");
+            rallySelection=null;BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null; Changed?.Invoke();
         }
         private void RefreshView()
         {
@@ -286,8 +292,20 @@ namespace Frontier.Runtime
                         UnitMoveOrdered?.Invoke(entity.id,entity.destination);
                 }
         }
+        public IEnumerable<VisibleEntity> SelectedMobileUnits => View==null?Enumerable.Empty<VisibleEntity>():View.entities.Where(e=>
+            e.owner==View.player&&!e.remembered&&e.health>0&&e.complete&&Selection.Contains(e.id)&&!Catalog[e.definition].building);
+        public IEnumerable<VisibleEntity> RallyPointProducers => View==null?Enumerable.Empty<VisibleEntity>():View.entities.Where(e=>
+            e.owner==View.player&&!e.remembered&&e.health>0&&e.complete&&Selection.Contains(e.id)&&Catalog.CanProduceUnits(e.definition));
         public bool CanSetRallyPoint => View!=null&&Selection.Count>0&&Selection.All(id=>View.entities.Any(e=>
-            e.id==id&&e.owner==View.player&&!e.remembered&&e.complete&&Catalog.CanProduceUnits(e.definition)));
+            e.id==id&&e.owner==View.player&&!e.remembered&&e.health>0&&Catalog[e.definition].building))&&RallyPointProducers.Any();
+        public bool ChooseRallyPoint()
+        {
+            if(!CanIssueOrders||!CanSetRallyPoint)return false;
+            if(IsTutorial)return TutorialRejectOrder();
+            BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=null;
+            rallySelection=new HashSet<int>(Selection);
+            Announce("Set rally point · Aim at the terrain and press Trigger.");Changed?.Invoke();return true;
+        }
         public bool ClearRallyPoint()
         {
             if(!Send(CommandKind.ClearRallyPoint))return false;
@@ -296,6 +314,8 @@ namespace Frontier.Runtime
         public int Context(Point point,int entityId,int resourceId,bool append=false,bool attack=false,int replaceSequence=0)
         {
             if (View == null) return 0;
+            if(RallyPointMode&&(!CanSetRallyPoint||!rallySelection.SetEquals(Selection)))
+            {rallySelection=null;Changed?.Invoke();return 0;}
             if (PendingAbility != null)
             {
                 var ability=PendingAbility;
@@ -319,7 +339,7 @@ namespace Frontier.Runtime
                 if(accepted)AttackMoveMode=false;return accepted?sequence:0;
             }
             var entity = View.entities.FirstOrDefault(e=>e.id==entityId && !e.remembered);
-            var selected = View.entities.Where(e=>Selection.Contains(e.id)).ToArray();
+            var selected = SelectedMobileUnits.ToArray();
             if(attack)
             {
                 bool accepted=entity!=null&&entity.owner!=LocalPlayer
@@ -343,6 +363,15 @@ namespace Frontier.Runtime
             // A queue card can address one producer or a shared unit order without changing selection.
             if(entityIds!=null&&(entityIds.Length==0||entityIds.Any(id=>!Selection.Contains(id))))return false;
             var selected = (entityIds??Selection.ToArray()).Distinct().OrderBy(id=>id).ToArray();
+            // Keep the full selection visible, but never include structures in a
+            // mobile order. This same command payload serves local and online play.
+            if(IsMobileCommand(kind))
+            {
+                var mobiles=new HashSet<int>(SelectedMobileUnits.Select(e=>e.id));
+                selected=selected.Where(mobiles.Contains).ToArray();
+            }
+            else if(entityIds==null&&(kind==CommandKind.SetRallyPoint||kind==CommandKind.ClearRallyPoint)&&CanSetRallyPoint)
+                selected=RallyPointProducers.Select(e=>e.id).OrderBy(id=>id).ToArray();
             var command = new GameCommand { player=LocalPlayer, sequence=++sequence, kind=kind, definition=definition, target=target, position=position, queueOrderId=queueOrderId, entities=selected,append=append,replacePendingSequence=replaceSequence,unitOrderSequence=unitOrderSequence };
             if(IsTutorial && !Tutorial.Allows(command))return TutorialRejectOrder();
             if(IsOnline)return SendOnline(command);
@@ -368,6 +397,9 @@ namespace Frontier.Runtime
             Feedback?.Invoke(result.accepted); RefreshView();UpdateTutorial();
             Changed?.Invoke(); return result.accepted;
         }
+        private static bool IsMobileCommand(CommandKind kind) => kind==CommandKind.Move||kind==CommandKind.Attack||kind==CommandKind.AttackMove
+            ||kind==CommandKind.Gather||kind==CommandKind.Repair||kind==CommandKind.Build||kind==CommandKind.Stop||kind==CommandKind.Hold
+            ||kind==CommandKind.Cast||kind==CommandKind.CancelUnitOrder;
         private void OnApplicationFocus(bool focused) { if(!focused)UpdateArchive(true); if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
         private void OnApplicationPause(bool paused) { if(paused)UpdateArchive(true); if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }
     }

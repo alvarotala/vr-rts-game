@@ -63,7 +63,7 @@ namespace Frontier.Runtime
                     new Command("menus.back-action",touch?"Back in the wheel":"Cancel a pending action",touch?bindings.MenuBackName+" / Back sector":back,touch?bindings.MenuBackName+" returns or closes root. Down: Quick select at root, idle workers there, group 3 in Groups, Back in actions.":"Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus."),
                     new Command("menus.activate","Use menu buttons",click,"Press and release on the same button. Empty menu areas never send orders through to the map."),
                     new Command("menus.pause","Pause / resume",touch?back+" / Pause button":back+" / "+pause+" / Pause button","Cancel an armed action first, or pause. Menus: "+(touch?bindings.MenuBackName:"Escape")+" goes back; Resume continues the match."),
-                    new Command("menus.leave","Return to main menu","Pause > Return to main menu","Confirm Leave match to end the current match. Keep playing returns to your army."),
+                    new Command("menus.leave","Return to main menu","Pause > Return to main menu","Confirm Leave match to end the current match. Keep playing returns to the pause menu."),
                     new Command("menus.match","Start / restart a match","New Match / Rematch","Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends.")),
                 new Topic("Groups",
                     new Command("groups.recall","Recall a group",touch?"Wheel up > Groups > Trigger":groups,touch?"Enter Groups, choose a direction and press Trigger. Centering never recalls a group.":"Replace the current selection with the surviving members of the chosen control group."),

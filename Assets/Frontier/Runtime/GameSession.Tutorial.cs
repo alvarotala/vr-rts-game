@@ -26,7 +26,7 @@ namespace Frontier.Runtime
             ArchiveStatus = null; ArchiveFailed = false;
             Match.Notice += (player, message) => { if (player == 0) Announce(message); };
             Selection.Clear(); SelectedResource = 0; foreach (var group in groups) group.Clear();
-            BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null;
+            rallySelection=null; BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null;
             LastCommandSequence = 0; sequence = 0; accumulator = 0;
             PrepareCountdown(countdown ? StartCountdownSeconds : 0);
             pauseReasons.Remove("menu"); pauseReasons.Remove("tutorial");
@@ -55,10 +55,10 @@ namespace Frontier.Runtime
             Tutorial.NotifyMenu(open); SynchronizeTutorial();
         }
 
-        public void NotifyTutorialWheel()
+        public void NotifyTutorialWheel(bool open = true)
         {
             if (!IsTutorial || !CanIssueOrders) return;
-            Tutorial.NotifyWheel(); SynchronizeTutorial(); Changed?.Invoke();
+            Tutorial.NotifyWheel(open); SynchronizeTutorial(); Changed?.Invoke();
         }
 
         private void UpdateTutorial()
@@ -69,7 +69,7 @@ namespace Frontier.Runtime
             SynchronizeTutorial();
             if (step != Tutorial.Step || briefing != Tutorial.Briefing)
             {
-                BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null;
+                rallySelection=null; BuildDefinition = null; AttackMoveMode = false; AbilityDefinitionId = null;
                 Announce(Tutorial.Complete ? "Tutorial complete. You led your first victory." : "Objective complete. Read the next lesson.");
                 Changed?.Invoke();
             }

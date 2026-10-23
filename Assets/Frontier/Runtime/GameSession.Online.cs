@@ -43,7 +43,7 @@ namespace Frontier.Runtime
             OnlineReportUnavailable=false;
             remoteIdentity=new object();
             Selection.Clear();SelectedResource=0;foreach(var group in groups)group.Clear();
-            BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=null;LastCommandSequence=0;sequence=0;
+            rallySelection=null;BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=null;LastCommandSequence=0;sequence=0;
             ArchiveStatus="Online reports are shown after the match. Local replay recording is available for offline matches.";
             ArchiveFailed=false;
             remoteClient=new GameObject("NGO match client").AddComponent<NgoMatchClient>();

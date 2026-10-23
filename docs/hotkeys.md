@@ -54,7 +54,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Back in the wheel | B / Back sector | B returns or closes root. Down: Quick select at root, idle workers there, group 3 in Groups, Back in actions. |
 | Use menu buttons | Trigger / A | Press and release on the same button. Empty menu areas never send orders through to the map. |
 | Pause / resume | B / Pause button | Cancel an armed action first, or pause. Menus: B goes back; Resume continues the match. |
-| Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
+| Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to the pause menu. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
 ### Groups
@@ -132,7 +132,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Cancel a pending action | Escape | Cancel an armed build or Attack Move, or open pause. Escape goes back inside menus. |
 | Use menu buttons | Left-click | Press and release on the same button. Empty menu areas never send orders through to the map. |
 | Pause / resume | Escape / Space / Pause button | Cancel an armed action first, or pause. Menus: Escape goes back; Resume continues the match. |
-| Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to your army. |
+| Return to main menu | Pause > Return to main menu | Confirm Leave match to end the current match. Keep playing returns to the pause menu. |
 | Start / restart a match | New Match / Rematch | Set faction, opponent, difficulty and map before Start Match. Rematch is available after a match ends. |
 
 ### Groups

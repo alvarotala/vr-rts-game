@@ -27,6 +27,10 @@ namespace Frontier.Runtime
             var result = new SelectionActions();
             if (session.View == null) return result;
             var selected = session.View.entities.Where(e => e.owner == session.View.player && session.Selection.Contains(e.id)).ToArray();
+            // Keep the full selection on the board and in its cards, but mobile
+            // units own the command context whenever buildings are also selected.
+            var mobile = selected.Where(e => !session.Catalog[e.definition].building).ToArray();
+            if (mobile.Length > 0) selected = mobile;
             if (selected.Length > 0 && selected.All(e => session.Catalog[e.definition].building))
             {
                 var entity = selected[0]; bool single = selected.Length == 1;
@@ -60,10 +64,17 @@ namespace Frontier.Runtime
                 else if(single&&entity.queue.Length>0)
                     result.Add("cancel", "Cancel / refund", "Cancel / refund", "Last queued item", () => session.Send(CommandKind.Cancel), ActionCategory.Cancel,
                         "Removes the last item in this building's production queue and refunds its resource cost.");
-                if(session.CanSetRallyPoint&&selected.Any(e=>e.hasRallyPoint))
-                    result.Add("clear-rally-point",single?"Clear Rally Point":"Clear Rally Points",single?"Clear Rally":"Clear Rallies",single?"Restore default exit":"Restore default exits",()=>session.ClearRallyPoint(),ActionCategory.Cancel,
-                        single?"Clears this building's rally point. Newly trained workers resume automatic gathering; other units stay at the exit. Units already deployed keep their orders.":
-                        "Clears rally points for the selected production buildings. Units already deployed keep their orders; production queues are unchanged.");
+                if(session.CanSetRallyPoint)
+                {
+                    var producers=session.RallyPointProducers.ToArray();bool singleProducer=producers.Length==1;
+                    if(producers.Any(e=>e.hasRallyPoint))
+                        result.Add("clear-rally-point",singleProducer?"Clear Rally Point":"Clear Rally Points",singleProducer?"Clear Rally":"Clear Rallies",singleProducer?"Restore default exit":"Restore default exits",()=>session.ClearRallyPoint(),ActionCategory.Cancel,
+                            singleProducer?"Clears this building's rally point. Newly trained workers resume automatic gathering; other units stay at the exit. Units already deployed keep their orders.":
+                            "Clears rally points for the selected production buildings. Units already deployed keep their orders; production queues are unchanged.");
+                    else
+                        result.Add("set-rally-point",singleProducer?"Set Rally Point":"Set Rally Points",singleProducer?"Set Rally":"Set Rallies","Choose a destination",()=>session.ChooseRallyPoint(),ActionCategory.Orders,
+                            "Point at open terrain and press Trigger to set a rally point for the selected production buildings. Newly trained units move there. A on terrain also sets or replaces the rally point directly.");
+                }
                 if (result.Items.Count == 0) result.Hint = single ? "This building operates automatically." : "Select a single building to view its construction or production queue.";
             }
             else if (selected.Length > 0 && selected.All(e => !session.Catalog[e.definition].building))

@@ -1027,8 +1027,8 @@
       "template": false
     },
     {
-      "key": "Choose Keep playing to resume the match.",
-      "value": "Elige Seguir jugando para reanudar.",
+      "key": "Choose Keep playing to return to the pause menu.",
+      "value": "Elige Seguir jugando para volver al menú de pausa.",
       "template": false
     },
     {
@@ -1167,8 +1167,8 @@
       "template": false
     },
     {
-      "key": "Confirm Leave match to end the current match. Keep playing returns to your army.",
-      "value": "Confirma Abandonar para terminar la partida. Seguir jugando vuelve a tu ejército.",
+      "key": "Confirm Leave match to end the current match. Keep playing returns to the pause menu.",
+      "value": "Confirma Abandonar para terminar la partida. Seguir jugando vuelve al menú de pausa.",
       "template": false
     },
     {
@@ -3207,8 +3207,8 @@
       "template": false
     },
     {
-      "key": "Resume your current match.",
-      "value": "Vuelve a tu partida actual.",
+      "key": "Return to the pause menu.",
+      "value": "Vuelve al menú de pausa.",
       "template": false
     },
     {
@@ -7940,8 +7940,8 @@
       "template": false
     },
     {
-      "key": "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. Mixed units and buildings leave this area empty. Pale slots are not buttons; point at a command for its cost and requirements.",
-      "value": "Las opciones dependen de tu selección: edificios para entrenar o investigar, obreros para construir y unidades para dar órdenes. Al mezclar unidades y edificios, esta zona queda vacía. Los espacios tenues no son botones. Apuntá a una opción para consultar su costo y requisitos.",
+      "key": "These commands belong to your selection. Choose a building to train units or research upgrades, a worker to construct, or mobile units to give orders. When units and buildings are selected together, units take priority. Rally controls only appear for production buildings without mobile units selected. Pale slots are not buttons; point at a command for its cost and requirements.",
+      "value": "Las opciones dependen de tu selección: edificios para entrenar o investigar, obreros para construir y unidades para dar órdenes. Al mezclar unidades y edificios, las unidades tienen prioridad. Los controles de reunión aparecen al seleccionar edificios de producción sin unidades móviles. Los espacios tenues no son botones. Apuntá a una opción para consultar su costo y requisitos.",
       "template": false
     },
     {
@@ -9060,6 +9060,11 @@
       "template": true
     },
     {
+      "key": "Explore the wheel. Press {0} to go back, then press it again to close and continue.",
+      "value": "Explora la rueda. Pulsa {0} para volver atrás y luego otra vez para cerrarla y continuar.",
+      "template": true
+    },
+    {
       "key": "Tilt up to Groups, then press Trigger.",
       "value": "Inclina arriba hacia Grupos y pulsa el gatillo.",
       "template": false
@@ -9077,6 +9082,46 @@
     {
       "key": "BETA",
       "value": "BETA",
+      "template": false
+    },
+    {
+      "key": "Set Rally Point",
+      "value": "Fijar punto de reunión",
+      "template": false
+    },
+    {
+      "key": "Set Rally Points",
+      "value": "Fijar puntos de reunión",
+      "template": false
+    },
+    {
+      "key": "Set Rally",
+      "value": "Fijar reunión",
+      "template": false
+    },
+    {
+      "key": "Set Rallies",
+      "value": "Fijar reuniones",
+      "template": false
+    },
+    {
+      "key": "TARGET · Rally point",
+      "value": "DESTINO · Punto de reunión",
+      "template": false
+    },
+    {
+      "key": "Point at open terrain and press Trigger to set a rally point for the selected production buildings. Newly trained units move there. A on terrain also sets or replaces the rally point directly.",
+      "value": "Apuntá al terreno libre y presioná Gatillo para fijar el punto de reunión de los edificios de producción seleccionados. Las unidades nuevas irán allí. A sobre el terreno también fija o reemplaza el destino directamente.",
+      "template": false
+    },
+    {
+      "key": "Set rally point · Aim at the terrain and press Trigger.",
+      "value": "Fijar punto de reunión · Apuntá al terreno y presioná Gatillo.",
+      "template": false
+    },
+    {
+      "key": "Rally point placement cancelled.",
+      "value": "Se canceló la colocación del punto de reunión.",
       "template": false
     }
   ]

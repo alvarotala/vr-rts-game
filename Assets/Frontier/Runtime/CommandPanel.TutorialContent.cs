@@ -76,7 +76,8 @@ namespace Frontier.Runtime
                     else
                     {
                         tutorialCueWheel=true;
-                        TutorialInstruction("Tilt the {0} stick right. That's your action wheel!",Bindings.HandName.ToLowerInvariant());
+                        if(lesson.WheelExplored&&TutorialWheel!=null&&TutorialWheel.IsOpen)TutorialInstruction("Explore the wheel. Press {0} to go back, then press it again to close and continue.",Bindings.MenuBackName);
+                        else TutorialInstruction("Tilt the {0} stick right. That's your action wheel!",Bindings.HandName.ToLowerInvariant());
                     }
                     break;
                 case TutorialStep.BuildSupply:
@@ -134,7 +135,7 @@ namespace Frontier.Runtime
             if(lesson.Briefing&&!lesson.Complete)
             {
                 tutorialCueEntity=tutorialCueResource=0;tutorialCuePoint=null;tutorialCueAction=null;tutorialCueWheel=false;
-                TutorialInstruction(Quest.Active?"Press Trigger / {0} on Continue when you're ready.":"Click Continue when you're ready.",Bindings.MenuConfirmName);
+                tutorialInstruction.text="";
             }
         }
 

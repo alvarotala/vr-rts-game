@@ -15,6 +15,7 @@ Shader "Frontier/Weapons"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION;float3 uv:TEXCOORD0;half4 color:COLOR;UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION;float3 world:TEXCOORD0;float3 uv:TEXCOORD1;float2 mapUV:TEXCOORD2;half4 color:COLOR;UNITY_VERTEX_OUTPUT_STEREO };
             TEXTURE2D(_FogTex);SAMPLER(sampler_FogTex);
@@ -36,7 +37,7 @@ Shader "Frontier/Weapons"
                 clip(SAMPLE_TEXTURE2D(_FogTex,sampler_FogTex,input.mapUV).r-.9);
                 float distance=input.uv.z>.5?length(input.uv.xy-.5):abs(input.uv.y-.5);
                 half alpha=(1-smoothstep(.2,.5,distance))*input.color.a;
-                return half4(input.color.rgb,alpha);
+                return half4(FrontierTutorialFocus(input.color.rgb),alpha);
             }
             ENDHLSL
         }

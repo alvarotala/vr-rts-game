@@ -12,6 +12,7 @@ Shader "Frontier/Remains"
             #pragma fragment frag
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "TutorialFocus.hlsl"
             struct Attributes { float4 positionOS:POSITION;float3 normalOS:NORMAL;half4 color:COLOR;UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION;float3 world:TEXCOORD0;float3 local:TEXCOORD1;float3 normal:TEXCOORD2;half4 color:COLOR;UNITY_VERTEX_OUTPUT_STEREO };
             TEXTURE2D(_FogTex);SAMPLER(sampler_FogTex);
@@ -35,7 +36,7 @@ Shader "Frontier/Remains"
                 float noise=frac(sin(dot(floor(input.local*70),float3(12.9898,78.233,37.719)))*43758.5453);
                 clip(input.color.a-noise-.0001);
                 half light=.63+.37*saturate(dot(normalize(input.normal),normalize(float3(-.3,.9,-.5))));
-                return half4(input.color.rgb*light,1);
+                return half4(FrontierTutorialFocus(input.color.rgb*light),1);
             }
             ENDHLSL
         }

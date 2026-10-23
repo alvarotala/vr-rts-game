@@ -14,6 +14,11 @@ namespace Frontier.Editor
     // tutorial state, resources, health or entity positions are changed by tests.
     public static class GuidedTutorialPreview
     {
+        public static void RunFocusBatch()
+        {
+            TutorialBoardFocusPreview.Run();
+            RunBatch();
+        }
         public static void RunBatch()
         {
             bool hadLanguage = PlayerPrefs.HasKey(Localization.PreferenceKey);
@@ -192,8 +197,24 @@ namespace Frontier.Editor
                             case TutorialStep.OpenWheel:
                                 s.Select(lesson.FocusEntity, false);
                                 f.Drain(); f.Frame(Vector2.right); Refresh();
-                                f.Check(lesson.Step == TutorialStep.BuildSupply, "Physical Touch tilt goes through RouteWheel and completes the wheel objective");
-                                f.Dismiss(); break;
+                                f.Check(lesson.Step == step && lesson.WheelExplored && f.Wheel.IsOpen && s.CanIssueOrders,
+                                    "Opening the selection wheel keeps its lesson active so the player can explore");
+                                f.Frame(); f.Frame(elapsed: ActionWheel.NeutralCloseDelay + 2); Refresh();
+                                f.Check(lesson.Step == step && f.Wheel.IsOpen,
+                                    "The first wheel lesson remains visible while the stick rests at neutral");
+                                f.Wheel.Close(); Refresh();
+                                f.Check(lesson.Step == step, "An involuntary wheel close does not complete its lesson");
+                                var reopenedInstruction=UnifiedWheelFixture.Field<Text>(f.Panel,"tutorialInstruction") as LocalizedText;
+                                f.Check(reopenedInstruction.Source=="Tilt the "+f.Panel.Bindings.HandName.ToLowerInvariant()+" stick right. That's your action wheel!",
+                                    "An involuntary wheel close restores the instruction to open it before continuing");
+                                f.Drain(); f.Frame(Vector2.right); Refresh();
+                                f.Frame(b: true); Refresh();
+                                f.Check(lesson.Step == step && f.Wheel.IsOpen && f.Wheel.Page == WheelPage.Root,
+                                    "Back still returns from the selection category to the wheel root during teaching");
+                                f.Frame(b: true); Refresh();
+                                f.Check(lesson.Step == TutorialStep.BuildSupply && lesson.Briefing && !f.Wheel.IsOpen,
+                                    "Deliberately closing the explored wheel starts the next briefing");
+                                f.Drain(); break;
                             case TutorialStep.BuildSupply:
                             case TutorialStep.BuildBarracks:
                             case TutorialStep.BuildExtractor:
@@ -359,7 +380,13 @@ namespace Frontier.Editor
                         var consoleRoot = UnifiedWheelFixture.Field<RectTransform>(f.Panel, "root");
                         emptyTutorialHudHeight = consoleRoot.rect.height;
                         f.Check(card.parent == consoleRoot.parent && card.parent == f.Panel.transform && !card.IsChildOf(consoleRoot)
-                            && card.GetComponent<Canvas>() != null, "Tutorial instructions live in their own world-space Canvas beside the console");
+                            && card.GetComponent<Canvas>() != null, "Tutorial instructions keep a separate world-space Canvas over the console");
+                        var relative=consoleRoot.InverseTransformPoint(card.position);
+                        f.Check(Mathf.Abs(relative.x)<1&&relative.y>0&&relative.y<consoleRoot.rect.yMax,
+                            "The opening guide sits centered over the upper console, not beside it");
+                        f.Check(!UnifiedWheelFixture.Field<RectTransform>(f.Panel,"tutorialInstructionBox").gameObject.activeSelf
+                            &&UnifiedWheelFixture.Field<Text>(f.Panel,"tutorialInstruction").text=="",
+                            "A Continue briefing hides the extra command box and duplicate instructions");
                         f.Check(card.GetComponentsInChildren<Collider>(true).Length == 0, "The floating instructions add no physics input blockers");
                         var local = new Vector2(card.rect.xMin + 12, card.rect.yMax - 12);
                         var corner = card.TransformPoint(local); var ray = new Ray(corner - card.forward * .5f, card.forward);
@@ -392,9 +419,29 @@ namespace Frontier.Editor
                             && Vector3.Distance(connector.GetPosition(connector.positionCount - 1), destination) < .001f,
                             "The floating instruction's line ends exactly at the resolved target");
                         f.Check(connector.GetComponents<Collider>().Length == 0, "The visual connector cannot intercept input");
+                        bool mapFocus=action==null;
+                        var dim=UnifiedWheelFixture.Field<Image>(f.Panel,"tutorialMenuDim");
+                        f.Check(mapFocus?dim.gameObject.activeSelf&&dim.color.a>.4f:!dim.gameObject.activeSelf,
+                            "Only map teaching dims the in-game console; menu teaching restores it");
+                        var card=UnifiedWheelFixture.Field<RectTransform>(f.Panel,"tutorialCard");
+                        if(mapFocus)
+                        {
+                            var console=UnifiedWheelFixture.Field<RectTransform>(f.Panel,"root");
+                            var eye=f.Quest.Camera.transform;
+                            float angularScale=card.lossyScale.y/console.lossyScale.y
+                                *eye.InverseTransformPoint(console.position).z/eye.InverseTransformPoint(card.position).z;
+                            f.Check(angularScale>1.15f,"Map instructions appear larger even after compensating for distance");
+                        }
+                        int attention=UnifiedWheelFixture.Field<int>(f.Panel,"tutorialAttentionChanges");Refresh();
+                        f.Check(UnifiedWheelFixture.Field<int>(f.Panel,"tutorialAttentionChanges")==attention,
+                            "An unchanged tutorial state does not repeatedly play its attention hint");
                         if (action != null)
                         {
                             var target = ActionTarget(action);
+                            var center=target.TransformPoint(target.rect.center);
+                            object[] hitArgs={card,new Ray(center-target.forward*.6f,target.forward),0f};
+                            bool covered=(bool)typeof(CommandPanel).GetMethod("Hit",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,hitArgs);
+                            f.Check(!covered,"The instruction leaves its taught command's center visible and clickable");
                             var local = target.InverseTransformPoint(destination);
                             f.Check(local.x >= target.rect.xMin - .1f && local.x <= target.rect.xMax + .1f
                                 && local.y >= target.rect.yMin - .1f && local.y <= target.rect.yMax + .1f && Mathf.Abs(local.z) < 12,

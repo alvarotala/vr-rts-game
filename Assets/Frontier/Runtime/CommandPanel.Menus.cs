@@ -33,7 +33,7 @@ namespace Frontier.Runtime
             var heading=Label(rect,title,new Vector2(24,titleY),new Vector2(size.x-80,hero?50:32),hero?34:primary?28:compact?23:25,ConsoleTheme.Ink);
             heading.fontStyle=FontStyle.Bold;
             Label(rect,description,new Vector2(24,descriptionY),new Vector2(size.x-48,hero?100:compact?24:size.y+descriptionY-12),hero?21:tall?20:compact?17:18,MenuMuted,TextAnchor.UpperLeft);
-            Label(rect,"›",new Vector2(size.x-48,hero?-size.y+65:-14),new Vector2(28,40),32,fill.HasValue?ConsoleTheme.Ink:primary?accent:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
+            Label(rect,"›",new Vector2(size.x-48,hero?-size.y+65:-14),new Vector2(28,40),32,primary&&!fill.HasValue?accent:ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
             return rect;
         }
@@ -41,7 +41,7 @@ namespace Frontier.Runtime
         private void MenuFooter(string title,Action click,float x=0,float width=330,bool primary=false,float height=64,Color? fill=null)
         {
             var rect=Section(actions,title,new Vector2(x,-396+height),new Vector2(width,height),fill??(primary?ConsoleTheme.Primary:button));
-            Label(rect,title,new Vector2(18,0),new Vector2(width-36,height),primary?28:23,primary?ConsoleTheme.Ink:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter).fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
+            Label(rect,title,new Vector2(18,0),new Vector2(width-36,height),primary?28:23,ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
         }
 
@@ -50,7 +50,7 @@ namespace Frontier.Runtime
             const float side=144,gap=20;
             float left=(1040-(side*4+gap*3))*.5f;
             var rect=Section(actions,title,new Vector2(left+index*(side+gap),-308),new Vector2(side,side),button);
-            Glyph(rect,icon,new Vector2((side-44)*.5f,-14),44,ConsoleTheme.SecondaryInk);
+            Glyph(rect,icon,new Vector2((side-44)*.5f,-14),44,ConsoleTheme.Ink);
             var label=Label(rect,title,new Vector2(8,-64),new Vector2(side-16,48),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             label.fontStyle=FontStyle.Bold;
             if(beta)
@@ -83,8 +83,8 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.Main:
-                    MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",new Vector2(264,0),new Vector2(512,116),()=>Show(MenuPage.MatchSetup),true);
-                    MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings),fill:ConsoleTheme.Secondary);
+                    MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",new Vector2(264,0),new Vector2(512,116),()=>Show(MenuPage.MatchSetup),true,ConsoleTheme.Secondary);
+                    MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
                     MainMenuTile("Guided tutorial",ConsoleGlyph.Kind.Tutorial,0,()=>Quest.RequestTutorial());
                     MainMenuTile("Multiplayer LAN",ConsoleGlyph.Kind.Group,1,()=>Show(MenuPage.OnlineSetup),true);
                     MainMenuTile("Guides",ConsoleGlyph.Kind.Guide,2,()=>OpenSubmenu(MenuPage.Guides));
@@ -117,7 +117,7 @@ namespace Frontier.Runtime
                 case MenuPage.Settings:
                     BuildSettingsPage();return true;
                 case MenuPage.LeaveConfirmation:
-                    MenuCard("Keep playing","Resume your current match.",Vector2.zero,new Vector2(512,140),()=>Show(MenuPage.Actions),true,ConsoleTheme.Success);
+                    MenuCard("Keep playing","Return to the pause menu.",Vector2.zero,new Vector2(512,140),()=>Show(MenuPage.Pause),true,ConsoleTheme.Success);
                     MenuCard("Leave match",Session.IsOnline?"Concede to your opponent and return to the main menu.":"End this match and return to the main menu.",new Vector2(528,0),new Vector2(512,140),()=>Session.LeaveMatch(),true,ConsoleTheme.Danger);
                     return true;
                 case MenuPage.Result:case MenuPage.HistoryReport:
