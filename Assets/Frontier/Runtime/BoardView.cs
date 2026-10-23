@@ -78,6 +78,8 @@ namespace Frontier.Runtime
         private WorkerVisuals workerVisuals;
         private CreepVisuals creepVisuals;
         private OrderQueueVisuals orderQueueVisuals;
+        private TutorialMarker tutorialMarker;
+        private BuildPlacementOverlay buildPlacementOverlay;
         private readonly Dictionary<int,AttackEvent> firing=new Dictionary<int,AttackEvent>();
         private readonly Dictionary<int,VisibleEntity> observedEntities=new Dictionary<int,VisibleEntity>();
         private readonly Dictionary<string,Material> roleMaterials=new Dictionary<string,Material>();
@@ -92,7 +94,13 @@ namespace Frontier.Runtime
             set{pointer=value;if(!value.HasValue)HoveredResource=0;UpdatePointer();}
         }
         public float CellScale => Width / Session.Map.width * Zoom;
+        // A shared minimum for small buildings and both deposit types. Preserve a
+        // useful physical target on compact boards without swallowing whole bases.
+        public float MinimumStaticPickRadius => Mathf.Clamp(.03f/CellScale,2.5f,4f);
+        public const float UnitPickRadius=1.6f;
         public float Depth => Width * Session.Map.height / Session.Map.width;
+        public void ShowTutorialCue(Point? point, bool foundation, float radius = .8f)
+            => tutorialMarker?.SetCue(point, foundation, radius);
         private void Start()
         {
             BaseTargeting=PlayerPrefs.GetInt(BaseTargetingKey,0)!=0;
@@ -136,6 +144,8 @@ namespace Frontier.Runtime
             workerVisuals?.Dispose();
             creepVisuals?.Dispose();
             orderQueueVisuals?.Dispose();
+            tutorialMarker?.Dispose();
+            buildPlacementOverlay?.Dispose();
             foreach(var material in roleMaterials.Values)Release(material);
             foreach(var material in revealMaterials.Values)Release(material);
             foreach(var material in buildingMaterials.Values)Release(material);
@@ -163,6 +173,9 @@ namespace Frontier.Runtime
             workerVisuals?.Dispose();workerVisuals=null;
             creepVisuals?.Dispose();creepVisuals=null;
             orderQueueVisuals?.Dispose();orderQueueVisuals=null;
+            tutorialMarker?.Dispose();tutorialMarker=null;
+            buildPlacementOverlay?.Dispose();buildPlacementOverlay=null;
+            ground.SetFloat("_BuildPlacementActive",0);
             resourceVisuals.ClearVapor();
             if(terrainCollider!=null)Release(terrainCollider.sharedMesh);
             for(int i=Content.childCount-1;i>=0;i--)Release(Content.GetChild(i).gameObject);
@@ -179,6 +192,7 @@ namespace Frontier.Runtime
             workerVisuals=new WorkerVisuals(Content);
             creepVisuals=new CreepVisuals(Session.Map);ground.SetTexture("_CreepTex",creepVisuals.Texture);
             orderQueueVisuals=new OrderQueueVisuals(Content);
+            tutorialMarker=new TutorialMarker(Content);
             resourceVisuals.BindVapor(Content,fog,Session.Map.width,Session.Map.height);
             var grid=terrainGrid=new GridMap(Session.Map);
             terrainRamps=new TerrainRegion[grid.Count];
@@ -257,6 +271,7 @@ namespace Frontier.Runtime
                 orderQueueVisuals?.Hide();
                 Hovered=0;Pointer=null;DrawSelection(default,default,false);
                 if(ground!=null)ground.SetFloat("_HoverWidth",0);
+                if(ground!=null)ground.SetFloat("_BuildPlacementActive",0);
                 if(preview!=null)preview.gameObject.SetActive(false);
             }
         }
@@ -308,6 +323,8 @@ namespace Frontier.Runtime
             // and effects. Board navigation and the headset camera remain independent.
             if(Session.IsReplay&&Session.Replay.Seeking)return;
             UpdateFog(); UpdatePointer();
+            UpdateBuildPlacementOverlay();
+            tutorialMarker?.Update(this);
             fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,Session.View?.tick/(float)Simulation.TickRate??0);
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null){contactShadows?.SetVisible(false);weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
@@ -446,7 +463,7 @@ namespace Frontier.Runtime
                     ground.SetFloat("_HoverWidth",Mathf.Clamp(.0018f/CellScale,.035f,.2f));ground.SetColor("_HoverColor",AllyHover);
                 }
             }
-            if(Session.BuildDefinition!=null&&Pointer.HasValue)
+            if(Session.BuildDefinition!=null&&Pointer.HasValue&&Session.CanIssueOrders&&Content.gameObject.activeInHierarchy)
             {
                 if(preview==null)preview=Primitive(PrimitiveType.Cube,Content,highlight);
                 int size=Session.Catalog[Session.BuildDefinition].footprint;Point p=Session.BuildPlacement(Pointer.Value,HoveredResource);
@@ -462,6 +479,24 @@ namespace Frontier.Runtime
             harvestingMarkers?.Update(this,viewer);
             orderQueueVisuals?.Update(this);
             UpdateContactShadows();
+        }
+        private void UpdateBuildPlacementOverlay()
+        {
+            if(ground==null)return;
+            bool active=Session.CanIssueOrders&&Session.BuildDefinition!=null&&Pointer.HasValue
+                &&Content!=null&&Content.gameObject.activeInHierarchy;
+            ground.SetFloat("_BuildPlacementActive",active?1:0);
+            if(!active)return;
+            int size=Session.Catalog[Session.BuildDefinition].footprint;
+            Point origin=Session.BuildPlacement(Pointer.Value,HoveredResource);
+            float inner=size*.707107f+.75f;
+            ground.SetVector("_BuildPlacementArea",new Vector4(origin.x+size*.5f,origin.y+size*.5f,inner,inner+4));
+            if(buildPlacementOverlay==null)
+            {
+                buildPlacementOverlay=new BuildPlacementOverlay(Session.Map);
+                ground.SetTexture("_BuildPlacementTex",buildPlacementOverlay.Texture);
+            }
+            buildPlacementOverlay.Update(Session);
         }
         public bool TryEntityTop(int id,out Vector3 top)
         {
@@ -625,14 +660,36 @@ namespace Frontier.Runtime
         }
         public int EntityAt(Point point)
         {
-            if(Session.View==null)return 0;
-            var found=Session.View.entities.Where(e=>!e.remembered).Select(e=>new{e,t=Session.Catalog[e.definition]})
-                .Where(a=>new Point(a.e.position.x+(a.t.building?a.t.footprint*.5f:0),a.e.position.y+(a.t.building?a.t.footprint*.5f:0)).Distance(point)<(a.t.building?a.t.footprint*.8f:1.6f))
-                .OrderBy(a=>a.e.position.Distance(point)).FirstOrDefault();return found?.e.id??0;
+            int unit=EntityBaseAt(point,false);
+            return unit!=0?unit:EntityBaseAt(point,true);
         }
-        // Mineral patches remain usable on a small board. Overlapping assistance zones
-        // choose the nearest deposit rather than treating the whole mineral line as one.
-        public int ResourceAt(Point point) => Session.View?.resources.Where(r=>ResourceVisible(r)&&r.position.Distance(point)<(r.kind=="mineral"?Mathf.Clamp(.03f/CellScale,2.5f,4):2))
+        private int EntityBaseAt(Point point,bool building)
+        {
+            if(Session.View==null||!VisibleBase(point))return 0;
+            int target=0;float closest=float.MaxValue;
+            foreach(var entity in Session.View.entities)
+            {
+                var type=Session.Catalog[entity.definition];
+                if(entity.remembered||entity.health<=0||type.building!=building)continue;
+                var center=EntityCenter(entity);
+                bool insideFootprint=building&&point.x>=entity.position.x&&point.y>=entity.position.y
+                    &&point.x<=entity.position.x+type.footprint&&point.y<=entity.position.y+type.footprint;
+                if(!VisibleBase(center)&&!insideFootprint)continue;
+                float distance=center.Distance(point);
+                float radius=building?Mathf.Max(type.footprint*.8f,MinimumStaticPickRadius):Mathf.Max(type.collisionRadius+.15f,UnitPickRadius);
+                if(distance>radius||distance>closest||distance==closest&&entity.id>=target)continue;
+                target=entity.id;closest=distance;
+            }
+            return target;
+        }
+        private Point EntityCenter(VisibleEntity entity)
+        {
+            var type=Session.Catalog[entity.definition];float offset=type.building?type.footprint*.5f:0;
+            return new Point(entity.position.x+offset,entity.position.y+offset);
+        }
+        // Overlapping assistance zones choose the nearest deposit.
+        public int ResourceAt(Point point) => Session.View==null||!VisibleBase(point)?0:Session.View.resources
+            .Where(r=>ResourceVisible(r)&&r.position.Distance(point)<=MinimumStaticPickRadius)
             .OrderBy(r=>r.position.Distance(point)).ThenBy(r=>r.id).FirstOrDefault()?.id??0;
         private bool ResourceVisible(ResourceState resource,byte minimumVision=1)
         {
@@ -644,40 +701,43 @@ namespace Frontier.Runtime
         }
         public void ResolvePointerTarget(Ray ray,Point point,Vector3 terrainHit,out int entityId,out int resourceId)
         {
-            if(BaseTargeting){ResolveBaseTarget(point,out entityId,out resourceId);return;}
-            entityId=EntityAt(point);resourceId=ResourceAt(point);
-            if(Session.View==null)return;
+            entityId=0;resourceId=0;
+            if(Session.View==null||!VisibleBase(point))return;
+            // A unit owns its entire selection area, including the assisted edge.
+            // Foreground buildings and deposits must not steal that target.
+            entityId=EntityBaseAt(point,false);
+            if(entityId!=0)return;
+            if(BaseTargeting){ResolveStaticBaseTarget(point,out entityId,out resourceId);return;}
             // The terrain intersection can be well behind a crystal when viewed from
             // the side. Test the visible model too, stopping at the terrain in front.
-            float closest=Vector3.Distance(ray.origin,terrainHit)+.001f;
-            bool hitResource=false;
+            float maximum=Vector3.Distance(ray.origin,terrainHit)+.001f,closest=maximum;
+            foreach(var entity in Session.View.entities)
+            {
+                if(entity.remembered||entity.health<=0||Session.Catalog[entity.definition].building||!entities.TryGetValue(entity.id,out var visual))continue;
+                foreach(var renderer in parts[visual].body)
+                {
+                    if(!HitBody(renderer,0,ray,closest,out float distance))continue;
+                    closest=distance;entityId=entity.id;
+                }
+            }
+            if(entityId!=0)return;
+            closest=maximum;
+            foreach(var entity in Session.View.entities)
+            {
+                if(entity.remembered||entity.health<=0||!Session.Catalog[entity.definition].building||!entities.TryGetValue(entity.id,out var visual))continue;
+                foreach(var renderer in parts[visual].body)
+                {
+                    if(!HitBody(renderer,0,ray,closest,out float distance))continue;
+                    closest=distance;entityId=entity.id;
+                }
+            }
             foreach(var resource in Session.View.resources)
             {
                 if(!ResourceVisible(resource)||!resourceRenderers.TryGetValue(resource.id,out var renderer))continue;
                 if(!HitBody(renderer,Mathf.Min(.004f,CellScale*.4f),ray,closest,out float distance))continue;
-                closest=distance;resourceId=resource.id;hitResource=true;
+                closest=distance;resourceId=resource.id;entityId=0;
             }
-            if(resourceId==0)return;
-            int directEntity=0;
-            foreach(var entity in Session.View.entities)
-            {
-                if(entity.remembered||!entities.TryGetValue(entity.id,out var visual))continue;
-                foreach(var renderer in parts[visual].body)
-                {
-                    if(!HitBody(renderer,0,ray,closest,out float distance))continue;
-                    closest=distance;directEntity=entity.id;
-                }
-            }
-            // A direct hit on a unit/building retains priority over nearby resource
-            // assistance. Its oversized ground selection halo does not hide minerals.
-            if(directEntity!=0){entityId=directEntity;resourceId=0;return;}
-            if(hitResource){entityId=0;return;}
-            int groundEntity=entityId;var candidate=Session.View.entities.FirstOrDefault(e=>e.id==groundEntity);
-            if(candidate==null)return;
-            var type=Session.Catalog[candidate.definition];
-            bool inside=type.building?point.x>=candidate.position.x&&point.y>=candidate.position.y&&point.x<=candidate.position.x+type.footprint&&point.y<=candidate.position.y+type.footprint
-                :candidate.position.Distance(point)<=type.collisionRadius+.15f;
-            if(inside)resourceId=0;else entityId=0;
+            if(entityId==0&&resourceId==0)ResolveStaticBaseTarget(point,out entityId,out resourceId);
         }
         public void SetBaseTargeting(bool enabled)
         {
@@ -693,37 +753,19 @@ namespace Frontier.Runtime
             fogVisuals?.Update(Session.Running&&Session.View!=null,Session.View?.tick/(float)Simulation.TickRate??0);
         }
         private static float ClampFogDensity(float density) => float.IsNaN(density)||float.IsInfinity(density)?1:Mathf.Clamp01(density);
-        private void ResolveBaseTarget(Point point,out int entityId,out int resourceId)
+        private void ResolveStaticBaseTarget(Point point,out int entityId,out int resourceId)
         {
-            entityId=0;resourceId=0;
-            if(Session.View==null||!VisibleBase(point))return;
-            int directUnit=0,nearUnit=0,building=0;
-            float directDistance=float.MaxValue,nearDistance=float.MaxValue,buildingDistance=float.MaxValue;
-            foreach(var entity in Session.View.entities)
-            {
-                if(entity.remembered)continue;
-                var type=Session.Catalog[entity.definition];
-                if(type.building)
-                {
-                    // Use the footprint, not the oversized circular selection halo.
-                    if(point.x<entity.position.x||point.y<entity.position.y||point.x>entity.position.x+type.footprint||point.y>entity.position.y+type.footprint)continue;
-                    float distance=new Point(entity.position.x+type.footprint*.5f,entity.position.y+type.footprint*.5f).Distance(point);
-                    if(distance<buildingDistance){building=entity.id;buildingDistance=distance;}
-                }
-                else
-                {
-                    if(!VisibleBase(entity.position))continue;
-                    float distance=entity.position.Distance(point);
-                    if(distance<=type.collisionRadius+.15f&&distance<directDistance){directUnit=entity.id;directDistance=distance;}
-                    if(distance<1.6f&&distance<nearDistance){nearUnit=entity.id;nearDistance=distance;}
-                }
-            }
-            // A unit's base wins over nearby assistance. A building only wins inside
-            // its footprint; foreground geometry never participates in this mode.
-            entityId=directUnit!=0?directUnit:building;
-            if(entityId!=0)return;
-            resourceId=ResourceAt(point);
-            if(resourceId==0)entityId=nearUnit;
+            entityId=EntityBaseAt(point,true);resourceId=ResourceAt(point);
+            if(entityId==0||resourceId==0)return;
+            int buildingId=entityId,depositId=resourceId;
+            var building=Session.View.entities.First(e=>e.id==buildingId);
+            var deposit=Session.View.resources.First(r=>r.id==depositId);
+            int footprint=Session.Catalog[building.definition].footprint;
+            bool inside=point.x>=building.position.x&&point.y>=building.position.y&&point.x<=building.position.x+footprint&&point.y<=building.position.y+footprint;
+            // The footprint remains authoritative (especially for an extractor on
+            // gas). Outside it, resolve overlapping assistance by center distance.
+            if(inside||EntityCenter(building).Distance(point)<=deposit.position.Distance(point))resourceId=0;
+            else entityId=0;
         }
         private bool VisibleBase(Point point)
         {

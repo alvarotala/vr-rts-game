@@ -83,10 +83,11 @@ static class DifficultyChecks
                 var command=Bot().Decide(view).FirstOrDefault(c=>c.kind==CommandKind.Train&&catalog[c.definition].role==role);
                 check(command!=null,"Uses available unit role "+role+": "+label);
             }
-            foreach(string upgrade in new[]{"attack","armor"})
+            foreach(int level in new[]{1,2,3})foreach(string stat in new[]{"attack","armor"})
             {
-                var view=View(1200);view.researched=upgrade=="armor"?new[]{"attack"}:Array.Empty<string>();
-                check(Bot().Decide(view).Any(c=>c.kind==CommandKind.Research&&c.definition==upgrade),"Can research "+upgrade+": "+label);
+                var upgrade=catalog.Definition.upgrades.Single(u=>u.Stat==stat&&u.level==level);
+                var view=View(1200);view.researched=catalog.Definition.upgrades.Where(u=>u.level<level||stat=="armor"&&u.Stat=="attack"&&u.level==level).Select(u=>u.id).ToArray();
+                check(Bot().Decide(view).Any(c=>c.kind==CommandKind.Research&&c.definition==upgrade.id),"Can research "+upgrade.id+": "+label);
             }
             var researchPlan=View(1200);
             researchPlan.entities=researchPlan.entities.Where(e=>catalog[e.definition].role!="research").ToArray();

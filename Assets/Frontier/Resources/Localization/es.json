@@ -7,6 +7,61 @@
   ],
   "entries": [
     {
+      "key": "75% refund",
+      "value": "Reembolso del 75 %",
+      "template": false
+    },
+    {
+      "key": "Cancel this unfinished building to recover 75% of its mineral and gas cost.",
+      "value": "Cancela este edificio en construcción para recuperar el 75 % de su costo en minerales y gas.",
+      "template": false
+    },
+    {
+      "key": "Construction cancelled. 75% of its resource cost refunded.",
+      "value": "Construcción cancelada. Se devolvió el 75 % de su costo en recursos.",
+      "template": false
+    },
+    {
+      "key": "Construction no longer available.",
+      "value": "La construcción ya no está disponible.",
+      "template": false
+    },
+    {
+      "key": "Firepower II",
+      "value": "Potencia de fuego II",
+      "template": false
+    },
+    {
+      "key": "Firepower III",
+      "value": "Potencia de fuego III",
+      "template": false
+    },
+    {
+      "key": "Armor II",
+      "value": "Armadura II",
+      "template": false
+    },
+    {
+      "key": "Armor III",
+      "value": "Armadura III",
+      "template": false
+    },
+    {
+      "key": "Research the previous level first.",
+      "value": "Investiga primero el nivel anterior.",
+      "template": false
+    },
+    {
+      "key": "Each level adds 20% of base damage to your army and defensive buildings. Complete the previous Firepower level first.",
+      "value": "Cada nivel añade un 20 % del daño base a tu ejército y edificios defensivos. Completa primero el nivel anterior de Potencia de fuego.",
+      "template": false
+    },
+    {
+      "key": "Each level reduces incoming damage to your units and buildings by 2. Complete the previous Armor level first.",
+      "value": "Cada nivel reduce en 2 el daño recibido por tus unidades y edificios. Completa primero el nivel anterior de Armadura.",
+      "template": false
+    },
+    {
       "key": "0% removes the mist. 100% is the densest, darkest mist.",
       "value": "0 % elimina la bruma. 100 % es la bruma más densa y oscura.",
       "template": false
@@ -392,13 +447,13 @@
       "template": false
     },
     {
-      "key": "Aim at unit bases, including behind buildings and minerals.",
-      "value": "Apunta a la base de las unidades, incluso detrás de edificios o minerales.",
+      "key": "Aim at ground areas. Units take priority over buildings and resources.",
+      "value": "Apunta a las áreas del suelo. Las unidades tienen prioridad sobre edificios y recursos.",
       "template": false
     },
     {
-      "key": "Aim at visible models. Switch to Bases to reach obscured units.",
-      "value": "Apunta a los modelos visibles. Usa Bases para alcanzar unidades ocultas.",
+      "key": "Aim at models or ground areas. Units take priority over buildings and resources.",
+      "value": "Apunta a modelos o áreas del suelo. Las unidades tienen prioridad sobre edificios y recursos.",
       "template": false
     },
     {
@@ -1377,8 +1432,8 @@
       "template": false
     },
     {
-      "key": "Enclose units in the flat rectangle. The drag can start outside the map.",
-      "value": "Encierra unidades en el rectángulo. Puedes empezar a arrastrar fuera del mapa.",
+      "key": "Enclose your units and buildings in the flat rectangle. The drag can start outside the map.",
+      "value": "Encierra tus unidades y edificios en el rectángulo. Puedes empezar fuera del mapa.",
       "template": false
     },
     {
@@ -8042,6 +8097,986 @@
     {
       "key": "Trains siege units. Unlocks caster production.",
       "value": "Entrena unidades de asedio. Desbloquea la producción de lanzadores.",
+      "template": false
+    },
+    {
+      "key": "Guided tutorial",
+      "value": "Tutorial guiado",
+      "template": false
+    },
+    {
+      "key": "Learn the controls and build your first victory.",
+      "value": "Aprende los controles y consigue tu primera victoria.",
+      "template": false
+    },
+    {
+      "key": "Continue tutorial",
+      "value": "Continuar tutorial",
+      "template": false
+    },
+    {
+      "key": "Repeat tutorial",
+      "value": "Repetir tutorial",
+      "template": false
+    },
+    {
+      "key": "Continue",
+      "value": "Continuar",
+      "template": false
+    },
+    {
+      "key": "GUIDED TUTORIAL · LESSON {0} / {1}",
+      "value": "TUTORIAL GUIADO · LECCIÓN {0} / {1}",
+      "template": true
+    },
+    {
+      "key": "PAUSED · Read, then continue",
+      "value": "EN PAUSA · Lee y continúa",
+      "template": false
+    },
+    {
+      "key": "PAUSED · Resume from the match menu",
+      "value": "EN PAUSA · Reanuda desde el menú de partida",
+      "template": false
+    },
+    {
+      "key": "OBJECTIVE ACTIVE · Complete this task to advance",
+      "value": "OBJETIVO ACTIVO · Completa la tarea para avanzar",
+      "template": false
+    },
+    {
+      "key": "Your first victory",
+      "value": "Tu primera victoria",
+      "template": false
+    },
+    {
+      "key": "This practice match guides every action. Time stops for explanations; complete each task before the next lesson. Your goal is to destroy every enemy building.",
+      "value": "Esta partida guía cada acción. El tiempo se detiene para las explicaciones; completa cada tarea antes de avanzar. Tu objetivo es destruir todos los edificios enemigos.",
+      "template": false
+    },
+    {
+      "key": "Point at Continue and press Trigger / {0}. The marker shows your next target.",
+      "value": "Apunta a Continuar y pulsa el gatillo / {0}. El marcador indica tu próximo objetivo.",
+      "template": true
+    },
+    {
+      "key": "Click Continue. The marker shows your next target.",
+      "value": "Haz clic en Continuar. El marcador indica tu próximo objetivo.",
+      "template": false
+    },
+    {
+      "key": "Meet your workers",
+      "value": "Conoce a tus trabajadores",
+      "template": false
+    },
+    {
+      "key": "Workers gather resources and construct your base. Combat units protect them. Start by selecting the marked worker.",
+      "value": "Los trabajadores recolectan recursos y construyen tu base. Las unidades de combate los protegen. Empieza seleccionando al trabajador marcado.",
+      "template": false
+    },
+    {
+      "key": "Aim at the marked worker and press {0}.",
+      "value": "Apunta al trabajador marcado y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Give a move order",
+      "value": "Da una orden de movimiento",
+      "template": false
+    },
+    {
+      "key": "Selection chooses who receives your orders. An order on empty ground moves the selected units there.",
+      "value": "La selección determina quién recibe tus órdenes. Una orden sobre terreno vacío mueve allí a las unidades seleccionadas.",
+      "template": false
+    },
+    {
+      "key": "Keep the worker selected. Aim at the ground marker and press {0}. Wait for the worker to arrive.",
+      "value": "Mantén al trabajador seleccionado. Apunta al marcador del terreno y pulsa {0}. Espera a que llegue.",
+      "template": true
+    },
+    {
+      "key": "Start your economy",
+      "value": "Pon en marcha tu economía",
+      "template": false
+    },
+    {
+      "key": "Minerals pay for workers, buildings and your army. Workers carry resources back to your headquarters. Two workers per mineral patch is optimal.",
+      "value": "Los minerales pagan trabajadores, edificios y ejército. Los trabajadores llevan los recursos a tu base. Lo óptimo son dos por depósito de minerales.",
+      "template": false
+    },
+    {
+      "key": "With a worker selected, aim at the marked mineral patch and press {0}. Wait for a delivery.",
+      "value": "Con un trabajador seleccionado, apunta al depósito de minerales marcado y pulsa {0}. Espera una entrega.",
+      "template": true
+    },
+    {
+      "key": "Your headquarters",
+      "value": "Tu base principal",
+      "template": false
+    },
+    {
+      "key": "Your headquarters receives gathered resources and trains workers. The resource counters show minerals, gas and population used / capacity.",
+      "value": "Tu base recibe los recursos recolectados y entrena trabajadores. Los contadores muestran minerales, gas y población usada / capacidad.",
+      "template": false
+    },
+    {
+      "key": "Aim at the marked headquarters and press {0}. Its production options appear in the menu.",
+      "value": "Apunta a la base marcada y pulsa {0}. Sus opciones de producción aparecen en el menú.",
+      "template": true
+    },
+    {
+      "key": "Train another worker",
+      "value": "Entrena otro trabajador",
+      "template": false
+    },
+    {
+      "key": "Training spends resources immediately and reserves population. A unit appears when its production bar finishes. Workers grow your economy.",
+      "value": "Entrenar consume recursos y reserva población al instante. La unidad aparece al completarse su barra de producción. Los trabajadores hacen crecer tu economía.",
+      "template": false
+    },
+    {
+      "key": "Headquarters selected: click {0} in OPTIONS. Train one worker and wait for completion.",
+      "value": "Con la base seleccionada: haz clic en {0} en OPCIONES. Entrena un trabajador y espera a que termine.",
+      "template": true
+    },
+    {
+      "key": "Use the match menu",
+      "value": "Usa el menú de partida",
+      "template": false
+    },
+    {
+      "key": "The match menu lets you pause, read guides and change settings or controls. Offline matches stop while the menu is open.",
+      "value": "El menú permite pausar, consultar guías y cambiar ajustes o controles. Las partidas locales se detienen mientras está abierto.",
+      "template": false
+    },
+    {
+      "key": "Press {0}, or use Pause in the console, to open the match menu.",
+      "value": "Pulsa {0}, o usa Pausa en la consola, para abrir el menú de partida.",
+      "template": true
+    },
+    {
+      "key": "Return to your game",
+      "value": "Vuelve a la partida",
+      "template": false
+    },
+    {
+      "key": "Your army and economy wait while this menu is open. Resume returns to the same selection and battlefield.",
+      "value": "Tu ejército y economía esperan mientras este menú está abierto. Reanudar vuelve a la misma selección y al mismo campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "After Continue, choose Resume match or press {0} to return.",
+      "value": "Después de Continuar, elige Reanudar partida o pulsa {0} para volver.",
+      "template": true
+    },
+    {
+      "key": "Your controller action wheel",
+      "value": "La rueda de acciones del control",
+      "template": false
+    },
+    {
+      "key": "Tilt the stick from its center: right for selection actions, left for orders, up for groups and down for quick selection. Trigger confirms; centering for 0.4 seconds closes it.",
+      "value": "Inclina el stick: derecha para acciones, izquierda para órdenes, arriba para grupos y abajo para selección rápida. El gatillo confirma; centrarlo 0,4 segundos cierra la rueda.",
+      "template": false
+    },
+    {
+      "key": "Make room for more units",
+      "value": "Haz espacio para más unidades",
+      "template": false
+    },
+    {
+      "key": "Supply structures increase population capacity when complete. Workers and soldiers both use population; queued units reserve it too.",
+      "value": "Los edificios de suministro aumentan la capacidad de población al terminarse. Trabajadores y soldados usan población; las unidades en cola también la reservan.",
+      "template": false
+    },
+    {
+      "key": "Select a worker > stick right > {0} > Trigger. Place at the marker with {1}; keep the worker building.",
+      "value": "Selecciona un trabajador > stick a la derecha > {0} > gatillo. Coloca en el marcador con {1}; deja al trabajador construyendo.",
+      "template": true
+    },
+    {
+      "key": "Select a worker > click {0} in OPTIONS. Place at the marker with {1}; keep the worker building.",
+      "value": "Selecciona un trabajador > clic en {0} en OPCIONES. Coloca en el marcador con {1}; deja al trabajador construyendo.",
+      "template": true
+    },
+    {
+      "key": "Create your army's production building",
+      "value": "Construye el edificio de tu ejército",
+      "template": false
+    },
+    {
+      "key": "Your military production building trains combat units. A building only works after construction finishes; its worker must remain on site.",
+      "value": "El edificio militar entrena unidades de combate. Solo funciona cuando termina la construcción; el trabajador debe permanecer en el lugar.",
+      "template": false
+    },
+    {
+      "key": "Select a worker > stick right > {0} > Trigger. Place at the marker with {1}; wait for construction.",
+      "value": "Selecciona un trabajador > stick a la derecha > {0} > gatillo. Coloca en el marcador con {1}; espera la construcción.",
+      "template": true
+    },
+    {
+      "key": "Select a worker > click {0} in OPTIONS. Place at the marker with {1}; wait for construction.",
+      "value": "Selecciona un trabajador > clic en {0} en OPCIONES. Coloca en el marcador con {1}; espera la construcción.",
+      "template": true
+    },
+    {
+      "key": "Unlock gas collection",
+      "value": "Prepara la recolección de gas",
+      "template": false
+    },
+    {
+      "key": "Advanced units and upgrades also cost gas. An extractor must be built directly on a gas deposit before workers can collect it.",
+      "value": "Las unidades avanzadas y mejoras también cuestan gas. Debes construir un extractor sobre un depósito de gas antes de poder recolectarlo.",
+      "template": false
+    },
+    {
+      "key": "Select a worker > stick right > {0} > Trigger. Place on the marked gas deposit with {1}.",
+      "value": "Selecciona un trabajador > stick a la derecha > {0} > gatillo. Coloca sobre el depósito de gas marcado con {1}.",
+      "template": true
+    },
+    {
+      "key": "Select a worker > click {0} in OPTIONS. Place on the marked gas deposit with {1}.",
+      "value": "Selecciona un trabajador > clic en {0} en OPCIONES. Coloca sobre el depósito de gas marcado con {1}.",
+      "template": true
+    },
+    {
+      "key": "Put the extractor to work",
+      "value": "Pon el extractor a trabajar",
+      "template": false
+    },
+    {
+      "key": "An extractor does not gather by itself. Assign workers to its deposit; three workers per gas deposit is optimal.",
+      "value": "El extractor no recolecta por sí solo. Asigna trabajadores a su depósito; lo óptimo son tres por depósito de gas.",
+      "template": false
+    },
+    {
+      "key": "Select a worker, aim at the marked gas deposit and press {0}. Wait for gas to reach your headquarters.",
+      "value": "Selecciona un trabajador, apunta al depósito de gas marcado y pulsa {0}. Espera a que el gas llegue a tu base.",
+      "template": true
+    },
+    {
+      "key": "Recruit three soldiers",
+      "value": "Recluta tres soldados",
+      "template": false
+    },
+    {
+      "key": "Combat units attack enemies automatically in range. This lesson uses ranged soldiers. Each fresh production command queues one unit; watch its cost and population.",
+      "value": "Las unidades atacan automáticamente a enemigos a su alcance. Usarás soldados a distancia. Cada orden añade una unidad a la cola; observa su coste y población.",
+      "template": false
+    },
+    {
+      "key": "Select the marked production building > stick right > {0}. Press Trigger three times; wait for all three units.",
+      "value": "Selecciona el edificio militar marcado > stick a la derecha > {0}. Pulsa el gatillo tres veces; espera las tres unidades.",
+      "template": true
+    },
+    {
+      "key": "Select the marked production building. Click {0} three times in OPTIONS; wait for all three units.",
+      "value": "Selecciona el edificio militar marcado. Haz clic en {0} tres veces en OPCIONES; espera las tres unidades.",
+      "template": true
+    },
+    {
+      "key": "Command several units",
+      "value": "Dirige varias unidades",
+      "template": false
+    },
+    {
+      "key": "Area selection commands a whole army together. Keep workers gathering while your soldiers fight.",
+      "value": "La selección por área permite dirigir un ejército entero. Mantén a los trabajadores recolectando mientras los soldados combaten.",
+      "template": false
+    },
+    {
+      "key": "Hold {0} and drag a rectangle around your soldiers. Or stick down > All army > Trigger.",
+      "value": "Mantén {0} y arrastra un rectángulo alrededor de tus soldados. O stick abajo > Todo el ejército > gatillo.",
+      "template": true
+    },
+    {
+      "key": "Hold {0} and drag a rectangle around all three soldiers. Leave workers outside it.",
+      "value": "Mantén {0} y arrastra un rectángulo alrededor de los tres soldados. Deja a los trabajadores fuera.",
+      "template": true
+    },
+    {
+      "key": "Save control group 1",
+      "value": "Guarda el grupo de control 1",
+      "template": false
+    },
+    {
+      "key": "Control groups remember a selection, so you can return to that army quickly. Saving replaces that group's previous members.",
+      "value": "Los grupos recuerdan una selección para recuperar ese ejército rápidamente. Guardar reemplaza a los miembros anteriores de ese grupo.",
+      "template": false
+    },
+    {
+      "key": "Keep the army selected. Stick up > group 1 (up) > press Stick click. Or Grip + Trigger on group 1.",
+      "value": "Con el ejército seleccionado: stick arriba > grupo 1 (arriba) > pulsa el stick. O Grip + gatillo sobre el grupo 1.",
+      "template": false
+    },
+    {
+      "key": "Keep the army selected. Hold {0} and press {1} to save group 1. Or Ctrl + click group 1.",
+      "value": "Con el ejército seleccionado, mantén {0} y pulsa {1} para guardar el grupo 1. O Ctrl + clic sobre el grupo 1.",
+      "template": true
+    },
+    {
+      "key": "Recall your army",
+      "value": "Recupera la selección del ejército",
+      "template": false
+    },
+    {
+      "key": "Your saved group is ready. Recalling selects its surviving members without changing their orders.",
+      "value": "Tu grupo está guardado. Recuperarlo selecciona a sus miembros supervivientes sin cambiar sus órdenes.",
+      "template": false
+    },
+    {
+      "key": "Stick up > group 1 (up) > Trigger. Or press the group 1 button in the console.",
+      "value": "Stick arriba > grupo 1 (arriba) > gatillo. O pulsa el botón del grupo 1 en la consola.",
+      "template": false
+    },
+    {
+      "key": "Press {0}, or click group 1 in the console, to recall your army.",
+      "value": "Pulsa {0}, o haz clic en el grupo 1 de la consola, para seleccionar a tu ejército.",
+      "template": true
+    },
+    {
+      "key": "Advance and fight",
+      "value": "Avanza y combate",
+      "template": false
+    },
+    {
+      "key": "Attack Move sends your army toward a destination and engages enemies along the way. Ordinary Move goes to the point; an order on an enemy focuses that target.",
+      "value": "Avanzar y atacar lleva tu ejército hacia un destino combatiendo por el camino. Mover va al punto; una orden sobre un enemigo concentra el ataque en él.",
+      "template": false
+    },
+    {
+      "key": "Finish the enemy base",
+      "value": "Destruye la base enemiga",
+      "template": false
+    },
+    {
+      "key": "You win by destroying all enemy buildings, not just the headquarters. Hidden territory must be explored before you can target enemies there.",
+      "value": "Ganas al destruir todos los edificios enemigos, además de la base principal. Debes explorar el territorio oculto para poder atacar a sus enemigos.",
+      "template": false
+    },
+    {
+      "key": "Tutorial complete!",
+      "value": "¡Tutorial completado!",
+      "template": false
+    },
+    {
+      "key": "You built an economy, trained an army, used control groups and destroyed the enemy base. You are ready to try a match against the AI.",
+      "value": "Creaste una economía, entrenaste un ejército, usaste grupos y destruiste la base enemiga. Ya puedes probar una partida contra la IA.",
+      "template": false
+    },
+    {
+      "key": "GUIDED TUTORIAL · VICTORY",
+      "value": "TUTORIAL GUIADO · VICTORIA",
+      "template": false
+    },
+    {
+      "key": "Choose Main menu to start a New Match, or repeat this guided practice.",
+      "value": "Elige Menú principal para iniciar una Nueva partida, o repite esta práctica guiada.",
+      "template": false
+    },
+    {
+      "key": "Follow the highlighted objective. The enemy waits while you learn.",
+      "value": "Sigue el objetivo marcado. El enemigo espera mientras aprendes.",
+      "template": false
+    },
+    {
+      "key": "Tutorial complete. You led your first victory.",
+      "value": "Tutorial completado. Conseguiste tu primera victoria.",
+      "template": false
+    },
+    {
+      "key": "Objective complete. Read the next lesson.",
+      "value": "Objetivo completado. Lee la siguiente lección.",
+      "template": false
+    },
+    {
+      "key": "Follow the current tutorial objective before issuing another order.",
+      "value": "Sigue el objetivo actual del tutorial antes de dar otra orden.",
+      "template": false
+    },
+    {
+      "key": "Select a worker, then tilt the {0} stick right. {1} goes back; {2} toggles hints.",
+      "value": "Selecciona un trabajador e inclina el stick de la mano {0} a la derecha. {1} vuelve atrás; {2} muestra u oculta ayudas.",
+      "template": true
+    },
+    {
+      "key": "Army selected: stick left > Attack Move > Trigger, then {0} on the ground marker.",
+      "value": "Con el ejército seleccionado: stick izquierda > Avanzar y atacar > gatillo y luego {0} sobre el marcador.",
+      "template": true
+    },
+    {
+      "key": "Army selected: click Attack Move, then {0} on the ground marker.",
+      "value": "Con el ejército seleccionado: clic en Avanzar y atacar y luego {0} sobre el marcador.",
+      "template": true
+    },
+    {
+      "key": "Stick left > Attack Move > Trigger, then {0} at the enemy marker. Once enemies are visible, {1} focuses a target.",
+      "value": "Stick izquierda > Avanzar y atacar > gatillo y luego {0} en el marcador enemigo. Cuando sean visibles, {1} concentra el ataque en un objetivo.",
+      "template": true
+    },
+    {
+      "key": "Click Attack Move, then {0} at the enemy marker. Once enemies are visible, {1} focuses a target.",
+      "value": "Haz clic en Avanzar y atacar y luego {0} en el marcador enemigo. Cuando sean visibles, {1} concentra el ataque en un objetivo.",
+      "template": true
+    },
+    {
+      "key": "Headquarters selected: point at {0} in OPTIONS and press Trigger / {1}. Train one worker and wait for completion.",
+      "value": "Con la base seleccionada: apunta a {0} en OPCIONES y pulsa gatillo / {1}. Entrena un trabajador y espera a que termine.",
+      "template": true
+    },
+    {
+      "key": "Choose Continue in the tutorial card before resuming.",
+      "value": "Elige Continuar en la tarjeta del tutorial antes de reanudar.",
+      "template": false
+    },
+    {
+      "key": "Read the tutorial lesson below and choose Continue first.",
+      "value": "Lee la lección del tutorial que aparece abajo y elige Continuar primero.",
+      "template": false
+    },
+    {
+      "key": "TUTORIAL COMPLETE · Repeat the lesson or return to the main menu.",
+      "value": "TUTORIAL COMPLETADO · Repite la lección o vuelve al menú principal.",
+      "template": false
+    },
+    {
+      "key": "TUTORIAL PAUSED · Read the lesson and choose Continue.",
+      "value": "TUTORIAL EN PAUSA · Lee la lección y elige Continuar.",
+      "template": false
+    },
+    {
+      "key": "GUIDED TUTORIAL · PRACTICE AT YOUR OWN PACE",
+      "value": "TUTORIAL GUIADO · PRACTICA A TU RITMO",
+      "template": false
+    },
+    {
+      "key": "Leave this guided practice and return to the main menu? You can restart the tutorial there.",
+      "value": "¿Salir de esta práctica guiada y volver al menú principal? Allí puedes reiniciar el tutorial.",
+      "template": false
+    },
+    {
+      "key": "YOUR FIRST VICTORY · {0}/{1}",
+      "value": "TU PRIMERA VICTORIA · {0}/{1}",
+      "template": true
+    },
+    {
+      "key": "Ready? Let's try it!",
+      "value": "¿Listo? ¡A probar!",
+      "template": false
+    },
+    {
+      "key": "Take your time",
+      "value": "Sin apuro",
+      "template": false
+    },
+    {
+      "key": "Your turn!",
+      "value": "¡Te toca!",
+      "template": false
+    },
+    {
+      "key": "Your first victory!",
+      "value": "¡Tu primera victoria!",
+      "template": false
+    },
+    {
+      "key": "Build a little base. Lead your army to victory.",
+      "value": "Construye tu base y lleva tu ejército a la victoria.",
+      "template": false
+    },
+    {
+      "key": "Point at Continue, then press Trigger / {0}.",
+      "value": "Apunta a Continuar y pulsa el gatillo / {0}.",
+      "template": true
+    },
+    {
+      "key": "Click Continue. Let's play!",
+      "value": "Haz clic en Continuar. ¡A jugar!",
+      "template": false
+    },
+    {
+      "key": "Meet your worker",
+      "value": "Conoce a tu trabajador",
+      "template": false
+    },
+    {
+      "key": "This little builder gathers resources and grows your base.",
+      "value": "Este pequeño constructor recolecta recursos y hace crecer tu base.",
+      "template": false
+    },
+    {
+      "key": "Point at this worker and press {0}.",
+      "value": "Apunta a este trabajador y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Off you go!",
+      "value": "¡En marcha!",
+      "template": false
+    },
+    {
+      "key": "Your selected units follow orders on the ground.",
+      "value": "Tus unidades seleccionadas siguen las órdenes que das sobre el terreno.",
+      "template": false
+    },
+    {
+      "key": "On the way! Let your worker reach the marker.",
+      "value": "¡En camino! Deja que tu trabajador llegue al marcador.",
+      "template": false
+    },
+    {
+      "key": "First, select this worker with {0}.",
+      "value": "Primero, selecciona este trabajador con {0}.",
+      "template": true
+    },
+    {
+      "key": "Point at the violet marker and press {0}.",
+      "value": "Apunta al marcador violeta y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Bring home minerals",
+      "value": "Trae los minerales",
+      "template": false
+    },
+    {
+      "key": "Minerals pay for buildings, workers and your growing army.",
+      "value": "Los minerales pagan edificios, trabajadores y tu creciente ejército.",
+      "template": false
+    },
+    {
+      "key": "Home sweet base",
+      "value": "Hogar, dulce base",
+      "template": false
+    },
+    {
+      "key": "Your headquarters receives resources and trains new workers.",
+      "value": "Tu base recibe recursos y entrena nuevos trabajadores.",
+      "template": false
+    },
+    {
+      "key": "Select your headquarters with {0}.",
+      "value": "Selecciona tu base con {0}.",
+      "template": true
+    },
+    {
+      "key": "One more helper",
+      "value": "Un ayudante más",
+      "template": false
+    },
+    {
+      "key": "New workers grow your economy. Training costs minerals.",
+      "value": "Más trabajadores hacen crecer tu economía. Entrenarlos cuesta minerales.",
+      "template": false
+    },
+    {
+      "key": "A helper is on the way! Wait for training to finish.",
+      "value": "¡Viene un ayudante! Espera a que termine su entrenamiento.",
+      "template": false
+    },
+    {
+      "key": "First, select your headquarters with {0}.",
+      "value": "Primero, selecciona tu base con {0}.",
+      "template": true
+    },
+    {
+      "key": "Choose {0} in the console with Trigger / {1}.",
+      "value": "Elige {0} en la consola con el gatillo / {1}.",
+      "template": true
+    },
+    {
+      "key": "Click {0} in the console.",
+      "value": "Haz clic en {0} en la consola.",
+      "template": true
+    },
+    {
+      "key": "Take a breather",
+      "value": "Toma un respiro",
+      "template": false
+    },
+    {
+      "key": "Your game menu holds settings, controls and helpful guides.",
+      "value": "En el menú tienes ajustes, controles y guías para ayudarte.",
+      "template": false
+    },
+    {
+      "key": "Press {0}, or choose Pause in the console.",
+      "value": "Pulsa {0} o elige Pausa en la consola.",
+      "template": true
+    },
+    {
+      "key": "Back to the action",
+      "value": "Vuelve a la acción",
+      "template": false
+    },
+    {
+      "key": "Your units wait while you explore the game menu.",
+      "value": "Tus unidades esperan mientras exploras el menú de partida.",
+      "template": false
+    },
+    {
+      "key": "First Continue, then choose Resume match.",
+      "value": "Primero Continuar; después, Reanudar partida.",
+      "template": false
+    },
+    {
+      "key": "Choose Resume match, or press {0}.",
+      "value": "Elige Reanudar partida o pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Give it a spin",
+      "value": "Descubre la rueda",
+      "template": false
+    },
+    {
+      "key": "Your stick opens a handy shortcut wheel for actions.",
+      "value": "El stick abre una rueda con tus acciones a mano.",
+      "template": false
+    },
+    {
+      "key": "Tilt the {0} stick right. That's your action wheel!",
+      "value": "Inclina el stick de la mano {0} a la derecha. ¡Esa es tu rueda!",
+      "template": true
+    },
+    {
+      "key": "Room for everyone",
+      "value": "Espacio para todos",
+      "template": false
+    },
+    {
+      "key": "Supply makes room for more workers and soldiers.",
+      "value": "El suministro hace espacio para más trabajadores y soldados.",
+      "template": false
+    },
+    {
+      "key": "Time for soldiers",
+      "value": "Llegan los soldados",
+      "template": false
+    },
+    {
+      "key": "Military buildings train troops to protect your busy workers.",
+      "value": "Los edificios militares entrenan tropas para proteger a tus trabajadores.",
+      "template": false
+    },
+    {
+      "key": "Let's get gas",
+      "value": "Vamos por el gas",
+      "template": false
+    },
+    {
+      "key": "Gas pays for advanced units and upgrades later on.",
+      "value": "El gas paga las unidades avanzadas y las mejoras.",
+      "template": false
+    },
+    {
+      "key": "Put gas to work",
+      "value": "A trabajar ese gas",
+      "template": false
+    },
+    {
+      "key": "Extractors need workers. Three per gas deposit works best.",
+      "value": "Los extractores necesitan trabajadores. Lo ideal son tres por depósito.",
+      "template": false
+    },
+    {
+      "key": "Your little legion",
+      "value": "Tu pequeña legión",
+      "template": false
+    },
+    {
+      "key": "These three ranged soldiers will lead your first attack.",
+      "value": "Estos tres soldados a distancia llevarán adelante tu primer ataque.",
+      "template": false
+    },
+    {
+      "key": "Your squad is training. Wait for all three soldiers.",
+      "value": "Tu escuadrón se está entrenando. Espera a los tres soldados.",
+      "template": false
+    },
+    {
+      "key": "Select this military building with {0}.",
+      "value": "Selecciona este edificio militar con {0}.",
+      "template": true
+    },
+    {
+      "key": "Stick right → {0} → press Trigger once.",
+      "value": "Stick a la derecha → {0} → pulsa el gatillo una vez.",
+      "template": true
+    },
+    {
+      "key": "Stick right → {0} → press Trigger {1} times.",
+      "value": "Stick a la derecha → {0} → pulsa el gatillo {1} veces.",
+      "template": true
+    },
+    {
+      "key": "Click {0} once in the console.",
+      "value": "Haz clic en {0} una vez en la consola.",
+      "template": true
+    },
+    {
+      "key": "Click {0} {1} times in the console.",
+      "value": "Haz clic en {0} {1} veces en la consola.",
+      "template": true
+    },
+    {
+      "key": "Round up the squad",
+      "value": "Reúne a tu escuadrón",
+      "template": false
+    },
+    {
+      "key": "Soldiers fight together. Leave your workers gathering at home.",
+      "value": "Los soldados luchan juntos. Deja a tus trabajadores recolectando en casa.",
+      "template": false
+    },
+    {
+      "key": "Hold {0} and drag a box around your three soldiers.",
+      "value": "Mantén {0} y arrastra un recuadro alrededor de tus tres soldados.",
+      "template": true
+    },
+    {
+      "key": "Save your squad",
+      "value": "Guarda tu escuadrón",
+      "template": false
+    },
+    {
+      "key": "A control group remembers your army for quick selection.",
+      "value": "Un grupo de control recuerda tu ejército para seleccionarlo rápido.",
+      "template": false
+    },
+    {
+      "key": "Stick up → group 1 (up) → press Stick click.",
+      "value": "Stick arriba → grupo 1 (arriba) → pulsa el stick.",
+      "template": false
+    },
+    {
+      "key": "Hold {0} and press {1} to save group 1.",
+      "value": "Mantén {0} y pulsa {1} para guardar el grupo 1.",
+      "template": true
+    },
+    {
+      "key": "Squad, assemble!",
+      "value": "¡Escuadrón, a formar!",
+      "template": false
+    },
+    {
+      "key": "Your saved group brings the same soldiers back into selection.",
+      "value": "Tu grupo guardado vuelve a seleccionar a los mismos soldados.",
+      "template": false
+    },
+    {
+      "key": "Stick up → group 1 (up) → Trigger.",
+      "value": "Stick arriba → grupo 1 (arriba) → gatillo.",
+      "template": false
+    },
+    {
+      "key": "Press {0} to select your saved squad.",
+      "value": "Pulsa {0} para seleccionar tu escuadrón guardado.",
+      "template": true
+    },
+    {
+      "key": "March into action",
+      "value": "Marcha al combate",
+      "template": false
+    },
+    {
+      "key": "Attack Move travels forward and fights enemies along the way.",
+      "value": "Avanzar y atacar lleva al ejército combatiendo por el camino.",
+      "template": false
+    },
+    {
+      "key": "Go for victory!",
+      "value": "¡A por la victoria!",
+      "template": false
+    },
+    {
+      "key": "Destroy every enemy building to win the match.",
+      "value": "Destruye todos los edificios enemigos para ganar la partida.",
+      "template": false
+    },
+    {
+      "key": "You did it!",
+      "value": "¡Lo lograste!",
+      "template": false
+    },
+    {
+      "key": "Your first victory! You're ready to challenge the AI.",
+      "value": "¡Tu primera victoria! Ya puedes desafiar a la IA.",
+      "template": false
+    },
+    {
+      "key": "VICTORY!",
+      "value": "¡VICTORIA!",
+      "template": false
+    },
+    {
+      "key": "Nicely played!",
+      "value": "¡Bien jugado!",
+      "template": false
+    },
+    {
+      "key": "Head to the main menu, or play this tutorial again.",
+      "value": "Vuelve al menú principal o juega este tutorial otra vez.",
+      "template": false
+    },
+    {
+      "key": "Press Trigger / {0} on Continue when you're ready.",
+      "value": "Pulsa el gatillo / {0} sobre Continuar cuando estés listo.",
+      "template": true
+    },
+    {
+      "key": "Click Continue when you're ready.",
+      "value": "Haz clic en Continuar cuando estés listo.",
+      "template": false
+    },
+    {
+      "key": "Building in progress!",
+      "value": "¡Construcción en marcha!",
+      "template": false
+    },
+    {
+      "key": "Your worker has this. Buildings need a builder nearby.",
+      "value": "Tu trabajador se encarga. Los edificios necesitan un constructor cerca.",
+      "template": false
+    },
+    {
+      "key": "Wait here until construction finishes.",
+      "value": "Espera a que termine la construcción.",
+      "template": false
+    },
+    {
+      "key": "Stick right → {0} → Trigger.",
+      "value": "Stick a la derecha → {0} → gatillo.",
+      "template": true
+    },
+    {
+      "key": "Point at the violet outline and press {0}.",
+      "value": "Apunta al contorno violeta y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Gas delivery underway! Let your worker bring it home.",
+      "value": "¡Gas en camino! Deja que tu trabajador lo lleve a casa.",
+      "template": false
+    },
+    {
+      "key": "Minerals on the move! Let your worker bring them home.",
+      "value": "¡Minerales en camino! Deja que tu trabajador los lleve a casa.",
+      "template": false
+    },
+    {
+      "key": "Point at this gas deposit and press {0}.",
+      "value": "Apunta a este depósito de gas y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Point at these minerals and press {0}.",
+      "value": "Apunta a estos minerales y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Your soldiers take it from here. Watch the enemy fall!",
+      "value": "Tus soldados se encargan. ¡Mira cómo cae el enemigo!",
+      "template": false
+    },
+    {
+      "key": "Your squad is marching! Wait until everyone reaches the marker.",
+      "value": "¡Tu escuadrón marcha! Espera a que todos lleguen al marcador.",
+      "template": false
+    },
+    {
+      "key": "Stick left → Attack Move → Trigger.",
+      "value": "Stick a la izquierda → Avanzar y atacar → gatillo.",
+      "template": false
+    },
+    {
+      "key": "Click Attack Move in the console.",
+      "value": "Haz clic en Avanzar y atacar en la consola.",
+      "template": false
+    },
+    {
+      "key": "Aim at the enemy marker and press {0}.",
+      "value": "Apunta al marcador enemigo y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Aim at the ground marker and press {0}.",
+      "value": "Apunta al marcador del terreno y pulsa {0}.",
+      "template": true
+    },
+    {
+      "key": "Minerals buy buildings and soldiers. Two workers per patch!",
+      "value": "Los minerales compran edificios y soldados. ¡Dos trabajadores por depósito!",
+      "template": false
+    },
+    {
+      "key": "Training costs minerals and reserves space for your new worker.",
+      "value": "Entrenar cuesta minerales y reserva espacio para tu nuevo trabajador.",
+      "template": false
+    },
+    {
+      "key": "Your workers are gathering the cost. Give them a moment!",
+      "value": "Tus trabajadores están reuniendo los recursos. ¡Dales un momento!",
+      "template": false
+    },
+    {
+      "key": "Choose Continue in the floating guide first.",
+      "value": "Primero, elige Continuar en la guía flotante.",
+      "template": false
+    },
+    {
+      "key": "Game paused",
+      "value": "Partida en pausa",
+      "template": false
+    },
+    {
+      "key": "Choose Resume match to keep playing.",
+      "value": "Elige Reanudar partida para seguir jugando.",
+      "template": false
+    },
+    {
+      "key": "Go back to the match menu.",
+      "value": "Vuelve al menú de partida.",
+      "template": false
+    },
+    {
+      "key": "Press {0} to cancel, then select your worker.",
+      "value": "Pulsa {0} para cancelar y después selecciona a tu trabajador.",
+      "template": true
+    },
+    {
+      "key": "Press {0} to cancel, then select your squad.",
+      "value": "Pulsa {0} para cancelar y después selecciona a tu escuadrón.",
+      "template": true
+    },
+    {
+      "key": "PLAY GUIDE · {0}/{1}",
+      "value": "GUÍA DE JUEGO · {0}/{1}",
+      "template": true
+    },
+    {
+      "key": "Press {0} to go back in the wheel.",
+      "value": "Pulsa {0} para volver atrás en la rueda.",
+      "template": true
+    },
+    {
+      "key": "Tilt up to Groups, then press Trigger.",
+      "value": "Inclina arriba hacia Grupos y pulsa el gatillo.",
+      "template": false
+    },
+    {
+      "key": "Tilt left to Unit orders, then press Trigger.",
+      "value": "Inclina a la izquierda hacia Órdenes de unidades y pulsa el gatillo.",
+      "template": false
+    },
+    {
+      "key": "Tilt right to Selection, then press Trigger.",
+      "value": "Inclina a la derecha hacia Selección y pulsa el gatillo.",
+      "template": false
+    },
+    {
+      "key": "BETA",
+      "value": "BETA",
       "template": false
     }
   ]

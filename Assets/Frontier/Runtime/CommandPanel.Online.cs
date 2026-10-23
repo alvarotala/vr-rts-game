@@ -12,7 +12,8 @@ namespace Frontier.Runtime
         private const string ServerAddressKey="frontier.multiplayer.address.v1",ServerPortKey="frontier.multiplayer.port.v1";
         private bool endpointPort;
         private string endpointDraft="",endpointMessage;
-        private string MatchDescription=>$"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · "+(Session.IsOnline?"MULTIPLAYER LAN":DifficultyLabel+" AI");
+        private string MatchDescription=>Session.IsTutorial?"GUIDED TUTORIAL · PRACTICE AT YOUR OWN PACE":
+            $"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · "+(Session.IsOnline?"MULTIPLAYER LAN":DifficultyLabel+" AI");
 
         private void LoadOnlineEndpoint()
         {
@@ -37,7 +38,7 @@ namespace Frontier.Runtime
             if(Session.IsConnecting)
             {
                 Label(actions,"Waiting for the server and your opponent",new Vector2(24,-32),new Vector2(992,64),27,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
-                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(24,-112),new Vector2(992,44),24,accent,TextAnchor.MiddleCenter);
+                Label(actions,Session.ServerAddress+":"+Session.ServerPort,new Vector2(24,-112),new Vector2(992,44),24,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
                 Label(actions,"Keep this app open. Both players need to join the same server.",new Vector2(40,-188),new Vector2(960,70),21,MenuMuted,TextAnchor.MiddleCenter);
                 MenuFooter("Cancel connection",CancelOnlineSetup,352,336);return;
             }

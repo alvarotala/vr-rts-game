@@ -13,6 +13,11 @@ namespace Frontier.Runtime
         public static readonly Color Ink = Rgb(242, 242, 232);
         public static readonly Color Muted = Rgb(209, 222, 224);
         public static readonly Color Accent = Rgb(177, 232, 221);
+        // Brand roles: teal for primary actions/focus, tutorial lilac for support.
+        // Use the pale ink on neutral cards; the saturated accent is for graphics.
+        public static readonly Color Secondary = new Color(.40f, .22f, .75f).linear;
+        public static readonly Color SecondaryAccent = new Color(.65f, .39f, 1).linear;
+        public static readonly Color SecondaryInk = Rgb(226, 210, 255);
         public static readonly Color Focus = Accent;
         public static readonly Color HoverInk = Rgb(25, 52, 60);
         public static readonly Color Success = Rgb(48, 112, 78);

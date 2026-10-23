@@ -23,14 +23,14 @@ namespace Frontier.Runtime
             // Action hover replaces the first selection row. Section guides use
             // the same readable text in a centered dialog, with explicit dismissal.
             actionHelp=Section(root,"Action help",new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,HudSelectionHeight),ConsoleTheme.Card);
-            helpCategory=Label(actionHelp,"",new Vector2(24,-12),new Vector2(HudInnerWidth-48,24),16,accent);
+            helpCategory=Label(actionHelp,"",new Vector2(24,-12),new Vector2(HudInnerWidth-48,24),16,ConsoleTheme.SecondaryInk);
             helpTitle=Label(actionHelp,"",new Vector2(24,-48),new Vector2(280,88),28,ConsoleTheme.Ink);
             helpTitle.fontStyle=FontStyle.Bold;
             helpDescription=Label(actionHelp,"",new Vector2(340,-44),new Vector2(HudInnerWidth-364,76),20,ConsoleTheme.Muted,TextAnchor.UpperLeft);
-            helpDetail=Label(actionHelp,"",new Vector2(340,-124),new Vector2(HudInnerWidth-364,44),18,accent,TextAnchor.UpperLeft);
+            helpDetail=Label(actionHelp,"",new Vector2(340,-124),new Vector2(HudInnerWidth-364,44),18,ConsoleTheme.SecondaryInk,TextAnchor.UpperLeft);
             sectionHelpClose=HudButton(actionHelp,"Close help","",new Vector2(768,-524),new Vector2(240,64),CloseSectionHelp,null,out var closeDetail);
             closeDetail.gameObject.SetActive(false);
-            sectionHelpClose.normal=ConsoleTheme.Primary;sectionHelpClose.image.color=sectionHelpClose.normal;
+            sectionHelpClose.normal=ConsoleTheme.Secondary;sectionHelpClose.image.color=sectionHelpClose.normal;
             var closeLabel=sectionHelpClose.rect.GetComponentInChildren<Text>();closeLabel.text="Close";closeLabel.fontSize=24;
             TopLeft(closeLabel.rectTransform,Vector2.zero,new Vector2(240,64));
             sectionHelpClose.rect.gameObject.SetActive(false);
@@ -39,7 +39,7 @@ namespace Frontier.Runtime
         private Target HudHelpButton(RectTransform parent,string name,Vector2 position,string title,Func<string> hint)
         {
             var rect=Section(parent,name,position,new Vector2(44,44),ConsoleTheme.Card);
-            var label=Label(rect,"?",Vector2.zero,new Vector2(44,44),22,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            var label=Label(rect,"?",Vector2.zero,new Vector2(44,44),22,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
             label.fontStyle=FontStyle.Bold;
             var target=new Target { rect=rect,image=rect.GetComponent<Image>(),normal=ConsoleTheme.Card,hintTitle=title,hint=hint };
             target.click=()=>OpenSectionHelp(target);
@@ -109,7 +109,7 @@ namespace Frontier.Runtime
                 TopLeft(helpTitle.rectTransform,new Vector2(32,-60),new Vector2(976,40));
                 TopLeft(helpDescription.rectTransform,new Vector2(32,-124),new Vector2(976,176));helpDescription.fontSize=24;
                 TopLeft(helpDetail.rectTransform,new Vector2(32,-320),new Vector2(976,176));helpDetail.fontSize=20;
-                helpCategory.text="HELP";helpCategory.color=accent;
+                helpCategory.text="HELP";helpCategory.color=ConsoleTheme.SecondaryInk;
                 helpTitle.text=sectionHelpTarget.hintTitle;
                 helpDescription.text=SectionHelpDescription(sectionHelpTarget.hintTitle);
                 helpDetail.text=sectionHelpTarget.hint();helpDetail.color=ConsoleTheme.Muted;
@@ -120,7 +120,7 @@ namespace Frontier.Runtime
             actionHelp.gameObject.SetActive(visible);
             if(!visible)return;
             sectionHelpBackdrop.gameObject.SetActive(false);sectionHelpClose.rect.gameObject.SetActive(false);
-            TopLeft(actionHelp,new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,HudSelectionHeight));
+            TopLeft(actionHelp,selectedCard.anchoredPosition,new Vector2(HudInnerWidth,HudSelectionHeight));
             TopLeft(helpCategory.rectTransform,new Vector2(24,-12),new Vector2(HudInnerWidth-48,24));helpCategory.fontSize=16;
             TopLeft(helpTitle.rectTransform,new Vector2(24,-48),new Vector2(280,88));
             TopLeft(helpDescription.rectTransform,new Vector2(340,-44),new Vector2(HudInnerWidth-364,76));helpDescription.fontSize=20;

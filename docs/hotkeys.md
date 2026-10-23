@@ -21,7 +21,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Command | Default input / menu action | Context |
 |---|---|---|
 | Select an item | Trigger on map | Select an allied unit, building or resource. |
-| Select an area | Hold Trigger + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
+| Select an area | Hold Trigger + drag | Enclose your units and buildings in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Grip + Trigger | Keep your selection and add more units, including by dragging an area. |
 | Remove from selection | Map: Grip + hold Trigger · Card: Grip + Trigger | Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders. |
 | Select the same type | Map: double Trigger · Card: Trigger / A | Map: same type within 12 cells; Grip adds. Card: keep only that type from the current selection. |
@@ -101,7 +101,7 @@ La colocación del tablero usa controles fijos: **grip achica**, **gatillo agran
 | Command | Default input / menu action | Context |
 |---|---|---|
 | Select an item | Left mouse on map | Select an allied unit, building or resource. |
-| Select an area | Hold Left mouse + drag | Enclose units in the flat rectangle. The drag can start outside the map. |
+| Select an area | Hold Left mouse + drag | Enclose your units and buildings in the flat rectangle. The drag can start outside the map. |
 | Add to selection | Shift + Left mouse | Keep your selection and add more units, including by dragging an area. |
 | Remove from selection | Map: Shift + hold Left mouse · Card: Shift + click | Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders. |
 | Select the same type | Map: double Left mouse · Card: Left-click | Map: same type within 12 cells; Shift adds. Card: keep only that type from the current selection. |

@@ -99,7 +99,14 @@ namespace Frontier.Core
                 return result;
             }
             if (command.kind == CommandKind.Train || command.kind == CommandKind.Research) return Produce(command, selected);
-            if (command.kind == CommandKind.Cancel) return selected.Count == 1 ? Cancel(first, command.queueOrderId) : Reject("Select one building to cancel production or construction.");
+            if (command.kind == CommandKind.Cancel)
+            {
+                if(selected.Count!=1)return Reject("Select one building to cancel production or construction.");
+                // A construction card must not cancel newly queued production if the building finishes in transit.
+                if(!string.IsNullOrEmpty(command.definition)&&(first.complete||first.definition!=command.definition))
+                    return Reject("Construction no longer available.");
+                return Cancel(first,command.queueOrderId);
+            }
             if (command.kind == CommandKind.SetRallyPoint || command.kind == CommandKind.ClearRallyPoint) return ConfigureRallyPoint(command, selected);
             if (selected.Any(e => !e.complete || Type(e).building)) return Reject("Select completed units or buildings.");
             if (command.kind == CommandKind.Move || command.kind == CommandKind.AttackMove)
@@ -205,7 +212,9 @@ namespace Frontier.Core
                 if (upgrade == null) return Reject("Invalid upgrade.");
                 var producer = AvailableProducer(selected, "research");
                 if (producer == null) return Reject("Building unavailable or queue full.");
-                if ((upgrade.id == "attack" ? Players[player].attackLevel : Players[player].armorLevel) > 0 || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && q.definition == upgrade.id))) return Reject("Upgrade already researched or queued.");
+                int level=upgrade.Stat=="attack"?Players[player].attackLevel:Players[player].armorLevel;
+                if (level>=upgrade.level || Entities.Values.Any(e => e.owner == player && e.queue.Any(q => q.research && Catalog.Upgrade(q.definition)?.Stat == upgrade.Stat))) return Reject("Upgrade already researched or queued.");
+                if (level!=upgrade.level-1) return Reject("Research the previous level first.");
                 if (!CanAfford(player, upgrade.minerals, upgrade.catalyst)) return Reject("Not enough resources.");
                 Pay(player, upgrade.minerals, upgrade.catalyst);
                 producer.queue.Add(new ProductionOrder { id = nextProductionOrderIds[player]++, definition = upgrade.id, research = true, remaining = upgrade.duration, total = upgrade.duration });

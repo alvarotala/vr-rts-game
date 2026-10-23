@@ -81,7 +81,10 @@ namespace Frontier.Editor
                     f.Check(!f.Wheel.IsOpen && f.Session.Selection.Contains(worker.id), "A fresh trigger recalls group 1 without ever centering the opening direction");
                     f.Frame(held: true); f.Frame(up: true); f.Drain();
                     f.OpenSelection();
-                    f.Check(f.Wheel.HighlightedId.StartsWith("build:") && f.Wheel.Items.Count(a => a.Building) == 7,
+                    var expectedBuildings = f.Session.Catalog.Definition.archetypes.Where(type => type.faction == faction && type.building)
+                        .Select(type => "build:" + type.id).OrderBy(id => id).ToArray();
+                    f.Check(f.Wheel.HighlightedId.StartsWith("build:") && f.Wheel.Items.Where(action => action.Building)
+                        .Select(action => action.Id).OrderBy(id => id).SequenceEqual(expectedBuildings),
                         "Right enters Selection with all buildings available and one highlighted immediately");
                     f.Capture(faction + "-direct-selection");
                     f.OpenOrders();

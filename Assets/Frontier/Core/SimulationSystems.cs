@@ -54,7 +54,8 @@ namespace Frontier.Core
             if (order.remaining > 0) return;
             if (order.research)
             {
-                if (order.definition == "attack") Players[producer.owner].attackLevel++; else Players[producer.owner].armorLevel++;
+                var upgrade=Catalog.Upgrade(order.definition);
+                if (upgrade.Stat == "attack") Players[producer.owner].attackLevel=upgrade.level; else Players[producer.owner].armorLevel=upgrade.level;
                 producer.queue.RemoveAt(0); FinishBuildOrder(producer.owner,order.id,false,BuildOrderStatus.Completed); Notice?.Invoke(producer.owner, "Research complete."); return;
             }
             if (Units(producer.owner) >= Capacity(producer.owner)) return;
@@ -166,9 +167,9 @@ namespace Frontier.Core
             { var e = entry.Value; visible.Add(new VisibleEntity { id = e.id, owner = e.owner, definition = e.definition, position = e.position, health = e.health, complete = e.complete, progress = e.progress, remembered = true }); }
             var assignments = GatherAssignments(player, Array.Empty<int>());
             var knownResources = Resources.Where(r => Explored(player, r.position)).Select(r => ObserveResource(player, r, assignments)).ToArray();
-            var upgrades = new List<string>(); if (Players[player].attackLevel > 0) upgrades.Add("attack"); if (Players[player].armorLevel > 0) upgrades.Add("armor");
+            var upgrades = Catalog.Definition.upgrades.Where(u=>(u.Stat=="attack"?Players[player].attackLevel:Players[player].armorLevel)>=u.level).Select(u=>u.id).ToArray();
             return new PlayerView { player = player, tick = Tick, winner = Winner, faction = Players[player].faction, minerals = Players[player].minerals, catalyst = Players[player].catalyst,
-                supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades.ToArray(),
+                supply = Units(player) + Reserved(player), capacity = Capacity(player), entities = visible.ToArray(), resources = knownResources, visibility = (byte[])vision[player].Clone(), researched = upgrades,
                 abilityEvents = recentAbilities.Where(a => (a.observers & (1<<player)) != 0 && Visible(player,a.origin) && Visible(player,a.effect.position)).Select(a=>ObservedAbility(a.effect,a.ids[player])).ToArray(),
                 deaths = recentDeaths.Where(d => (d.observers & (1<<player)) != 0 && (d.death.owner == player || Visible(player,d.death.position))).Select(d=>d.death).ToArray(),
                 // Never reveal a previously unseen shot when an observer arrives later, or keep a trail in lost vision.

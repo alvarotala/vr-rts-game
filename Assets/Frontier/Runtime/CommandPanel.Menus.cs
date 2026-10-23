@@ -33,7 +33,7 @@ namespace Frontier.Runtime
             var heading=Label(rect,title,new Vector2(24,titleY),new Vector2(size.x-80,hero?50:32),hero?34:primary?28:compact?23:25,ConsoleTheme.Ink);
             heading.fontStyle=FontStyle.Bold;
             Label(rect,description,new Vector2(24,descriptionY),new Vector2(size.x-48,hero?100:compact?24:size.y+descriptionY-12),hero?21:tall?20:compact?17:18,MenuMuted,TextAnchor.UpperLeft);
-            Label(rect,"›",new Vector2(size.x-48,hero?-size.y+65:-14),new Vector2(28,40),32,accent,TextAnchor.MiddleCenter);
+            Label(rect,"›",new Vector2(size.x-48,hero?-size.y+65:-14),new Vector2(28,40),32,fill.HasValue?ConsoleTheme.Ink:primary?accent:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
             return rect;
         }
@@ -41,8 +41,25 @@ namespace Frontier.Runtime
         private void MenuFooter(string title,Action click,float x=0,float width=330,bool primary=false,float height=64,Color? fill=null)
         {
             var rect=Section(actions,title,new Vector2(x,-396+height),new Vector2(width,height),fill??(primary?ConsoleTheme.Primary:button));
-            Label(rect,title,new Vector2(18,0),new Vector2(width-36,height),primary?28:23,ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
+            Label(rect,title,new Vector2(18,0),new Vector2(width-36,height),primary?28:23,primary?ConsoleTheme.Ink:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter).fontStyle=primary?FontStyle.Bold:FontStyle.Normal;
             targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=click});
+        }
+
+        private void MainMenuTile(string title,ConsoleGlyph.Kind icon,int index,Action click,bool beta=false)
+        {
+            const float side=144,gap=20;
+            float left=(1040-(side*4+gap*3))*.5f;
+            var rect=Section(actions,title,new Vector2(left+index*(side+gap),-308),new Vector2(side,side),button);
+            Glyph(rect,icon,new Vector2((side-44)*.5f,-14),44,ConsoleTheme.SecondaryInk);
+            var label=Label(rect,title,new Vector2(8,-64),new Vector2(side-16,48),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            label.fontStyle=FontStyle.Bold;
+            if(beta)
+            {
+                var badge=Section(rect,"Beta badge",new Vector2((side-64)*.5f,-122),new Vector2(64,18),WarningTint);
+                ConsoleTheme.StylePill(badge.GetComponent<Image>());
+                Label(badge,"BETA",Vector2.zero,new Vector2(64,18),13,ConsoleTheme.HoverInk,TextAnchor.MiddleCenter).fontStyle=FontStyle.Bold;
+            }
+            targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click});
         }
 
         private void FactionCard(bool opponent,Vector2 position)
@@ -66,11 +83,12 @@ namespace Frontier.Runtime
             switch(Page)
             {
                 case MenuPage.Main:
-                    MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",Vector2.zero,new Vector2(1040,116),()=>Show(MenuPage.MatchSetup),true);
-                    MenuCard("Multiplayer LAN","Two players on the same network.",new Vector2(0,-132),new Vector2(512,116),()=>Show(MenuPage.OnlineSetup));
-                    MenuCard("Guides","Controls, units and structures.",new Vector2(528,-132),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Guides));
-                    MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(0,-264),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
-                    MenuCard("Match history","Replays, results and build orders.",new Vector2(528,-264),new Vector2(512,116),OpenHistory);
+                    MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",new Vector2(264,0),new Vector2(512,116),()=>Show(MenuPage.MatchSetup),true);
+                    MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings),fill:ConsoleTheme.Secondary);
+                    MainMenuTile("Guided tutorial",ConsoleGlyph.Kind.Tutorial,0,()=>Quest.RequestTutorial());
+                    MainMenuTile("Multiplayer LAN",ConsoleGlyph.Kind.Group,1,()=>Show(MenuPage.OnlineSetup),true);
+                    MainMenuTile("Guides",ConsoleGlyph.Kind.Guide,2,()=>OpenSubmenu(MenuPage.Guides));
+                    MainMenuTile("Match history",ConsoleGlyph.Kind.History,3,OpenHistory);
                     return true;
                 case MenuPage.History:BuildHistory();return true;
                 case MenuPage.Replay:BuildReplayPanel();return true;
@@ -83,10 +101,10 @@ namespace Frontier.Runtime
                     MenuCard("Map: "+Session.Map.title,MapDescription,new Vector2(528,-132),new Vector2(512,116),()=>{Session.CycleMap();Board.Rebuild();Rebuild();});
                     MenuFooter("Back",Back,0,208);
                     MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},224,296);
-                    MenuFooter("START MATCH",Quest.RequestStartMatch,536,504,true,80,ConsoleTheme.Success);
+                    MenuFooter("START MATCH",Quest.RequestStartMatch,536,504,true,80);
                     return true;
                 case MenuPage.Pause:
-                    MenuCard("Resume match","Return to the battlefield.",Vector2.zero,new Vector2(1040,116),()=>Show(MenuPage.Actions),true);
+                    MenuCard("Resume match",TutorialResumeBriefing?"Choose Continue in the floating guide first.":"Return to the battlefield.",Vector2.zero,new Vector2(1040,116),()=>Show(MenuPage.Actions),!TutorialResumeBriefing);
                     MenuCard("Guides","Controls, units and structures.",new Vector2(0,-132),new Vector2(512,144),()=>OpenSubmenu(MenuPage.Guides));
                     MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(528,-132),new Vector2(512,144),()=>OpenSubmenu(MenuPage.Settings));
                     MenuFooter("Return to main menu",()=>Show(MenuPage.LeaveConfirmation),0,512);
@@ -123,7 +141,7 @@ namespace Frontier.Runtime
             {
                 MenuCard("Hand: "+Bindings.HandName,"Switch the active controller and its button hints.",new Vector2(0,-68),new Vector2(512,116),ToggleControllerHand);
                 MenuCard("Hotkeys","Customize gameplay buttons and keyboard shortcuts.",new Vector2(528,-68),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Hotkeys));
-                MenuCard("Selection: "+(Board.BaseTargeting?"Bases":"Bodies"),Board.BaseTargeting?"Aim at unit bases, including behind buildings and minerals.":"Aim at visible models. Switch to Bases to reach obscured units.",new Vector2(0,-200),new Vector2(1040,116),()=>{Board.SetBaseTargeting(!Board.BaseTargeting);Rebuild();});
+                MenuCard("Selection: "+(Board.BaseTargeting?"Bases":"Bodies"),Board.BaseTargeting?"Aim at ground areas. Units take priority over buildings and resources.":"Aim at models or ground areas. Units take priority over buildings and resources.",new Vector2(0,-200),new Vector2(1040,116),()=>{Board.SetBaseTargeting(!Board.BaseTargeting);Rebuild();});
             }
             else if(settingsTab==SettingsTab.Audio)
             {

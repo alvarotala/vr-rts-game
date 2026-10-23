@@ -678,6 +678,42 @@
       "minerals": 150,
       "catalyst": 100,
       "duration": 700
+    },
+    {
+      "id": "attack2",
+      "name": "Firepower II",
+      "stat": "attack",
+      "level": 2,
+      "minerals": 225,
+      "catalyst": 150,
+      "duration": 700
+    },
+    {
+      "id": "armor2",
+      "name": "Armor II",
+      "stat": "armor",
+      "level": 2,
+      "minerals": 225,
+      "catalyst": 150,
+      "duration": 700
+    },
+    {
+      "id": "attack3",
+      "name": "Firepower III",
+      "stat": "attack",
+      "level": 3,
+      "minerals": 300,
+      "catalyst": 200,
+      "duration": 700
+    },
+    {
+      "id": "armor3",
+      "name": "Armor III",
+      "stat": "armor",
+      "level": 3,
+      "minerals": 300,
+      "catalyst": 200,
+      "duration": 700
     }
   ],
   "abilities": [

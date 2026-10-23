@@ -85,9 +85,9 @@ namespace Frontier.Editor
                     session.Select(tech.id,false);
                     Check(session.Context(new Point(26,20),0,0)>0&&session.Send(CommandKind.Research,"attack")&&session.Send(CommandKind.Train,session.Catalog.Role(faction,"siege").id),"Technology building combines rally, research and training");Refresh();
                     var actions=Field<RectTransform>(panel,"actions");
-                    Check(!actions.Cast<Transform>().Any(t=>t.name=="Clear Rally Point"||t.name=="Cancel / refund")
+                    Check(actions.Cast<Transform>().Any(t=>t.name=="Clear Rally Point")&&!actions.Cast<Transform>().Any(t=>t.name=="Cancel / refund")
                         &&SelectionActions.For(session).Items.Any(action=>action.Id=="clear-rally-point"&&action.Category==ActionCategory.Cancel),
-                        "Technology HUD hides redundant controls while shared rally clearing remains available");
+                        "Technology HUD exposes rally clearing in Options and keeps production cancellation on its cards");
                     Check(actions.Cast<Transform>().OfType<RectTransform>().All(r=>-r.anchoredPosition.y+r.sizeDelta.y<=actions.sizeDelta.y+.01f),"Technology training and research actions fit inside Options");
                     Check(Text("productionName")=="Firepower I"&&!Shown("rallyPointStrip")&&Plan().gameObject.activeInHierarchy,
                         "Research remains visible while its rally is represented on the map");CapturePanel(faction+"-technology");

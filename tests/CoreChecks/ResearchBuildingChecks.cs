@@ -37,6 +37,37 @@ static class ResearchBuildingChecks
             sim.Step();sim.Step();
             Check(sim.Players[0].attackLevel==1&&sim.Players[0].armorLevel==1&&lab.queue.Count==0,"both upgrades retain their faction-wide effects");
             Check(!Send(CommandKind.Research,lab,"armor"),"completed upgrades cannot be researched again");
+            foreach(string stat in new[]{"attack","armor"})
+            {
+                int beforeMinerals=sim.Players[0].minerals,beforeGas=sim.Players[0].catalyst;
+                Check(!Send(CommandKind.Research,lab,stat+"3")&&sim.Players[0].minerals==beforeMinerals&&sim.Players[0].catalyst==beforeGas,
+                    stat+": level III cannot skip level II or charge resources");
+                for(int level=2;level<=3;level++)
+                {
+                    var upgrade=catalog.Upgrade(stat+level);var view=sim.View(0);
+                    Check(upgrade.level==level&&upgrade.Stat==stat&&upgrade.minerals==(level==2?225:300)&&upgrade.catalyst==(level==2?150:200)
+                        &&upgrade.duration==35*Simulation.TickRate,stat+": approved progressive cost and unchanged duration at level "+level);
+                    Check(catalog.CanResearch(upgrade,view.researched),stat+": completed previous level unlocks the next option");
+                    beforeMinerals=sim.Players[0].minerals;beforeGas=sim.Players[0].catalyst;
+                    Check(Send(CommandKind.Research,lab,upgrade.id)&&lab.queue.Single().definition==upgrade.id
+                        &&sim.Players[0].minerals==beforeMinerals-upgrade.minerals&&sim.Players[0].catalyst==beforeGas-upgrade.catalyst,
+                        stat+": exact tier is enqueued and paid once");
+                    Check(!Send(CommandKind.Research,lab,upgrade.id),stat+": queued tier cannot be duplicated");
+                    if(level==2)Check(!Send(CommandKind.Research,lab,stat+"3"),stat+": next level waits for completion, not just enqueue");
+                    Check(Send(CommandKind.Cancel,lab,null)&&lab.queue.Count==0&&sim.Players[0].minerals==beforeMinerals&&sim.Players[0].catalyst==beforeGas,
+                        stat+": cancellation refunds this tier's full cost");
+                    Check(Send(CommandKind.Research,lab,upgrade.id),stat+": cancelled tier can be researched again");
+                    for(int tick=0;tick<upgrade.duration;tick++)sim.Step();
+                    Check((stat=="attack"?sim.Players[0].attackLevel:sim.Players[0].armorLevel)==level&&lab.queue.Count==0,
+                        stat+": tier completes after its actual duration");
+                    if(stat=="attack")Check(sim.Players[0].armorLevel==1,"Firepower progresses independently from Armor");
+                    Check(sim.View(0).researched.Contains(upgrade.id)&&!sim.View(1).researched.Contains(upgrade.id),stat+": only the owner receives its completed tier");
+                    Check(!Send(CommandKind.Research,lab,upgrade.id)&&!catalog.CanResearch(upgrade,sim.View(0).researched),stat+": completed tier cannot be repeated");
+                }
+            }
+            Check(sim.Players[0].attackLevel==3&&sim.Players[0].armorLevel==3&&sim.View(0).researched.Length==6
+                &&!catalog.Definition.upgrades.Any(u=>catalog.CanResearch(u,sim.View(0).researched)),"both independent progressions finish at III");
+            Check(!Send(CommandKind.Research,lab,"attack4")&&!Send(CommandKind.Research,lab,"armor4"),"there is no fourth level");
             void Check(bool ok,string message)=>check(ok,"Research building "+faction+": "+message);
             bool Build(Point point)=>sim.Submit(new GameCommand{player=0,kind=CommandKind.Build,entities=new[]{worker.id},definition=type.id,position=point}).accepted;
             bool Send(CommandKind kind,EntityState entity,string definition)=>sim.Submit(new GameCommand{player=0,kind=kind,entities=new[]{entity.id},definition=definition}).accepted;

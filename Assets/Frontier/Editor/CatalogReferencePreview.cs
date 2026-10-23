@@ -88,6 +88,9 @@ namespace Frontier.Editor
                                 Check(requirements.Contains(source),"Production source is catalog-backed for "+type.id);
                                 if(!string.IsNullOrEmpty(type.requires))Check(requirements.Contains(session.Catalog.Role(type.faction,type.requires).name),"Prerequisite shown for "+type.id);
                                 string details=Field<Text>(panel,"referenceExtraDetails").text;
+                                if(type.role=="research")foreach(var upgrade in session.Catalog.Definition.upgrades)
+                                    Check(details.Contains(upgrade.name)&&details.Contains(upgrade.minerals+" minerals · "+upgrade.catalyst+" gas · "+Number((float)upgrade.duration/Simulation.TickRate)+" s"),
+                                        "Research reference includes tier and cost: "+upgrade.id);
                                 foreach(string id in type.abilities)
                                 {
                                     var ability=session.Catalog.Ability(id);

@@ -25,7 +25,7 @@ namespace Frontier.Runtime
             {
                 int index=i;
                 var tab=Section(referenceGuide,"Reference faction "+i,new Vector2(16+i*254,-14),new Vector2(244,48));
-                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+                referenceFactionNames[i]=Label(tab,"",new Vector2(8,0),new Vector2(228,48),20,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
                 referenceFactionTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{
                     referenceFaction=Session.Catalog.Definition.factions[index].id;Rebuild();UpdateMenuText();
                 }};
@@ -45,7 +45,7 @@ namespace Frontier.Runtime
             var detail=Section(referenceGuide,"Reference detail",new Vector2(286,-82),new Vector2(738,502),ConsoleTheme.Card);
             referenceName=Label(detail,"",new Vector2(16,-8),new Vector2(572,32),26,ConsoleTheme.Ink);
             referenceName.fontStyle=FontStyle.Bold;
-            referenceRole=Label(detail,"",new Vector2(16,-42),new Vector2(572,24),18,accent);
+            referenceRole=Label(detail,"",new Vector2(16,-42),new Vector2(572,24),18,ConsoleTheme.SecondaryInk);
             referenceDescription=Label(detail,"",new Vector2(16,-72),new Vector2(572,48),17,ConsoleTheme.Muted,TextAnchor.UpperLeft);
             var portraitObject=new GameObject("Reference model",typeof(RectTransform),typeof(CanvasRenderer),typeof(SelectionPortrait));
             var portraitRect=portraitObject.GetComponent<RectTransform>();portraitRect.SetParent(detail,false);
@@ -60,7 +60,7 @@ namespace Frontier.Runtime
                 referenceStatValues[i].fontStyle=FontStyle.Bold;
             }
             referenceRequirements=Label(detail,"",new Vector2(16,-312),new Vector2(706,49),17,ConsoleTheme.Muted,TextAnchor.UpperLeft);
-            referenceExtraTitle=Label(detail,"",new Vector2(16,-369),new Vector2(706,22),15,accent);
+            referenceExtraTitle=Label(detail,"",new Vector2(16,-369),new Vector2(706,22),15,ConsoleTheme.SecondaryInk);
             referenceExtraDetails=Label(detail,"",new Vector2(16,-396),new Vector2(706,98),17,ConsoleTheme.Muted,TextAnchor.UpperLeft);
         }
 
@@ -78,6 +78,7 @@ namespace Frontier.Runtime
                 var faction=catalog.Definition.factions[i];var tab=referenceFactionTabs[i];
                 tab.rect.name="Reference faction: "+faction.id;
                 referenceFactionNames[i].text=faction.name;
+                referenceFactionNames[i].color=faction.id==referenceFaction?accent:ConsoleTheme.SecondaryInk;
                 referenceFactionNames[i].fontStyle=faction.id==referenceFaction?FontStyle.Bold:FontStyle.Normal;
                 tab.normal=faction.id==referenceFaction?ConsoleTheme.Primary:button;tab.image.color=tab.normal;targets.Add(tab);
             }
@@ -98,6 +99,10 @@ namespace Frontier.Runtime
                 referenceStatCards[i].name="Reference stat: "+stats[i].Label;
                 referenceStatLabels[i].text=stats[i].Label;referenceStatValues[i].text=stats[i].Value;
             }
+            float requirementsTop=134+Mathf.CeilToInt(stats.Count/4f)*56+10;
+            TopLeft(referenceRequirements.rectTransform,new Vector2(16,-requirementsTop),new Vector2(706,49));
+            TopLeft(referenceExtraTitle.rectTransform,new Vector2(16,-requirementsTop-57),new Vector2(706,22));
+            TopLeft(referenceExtraDetails.rectTransform,new Vector2(16,-requirementsTop-84),new Vector2(706,494-requirementsTop-84));
             referenceRequirements.text=CatalogReference.Requirements(catalog,current);
             referenceExtraTitle.text=CatalogReference.ExtraTitle(current);referenceExtraDetails.text=CatalogReference.ExtraDetails(catalog,current);
         }

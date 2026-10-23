@@ -86,7 +86,7 @@ namespace Frontier.Editor
                     }
                     foreach(var upgrade in session.Catalog.Definition.upgrades)
                     {
-                        var e=new EntityState{id=id++,owner=p,definition=session.Catalog.Role(faction,"tech").id,position=new Point(23+p*25,23),health=300};
+                        var e=new EntityState{id=id++,owner=p,definition=session.Catalog.Role(faction,"research").id,position=new Point(23+p*25,23),health=300};
                         e.queue.Add(new ProductionOrder{id=id++,definition=upgrade.id,research=true,total=100,remaining=25});session.Match.Entities.Add(e.id,e);
                     }
                     session.Match.Players[p].minerals=12345+p;session.Match.Players[p].catalyst=6789+p;
@@ -98,7 +98,9 @@ namespace Frontier.Editor
                 Check(Field<Text[,]>(panel,"replayProductionNames").Cast<Text>().Any(t=>t.text.StartsWith("Research · "))&&Field<Text[,]>(panel,"replayProductionProgress").Cast<Text>().Any(t=>t.text=="75%"),"Research and its progress share the always-visible production view");
                 ClickRect(navigation[0].GetComponentsInChildren<RectTransform>().First(r=>r.name=="Next"));Refresh();Capture("05-production-page-2");
                 Check(Field<int[]>(panel,"replayProductionPage")[0]==1&&Field<int[]>(panel,"replayProductionPage")[1]==0,"Production pagination changes only the requested player's column");
-                Check(Field<Text[,]>(panel,"replayProductionNames")[0,0].text.StartsWith("Train · "),"Production overflow remains reachable without hiding transport controls");
+                var names=Field<Text[,]>(panel,"replayProductionNames");
+                Check(Enumerable.Range(0,names.GetLength(1)).Any(row=>names[0,row].gameObject.activeInHierarchy&&names[0,row].text.StartsWith("Train · ")),
+                    "Production overflow remains reachable without hiding transport controls");
                 typeof(ReplayPlayback).GetProperty("Error").SetValue(session.Replay,"Replay stopped: A checkpoint diverged at 00:32. This recording may need its original game version.");
                 Refresh();Check(Field<Text>(panel,"status").text==session.Replay.Error&&Field<Text>(panel,"replayState").text=="REPLAY STOPPED","Replay verification errors stay visible above the exit controls");Capture("06-error");
                 Click("Exit replay");Check(panel.Page==CommandPanel.MenuPage.History&&!session.IsReplay&&!session.Running,"Exit replay returns directly to saved match history");

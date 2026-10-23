@@ -38,7 +38,7 @@ namespace Frontier.Runtime
             return new[]{
                 new Topic("Selection",new[]{
                     new Command("selection.single","Select an item",select+" on map","Select an allied unit, building or resource."),
-                    new Command("selection.area","Select an area","Hold "+select+" + drag","Enclose units in the flat rectangle. The drag can start outside the map."),
+                    new Command("selection.area","Select an area","Hold "+select+" + drag","Enclose your units and buildings in the flat rectangle. The drag can start outside the map."),
                     new Command("selection.add","Add to selection",shift+" + "+select,"Keep your selection and add more units, including by dragging an area."),
                     new Command("selection.remove","Remove from selection","Map: "+shift+" + hold "+select+" · Card: "+(touch?"Grip + Trigger":"Shift + click"),"Map: hold 0.5 s to remove one item. Card: remove the whole type from selection. Units keep their orders."),
                     new Command("selection.same-type","Select the same type","Map: double "+select+" · Card: "+click,"Map: same type within 12 cells; "+shift+" adds. Card: keep only that type from the current selection."),

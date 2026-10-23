@@ -16,9 +16,16 @@ namespace Frontier.Editor
         private const BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
         private static T Field<T>(object obj,string name)=>(T)obj.GetType().GetField(name,Private).GetValue(obj);
         private static void Invoke(object obj,string name)=>obj.GetType().GetMethod(name,Private).Invoke(obj,null);
+        public static void ValidateConstruction()
+        {
+            string language=Localization.Preference;
+            try{Localization.SetPreference("en");RenderChecks(false);ActionWheelPreview.Render();HudLayoutPreview.Render();}
+            finally{Localization.SetPreference(language);}
+        }
 
         [MenuItem("Frontier/Preview and check queue cancellation")]
-        public static void Render()
+        public static void Render()=>RenderChecks(true);
+        private static void RenderChecks(bool runRelatedChecks)
         {
             Directory.CreateDirectory("TestResults/ProductionCancel");
             var preview=new PreviewRenderUtility();var fixture=new GameObject("Queue cancellation fixture");var console=new GameObject("Queue cancellation console");
@@ -39,6 +46,42 @@ namespace Frontier.Editor
                     session.Faction=faction;session.StartMatch();session.Match.Players[0].minerals=5000;session.Match.Players[0].catalyst=5000;
                     Add("supply",1000);var barracks=Add("barracks",1001);var tech=Add("tech",1002);var lab=Add("research",1003);
                     var hq=session.Match.Entities.Values.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
+                    session.Select(hq.id,false);Refresh();var hudSize=Field<RectTransform>(panel,"root").sizeDelta;
+                    var productionPosition=Field<RectTransform>(panel,"productionStrip").anchoredPosition;
+                    foreach(var type in session.Catalog.Definition.archetypes.Where(t=>t.faction==faction&&t.building))
+                    {
+                        var foundation=new EntityState{id=1500,owner=0,definition=type.id,health=type.health*.25f,complete=false,
+                            remaining=type.duration*3/4,position=new Point(32,16)};
+                        session.Match.Entities.Add(foundation.id,foundation);session.Match.Map.Occupy(foundation.position,type.footprint,foundation.id);
+                        Refresh();session.Select(foundation.id,false);Refresh();
+                        Check(Card("Cancel construction").IsChildOf(Field<RectTransform>(panel,"actions")),
+                            "Every unfinished building exposes Cancel construction in Options: "+type.id);
+                        Check(!Field<RectTransform>(panel,"productionStrip").gameObject.activeInHierarchy
+                            &&Field<Array>(panel,"productionTargets").Cast<object>().All(t=>t==null),"An unfinished building keeps Production empty and non-interactive");
+                        Check(Field<RectTransform>(panel,"root").sizeDelta==hudSize
+                            &&Field<RectTransform>(panel,"productionStrip").anchoredPosition==productionPosition,"Foundation selection preserves HUD size and production position");
+                        if(type.role=="barracks")
+                        {
+                            string language=Localization.Preference;Localization.SetPreference("es");Refresh();
+                            Canvas.ForceUpdateCanvases();
+                            foreach(var text in Card("Cancel construction").GetComponentsInChildren<Text>())
+                                Check(text.preferredHeight<=text.rectTransform.rect.height+.5f,"Spanish construction option fits: "+text.text);
+                            Capture(faction+"-construction");Localization.SetPreference(language);Refresh();
+                        }
+                        int minerals=session.View.minerals,gasBefore=session.View.catalyst;
+                        Click("Cancel construction",faction=="biological");
+                        Check(!session.Match.Entities.ContainsKey(foundation.id)&&session.View.minerals==minerals+(int)(type.minerals*.75f)
+                            &&session.View.catalyst==gasBefore+(int)(type.catalyst*.75f),"Options cancels construction and refunds its mineral and gas cost: "+type.id);
+                        Check(Field<RectTransform>(panel,"root").sizeDelta==hudSize&&!Field<RectTransform>(panel,"productionStrip").gameObject.activeInHierarchy,
+                            "Cancelling construction clears the card without resizing the menu");
+                    }
+                    var finishing=Add("barracks",1004);finishing.complete=false;Refresh();session.Select(finishing.id,false);Refresh();
+                    var constructionRay=RayTo("Cancel construction");Frame(constructionRay,true,false,false);
+                    finishing.complete=true;finishing.remaining=0;Refresh();Frame(constructionRay,false,true,false);Refresh();
+                    Check(session.Match.Entities.ContainsKey(finishing.id)&&Field<Text>(panel,"productionName").text=="Queue empty"
+                        &&!panel.GetComponentsInChildren<RectTransform>().Any(r=>r.name=="Cancel construction"&&r.gameObject.activeInHierarchy),
+                        "Completing construction during a held click switches to production without cancelling anything: exists="+session.Match.Entities.ContainsKey(finishing.id)
+                        +", production="+Field<Text>(panel,"productionName").text+", actions="+string.Join(",",SelectionActions.For(session).Items.Select(a=>a.Id)));
                     foreach(var producer in new[]{hq,barracks})
                     {
                         session.Select(producer.id,false);string role=producer==hq?"worker":"ranged";
@@ -124,7 +167,7 @@ namespace Frontier.Editor
                 void Capture(string name){HarvestingPreview.SavePanel(panel,"TestResults/ProductionCancel/"+name+".png",preview);captures++;}
             }
             finally{Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();}
-            ActionHelpPreview.Render();
+            if(runRelatedChecks)ActionHelpPreview.Render();
         }
     }
 }

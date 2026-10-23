@@ -89,7 +89,7 @@ namespace Frontier.Editor
                     f.Check(tech.queue.Count==1&&!tech.queue[0].research&&f.Wheel.IsOpen,"Technology building still trains its unit through the wheel");
                     f.Check(!SelectionActions.For(f.Session).Items.Any(a=>a.Category==ActionCategory.Research),"Artillery menu has no upgrades");
                     f.Dismiss();f.Session.Select(lab.id,false);f.Refresh();
-                    foreach(var upgrade in f.Session.Catalog.Definition.upgrades)
+                    foreach(var upgrade in f.Session.Catalog.Definition.upgrades.Where(u=>u.level==1))
                     {
                         var research=SelectionActions.For(f.Session).Items.Single(a=>a.Id=="research:"+upgrade.id);
                         f.Check(f.Panel.GetComponentsInChildren<RectTransform>().Any(r=>r.name==research.Title&&r.gameObject.activeInHierarchy)
@@ -115,19 +115,19 @@ namespace Frontier.Editor
                     f.Check(f.Wheel.Page == WheelPage.Root && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text.Contains("No actions"), "Automatic structures keep the root open and explain unavailable selection actions");
                     f.Capture(faction + "-automatic"); f.Dismiss(); supply.complete = false; f.Refresh();
                     f.OpenSelection();
-                    f.Check(f.Wheel.Page == WheelPage.Root && !f.Wheel.Items.Any(a => a.Id == "cancel") && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text.Contains("No actions"), "An unfinished building does not expose a cancellation wheel");
-                    f.Dismiss(); f.CapturePanel(faction + "-construction-panel");
-                    f.Check(!f.Panel.GetComponentsInChildren<RectTransform>().Any(r => r.name == "Cancel / refund" && r.gameObject.activeInHierarchy),
-                        "An unfinished building does not restore the removed HUD cancellation button");
+                    f.Check(f.Wheel.Page == WheelPage.Selection && f.Wheel.Items.Any(a => a.Id == "cancel-construction"),
+                        "An unfinished building exposes cancellation in the wheel");
+                    f.Choose("cancel-construction");f.Capture(faction+"-cancel-construction");f.CapturePanel(faction + "-construction-panel");
+                    f.Check(f.Panel.GetComponentsInChildren<RectTransform>().Any(r => r.name == "Cancel construction" && r.gameObject.activeInHierarchy)
+                        &&!UnifiedWheelFixture.Field<RectTransform>(f.Panel,"productionStrip").gameObject.activeInHierarchy,
+                        "An unfinished building offers cancellation in Options while Production stays empty");
                     int constructionMinerals = f.Session.View.minerals, constructionGas = f.Session.View.catalyst;
                     var supplyType = f.Session.Catalog[supply.definition];
-                    f.Check(SelectionActions.For(f.Session).Items.Single(a => a.Id == "cancel").Execute(),
-                        "The shared construction cancellation action remains available");
-                    f.Refresh();
+                    f.Confirm();f.Drain();f.Refresh();
                     f.Check(!f.Session.Match.Entities.ContainsKey(supply.id)
                         && f.Session.View.minerals == constructionMinerals + (int)(supplyType.minerals * .75f)
                         && f.Session.View.catalyst == constructionGas + (int)(supplyType.catalyst * .75f),
-                        "Shared construction cancellation removes the unfinished building and refunds 75 percent of its cost");
+                        "Confirming the wheel removes the unfinished building and refunds 75 percent of its cost");
                     f.Session.Select(0, false); f.OpenSelection();
                     f.Check(f.Wheel.Page == WheelPage.Root && UnifiedWheelFixture.Field<Text>(f.Wheel, "detail").text.Contains("No actions"), "An empty selection keeps root navigation without executable selection commands"); f.Capture(faction + "-no-selection"); f.Dismiss();
                     f.Session.Select(worker.id, false); f.OpenOrders(); f.Choose("hold"); f.Session.Select(other.id, false); f.Frame(Vector2.up, down: true, held: true);

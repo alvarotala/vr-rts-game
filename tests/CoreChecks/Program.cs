@@ -15,6 +15,13 @@ void Throws(Action action, string name) { try { action(); } catch (ArgumentExcep
 Simulation New(string a = "industrial", string b = "biological") => new Simulation(map, catalog, a, b);
 GameCommand Cmd(CommandKind kind, int id, int player = 0, string definition = null, Point position = default, int target = 0) => new GameCommand { kind = kind, entities = new[] { id }, player = player, definition = definition, position = position, target = target };
 
+if(args.Contains("--tutorial-only"))
+{
+    GuidedTutorialChecks.Run(catalog,training,Check);
+    Console.WriteLine($"{checks} guided tutorial checks passed.");
+    return;
+}
+
 if(args.Contains("--research-only"))
 {
     ResearchBuildingChecks.Run(catalog,map,Check);
@@ -119,6 +126,7 @@ if(args.Contains("--harvesting-only"))
 }
 
 FactionParityChecks.Run(catalog,new[]{map,training},Check);
+GuidedTutorialChecks.Run(catalog,training,Check);
 DesertMapChecks.Run(catalog,desert,map,Check);
 Check(new GridMap(map).Count == 16384 && new GridMap(training).Count == 2304, "both authored maps validate");
 ResourceLayoutChecks.Run(catalog, new[]{map, training}, Check);

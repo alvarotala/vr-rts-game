@@ -240,7 +240,8 @@ namespace Frontier.Core
             }
             if(view.tick>=Seconds(pace.research)&&view.tick>=economyResearchAt&&producerCounts["siege"]>0&&militaryCount>=16)
             {
-                var upgrade=catalog.Definition.upgrades.FirstOrDefault(u=>!view.researched.Contains(u.id)&&!own.Any(e=>e.queue.Any(q=>q.research&&q.definition==u.id)));
+                var upgrade=catalog.Definition.upgrades.FirstOrDefault(u=>catalog.CanResearch(u,view.researched)
+                    &&!own.Any(e=>e.queue.Any(q=>q.research&&catalog.Upgrade(q.definition)?.Stat==u.Stat)));
                 var research=own.FirstOrDefault(e=>e.complete&&Type(e).role=="research"&&e.queue.Length<=1&&!e.queue.Any(q=>q.research));
                 if(upgrade!=null&&research!=null&&minerals-saveMinerals>=upgrade.minerals&&catalyst>=upgrade.catalyst)
                 {

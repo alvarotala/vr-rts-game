@@ -26,7 +26,7 @@ namespace Frontier.Runtime
         private object remoteIdentity = new object();
         private MatchReport remoteReport;
         private readonly Dictionary<int, GameCommand> pendingCommands = new Dictionary<int, GameCommand>();
-        private GridMap previewMap;
+        private BuildPlacementValidity previewPlacement;
         private MapDefinition onlineSetupMap;
         private string onlineSetupFaction,onlineSetupEnemy;
         private readonly Dictionary<int,VisibleEntity> previousRemoteEntities=new Dictionary<int,VisibleEntity>();
@@ -210,29 +210,23 @@ namespace Frontier.Runtime
             return new Point(Mathf.Floor(nearest.position.x-half),Mathf.Floor(nearest.position.y-half));
         }
 
-        // Placement preview uses public terrain and this player's observed buildings.
-        // The authoritative server still checks occupancy, vision and resources.
+        // Both the ghost and terrain overlay use full-footprint spatial validity.
+        // The authoritative command still checks economy, worker access and clearance.
         public bool CanPreviewBuild(Point point,int size)
         {
-            if(View==null)return false;
-            if(previewMap==null||previewMap.Definition!=Map)previewMap=new GridMap(Map);
-            if(!previewMap.CanPlace(point,size))return false;
+            if(View==null||Map==null||float.IsNaN(point.x)||float.IsNaN(point.y)||float.IsInfinity(point.x)||float.IsInfinity(point.y))return false;
             int x=(int)Math.Floor(point.x),y=(int)Math.Floor(point.y);
-            for(int dy=0;dy<size;dy++)for(int dx=0;dx<size;dx++)
-                if(View.visibility[(y+dy)*Map.width+x+dx]!=2)return false;
-            if(BuildDefinition!=null&&Catalog[BuildDefinition].role=="extractor")
-            {
-                var covered=View.resources.Where(r=>r.remaining!=0&&r.position.x>=point.x&&r.position.x<point.x+size
-                    &&r.position.y>=point.y&&r.position.y<point.y+size).ToArray();
-                if(covered.Length!=1||covered[0].kind!="catalyst")return false;
-            }
-            foreach(var e in View.entities)
-            {
-                var type=Catalog[e.definition];
-                if(type.building&&point.x<e.position.x+type.footprint&&point.x+size>e.position.x
-                    &&point.y<e.position.y+type.footprint&&point.y+size>e.position.y)return false;
-            }
-            return true;
+            if(x<0||y<0||x>=Map.width||y>=Map.height)return false;
+            return BuildPlacementMask(size)[y*Map.width+x];
+        }
+
+        // Reused read-only storage: index = y * Map.width + x. True means the
+        // selected building can occupy the entire footprint starting at that cell.
+        public bool[] BuildPlacementMask(int size)
+        {
+            if(Map==null)return Array.Empty<bool>();
+            if(previewPlacement==null||previewPlacement.Definition!=Map)previewPlacement=new BuildPlacementValidity(Map);
+            return previewPlacement.Mask(View,Catalog,BuildDefinition,size);
         }
     }
 }

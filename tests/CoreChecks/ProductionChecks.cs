@@ -49,6 +49,16 @@ static class ProductionChecks
                 "cancelled active research refunds fully and can be queued again "+faction);
             supply.complete=false;int buildings=sim.Buildings(0);minerals=sim.Players[0].minerals;
             check(!Cancel(supply,mixed[1].id)&&sim.Buildings(0)==buildings&&sim.Players[0].minerals==minerals,"queue command cannot accidentally cancel a foundation "+faction);
+            check(!CancelConstruction(supply,tech.definition)&&sim.Entities.ContainsKey(supply.id),"construction cancellation validates the captured building type "+faction);
+            check(CancelConstruction(supply,supply.definition)&&!sim.Entities.ContainsKey(supply.id)
+                &&sim.Players[0].minerals==minerals+(int)(catalog[supply.definition].minerals*.75f),"construction card cancels the foundation and refunds 75 percent "+faction);
+            var foundation=Add("research",1003);foundation.complete=false;minerals=sim.Players[0].minerals;gas=sim.Players[0].catalyst;
+            check(CancelConstruction(foundation,foundation.definition)&&sim.Players[0].minerals==minerals+(int)(catalog[foundation.definition].minerals*.75f)
+                &&sim.Players[0].catalyst==gas+(int)(catalog[foundation.definition].catalyst*.75f),"construction refund includes the original gas cost "+faction);
+            check(Train(hq,worker),"finished building starts production before a delayed construction cancellation "+faction);
+            minerals=sim.Players[0].minerals;int newOrder=hq.queue[0].id;
+            check(!CancelConstruction(hq,hq.definition)&&hq.queue.Count==1&&hq.queue[0].id==newOrder&&sim.Players[0].minerals==minerals,
+                "delayed construction cancellation never cancels a finished building's new production "+faction);
 
             // Exercise the actual cap, including reservations and deployment.
             sim=new Simulation(map,catalog,faction);sim.Players[0].minerals=5000;
@@ -77,6 +87,7 @@ static class ProductionChecks
             bool Train(EntityState e,string definition)=>sim.Submit(new GameCommand{kind=CommandKind.Train,player=0,entities=new[]{e.id},definition=definition}).accepted;
             bool Research(string id)=>sim.Submit(new GameCommand{kind=CommandKind.Research,player=0,entities=new[]{lab.id},definition=id}).accepted;
             bool Cancel(EntityState e,int id)=>sim.Submit(new GameCommand{kind=CommandKind.Cancel,player=0,entities=new[]{e.id},queueOrderId=id}).accepted;
+            bool CancelConstruction(EntityState e,string definition)=>sim.Submit(new GameCommand{kind=CommandKind.Cancel,player=0,entities=new[]{e.id},definition=definition}).accepted;
         }
     }
 }

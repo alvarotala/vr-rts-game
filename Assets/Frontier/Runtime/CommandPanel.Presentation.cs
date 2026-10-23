@@ -16,9 +16,9 @@ namespace Frontier.Runtime
             consoleBrand=Label(root,"LEGION",new Vector2(32,-40),new Vector2(330,50),38,ConsoleTheme.Ink);consoleBrand.fontStyle=FontStyle.Bold;
             moveAffordance=Section(moveHandle,"Move affordance",Vector2.zero,new Vector2(192,12),ConsoleTheme.Muted);
             moveAffordanceImage=moveAffordance.GetComponent<Image>();
-            moveCaption=Label(moveAffordance,"Move window",Vector2.zero,new Vector2(232,52),23,ConsoleTheme.Background,TextAnchor.MiddleCenter);
+            moveCaption=Label(moveAffordance,"Move window",Vector2.zero,new Vector2(232,52),23,ConsoleTheme.HoverInk,TextAnchor.MiddleCenter);
             moveCaption.fontStyle=FontStyle.Bold;
-            moveHints=Label(moveHandle,"",new Vector2(-290,-88),new Vector2(900,64),20,ConsoleTheme.Muted,TextAnchor.UpperCenter);
+            moveHints=Label(moveHandle,"",new Vector2(-290,-88),new Vector2(900,64),20,ConsoleTheme.SecondaryInk,TextAnchor.UpperCenter);
             moveHints.gameObject.name="Move window hints";
         }
 
@@ -55,7 +55,7 @@ namespace Frontier.Runtime
             TopLeft(consoleBrand.rectTransform,new Vector2(left+littleWidth+20,-40),new Vector2(legionWidth+2,92));
             economy.fontSize=24;economy.color=ConsoleTheme.Ink;economy.alignment=TextAnchor.MiddleCenter;
             TopLeft(economy.rectTransform,new Vector2(30,-144),new Vector2(1040,36));
-            TopLeft(actions,new Vector2(30,-216),new Vector2(1040,396));
+            TopLeft(actions,new Vector2(30,-260),new Vector2(1040,452));
         }
         private void UpdateMoveAffordance(bool focused)
         {
@@ -63,7 +63,7 @@ namespace Frontier.Runtime
             moveImage.color=Color.clear;
             var size=focused?new Vector2(264,52):new Vector2(192,12);
             TopLeft(moveAffordance,new Vector2((320-size.x)*.5f,-(80-size.y)*.5f),size);
-            moveAffordanceImage.color=ConsoleTheme.Muted;
+            moveAffordanceImage.color=focused?ConsoleTheme.Accent:ConsoleTheme.Muted;
             ConsoleTheme.StylePill(moveAffordanceImage);
             moveCaption.gameObject.SetActive(focused);
             TopLeft(moveCaption.rectTransform,new Vector2(16,0),new Vector2(size.x-32,size.y));

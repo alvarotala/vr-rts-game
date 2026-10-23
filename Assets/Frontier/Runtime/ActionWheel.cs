@@ -58,11 +58,29 @@ namespace Frontier.Runtime
         private static readonly Color Disabled = new Color(.38f, .47f, .52f), Save = new Color(1, .7f, .3f);
         public bool CanOpen => Session != null && Session.View != null && Panel != null && Panel.AcceptsGameInput && !Panel.IsDragging && Quest != null && !Quest.Placing;
 
+        public bool TryTutorialTarget(string actionId, out Vector3 position)
+        {
+            position = default;
+            if (!IsOpen || root == null || !root.gameObject.activeInHierarchy) return false;
+            RectTransform target;
+            if (string.IsNullOrEmpty(actionId)) target = heading != null ? heading.rectTransform : root;
+            else
+            {
+                int index = items.FindIndex(item => item.Id == actionId);
+                if (index < 0 || index >= sectorLabels.Count || sectorLabels[index] == null) return false;
+                target = sectorLabels[index].rectTransform;
+            }
+            if (!target.gameObject.activeInHierarchy) return false;
+            position = target.TransformPoint(target.rect.center) - root.forward * .004f;
+            return true;
+        }
+
         // The router calls this before console/terrain input. Every open frame is consumed,
         // including closing and confirmation; it must also drain the confirming trigger release.
         public bool ProcessUnified(Ray pointer, Vector2 stick, bool triggerDown, bool triggerHeld, bool triggerUp, bool cancel, float now,
             bool stickDown = false, bool stickHeld = false, bool stickUp = false)
         {
+            if (Panel != null) Panel.TutorialWheel = this;
             if (IsOpen && !ValidContext()) { Close(); TickHint(pointer, false, now); return true; }
             if (!CanOpen) { openReady = false; TickHint(pointer, false, now); return false; }
             if (cancel && IsOpen)
@@ -198,14 +216,16 @@ namespace Frontier.Runtime
             // Deliberate navigation preserves the held direction, including Back.
             // Unexpected action-list changes still invalidate a stale highlight.
             stickReady = true; Aim(stick);
+            if(page==WheelPage.Selection)Session.NotifyTutorialWheel();
         }
 
         private static SelectionAction Navigation(string id, string label, string description)
             => new SelectionAction { Id = id, Title = label, Label = label, Detail = description };
 
-        // Refunds and upgrades stay on the console; the wheel keeps unit training quick to reach.
+        // Production refunds, rally clearing and upgrades stay off the wheel. Unfinished buildings
+        // expose their separate cancel-construction action here as well as in Options.
         private IEnumerable<SelectionAction> AvailableActions()
-            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel" && a.Category != ActionCategory.Research);
+            => SelectionActions.For(Session).Items.Where(a => a.Id != "cancel" && a.Id != "clear-rally-point" && a.Category != ActionCategory.Research);
 
         private IEnumerable<SelectionAction> QuickSelectActions()
         {

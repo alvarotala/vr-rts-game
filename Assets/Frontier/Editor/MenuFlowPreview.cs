@@ -30,8 +30,11 @@ namespace Frontier.Editor
             float fogPreference=PlayerPrefs.GetFloat(BoardView.FogDensityKey);
             bool hadLightingPreference=PlayerPrefs.HasKey(BoardView.LightingKey);
             int lightingPreference=PlayerPrefs.GetInt(BoardView.LightingKey);
+            bool hadLanguagePreference=PlayerPrefs.HasKey(Localization.PreferenceKey);
+            string languagePreference=PlayerPrefs.GetString(Localization.PreferenceKey);
             try
             {
+                Localization.SetPreference("en");
                 PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
                 PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
                 PlayerPrefs.DeleteKey(BoardView.LightingKey);
@@ -45,7 +48,7 @@ namespace Frontier.Editor
                 Invoke(panel,"Start");preview.AddSingleGO(console);Refresh();
                 Check(panel.Page==CommandPanel.MenuPage.Main&&!session.Running&&session.Match==null,"Startup opens main menu without a match");
                 Check(!board.Content.gameObject.activeSelf&&!panel.AcceptsGameInput,"Main menu hides board and blocks game input");
-                Check(Has("New Match")&&Has("Guides")&&Has("Settings")&&!Has("Hotkeys")&&!Has("START MATCH"),"Main menu has match, guides and unified settings navigation");
+                Check(Has("Guided tutorial")&&Has("New Match")&&Has("Guides")&&Has("Settings")&&!Has("Hotkeys")&&!Has("START MATCH"),"Main menu has guided tutorial, match, guides and unified settings navigation");
                 Capture("01-main");
                 Click("Guides");
                 Check(panel.Page==CommandPanel.MenuPage.Guides&&Has("Control guide")&&Has("Units")&&Has("Structures"),"Main menu opens all guide categories");Capture("01-guides");
@@ -104,8 +107,8 @@ namespace Frontier.Editor
                     &&factionCards.Any(p=>ProductionQueuePreview.MatchesModel(p,session.Catalog.Role(session.EnemyFaction,"hq"))),
                     "New Match identifies both factions with their real headquarters models");
                 var startButton=panel.GetComponentsInChildren<RectTransform>().Single(t=>t.name=="START MATCH");
-                Check(startButton.rect.width==504&&startButton.rect.height==80&&startButton.GetComponent<Image>().color==ConsoleTheme.Success,
-                    "Start Match is the large green primary setup action");
+                Check(startButton.rect.width==504&&startButton.rect.height==80&&startButton.GetComponent<Image>().color==ConsoleTheme.Primary,
+                    "Start Match is the large teal primary setup action");
                 Click("Position board");
                 Check(quest.Placing&&!quest.StartPending&&!session.Running&&panel.Page==CommandPanel.MenuPage.MatchSetup,
                     "Direct placement stays in setup and does not request a match");
@@ -405,6 +408,8 @@ namespace Frontier.Editor
                 if(hadBasePreference)PlayerPrefs.SetInt(BoardView.BaseTargetingKey,basePreference);else PlayerPrefs.DeleteKey(BoardView.BaseTargetingKey);
                 if(hadFogPreference)PlayerPrefs.SetFloat(BoardView.FogDensityKey,fogPreference);else PlayerPrefs.DeleteKey(BoardView.FogDensityKey);
                 if(hadLightingPreference)PlayerPrefs.SetInt(BoardView.LightingKey,lightingPreference);else PlayerPrefs.DeleteKey(BoardView.LightingKey);
+                if(hadLanguagePreference)PlayerPrefs.SetString(Localization.PreferenceKey,languagePreference);else PlayerPrefs.DeleteKey(Localization.PreferenceKey);
+                Localization.ReloadPreference();
                 PlayerPrefs.Save();
                 Object.DestroyImmediate(console);Object.DestroyImmediate(fixture);preview.Cleanup();
             }

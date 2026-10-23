@@ -113,25 +113,26 @@ namespace Frontier.Editor
                     // The console A alias must consume its press/release without setting a new rally point.
                     session.Select(hq.id, false); session.Context(first, 0, 0); Refresh(); Reset();
                     var clearAction = SelectionActions.For(session).Items.Single(a => a.Id == "clear-rally-point");
-                    Check(!panel.GetComponentsInChildren<RectTransform>().Any(t => t.name == clearAction.Title && t.gameObject.activeInHierarchy),
-                        "HUD omits rally clearing while the shared action remains available to the wheel");
-                    var card = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == "Actions help" && t.gameObject.activeInHierarchy);
+                    Check(panel.GetComponentsInChildren<RectTransform>().Any(t => t.name == clearAction.Title && t.gameObject.activeInHierarchy),
+                        "Options exposes rally clearing outside the wheel");
+                    var card = panel.GetComponentsInChildren<RectTransform>().First(t => t.name == clearAction.Title && t.gameObject.activeInHierarchy);
                     var panelRay = new Ray(card.TransformPoint(card.rect.center) - card.forward, card.forward);
                     var production = hq.queue.Select(q => q.id).ToArray();
-                    Check(PanelFrame(panelRay, true, false) && PanelFrame(panelRay, false, true), "Console A owns both Options help press and release");
-                    Check(hq.hasRallyPoint && hq.rallyPoint.Equals(first) && hq.queue.Select(q => q.id).SequenceEqual(production), "Console help preserves rally and production without leaking A to the map");
+                    Check(PanelFrame(panelRay, true, false) && PanelFrame(panelRay, false, true), "Console A owns both Clear rally press and release");
+                    Check(!hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Options clears rally and preserves production without leaking A to the map");
                     Check(Field<float>(input, "lastActionPress") < 0, "Console action leaves no pending double-A gesture");
 
                     // Reuse the real wheel route with a map ray underneath, so a leaked confirm is visible.
                     session.Context(first, 0, 0); Refresh(); Reset();
                     WheelFrame();
                     Check(WheelFrame(stick: Vector2.right) && wheel.IsOpen && wheel.Page==WheelPage.Selection && wheel.Highlighted>=0, "Right tilt directly opens producer selection actions with its direction highlighted");
-                    int index = wheel.Items.ToList().FindIndex(a => a.Id == "clear-rally-point");
-                    Check(index >= 0, "Producer wheel exposes Clear rally independently of Cancel production");
-                    var direction=wheel.DirectionFor("clear-rally-point");WheelFrame(stick: direction);
-                    Check(wheel.HighlightedId == "clear-rally-point", "Right stick can highlight Clear rally");
-                    Check(WheelFrame(stick:direction,down:true,held:true) && wheel.IsOpen && !hq.hasRallyPoint && wheel.Highlighted == -1, "Wheel trigger clears rally and invalidates its removed sector while keeping Selection open");
-                    Check(WheelFrame(stick:direction,held:true)&&WheelFrame(stick:direction,up:true) && wheel.Highlighted == -1 && !hq.hasRallyPoint && hq.queue.Select(q => q.id).SequenceEqual(production), "Held direction cannot trigger a remapped sector after Clear rally disappears");
+                    Check(!wheel.Items.Any(a=>a.Id=="clear-rally-point"), "Producer wheel omits Clear rally even when a destination is set");
+                    string train="train:"+worker.definition;var direction=wheel.DirectionFor(train);WheelFrame(stick: direction);
+                    Check(wheel.HighlightedId==train, "Right stick still highlights training with an active rally point");
+                    Check(WheelFrame(stick:direction,down:true,held:true)&&wheel.IsOpen&&hq.hasRallyPoint&&hq.rallyPoint.Equals(first)
+                        &&hq.queue.Count==production.Length+1, "Wheel trigger trains one unit without changing the rally point");
+                    Check(WheelFrame(stick:direction,held:true)&&WheelFrame(stick:direction,up:true)&&hq.hasRallyPoint&&hq.queue.Count==production.Length+1,
+                        "Holding the trigger neither repeats training nor changes rally");
                     Reset();session.Context(first,0,0);
                     var priorIds=new System.Collections.Generic.HashSet<int>(session.Match.Entities.Keys);
                     int moveEvents=0;Point bornHeading=default;

@@ -73,6 +73,7 @@ namespace Frontier.Runtime
             status=Label(statusBanner,"",Vector2.zero,new Vector2(1040,48),20,accent);
             actions=new GameObject("Actions",typeof(RectTransform)).GetComponent<RectTransform>();actions.SetParent(root,false);TopLeft(actions,new Vector2(30,-240),new Vector2(1040,225));
             CreateMatchHud();
+            CreateTutorialCard();
             // Shared labels and action buttons sit above the HUD section backgrounds.
             foreach(var label in new[]{headline,economy,selection,harvesting})label.transform.SetAsLastSibling();
             statusBanner.SetAsLastSibling();
@@ -96,7 +97,7 @@ namespace Frontier.Runtime
             }
             Session.NewMatch+=OnMatchStarted;Session.MatchClosed+=OnMatchClosed;
             LoadOnlineEndpoint();
-            Page=Session.IsReplay?MenuPage.Replay:Session.Running?(Session.Winner!=-1?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
+            Page=Session.IsReplay?MenuPage.Replay:Session.Running?(Session.Winner!=-1&&!Session.IsTutorial?MenuPage.Result:MenuPage.Actions):MenuPage.Main;
             ApplyWindowScale();
             Canvas.willRenderCanvases+=LayoutHudCounters;
             Rebuild();
@@ -104,6 +105,7 @@ namespace Frontier.Runtime
         private void OnDestroy()
         {
             Canvas.willRenderCanvases-=LayoutHudCounters;
+            DisposeTutorialPresentation();
             if(Session==null)return;
             Session.NewMatch-=OnMatchStarted;Session.MatchClosed-=OnMatchClosed;
         }
@@ -113,17 +115,19 @@ namespace Frontier.Runtime
         {
             if(root==null)return;
             Board.SetVisible(ShowsBoard);
-            if(!UpdatePosition(!Quest.Active||Quest.HeadTracked))return;
-            if(UpdateCountdownPresentation())return;
+            if(!UpdatePosition(!Quest.Active||Quest.HeadTracked)){HideTutorialPresentation();return;}
+            if(UpdateCountdownPresentation()){HideTutorialPresentation();return;}
             if(Session.IsConnecting&&!Session.Running&&Page!=MenuPage.OnlineSetup)Show(MenuPage.OnlineSetup);
-            if(Session.Running&&!Session.IsReplay&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
-            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
+            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
             if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
             if(SectionHelpOpen)UpdateActionHelp();
             UpdateGroupFeedback();
+            UpdateTutorialPresentation();
             if(Time.unscaledTime<nextText)return;nextText=Time.unscaledTime+.15f;
+            UpdateTutorialCard();
             if(Page!=MenuPage.Actions){UpdateMenuText();return;}
             UpdateMatchHud();
         }
@@ -243,7 +247,8 @@ namespace Frontier.Runtime
                     status.text=Session.Running?(Session.IsOnline?"The online match continues. Back returns to Guides.":"Your match stays paused. Back returns to Guides."):"Review controls before playing. Back returns to Guides.";break;
                 case MenuPage.LeaveConfirmation:
                     headline.text="LEAVE MATCH?";economy.text="RETURN TO MAIN MENU";
-                    selection.text=Session.IsOnline?"Leaving concedes this match to your opponent.":"Leave this match and return to the main menu? It will be recorded as abandoned.";
+                    selection.text=Session.IsTutorial?"Leave this guided practice and return to the main menu? You can restart the tutorial there.":
+                        Session.IsOnline?"Leaving concedes this match to your opponent.":"Leave this match and return to the main menu? It will be recorded as abandoned.";
                     status.text="Choose Keep playing to resume the match.";break;
                 case MenuPage.Result:
                     headline.text=Session.Winner==Session.LocalPlayer?"VICTORY":Session.Winner==2?"DRAW":"DEFEAT";
@@ -273,6 +278,7 @@ namespace Frontier.Runtime
             statusAccent.gameObject.SetActive(false);statusIcon.gameObject.SetActive(false);
             status.fontStyle=FontStyle.Normal;
             status.fontSize=Page==MenuPage.Replay?16:Page==MenuPage.Actions?18:20;
+            status.alignment=Page==MenuPage.Main?TextAnchor.MiddleCenter:TextAnchor.MiddleLeft;
             status.color=error?ErrorTint:ConsoleTheme.Muted;
             TopLeft(status.rectTransform,Vector2.zero,statusBanner.sizeDelta);
         }
@@ -285,7 +291,7 @@ namespace Frontier.Runtime
             var go=new GameObject(label,typeof(RectTransform),typeof(Image));var rt=go.GetComponent<RectTransform>();rt.SetParent(actions,false);
             TopLeft(rt,new Vector2((columns==1?220:0)+col*(width+15),-row*(height+9)),new Vector2(width,height));
             var image=go.GetComponent<Image>();image.color=primary?ConsoleTheme.Primary:button;ConsoleTheme.StyleSurface(image);
-            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            Label(rt,label,new Vector2(9,-4),new Vector2(width-18,height-8),grid?18:22,primary?ConsoleTheme.Ink:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
             targets.Add(new Target{rect=rt,image=image,normal=image.color,click=action,hold=hold});
         }
         private void Rebuild()
@@ -306,6 +312,7 @@ namespace Frontier.Runtime
             BuildControlGuide();
             BuildHotkeys();
             BuildReferenceGuide();
+            BuildTutorialCard();
             if(BuildMenuPage())return;
             if(Page==MenuPage.Hotkeys)
             {
@@ -323,6 +330,10 @@ namespace Frontier.Runtime
         }
         private void Show(MenuPage page)
         {
+            // Keep the resume lesson beside its actual menu until the player
+            // acknowledges the explanation. Back and Space share this route.
+            if(page==MenuPage.Actions&&TutorialResumeBriefing)
+            {Session.Announce("Choose Continue in the tutorial card before resuming.");return;}
             if(moving){moving=false;SavePosition();}
             CloseSectionHelp();
             if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.OnlineSetup||page==MenuPage.Result||page==MenuPage.Replay)menuHistory.Clear();
@@ -333,6 +344,7 @@ namespace Frontier.Runtime
             if(page==MenuPage.Guide&&Page!=MenuPage.Guide)controlGuidePage=0;
             if(page!=MenuPage.MatchSetup&&page!=MenuPage.OnlineSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
+            if(page==MenuPage.Pause||page==MenuPage.Actions)Session.NotifyTutorialMenu(page==MenuPage.Pause);
             ApplyWindowScale();
             lastMenuMessage=Session.Message;lastMenuMessageVersion=Session.MessageVersion;menuMessageUntil=0;
             ClearSelectionGesture();
@@ -406,7 +418,7 @@ namespace Frontier.Runtime
             HideActionHelp();
             UpdateMoveAffordance(false);
         }
-        public bool ContainsPointer(Ray ray)=>SectionHelpOpen||moving||Hit(root,ray,out _)||Hit(moveHandle,ray,out _);
+        public bool ContainsPointer(Ray ray)=>SectionHelpOpen||moving||Hit(root,ray,out _)||Hit(moveHandle,ray,out _)||Hit(tutorialCard,ray,out _);
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -478,7 +490,7 @@ namespace Frontier.Runtime
             if(up&&pressed!=null)
             {var p=pressed;pressed=null;HideActionHelp();if(hit==p){Session.GetComponent<AudioFeedback>()?.Navigation(true);if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
             // Empty areas also consume the ray, preventing orders through the panel.
-            return pressed!=null||onMove||Hit(root,ray,out _);
+            return pressed!=null||onMove||Hit(root,ray,out _)||Hit(tutorialCard,ray,out _);
         }
         private static bool Hit(RectTransform rect,Ray ray,out float distance)
         {

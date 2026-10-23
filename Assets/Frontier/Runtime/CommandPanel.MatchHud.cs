@@ -57,7 +57,7 @@ namespace Frontier.Runtime
             {
                 int index=g;
                 var target=groupTargets[g]=HudButton(groupStrip,"Group "+(g+1),"Empty",new Vector2(HudPadding+g*346,-HudContentTop),new Vector2(330,84),()=>Session.Group(index,false),null,out groupCounts[g]);
-                var number=target.rect.GetComponentInChildren<Text>();number.text=(g+1).ToString();number.fontSize=34;number.fontStyle=FontStyle.Bold;
+                var number=target.rect.GetComponentInChildren<Text>();number.text=(g+1).ToString();number.fontSize=34;number.fontStyle=FontStyle.Bold;number.color=ConsoleTheme.SecondaryInk;
                 TopLeft(number.rectTransform,new Vector2(16,-8),new Vector2(48,68));
                 TopLeft(groupCounts[g].rectTransform,new Vector2(84,-16),new Vector2(230,52));groupCounts[g].fontSize=20;groupCounts[g].alignment=TextAnchor.MiddleLeft;
                 CreateGroupFeedback(g,target);
@@ -159,14 +159,15 @@ namespace Frontier.Runtime
             headline.gameObject.SetActive(!hud);economy.gameObject.SetActive(!hud);
             selection.fontSize=20;selection.fontStyle=hud?FontStyle.Bold:FontStyle.Normal;selection.color=hud?ConsoleTheme.Ink:ConsoleTheme.Muted;
             selection.alignment=TextAnchor.MiddleLeft;
-            TopLeft(selection.rectTransform,hud?new Vector2(1280,-HudBodyTop-HudPadding):new Vector2(30,-169),hud?new Vector2(72,28):new Vector2(1040,38));
+            float bodyTop=HudBodyTop;
+            TopLeft(selection.rectTransform,hud?new Vector2(1280,-bodyTop-HudPadding):new Vector2(30,-169),hud?new Vector2(72,28):new Vector2(1040,38));
             harvesting.gameObject.SetActive(true);harvesting.fontSize=hud?18:18;
             status.fontSize=replay?16:hud?18:20;
             if(hud)
             {
                 float selectedHeight=HudSelectionHeight;
-                TopLeft(selectedCard,new Vector2(32,-HudBodyTop),new Vector2(HudInnerWidth,selectedHeight));
-                float next=HudBodyTop+selectedHeight+HudGap;
+                TopLeft(selectedCard,new Vector2(32,-bodyTop),new Vector2(HudInnerWidth,selectedHeight));
+                float next=bodyTop+selectedHeight+HudGap;
                 float actionHeight=MatchActionsHeight();
                 TopLeft(actionCard,new Vector2(32,-next),new Vector2(HudInnerWidth,HudContentTop+actionHeight+HudPadding));
                 TopLeft(actions,new Vector2(32+HudPadding,-next-HudContentTop),new Vector2(HudInnerWidth-HudPadding*2,actionHeight));
@@ -186,11 +187,12 @@ namespace Frontier.Runtime
             }
             else
             {
-                root.sizeDelta=new Vector2(1100,guide?920:controls?1004:reference||history?966:report?1028:replay?1082:690);
+                root.sizeDelta=new Vector2(1100,Page==MenuPage.Main?840:guide?920:controls?1004:reference||history?966:report?1028:replay?1082:690);
                 TopLeft(harvesting.rectTransform,new Vector2(30,-207),new Vector2(1040,28));
-                TopLeft(statusBanner,new Vector2(30,guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(1040,48));
+                TopLeft(statusBanner,new Vector2(30,Page==MenuPage.Main?-760:guide?-860:controls?-938:reference||history?-910:report?-972:replay?-1020:-638),new Vector2(1040,48));
                 TopLeft(actions,new Vector2(30,guide?-786:controls?-866:reference?-840:-240),new Vector2(1040,report?716:history?648:replay?756:controls||guide||reference?58:396));
             }
+            LayoutTutorialCard(hud);
             matchHud.sizeDelta=root.sizeDelta;
             LayoutConsoleChrome();
         }
@@ -261,7 +263,10 @@ namespace Frontier.Runtime
             UpdateRallyPointHud();
             LayoutHudCounters();
             UpdateGroupFeedback();
-            status.text=Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
+            bool lessonPause=Session.IsTutorial&&!Session.HasSystemPause&&!Quest.Placing;
+            status.text=lessonPause&&Session.Tutorial.Complete?"TUTORIAL COMPLETE · Repeat the lesson or return to the main menu.":
+                lessonPause&&Session.Tutorial.Briefing?"TUTORIAL PAUSED · Read the lesson and choose Continue.":
+                Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
             UpdateStatusStyle(!Session.IsPaused&&Session.MessageIsError);
         }
         private void UpdateCasterStatus(VisibleEntity[] selected)
@@ -352,10 +357,10 @@ namespace Frontier.Runtime
             for(int row=0;row<3;row++)for(int column=0;column<4;column++)
                 Section(slots,"Empty option",new Vector2(column==3?1040:column*(HudActionWidth+HudGap),-row*HudActionStride),
                     new Vector2(HudActionWidth,HudActionHeight),Color.Lerp(ConsoleTheme.Surface,button,.32f));
-            foreach(var action in available.Items.Where(a=>a.Category!=ActionCategory.Cancel))
+            foreach(var action in available.Items.Where(a=>(a.Category!=ActionCategory.Cancel||a.Id=="cancel-construction"||a.Id=="clear-rally-point")&&Session.TutorialAllowsAction(a)))
             {
                 var captured=action;
-                bool side=action.Category==ActionCategory.Orders||action.Category==ActionCategory.Research;
+                bool side=action.Category==ActionCategory.Orders||action.Category==ActionCategory.Research||action.Category==ActionCategory.Cancel;
                 int slot=MatchActionSlot(action,available);
                 float x=side?1040:slot%3*(HudActionWidth+HudGap),y=(side?slot:slot/3)*HudActionStride;
                 bool active=captured.Building&&captured.Id=="build:"+Session.BuildDefinition;
@@ -387,12 +392,14 @@ namespace Frontier.Runtime
         }
         private int MatchActionSlot(SelectionAction action,SelectionActions available)
         {
+            if(action.Id=="cancel-construction")return 0;
+            if(action.Id=="clear-rally-point")return 2;
             // Use the faction catalog, never the currently available subset:
             // selecting another producer cannot move a known action.
             if(action.Category==ActionCategory.Orders)
                 return action.Id=="attack-move"?0:action.Id=="stop"?1:2;
             if(action.Category==ActionCategory.Research)
-                return Array.FindIndex(Session.Catalog.Definition.upgrades,u=>action.Id=="research:"+u.id);
+                return Session.Catalog.Upgrade(action.Id.Substring("research:".Length)).Stat=="attack"?0:1;
             if(action.Category==ActionCategory.Abilities)
                 return Array.FindIndex(Session.Catalog.Definition.archetypes.Where(t=>t.faction==Session.Faction)
                     .SelectMany(t=>t.abilities).Distinct().ToArray(),id=>action.Id=="ability:"+id);

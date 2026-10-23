@@ -33,6 +33,9 @@ Shader "Frontier/Board"
         _Desaturate("Desaturate tissue", Float) = 0
         _CreepTex("Observed creep", 2D) = "black" {}
         _CreepTime("Creep animation time", Float) = 0
+        _BuildPlacementTex("Construction placement zones", 2D) = "black" {}
+        _BuildPlacementActive("Show construction zones", Float) = 0
+        _BuildPlacementArea("Construction center, inner and outer radius", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -58,11 +61,14 @@ Shader "Frontier/Board"
             float4 _AbilityArea; float4 _AbilityRange; float4 _AbilityColor;
             float _DamageAmount;
             float _Desaturate; float _CreepTime; float _RevealOpacity;
+            float _BuildPlacementActive;
+            float4 _BuildPlacementArea;
             CBUFFER_END
             float4x4 _FrontierWorldToBoard; float4 _FrontierBounds;
             float _FrontierEnhancedLighting; float4 _FrontierLightColor; float _FrontierFogDensity;
             TEXTURE2D(_FogTex); SAMPLER(sampler_FogTex);
             TEXTURE2D(_CreepTex); SAMPLER(sampler_CreepTex);
+            TEXTURE2D(_BuildPlacementTex); SAMPLER(sampler_BuildPlacementTex);
             float TissueNoise(float2 p)
             {
                 float2 cell=floor(p),f=frac(p);f=f*f*(3-2*f);
@@ -183,6 +189,31 @@ Shader "Frontier/Board"
                     float2 tile=abs(frac(input.uv*_FrontierBounds.zw)-.5);
                     float gridLine=step(.48,max(tile.x,tile.y));
                     color*=1-gridLine*.1*_Grid;
+                    float2 constructionOffset=input.uv*_FrontierBounds.zw-_BuildPlacementArea.xy;
+                    if(_BuildPlacementActive>.5 && input.topSurface>.5
+                        &&dot(constructionOffset,constructionOffset)<_BuildPlacementArea.w*_BuildPlacementArea.w)
+                    {
+                        float2 mapPosition=input.uv*_FrontierBounds.zw;
+                        float2 cell=floor(mapPosition),within=frac(mapPosition),texel=1/_FrontierBounds.zw;
+                        float2 center=(cell+.5)*texel;
+                        half4 zone=SAMPLE_TEXTURE2D(_BuildPlacementTex,sampler_BuildPlacementTex,center);
+                        half left=SAMPLE_TEXTURE2D(_BuildPlacementTex,sampler_BuildPlacementTex,center-float2(texel.x,0)).r;
+                        half right=SAMPLE_TEXTURE2D(_BuildPlacementTex,sampler_BuildPlacementTex,center+float2(texel.x,0)).r;
+                        half down=SAMPLE_TEXTURE2D(_BuildPlacementTex,sampler_BuildPlacementTex,center-float2(0,texel.y)).r;
+                        half up=SAMPLE_TEXTURE2D(_BuildPlacementTex,sampler_BuildPlacementTex,center+float2(0,texel.y)).r;
+                        // Outline changes of legality, with derivative antialiasing
+                        // so the boundary stays stable while moving the headset.
+                        float edge=1;
+                        if(abs(zone.r-left)>.5)edge=min(edge,within.x);
+                        if(abs(zone.r-right)>.5)edge=min(edge,1-within.x);
+                        if(abs(zone.r-down)>.5)edge=min(edge,within.y);
+                        if(abs(zone.r-up)>.5)edge=min(edge,1-within.y);
+                        float aa=max(fwidth(edge),.012);
+                        half outline=1-smoothstep(.055-aa,.055+aa,edge);
+                        half3 tint=lerp(half3(.95,.19,.12),half3(.12,.88,.52),zone.r);
+                        half proximity=1-smoothstep(_BuildPlacementArea.z,_BuildPlacementArea.w,length(constructionOffset));
+                        color=lerp(color,tint,(.22+outline*.4)*zone.a*visible*proximity);
+                    }
                     if(_SelectionWidth>0)
                     {
                         float2 mapPosition=input.uv*_FrontierBounds.zw;

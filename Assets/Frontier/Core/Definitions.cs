@@ -79,8 +79,10 @@ namespace Frontier.Core
     [Serializable] public sealed class AbilityCooldown { public string ability; public int readyTick; }
     [Serializable] public sealed class UpgradeDefinition
     {
-        public string id, name;
+        public string id, name, stat;
+        public int level = 1;
         public int minerals = 150, catalyst = 75, duration = 600;
+        public string Stat => string.IsNullOrEmpty(stat) ? id : stat;
     }
     public sealed class Catalog
     {
@@ -141,8 +143,13 @@ namespace Frontier.Core
             }
             var upgrades = new HashSet<string>();
             foreach (var upgrade in definition.upgrades)
-                if (upgrade == null || (upgrade.id != "attack" && upgrade.id != "armor") || !upgrades.Add(upgrade.id) || upgrade.minerals < 0 || upgrade.catalyst < 0 || upgrade.duration < 1)
+                if (upgrade == null || (upgrade.Stat != "attack" && upgrade.Stat != "armor") || upgrade.level < 1 || upgrade.level > 3
+                    || upgrade.id != (upgrade.level == 1 ? upgrade.Stat : upgrade.Stat + upgrade.level) || !upgrades.Add(upgrade.id)
+                    || string.IsNullOrWhiteSpace(upgrade.name) || upgrade.minerals < 0 || upgrade.catalyst < 0 || upgrade.duration < 1)
                     throw new ArgumentException("Invalid or duplicate upgrade.");
+            foreach (var upgrade in definition.upgrades)
+                if (upgrade.level > 1 && !Array.Exists(definition.upgrades, previous => previous.Stat == upgrade.Stat && previous.level == upgrade.level - 1))
+                    throw new ArgumentException("Missing previous upgrade level: " + upgrade.id);
             foreach (var ability in definition.abilities)
                 if (!Array.Exists(definition.archetypes, type => Array.IndexOf(type.abilities, ability.id) >= 0))
                     throw new ArgumentException("Ability has no caster: " + ability.id);
@@ -170,6 +177,9 @@ namespace Frontier.Core
             foreach (var u in Definition.upgrades) if (u.id == id) return u;
             return null;
         }
+        public bool CanResearch(UpgradeDefinition upgrade,string[] researched)
+            => Array.IndexOf(researched,upgrade.id)<0 && (upgrade.level==1 || Array.Exists(Definition.upgrades,
+                previous=>previous.Stat==upgrade.Stat&&previous.level==upgrade.level-1&&Array.IndexOf(researched,previous.id)>=0));
         public AbilityDefinition Ability(string id) => id != null && abilities.TryGetValue(id, out var ability) ? ability : null;
     }
     public enum CommandKind { Move, Attack, AttackMove, Gather, Repair, Build, Train, Research, Cancel, Stop, Hold, Surrender, SetRallyPoint, ClearRallyPoint, Cast, CancelUnitOrder }

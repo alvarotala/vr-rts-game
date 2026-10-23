@@ -43,15 +43,23 @@ namespace Frontier.Runtime
                     }
                     if (roles.Contains("research")) foreach (var upgrade in session.Catalog.Definition.upgrades)
                     {
+                        if(!session.Catalog.CanResearch(upgrade,session.View.researched))continue;
                         var captured = upgrade;
                         result.Add("research:" + upgrade.id, upgrade.name, upgrade.name, "Research · " + Cost(upgrade.minerals, upgrade.catalyst), () => session.Send(CommandKind.Research, captured.id), ActionCategory.Research,
-                            upgrade.id == "attack" ? "Improves the damage dealt by your army and defensive buildings. Research once to benefit your whole faction." : "Reduces incoming damage to your units and buildings. Research once to protect your whole faction.",
+                            upgrade.Stat == "attack" ? "Each level adds 20% of base damage to your army and defensive buildings. Complete the previous Firepower level first." : "Each level reduces incoming damage to your units and buildings by 2. Complete the previous Armor level first.",
                             Cost(upgrade.minerals, upgrade.catalyst) + " · " + Seconds(upgrade.duration) + " s\nFaction-wide upgrade");
                     }
                 }
-                if (single && (!entity.complete || entity.queue.Length > 0))
-                    result.Add("cancel", "Cancel / refund", "Cancel / refund", entity.complete ? "Last queued item" : "Cancel construction", () => session.Send(CommandKind.Cancel), ActionCategory.Cancel,
-                        entity.complete ? "Removes the last item in this building's production queue and refunds its resource cost." : "Abandons this unfinished building and refunds part of its resource cost.");
+                if(single&&!entity.complete)
+                    result.Add("cancel-construction","Cancel construction","Cancel construction","75% refund",()=>
+                    {
+                        bool sent=session.Send(CommandKind.Cancel,definition:entity.definition,entityIds:new[]{entity.id});
+                        if(sent)session.Announce(session.IsOnline?"Cancellation requested.":"Construction cancelled. 75% of its resource cost refunded.");
+                        return sent;
+                    },ActionCategory.Cancel,"Cancel this unfinished building to recover 75% of its mineral and gas cost.");
+                else if(single&&entity.queue.Length>0)
+                    result.Add("cancel", "Cancel / refund", "Cancel / refund", "Last queued item", () => session.Send(CommandKind.Cancel), ActionCategory.Cancel,
+                        "Removes the last item in this building's production queue and refunds its resource cost.");
                 if(session.CanSetRallyPoint&&selected.Any(e=>e.hasRallyPoint))
                     result.Add("clear-rally-point",single?"Clear Rally Point":"Clear Rally Points",single?"Clear Rally":"Clear Rallies",single?"Restore default exit":"Restore default exits",()=>session.ClearRallyPoint(),ActionCategory.Cancel,
                         single?"Clears this building's rally point. Newly trained workers resume automatic gathering; other units stay at the exit. Units already deployed keep their orders.":
@@ -85,6 +93,7 @@ namespace Frontier.Runtime
                     description: "Keep selected units at their current positions. Combat units fire within range without chasing enemies.");
             }
             else if (selected.Length > 0) result.Hint = "Select mobile units or buildings to give orders.";
+            if(session.IsTutorial)result.Items.RemoveAll(action=>!session.TutorialAllowsAction(action));
             return result;
         }
 

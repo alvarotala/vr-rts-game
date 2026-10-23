@@ -17,13 +17,13 @@ namespace Frontier.Runtime
         private void CreateControlGuide()
         {
             controlGuide=Section(root,"Control guide cards",new Vector2(30,-216),new Vector2(1040,554),ConsoleTheme.Surface);
-            Label(controlGuide,"CONTROL GUIDE",new Vector2(16,-10),new Vector2(450,26),21,ConsoleTheme.Ink).fontStyle=FontStyle.Bold;
+            Label(controlGuide,"CONTROL GUIDE",new Vector2(16,-10),new Vector2(450,26),21,ConsoleTheme.SecondaryInk).fontStyle=FontStyle.Bold;
             controlGuideDevice=Label(controlGuide,"",new Vector2(470,-10),new Vector2(554,26),16,ConsoleTheme.Ink,TextAnchor.MiddleRight);
             for(int i=0;i<controlGuideTabs.Length;i++)
             {
                 int index=i;
                 var tab=Section(controlGuide,"Help category "+i,new Vector2(16+i*169,-46),new Vector2(163,42));
-                controlGuideTabLabels[i]=Label(tab,"",new Vector2(4,0),new Vector2(155,42),17,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+                controlGuideTabLabels[i]=Label(tab,"",new Vector2(4,0),new Vector2(155,42),17,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
                 controlGuideTabs[i]=new Target{rect=tab,image=tab.GetComponent<Image>(),normal=button,click=()=>{controlGuideTopic=index;controlGuidePage=0;Rebuild();UpdateMenuText();}};
             }
             for(int i=0;i<controlGuideCards.Length;i++)
@@ -32,7 +32,7 @@ namespace Frontier.Runtime
                 controlGuideCards[i]=card;
                 controlGuideCommands[i]=Label(card,"",new Vector2(12,-7),new Vector2(474,23),19,ConsoleTheme.Ink);
                 controlGuideCommands[i].fontStyle=FontStyle.Bold;
-                controlGuideGestures[i]=Label(card,"",new Vector2(12,-32),new Vector2(474,22),16,accent);
+                controlGuideGestures[i]=Label(card,"",new Vector2(12,-32),new Vector2(474,22),16,ConsoleTheme.SecondaryInk);
                 controlGuideDescriptions[i]=Label(card,"",new Vector2(12,-57),new Vector2(474,38),16,ConsoleTheme.Muted,TextAnchor.UpperLeft);
             }
         }
@@ -49,6 +49,7 @@ namespace Frontier.Runtime
                 var tab=controlGuideTabs[i];tab.rect.name="Help: "+topics[i].Name;
                 tab.normal=i==controlGuideTopic?ConsoleTheme.Primary:button;tab.image.color=tab.normal;
                 controlGuideTabLabels[i].text=topics[i].Name;
+                controlGuideTabLabels[i].color=i==controlGuideTopic?accent:ConsoleTheme.SecondaryInk;
                 controlGuideTabLabels[i].fontStyle=i==controlGuideTopic?FontStyle.Bold:FontStyle.Normal;
                 targets.Add(tab);
             }

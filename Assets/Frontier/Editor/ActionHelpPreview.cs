@@ -90,8 +90,8 @@ namespace Frontier.Editor
                     {
                         Check(session.Context(new Point(24,14),0,0)>0,"A terrain order still sets a rally point");Refresh();
                         var clearRally=SelectionActions.For(session).Items.Single(a=>a.Id=="clear-rally-point");
-                        Check(hq.hasRallyPoint&&!HasButton(clearRally.Title),"Clear Rally stays in shared actions while absent from the HUD");
-                        Check(clearRally.Execute(),"Shared Clear Rally remains executable for the wheel");Refresh();
+                        Check(hq.hasRallyPoint&&HasButton(clearRally.Title),"Clear Rally remains available in Options");
+                        Check(clearRally.Execute(),"Shared Clear Rally remains executable from the menu");Refresh();
                     }
                     Select(barracks.id);CheckHelpForSelection(faction+"-army");
                     Select(tech.id);CheckHelpForSelection(faction+"-tech");

@@ -8,7 +8,7 @@ namespace Frontier.Runtime
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class ConsoleGlyph : MaskableGraphic
     {
-        public enum Kind { Mineral, Gas, Supply, Reset, Pause, Group }
+        public enum Kind { Mineral, Gas, Supply, Reset, Pause, Group, Tutorial, Guide, History }
 
         [SerializeField] private Kind glyph;
         public Kind Glyph
@@ -67,6 +67,30 @@ namespace Frontier.Runtime
                     break;
                 case Kind.Pause:
                     Box(-.29f,-.36f,-.09f,.36f,ink);Box(.09f,-.36f,.29f,.36f,ink);
+                    break;
+                case Kind.Tutorial:
+                    Box(-.30f,-.42f,-.22f,.42f,ink);
+                    Quad(new Vector2(-.22f,.40f),new Vector2(-.22f,.04f),new Vector2(.37f,.12f),new Vector2(.24f,.38f),ink);
+                    Box(-.39f,-.44f,-.10f,-.37f,shade);
+                    break;
+                case Kind.Guide:
+                    Quad(new Vector2(-.42f,.35f),new Vector2(-.42f,-.30f),new Vector2(-.04f,-.40f),new Vector2(-.04f,.25f),ink);
+                    Quad(new Vector2(.04f,.25f),new Vector2(.04f,-.40f),new Vector2(.42f,-.30f),new Vector2(.42f,.35f),shade);
+                    for(int i=0;i<3;i++)
+                    {
+                        float y=.17f-i*.15f;
+                        Stroke(new Vector2(-.34f,y),new Vector2(-.12f,y-.06f),.035f,shade);
+                        Stroke(new Vector2(.12f,y-.06f),new Vector2(.34f,y),.035f,ink);
+                    }
+                    break;
+                case Kind.History:
+                    for(int i=0;i<32;i++)
+                    {
+                        float from=2*Mathf.PI*i/32,to=2*Mathf.PI*(i+1)/32;
+                        Quad(Radial(from,.32f),Radial(to,.32f),Radial(to,.41f),Radial(from,.41f),ink);
+                    }
+                    Stroke(Vector2.zero,new Vector2(0,.23f),.07f,ink);
+                    Stroke(Vector2.zero,new Vector2(.18f,-.10f),.07f,ink);
                     break;
             }
 

@@ -35,6 +35,11 @@ namespace Frontier.Editor
                 var units=session.View.entities.Where(e=>e.owner==0&&!session.Catalog[e.definition].building).ToArray();
                 Point[] positions={new Point(.6f,10),new Point(47.4f,10),new Point(10,.6f),new Point(10,47.4f),new Point(.6f,.6f),new Point(24,24)};
                 for(int i=0;i<units.Length;i++)units[i].position=positions[i];
+                var hq=session.View.entities.First(e=>e.owner==0&&session.Catalog[e.definition].role=="hq");
+                var relay=Building(90001,"supply",new Point(25,18));
+                var unfinished=Building(90002,"defense",new Point(29,18),complete:false);
+                var enemy=Building(90003,"hq",new Point(28,24),owner:1);
+                session.View.entities=session.View.entities.Concat(new[]{relay,unfinished,enemy}).ToArray();
                 Array.Fill(session.View.visibility,(byte)2);session.View.tick+=4;Invoke(board,"LateUpdate");
                 boardObject.transform.SetParent(null,true);preview.AddSingleGO(boardObject);preview.camera.orthographic=true;preview.camera.nearClipPlane=.001f;preview.camera.farClipPlane=10;
                 preview.camera.clearFlags=CameraClearFlags.SolidColor;preview.camera.backgroundColor=new Color(.025f,.04f,.06f);
@@ -46,7 +51,7 @@ namespace Frontier.Editor
                 Drag(new Point(7,52),new Point(12,46),new[]{units[3].id});
                 Drag(new Point(-4,-4),new Point(2,2),new[]{units[4].id},"corner");
                 Drag(new Point(2,12),new Point(-4,7),new[]{units[0].id});
-                Drag(new Point(-4,-4),new Point(52,52),units.Select(e=>e.id).ToArray(),"through-board");
+                Drag(new Point(-4,-4),new Point(52,52),units.Select(e=>e.id).Concat(new[]{hq.id,relay.id,unfinished.id}).ToArray(),"through-board");
                 var previous=session.Selection.ToArray();
                 Send(new Point(-6,5),down:true);Send(new Point(-2,12),up:true);
                 Check(session.Selection.SetEquals(previous),"Drag entirely outside changed selection");
@@ -57,17 +62,36 @@ namespace Frontier.Editor
                 Send(new Point(52,7),down:true);Send(new Point(46,12),up:true,add:true);
                 Check(session.Selection.SetEquals(new[]{units[0].id,units[1].id}),"Additive outside drag replaced selection");
 
-                // At 4x zoom, this rectangle also covers a known unit clipped out of the board.
+                Drag(new Point(hq.position.x-.1f,hq.position.y-.1f),new Point(hq.position.x+1.3f,hq.position.y+1.3f),Array.Empty<int>());
+                Check(!session.Selection.Contains(hq.id),"Building footprint corner must not stand in for its visual center");
+                float half=session.Catalog[hq.definition].footprint*.5f;
+                var hqCenter=new Point(hq.position.x+half,hq.position.y+half);
+                Drag(new Point(hqCenter.x-1,hqCenter.y-1),new Point(hqCenter.x+1,hqCenter.y+1),new[]{hq.id},"building-center");
+                Drag(new Point(22,16),new Point(32,27),new[]{units[5].id,relay.id,unfinished.id},"mixed-buildings");
+                Check(!session.Selection.Contains(enemy.id),"Visible enemy building entered rectangle selection");
+                Check(session.Selection.Contains(unfinished.id),"Unfinished own building is missing from rectangle selection");
+                session.Select(units[0].id,false);
+                Send(new Point(24,17),down:true);Send(new Point(28,21),up:true,add:true);
+                Check(session.Selection.SetEquals(new[]{units[0].id,relay.id}),"Additive building rectangle lost the previous unit selection");
+
+                relay.remembered=true;unfinished.health=0;
+                session.SelectRectangle(new Point(22,16),new Point(32,27),false);
+                Check(session.Selection.SetEquals(new[]{units[5].id}),"Remembered or dead buildings entered rectangle selection");
+                relay.remembered=false;unfinished.health=session.Catalog[unfinished.definition].health*.4f;
+
+                // At 4x zoom, this rectangle also covers a unit and building clipped out of the board.
                 units[0].position=new Point(20.6f,22);units[5].position=new Point(19.4f,22);
+                relay.position=new Point(19.6f,21);unfinished.position=new Point(18.6f,21);
                 board.Rebuild();board.Zoom=4;board.Pan=new Vector2(2,1);
                 board.transform.SetPositionAndRotation(new Vector3(.4f,.7f,-.3f),Quaternion.Euler(0,70,0));board.Width=.8f;
-                Drag(new Point(18,20),new Point(23,24),new[]{units[0].id},"zoom-rotated");
+                Drag(new Point(18,20),new Point(23,24),new[]{units[0].id,relay.id},"zoom-rotated");
+                Check(!session.Selection.Contains(unfinished.id),"Rectangle selected a building whose center is clipped outside the board");
                 Send(new Point(18,20),down:true);Invoke(input,"ClearPointer");Send(new Point(30,30),up:true);
-                Check(session.Selection.SetEquals(new[]{units[0].id}),"Cancelled drag completed after input was cleared");
+                Check(session.Selection.SetEquals(new[]{units[0].id,relay.id}),"Cancelled drag completed after input was cleared");
                 Send(new Point(18,20),down:true);
                 pointMethod.Invoke(input,new object[]{new Ray(board.transform.position+Vector3.up,Vector3.up),false,true,false,false});
                 Send(new Point(30,30),up:true);
-                Check(session.Selection.SetEquals(new[]{units[0].id})&&ground.GetFloat("_SelectionWidth")==0,"Missed plane left a stale drag");
+                Check(session.Selection.SetEquals(new[]{units[0].id,relay.id})&&ground.GetFloat("_SelectionWidth")==0,"Missed plane left a stale drag");
 
                 // Extending selection must not extend order or construction targets beyond the board.
                 string message=session.Message;Send(new Point(18,20),order:true);
@@ -78,7 +102,13 @@ namespace Frontier.Editor
                 session.CancelMode();session.AttackMoveMode=true;message=session.Message;
                 Send(new Point(18,20),down:true);Send(new Point(23,24),up:true);
                 Check(session.Message==message&&session.AttackMoveMode,"Outside attack-move press submitted an order");session.CancelMode();
-                Debug.Log($"FRONTIER_EDGE_SELECTION passed: {checks} checks, {captures} views; four edges, corner, outside release, full crossing, zoom/rotation, additive, cancel and order isolation; no player build");
+                Debug.Log($"FRONTIER_EDGE_SELECTION passed: {checks} checks, {captures} views; four edges, corner, unit/building mixed selection, unfinished buildings, visual centers, enemy exclusion, zoom/rotation, additive, cancel and order isolation; no player build");
+
+                VisibleEntity Building(int id,string role,Point position,int owner=0,bool complete=true)
+                {
+                    var type=session.Catalog.Role(owner==0?session.Faction:session.EnemyFaction,role);
+                    return new VisibleEntity{id=id,owner=owner,definition=type.id,position=position,health=type.health*(complete?1:.4f),complete=complete,progress=complete?1:.4f};
+                }
 
                 Ray RayAt(Point p)
                 {

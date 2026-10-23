@@ -30,7 +30,7 @@ namespace Frontier.Runtime
         private Target ReplayButton(string name,string title,float x,float y,float width,Action click,out Text label)
         {
             var rect=Section(actions,name,new Vector2(x,-y),new Vector2(width,48),button);
-            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            label=Label(rect,title,new Vector2(8,0),new Vector2(width-16,48),20,name=="Replay play / pause"?accent:ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
             var target=new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click};targets.Add(target);return target;
         }
         private void BuildReplayPanel()
@@ -69,7 +69,7 @@ namespace Frontier.Runtime
                 void PageButton(string title,float x,int delta)
                 {
                     var rect=Section(navigation,title,new Vector2(x,0),new Vector2(100,34),button);
-                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+                    Label(rect,title,new Vector2(4,0),new Vector2(92,34),16,ConsoleTheme.SecondaryInk,TextAnchor.MiddleCenter);
                     targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=()=>{replayProductionPage[player]+=delta;replayPanelView=null;UpdateReplayPanel();}});
                 }
                 PageButton("Previous",0,-1);PageButton("Next",380,1);
@@ -77,7 +77,7 @@ namespace Frontier.Runtime
             }
             replayTimeline=Section(actions,"Replay timeline",new Vector2(0,-558),new Vector2(1040,70),Color.clear);
             replayTime=Label(replayTimeline,"",Vector2.zero,new Vector2(510,30),23,ConsoleTheme.Ink);
-            replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,accent,TextAnchor.MiddleRight);
+            replayState=Label(replayTimeline,"",new Vector2(530,0),new Vector2(510,30),20,ConsoleTheme.SecondaryInk,TextAnchor.MiddleRight);
             Section(replayTimeline,"Timeline track",new Vector2(0,-38),new Vector2(1040,24),ConsoleTheme.Track);
             replayTimelineFill=Section(replayTimeline,"Timeline played",new Vector2(0,-38),new Vector2(0,24),accent);
             replayTimelineMarker=Section(replayTimeline,"Timeline playhead",new Vector2(0,-34),new Vector2(4,32),ConsoleTheme.Ink);
@@ -86,7 +86,7 @@ namespace Frontier.Runtime
             ReplayButton("Replay forward 15s","+15 seconds",414,642,170,()=>Session.SeekReplay(ReplayTransportTick+Simulation.TickRate*15),out _);
             ReplayButton("Replay restart","Restart",596,642,200,()=>Session.SeekReplay(0),out _);
             ReplayButton("Replay full map","Full map",808,642,232,()=>Board.Fit(),out _);
-            Label(actions,"SPEED",new Vector2(0,-708),new Vector2(100,48),18,MenuMuted);
+            Label(actions,"SPEED",new Vector2(0,-708),new Vector2(100,48),18,ConsoleTheme.SecondaryInk);
             for(int i=0;i<ReplaySpeeds.Length;i++)
             {
                 float speed=ReplaySpeeds[i];string title=speed==.5f?"0.5×":speed+"×";
@@ -156,15 +156,20 @@ namespace Frontier.Runtime
             replayTime.text=ReportTime(shownTick)+" / "+ReportTime(replay.EndTick);
             string speedText=replay.Speed==.5f?"0.5×":replay.Speed+"×";
             replayState.text=replay.Error!=null?"REPLAY STOPPED":replayScrubbing?"RELEASE TO SEEK":replay.Seeking?"SEEKING · "+ReportTime(replay.SeekTarget):replay.Ended?"REPLAY FINISHED":(replay.Paused?"PAUSED":"PLAYING")+" · "+speedText;
-            replayState.color=replay.Error!=null?WarningTint:accent;
+            replayState.color=replay.Error!=null?WarningTint:ConsoleTheme.SecondaryInk;
             replayPauseLabel.text=replay.Ended?"Play again":replay.Paused?"Play":"Pause";
             float fraction=replay.EndTick>0?shownTick/(float)replay.EndTick:0;
             replayTimelineFill.sizeDelta=new Vector2(1040*fraction,24);
             replayTimelineMarker.anchoredPosition=new Vector2(Mathf.Clamp(1040*fraction,0,1036),-34);
             for(int i=0;i<replaySpeedButtons.Length;i++)
             {
-                var target=replaySpeedButtons[i];target.normal=Mathf.Approximately(replay.Speed,ReplaySpeeds[i])?ConsoleTheme.Primary:button;
-                if(hovered!=target)target.image.color=target.normal;
+                bool selected=Mathf.Approximately(replay.Speed,ReplaySpeeds[i]);
+                var target=replaySpeedButtons[i];target.normal=selected?ConsoleTheme.Primary:button;
+                if(hovered!=target)
+                {
+                    target.image.color=target.normal;
+                    target.rect.GetComponentInChildren<Text>().color=selected?accent:ConsoleTheme.SecondaryInk;
+                }
             }
         }
         private bool PointReplayTimeline(Ray ray,bool down,bool up)
@@ -204,7 +209,7 @@ namespace Frontier.Runtime
             headline.text="SPECTATOR REPLAY";economy.text=Session.Replay.Info.Header.mapTitle+" · "+HistoryDate(Session.Replay.Info.Header.startedUtc);
             selection.text="Full battlefield · Both players' resources and production are visible.";
             harvesting.text=Session.Replay.Info.Progress.state==ArchivedMatchState.Interrupted?"INTERRUPTED RECORDING · PLAYING THE SAVED PORTION":"RECORDED MATCH";
-            status.fontSize=16;status.color=Session.Replay.Error!=null?WarningTint:accent;
+            status.fontSize=16;status.color=Session.Replay.Error!=null?WarningTint:ConsoleTheme.SecondaryInk;
             status.text=Session.Replay.Error??(Quest.Active
                 ?$"{Bindings.MenuConfirmName}: play / pause · Stick left / right: ±15s · up / down: speed · {Bindings.MenuBackName}: history\nGrip + stick: pan · Grip + {Bindings.MenuConfirmName} / {Bindings.MenuBackName}: zoom · Trigger: point and select"
                 :"Space: play / pause · Left / right: ±15s · Up / down: speed · Esc: history\nWASD / middle drag: pan · Scroll: zoom · Point at the timeline to seek");
