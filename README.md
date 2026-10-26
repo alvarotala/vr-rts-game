@@ -2,7 +2,7 @@
 
 **Pequeños ejércitos. Grandes batallas.**
 
-Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA y partidas LAN de dos jugadores con servidor dedicado NGO. Funciona sin servicios de juego externos. El arte geométrico es provisional.
+Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y búsqueda pública 1v1 con servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
@@ -38,16 +38,42 @@ La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/u
 
 ## Multiplayer y servidor Docker
 
-Con Linux Dedicated Server Build Support instalado para el mismo Editor:
+### Búsqueda pública 1v1
+
+Con Linux Dedicated Server Build Support instalado para el mismo Editor, generar el servidor y levantar el stack online. Reemplazar la IP del ejemplo por la dirección LAN de esta Mac:
+
+```sh
+python3 scripts/build-server.py
+python3 scripts/online-stack.py init --host 192.168.100.157
+python3 scripts/online-stack.py up
+```
+
+Abrir **Multijugador → Buscar partida** en ambos clientes. El tablero se coloca antes de iniciar la búsqueda. Nakama conserva una identidad por instalación, encuentra dos jugadores compatibles y entrega a cada uno un ticket para el mismo servidor NGO. La configuración del servicio online se guarda separada de la conexión LAN. Desde Quest, usar `http://192.168.100.157:7350` como servicio; el endpoint de juego se recibe automáticamente.
+
+Para abrir Desktop con búsqueda automática, después de compilarlo:
+
+```sh
+open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --args \
+  -frontier-backend http://127.0.0.1:7350 -frontier-matchmake \
+  -logFile /tmp/little-legion-online.log
+```
+
+El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático, ranking ni reconexión a una partida en curso. La configuración, seguridad y ampliación manual del pool están en [Multiplayer público autohospedado](docs/nakama.md) y su [contrato de asignación](docs/online-contract.md).
+
+La API HTTP del ejemplo es para pruebas locales. Una instalación pública necesita HTTPS/WSS y acceso al puerto UDP de juego. Esta documentación no implica un despliegue WAN ni una validación del flujo público en Quest físico.
+
+### Conexión LAN directa
+
+El servidor directo sigue siendo independiente del stack online:
 
 ```sh
 python3 scripts/build-server.py
 docker compose -f compose.multiplayer.yml up -d --build
 ```
 
-Abrir **Multijugador LAN** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú online permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
+Abrir **Multijugador → Conexión directa** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú directo permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
 
-La imagen contiene solamente el servidor Linux y se puede trasladar a un host de producción compatible. Cada proceso atiende una partida a la vez; cuando ambos jugadores salen, vuelve a esperar otros dos sin reiniciar el contenedor. No incluye búsqueda pública, ranking ni reconexión. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
+La imagen contiene solamente el servidor Linux y se puede trasladar a un host compatible. Cada proceso directo atiende una partida a la vez; cuando ambos jugadores salen, vuelve a esperar otros dos sin reiniciar el contenedor. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
 
 ## Uso básico
 
@@ -65,5 +91,6 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
+- [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
 - [Formato de mapas](docs/maps.md)
 - [Registro de validación y pendientes](docs/validation.md)

@@ -1,0 +1,82 @@
+name: little-legion-online
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nakama
+      POSTGRES_USER: nakama
+      POSTGRES_PASSWORD: ${LL_DB_PASSWORD:?Run python3 scripts/online-stack.py init}
+    volumes:
+      - online-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U nakama -d nakama"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    image: little-legion-nakama:3.41.0
+    build:
+      context: .
+      dockerfile: Dockerfile.nakama
+    entrypoint: [/nakama/nakama]
+    command: [migrate, up, --config, /run/secrets/nakama.yml]
+    environment:
+      NAKAMA_TELEMETRY: "0"
+    volumes:
+      - ./.cache/online/config.yml:/run/secrets/nakama.yml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  nakama:
+    image: little-legion-nakama:3.41.0
+    entrypoint: [/nakama/nakama]
+    command: [--config, /run/secrets/nakama.yml]
+    environment:
+      NAKAMA_TELEMETRY: "0"
+    volumes:
+      - ./.cache/online/config.yml:/run/secrets/nakama.yml:ro
+    ports:
+      - "0.0.0.0:${LL_API_PORT:-7350}:7350"
+      - "127.0.0.1:${LL_CONSOLE_PORT:-7351}:7351"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, /nakama/nakama, healthcheck, "7350"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  server:
+    image: ${FRONTIER_ONLINE_SERVER_IMAGE:-little-legion-server:ngo-online}
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      platforms: [linux/amd64]
+    profiles: [game]
+    environment:
+      FRONTIER_BACKEND_URL: http://nakama:7350
+      FRONTIER_SERVER_KEY: ${LL_RUNTIME_HTTP_KEY:?Run python3 scripts/online-stack.py init}
+      FRONTIER_SERVER_ID: local-1
+      FRONTIER_ADVERTISE_HOST: ${LL_PUBLIC_HOST:?Set the Mac LAN IP using online-stack.py init --host IP}
+    command: [-frontier-allocated, -frontier-port, "7778", -frontier-map, rift, -frontier-listen, 0.0.0.0]
+    ports:
+      - "0.0.0.0:7778:7778/udp"
+    depends_on:
+      nakama:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 15s
+
+volumes:
+  online-postgres:

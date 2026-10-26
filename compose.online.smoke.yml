@@ -1,0 +1,4 @@
+# Use only for automated NGO checks; the normal stack keeps real-time simulation.
+services:
+  server:
+    command: [-frontier-allocated, -frontier-port, "7778", -frontier-map, rift, -frontier-listen, 0.0.0.0, -frontier-smoke]

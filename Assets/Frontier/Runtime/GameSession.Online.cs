@@ -21,7 +21,7 @@ namespace Frontier.Runtime
             && (!IsOnline || remoteClient != null && remoteClient.IsConnected);
         public string ServerAddress = "127.0.0.1";
         public ushort ServerPort = 7777;
-        public string NetworkStatus { get; private set; } = "Connect two clients to a dedicated server.";
+        public string NetworkStatus { get; private set; } = "Choose Find Match for online play or connect directly to a server.";
         private NgoMatchClient remoteClient;
         private object remoteIdentity = new object();
         private MatchReport remoteReport;
@@ -34,17 +34,28 @@ namespace Frontier.Runtime
         public void ConnectOnline()
         {
             if(Running || IsConnecting) return;
+            PrepareOnlineSession(false);
+            ConnectRemote(ServerAddress,ServerPort,Faction);
+        }
+
+        private void PrepareOnlineSession(bool publicMatch)
+        {
             DisconnectOnline();
             CloseArchive();
             onlineSetupMap=Map;onlineSetupFaction=Faction;onlineSetupEnemy=EnemyFaction;
             Match=null;View=null;bot=null;remoteReport=null;
             IsOnline=true;IsConnecting=true;LastClosedWasReplay=false;
+            IsPublicMatch=publicMatch;
             OnlineReportUnavailable=false;
             remoteIdentity=new object();
             Selection.Clear();SelectedResource=0;foreach(var group in groups)group.Clear();
             rallySelection=null;BuildDefinition=null;AttackMoveMode=false;AbilityDefinitionId=null;LastCommandSequence=0;sequence=0;
             ArchiveStatus="Online reports are shown after the match. Local replay recording is available for offline matches.";
             ArchiveFailed=false;
+        }
+
+        private void ConnectRemote(string address,ushort port,string faction,string matchId=null,string joinTicket=null)
+        {
             remoteClient=new GameObject("NGO match client").AddComponent<NgoMatchClient>();
             remoteClient.Started+=OnlineStarted;
             remoteClient.StateReceived+=OnlineState;
@@ -52,9 +63,9 @@ namespace Frontier.Runtime
             remoteClient.Finished+=OnlineFinished;
             remoteClient.StatusChanged+=OnlineStatus;
             remoteClient.Disconnected+=OnlineDisconnected;
-            OnlineStatus("Connecting to "+ServerAddress+":"+ServerPort+"…");
-            if(!remoteClient.Connect(ServerAddress,ServerPort,Faction))
-                OnlineDisconnected("Could not connect. Check the server address and port.");
+            OnlineStatus(IsPublicMatch?"Opponent found. Connecting to your match…":"Connecting to "+address+":"+port+"…");
+            if(!remoteClient.Connect(address,port,faction,matchId,joinTicket))
+                OnlineDisconnected(IsPublicMatch?"Could not join the match. Search again.":"Could not connect. Check the server address and port.");
         }
 
         public void CancelOnline()
@@ -64,6 +75,9 @@ namespace Frontier.Runtime
 
         private void OnlineStarted(MatchWelcome welcome)
         {
+            if(IsPublicMatch&&(string.IsNullOrEmpty(publicAllocatedMatchId)||welcome.matchId!=publicAllocatedMatchId))
+            {FailPublicSearch("Could not join the match. Search again.");return;}
+            ConfirmPublicMatchJoined();
             LoadMap(welcome.mapId);
             Faction=welcome.player==0?welcome.faction0:welcome.faction1;
             EnemyFaction=welcome.player==0?welcome.faction1:welcome.faction0;
@@ -107,6 +121,8 @@ namespace Frontier.Runtime
 
         private void OnlineDisconnected(string reason)
         {
+            if(IsPublicMatch&&!Running)
+            {FailPublicSearch("Could not join the match. Search again.");return;}
             // A completed report remains readable after the server shuts down.
             if(remoteReport!=null||Winner!=-1)
             {
@@ -119,6 +135,7 @@ namespace Frontier.Runtime
 
         private void DisconnectOnline(bool keepResult=false)
         {
+            CancelPublicSearch();
             if(remoteClient!=null)
             {
                 var client=remoteClient;remoteClient=null;
@@ -132,6 +149,7 @@ namespace Frontier.Runtime
             {
                 remotePresentation.Reset();
                 IsOnline=false;remoteReport=null;remoteIdentity=new object();OnlineReportUnavailable=false;
+                IsPublicMatch=false;
                 if(onlineSetupMap!=null)
                 {
                     Map=onlineSetupMap;MapId=Map.id;Faction=onlineSetupFaction;EnemyFaction=onlineSetupEnemy;

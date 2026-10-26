@@ -20,6 +20,11 @@ namespace Frontier.Dedicated
             var server = new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
             server.EnableNetworkMetrics = Array.IndexOf(args, "-frontier-network-metrics") >= 0;
             if (Array.IndexOf(args, "-frontier-smoke") >= 0) server.SimulationSpeed = 20;
+            if (Array.IndexOf(args, "-frontier-allocated") >= 0)
+            {
+                try { AllocatedServerAgent.Launch(server, port); }
+                catch (Exception error) { Debug.LogError(error.Message); Application.Quit(2); return; }
+            }
             if (!server.StartServer(port, Argument(args, "-frontier-map", "rift"), Argument(args, "-frontier-listen", "0.0.0.0")))
                 Application.Quit(1);
         }

@@ -131,6 +131,7 @@ def main():
     server_source = parser.add_mutually_exclusive_group(required=True)
     server_source.add_argument("--server", type=Path, help="Linux server binary or macOS server .app")
     server_source.add_argument("--external-server", help="Already-running dedicated server address (for example a Docker server on 127.0.0.1)")
+    server_source.add_argument("--backend", help="Self-hosted Nakama URL; authenticate two isolated players and use real public matchmaking")
     parser.add_argument("--client", type=Path, default=ROOT / "Builds/Desktop/LittleLegion.app")
     parser.add_argument("--port", type=int, default=0, help="UDP port; zero chooses a currently free port")
     parser.add_argument("--timeout", type=float, default=540)
@@ -149,6 +150,8 @@ def main():
             raise ValueError("Invalid port or timeout.")
         if not 0 <= args.latency_ms <= 5000 or not 0 <= args.jitter_ms <= 5000 or not 0 <= args.loss_percent < 100:
             raise ValueError("Delay/jitter must be 0..5000 ms and packet loss 0..<100%.")
+        if args.backend and (args.latency_ms or args.jitter_ms or args.loss_percent):
+            raise ValueError("The local UDP impairment proxy currently supports direct connections only.")
         port = args.port or (7777 if args.external_server else available_port())
         address = args.external_server or "127.0.0.1"
         output = args.output.resolve()
@@ -186,8 +189,9 @@ def main():
         if args.latency_ms or args.jitter_ms or args.loss_percent:
             proxy = DatagramProxy(address, port, args.latency_ms, args.jitter_ms, args.loss_percent)
             address, player_port = "127.0.0.1", proxy.port
-        clients = [launch("client-a", client, ["-frontier-client", address, "-frontier-faction", "industrial"], player_port),
-                   launch("client-b", client, ["-frontier-client", address, "-frontier-faction", "biological"], player_port)]
+        connection_args = ["-frontier-public-smoke", "-frontier-backend", args.backend] if args.backend else ["-frontier-client", address]
+        clients = [launch("client-a", client, connection_args + ["-frontier-faction", "industrial"], player_port),
+                   launch("client-b", client, connection_args + ["-frontier-faction", "biological"], player_port)]
         deadline = time.monotonic() + args.timeout
         while time.monotonic() < deadline:
             if proxy is not None and proxy.error is not None:
@@ -219,8 +223,15 @@ def main():
             raise RuntimeError("Clients disagree about winner, final tick or complete report digest.")
         result = {"passed": True, "port": port, "winner": int(matches[0][1]),
                   "tick": int(matches[0][2]), "report_sha256": matches[0][3],
-                  "server": str(server) if server else "external:" + args.external_server, "client": str(client),
+                  "server": str(server) if server else "nakama:" + args.backend if args.backend else "external:" + args.external_server, "client": str(client),
                   "logs": {k: str(v) for k, v in logs.items()}}
+        if args.backend:
+            allocations = [re.search(r"FRONTIER_PUBLIC_ALLOCATED match=(\S+) host=(\S+) port=(\d+)", logs[name].read_text())
+                           for name in ("client-a", "client-b")]
+            if any(value is None for value in allocations) or allocations[0].groups() != allocations[1].groups():
+                raise RuntimeError("Public clients were not assigned the same authenticated match and endpoint.")
+            result["match_id"], result["host"], assigned_port = allocations[0].groups()
+            result["port"] = int(assigned_port)
         if proxy is not None:
             result["network_impairment"] = proxy.stats()
             if proxy.overflow:

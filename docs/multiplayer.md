@@ -1,10 +1,10 @@
 # NGO dedicated multiplayer
 
-The first multiplayer deliverable uses Unity Netcode for GameObjects and Unity Transport, with one authoritative server and two player clients. The existing offline game continues to run its local simulation and AI.
+Multiplayer uses Unity Netcode for GameObjects and Unity Transport, with one authoritative server and two player clients. Players can connect directly over LAN or use the self-hosted public 1v1 matchmaker. The existing offline game continues to run its local simulation and AI.
 
 The server runs the existing simulation at 20 ticks/second. Clients send orders and receive their filtered `PlayerView`; they never receive the active opponent's private economy, production queues or complete authoritative simulation. Seat ownership comes from the server's connection mapping. Reliable command acknowledgements preserve the original outcome for duplicate sequences. State frames are compressed, bounded, fragmented and published only after complete assembly. Final statistics are sent after the game ends. If that payload exceeds the final-message limits (8 MiB expanded or 2 MiB compressed), the server delivers the terminal player view with an explicit report-unavailable flag. The outcome remains readable even when statistics cannot be delivered.
 
-This deliverable connects directly to a server address. Public matchmaking, accounts, ranking, cloud allocation and reconnecting into a running match are subsequent work. A disconnected player concedes; the other player receives the result. Opening a client's menu does not pause the server.
+The public flow uses Nakama OSS for persistent account sessions and native matchmaking, a Go module to allocate an explicit pool of NGO servers, and PostgreSQL for persistent searches, allocations, admissions and outcomes. The current pool contains one statically configured game slot; additional pairs wait for capacity. The backend does not create containers or scale automatically. Ranking and reconnecting into a running match remain subsequent work. Once a match starts, a disconnected player concedes; the other player receives the result. Opening a client's menu does not pause the server.
 
 Online presentation keeps a bounded history of filtered positions with a 150 ms
 buffer, so packet arrivals do not restart movement interpolation. Positions never
@@ -14,6 +14,49 @@ Work, gait, fog and effect animations use a continuous cosmetic clock with a
 visibility, orders and game outcomes still use the latest server state. Offline
 and replay retain their existing timing. This smooths presentation; it does not
 predict command outcomes or remove network round-trip time.
+
+## Public 1v1 with the self-hosted service
+
+See [Nakama and PostgreSQL setup](nakama.md) for the complete Docker stack,
+credential generation, persistent volumes, production TLS and pool expansion.
+The [online allocation contract](online-contract.md) specifies the authenticated
+player flow and the server-only lifecycle RPCs.
+
+After building the Linux server below, initialize the stack with the address the
+Quest can reach and start it:
+
+```sh
+python3 scripts/online-stack.py init --host 192.168.100.157
+python3 scripts/online-stack.py up
+```
+
+The example address must be replaced when this Mac's LAN address changes. The
+online service listens on TCP 7350, its allocated NGO slot on UDP 7778, and its
+administrative console remains on loopback. The separate direct-connect server
+can continue to use UDP 7777. PostgreSQL is not published to the host network.
+
+Choose **Multiplayer → Find Match** and select a faction. Board placement finishes
+before authentication and ticket creation. The service finds two compatible
+players, then each client connects automatically with its own short-lived join
+ticket. The server validates that ticket against its assigned players; the account
+JWT never travels over NGO. Cancelling a search invalidates its pending allocation,
+and late completion cannot reopen a cancelled session. Direct LAN address/port
+preferences remain separate from the online service URL.
+
+Desktop can enter this flow on launch:
+
+```sh
+open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --args \
+  -frontier-backend http://127.0.0.1:7350 -frontier-matchmake \
+  -logFile /tmp/little-legion-online.log
+```
+
+On Quest, configure the online service with the Mac's LAN address and port 7350.
+For a public deployment, use an HTTPS service URL and publish the configured UDP
+game ports. The local HTTP stack and local-process checks do not establish WAN
+reachability or physical Quest behavior for this new flow. Build/test evidence
+for the earlier direct-connect deliverable below must not be read as proof of
+the new account, matchmaking and allocation path.
 
 ## Build
 
@@ -38,7 +81,7 @@ unity build . --target StandaloneOSX --execute-method Frontier.Editor.Multiplaye
 
 If that module is unavailable, `BuildMacHeadlessServer` builds a normal macOS player in `Builds/HeadlessMac/FrontierServer.app`, launched with `-batchmode -nographics -frontier-server`. This fallback runs only the dedicated server role but does not validate Unity's Server subtarget. A macOS process check does not validate Linux execution.
 
-## Docker server
+## Direct-connect Docker server
 
 Build the Linux server above first, then package and start it:
 
@@ -86,7 +129,7 @@ docker compose -f compose.multiplayer.yml logs -f server
 
 Allow inbound **UDP 7777** on that host's firewall and network rules, or set `FRONTIER_PORT` consistently if selecting another port. `--no-build --pull never` uses the loaded artifact. The normal Compose file runs real-time matches; omit the smoke override. Each process serves one match at a time and becomes available for the next match after both participants leave. This is a future deployment procedure; no production host has been deployed or validated. [Compose startup options](https://docs.docker.com/reference/cli/docker/compose/up/)
 
-## Run a match
+## Run a direct-connect match
 
 For cadence diagnostics at normal match speed, start Compose with the optional
 `-f compose.multiplayer.metrics.yml` override after the base file. The server logs
@@ -98,7 +141,7 @@ arrival gaps, received tick rate, state age and transport RTT as
 change the protocol or simulation speed. Frame-rate reports remain separate from
 network cadence; high FPS alone does not establish smooth multiplayer presentation.
 
-Start the server, then connect two clients through the multiplayer menu. Use the server machine's LAN address from another machine; `127.0.0.1` only connects to a server on the same machine. Allow the selected UDP port through the server's firewall.
+Start the server, then connect two clients through **Multiplayer → Direct connection**. Use the server machine's LAN address from another machine; `127.0.0.1` only connects to a server on the same machine. Allow the selected UDP port through the server's firewall.
 
 The Linux executable below runs directly on a Linux host. On the authoring Mac, run that executable inside Docker using the preceding instructions.
 
@@ -114,7 +157,7 @@ For the macOS server substitute `Builds/ServerMac/FrontierServer.app/Contents/Ma
 
 Both clients must connect before the match starts. A normal server has no AI filling an empty seat. The match ends through the existing victory rules or concession, and both clients receive the same authoritative result.
 
-## Reproducible process check
+## Reproducible direct-connect process check
 
 For three native macOS processes, build the optional macOS server and run:
 

@@ -10,13 +10,13 @@ using UnityEngine;
 namespace Frontier.Networking
 {
     // One dedicated process owns one match at a time. No Unity transforms, physics, focus or local pause affect its rules.
-    public sealed class NgoMatchServer : MonoBehaviour
+    public sealed partial class NgoMatchServer : MonoBehaviour
     {
         private sealed class Seat
         {
             public ulong client;
             public int player;
-            public string faction;
+            public string faction, playerId;
             public bool connected, ready, resultAcknowledged;
             public double connectedAt, tokenTime;
             public double tokens = 80;
@@ -90,6 +90,7 @@ namespace Frontier.Networking
                 if (hello == null || hello.protocol != MatchProtocol.Version || hello.rules != Simulation.ReplayRulesVersion || hello.contentHash != MatchProtocol.ContentHash())
                 { response.Reason = "Incompatible game version, rules, maps or catalog."; return; }
                 if (hello.faction != "industrial" && hello.faction != "biological") { response.Reason = "Unknown faction."; return; }
+                if (AllocatedMode) { BeginAllocatedApproval(request, response, hello); return; }
                 int player = seats.Values.Any(s => s.player == 0) ? 1 : 0;
                 seats.Add(request.ClientNetworkId, new Seat { client = request.ClientNetworkId, player = player, faction = hello.faction, connectedAt = clock.Elapsed.TotalSeconds });
                 response.Approved = true;
@@ -100,6 +101,12 @@ namespace Frontier.Networking
         private void Connected(ulong client)
         {
             if (!seats.TryGetValue(client, out var seat)) { manager.DisconnectClient(client, "Unapproved player."); return; }
+            if (AllocatedMode && (allocation == null || allocationAborted))
+            {
+                // NGO may process an approval one frame after the backend cancels
+                // the assignment. Do not attach that late transport to the lobby.
+                seats.Remove(client); manager.DisconnectClient(client, "The match assignment was cancelled."); return;
+            }
             seat.connected = true; seat.connectedAt = clock.Elapsed.TotalSeconds;
             SendStatus(client, "Connected. Waiting for both players to be ready.");
             Status("Player " + (seat.player + 1) + " connected (" + ConnectedPlayers + "/2).");
@@ -121,6 +128,14 @@ namespace Frontier.Networking
             {
                 seat.ready = true;
                 if (seats.Count != 2 || seats.Values.Any(s => !s.ready || !s.connected)) return;
+                if (AllocatedMode) { RequestAllocatedStart(); return; }
+                BeginMatch();
+            }
+            catch (Exception error) { Status("Could not start match: " + error.Message); StopServer(); }
+        }
+
+        private void BeginMatch()
+        {
                 var ordered = seats.Values.OrderBy(s => s.player).ToArray();
                 Match = new Simulation(map, catalog, ordered[0].faction, ordered[1].faction);
                 Match.Paused = true;
@@ -135,8 +150,6 @@ namespace Frontier.Networking
                 Status("Match started · " + matchId);
                 PublishSnapshots();
                 nextSnapshot = NextSnapshotTime(nextSnapshot, clock.Elapsed.TotalSeconds);
-            }
-            catch (Exception error) { Status("Could not start match: " + error.Message); StopServer(); }
         }
 
         private void Command(ulong client, FastBufferReader reader)
@@ -185,6 +198,8 @@ namespace Frontier.Networking
         private void Update()
         {
             if (!IsRunning || closing) return;
+            AdvanceAllocation();
+            if (allocationAborted) return;
             double now = clock.Elapsed.TotalSeconds;
             foreach (var seat in seats.Values.ToArray())
                 if (!seat.ready && now - seat.connectedAt > 15)
@@ -281,6 +296,7 @@ namespace Frontier.Networking
                 if (unavailable && report != null) UnityEngine.Debug.LogWarning("Final report exceeds wire limits; delivering the match outcome without statistics.");
             }
             finished = true;
+            EmitAllocationEvent("finished", Match.Winner, Match.Tick);
             Status("Match finished · winner=" + Match.Winner + " tick=" + Match.Tick + " accepted=" + AcceptedCommands + " rejected=" + RejectedCommands);
         }
 
@@ -292,6 +308,7 @@ namespace Frontier.Networking
 
         private void Disconnected(ulong client)
         {
+            CancelPendingApproval(client, "Connection closed during admission.");
             if (closing || !seats.TryGetValue(client, out var seat)) return;
             seat.connected = false;
             string reason = manager == null ? "" : manager.DisconnectReason ?? "";
@@ -299,7 +316,14 @@ namespace Frontier.Networking
             if (reason.Length > 512) reason = reason.Substring(0, 512);
             Status("Player " + (seat.player + 1) + " disconnected · transport=" + (manager == null ? "Unavailable" : manager.DisconnectEvent.ToString())
                 + " · reason=" + reason + " · match=" + matchId + " · tick=" + (Match?.Tick ?? 0) + " · remaining=" + ConnectedPlayers);
-            if (Match == null) { seats.Remove(client); Status("Waiting for two players."); return; }
+            if (Match == null)
+            {
+                seats.Remove(client);
+                if (AllocatedMode) AbortAllocation("A player left before the match started.");
+                else Status("Waiting for two players.");
+                return;
+            }
+            if (allocationAborted) return;
             if (Match.Winner == -1)
             {
                 // Reconnection is deliberately not enabled in this first direct-connect protocol.
@@ -309,7 +333,7 @@ namespace Frontier.Networking
             }
             // Preserve the terminal state and reliable result for any remaining
             // participant. Reuse the listening server only after everyone leaves.
-            if (Match.Winner != -1 && ConnectedPlayers == 0)
+            if (!AllocatedMode && Match.Winner != -1 && ConnectedPlayers == 0)
             {
                 ResetMatch();
                 Status("Waiting for two players.");
@@ -318,6 +342,7 @@ namespace Frontier.Networking
 
         private void ResetMatch()
         {
+            InvalidateApprovals();
             Match = null; seats.Clear(); finished = false;
             matchId = Guid.NewGuid().ToString("N");
             frame = 0; accumulator = lastTime = nextSnapshot = startServerTime = 0;
@@ -402,6 +427,7 @@ namespace Frontier.Networking
         public void StopServer()
         {
             closing = true; clock.Stop();
+            InvalidateApprovals();
             if (manager == null) return;
             var old = manager; manager = null;
             old.OnClientConnectedCallback -= Connected; old.OnClientDisconnectCallback -= Disconnected;

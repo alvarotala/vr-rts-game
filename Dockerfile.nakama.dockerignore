@@ -1,0 +1,8 @@
+**
+!Dockerfile.nakama
+!backend/
+!backend/nakama/
+!backend/nakama/*.go
+!backend/nakama/go.mod
+!backend/nakama/go.sum
+!backend/nakama/schema.sql

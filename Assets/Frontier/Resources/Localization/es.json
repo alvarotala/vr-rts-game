@@ -9123,6 +9123,276 @@
       "key": "Rally point placement cancelled.",
       "value": "Se canceló la colocación del punto de reunión.",
       "template": false
+    },
+    {
+      "key": "Multiplayer",
+      "value": "Multijugador",
+      "template": false
+    },
+    {
+      "key": "Lead your faction from a tabletop battlefield. Play offline or find an online opponent.",
+      "value": "Dirige tu ejército sobre un tablero. Juega sin conexión o busca un rival online.",
+      "template": false
+    },
+    {
+      "key": "Find another match",
+      "value": "Buscar otra partida",
+      "template": false
+    },
+    {
+      "key": "Finding an opponent",
+      "value": "Buscando rival",
+      "template": false
+    },
+    {
+      "key": "Opponent found",
+      "value": "Rival encontrado",
+      "template": false
+    },
+    {
+      "key": "Keep this app open while your match is prepared.",
+      "value": "Mantén la aplicación abierta mientras se prepara la partida.",
+      "template": false
+    },
+    {
+      "key": "Cancel search",
+      "value": "Cancelar búsqueda",
+      "template": false
+    },
+    {
+      "key": "Direct connection",
+      "value": "Conexión directa",
+      "template": false
+    },
+    {
+      "key": "Join a server by address on your local network.",
+      "value": "Conéctate por dirección a un servidor de tu red local.",
+      "template": false
+    },
+    {
+      "key": "Online service: {0}",
+      "value": "Servicio online: {0}",
+      "template": true
+    },
+    {
+      "key": "Choose the address of your online service.",
+      "value": "Elige la dirección del servicio online.",
+      "template": false
+    },
+    {
+      "key": "Service port: {0}",
+      "value": "Puerto del servicio: {0}",
+      "template": true
+    },
+    {
+      "key": "Use the port of your online service.",
+      "value": "Usa el puerto del servicio online.",
+      "template": false
+    },
+    {
+      "key": "FIND MATCH",
+      "value": "BUSCAR PARTIDA",
+      "template": false
+    },
+    {
+      "key": "MULTIPLAYER",
+      "value": "MULTIJUGADOR",
+      "template": false
+    },
+    {
+      "key": "SEARCHING FOR AN OPPONENT",
+      "value": "BUSCANDO RIVAL",
+      "template": false
+    },
+    {
+      "key": "PUBLIC 1V1",
+      "value": "1V1 PÚBLICO",
+      "template": false
+    },
+    {
+      "key": "Find another player and join a dedicated match.",
+      "value": "Busca otro jugador y entra en una partida dedicada.",
+      "template": false
+    },
+    {
+      "key": "Choose Find Match for online play or connect directly to a server.",
+      "value": "Busca una partida online o conéctate directamente a un servidor.",
+      "template": false
+    },
+    {
+      "key": "Signing in for online play…",
+      "value": "Iniciando sesión para jugar online…",
+      "template": false
+    },
+    {
+      "key": "Opponent found. Connecting to your match…",
+      "value": "Rival encontrado. Conectando con tu partida…",
+      "template": false
+    },
+    {
+      "key": "Could not join the match. Search again.",
+      "value": "No se pudo entrar en la partida. Vuelve a buscar.",
+      "template": false
+    },
+    {
+      "key": "The search timed out. Try again.",
+      "value": "La búsqueda agotó el tiempo de espera. Vuelve a intentarlo.",
+      "template": false
+    },
+    {
+      "key": "Could not find a match. Check the connection and try again.",
+      "value": "No se pudo buscar una partida. Comprueba la conexión y vuelve a intentarlo.",
+      "template": false
+    },
+    {
+      "key": "Final report received from the server. You can now find another match.",
+      "value": "Informe final recibido del servidor. Ya puedes buscar otra partida.",
+      "template": false
+    },
+    {
+      "key": "Signing in…",
+      "value": "Iniciando sesión…",
+      "template": false
+    },
+    {
+      "key": "Searching for an opponent…",
+      "value": "Buscando rival…",
+      "template": false
+    },
+    {
+      "key": "Waiting for an available server…",
+      "value": "Esperando un servidor disponible…",
+      "template": false
+    },
+    {
+      "key": "Preparing your match…",
+      "value": "Preparando tu partida…",
+      "template": false
+    },
+    {
+      "key": "Connecting to your match…",
+      "value": "Conectando con tu partida…",
+      "template": false
+    },
+    {
+      "key": "Updating search…",
+      "value": "Actualizando la búsqueda…",
+      "template": false
+    },
+    {
+      "key": "Enter a valid online service URL.",
+      "value": "Introduce una dirección válida para el servicio online.",
+      "template": false
+    },
+    {
+      "key": "Public online services require HTTPS.",
+      "value": "Los servicios online públicos requieren HTTPS.",
+      "template": false
+    },
+    {
+      "key": "Waiting for the server and your opponent",
+      "value": "Esperando al servidor y a tu rival",
+      "template": false
+    },
+    {
+      "key": "Keep this app open. Both players need to join the same server.",
+      "value": "Mantén la aplicación abierta. Ambos jugadores deben entrar en el mismo servidor.",
+      "template": false
+    },
+    {
+      "key": "Cancel connection",
+      "value": "Cancelar conexión",
+      "template": false
+    },
+    {
+      "key": "Server: {0}",
+      "value": "Servidor: {0}",
+      "template": true
+    },
+    {
+      "key": "Enter the IPv4 address of the computer running the server.",
+      "value": "Introduce la dirección IPv4 del equipo que ejecuta el servidor.",
+      "template": false
+    },
+    {
+      "key": "Port: {0}",
+      "value": "Puerto: {0}",
+      "template": true
+    },
+    {
+      "key": "Use the port configured on the server.",
+      "value": "Usa el puerto configurado en el servidor.",
+      "template": false
+    },
+    {
+      "key": "The server chooses the map and assigns each player's faction.",
+      "value": "El servidor elige el mapa y asigna la facción de cada jugador.",
+      "template": false
+    },
+    {
+      "key": "On Quest, use your server computer's LAN address. 127.0.0.1 refers to this device.",
+      "value": "En Quest, usa la dirección LAN del servidor. 127.0.0.1 se refiere a este dispositivo.",
+      "template": false
+    },
+    {
+      "key": "JOIN MATCH",
+      "value": "ENTRAR A PARTIDA",
+      "template": false
+    },
+    {
+      "key": "SERVER PORT",
+      "value": "PUERTO DEL SERVIDOR",
+      "template": false
+    },
+    {
+      "key": "SERVER ADDRESS",
+      "value": "DIRECCIÓN DEL SERVIDOR",
+      "template": false
+    },
+    {
+      "key": "EDIT CONNECTION",
+      "value": "EDITAR CONEXIÓN",
+      "template": false
+    },
+    {
+      "key": "CONNECTING / WAITING",
+      "value": "CONECTANDO / ESPERANDO",
+      "template": false
+    },
+    {
+      "key": "DIRECT CONNECTION · 1V1",
+      "value": "CONEXIÓN DIRECTA · 1V1",
+      "template": false
+    },
+    {
+      "key": "POSITION YOUR BOARD BEFORE JOINING",
+      "value": "COLOCA EL TABLERO ANTES DE ENTRAR",
+      "template": false
+    },
+    {
+      "key": "Point and select keys. Save applies the new value.",
+      "value": "Apunta y selecciona las teclas. Guardar aplica el nuevo valor.",
+      "template": false
+    },
+    {
+      "key": "Use the keypad on Quest or desktop.",
+      "value": "Usa el teclado en Quest o en escritorio.",
+      "template": false
+    },
+    {
+      "key": "Join the same dedicated server as your opponent.",
+      "value": "Entra en el mismo servidor dedicado que tu rival.",
+      "template": false
+    },
+    {
+      "key": "Enter a port from 1 to 65535.",
+      "value": "Introduce un puerto del 1 al 65535.",
+      "template": false
+    },
+    {
+      "key": "Enter four numbers from 0 to 255, separated by dots.",
+      "value": "Introduce cuatro números del 0 al 255, separados por puntos.",
+      "template": false
     }
   ]
 }

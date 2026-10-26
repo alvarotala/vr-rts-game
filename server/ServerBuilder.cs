@@ -22,6 +22,8 @@ namespace Frontier.Dedicated.Editor
             PlayerSettings.companyName = "Frontier";
             PlayerSettings.productName = "Little Legion Server";
             PlayerSettings.runInBackground = true;
+            // The trusted control plane uses HTTP on the private Docker network.
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
             // Ahead-of-time compilation also avoids Mono JIT address assumptions
             // when the production Linux amd64 image is tested under emulation.
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Server, ScriptingImplementation.IL2CPP);

@@ -23,10 +23,10 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay, OnlineSetup, OnlineEndpoint }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay, OnlineSetup, OnlineEndpoint, DirectSetup, PublicEndpoint }
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.CanIssueOrders;
-        public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Page==MenuPage.OnlineSetup||Quest.Placing;
+        public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Page==MenuPage.OnlineSetup||Page==MenuPage.DirectSetup||Quest.Placing;
         public bool IsDragging => moving;
         private readonly Stack<MenuPage> menuHistory=new Stack<MenuPage>();
         private int actionIndex;
@@ -117,9 +117,10 @@ namespace Frontier.Runtime
             Board.SetVisible(ShowsBoard);
             if(!UpdatePosition(!Quest.Active||Quest.HeadTracked)){HideTutorialPresentation();return;}
             if(UpdateCountdownPresentation()){HideTutorialPresentation();return;}
-            if(Session.IsConnecting&&!Session.Running&&Page!=MenuPage.OnlineSetup)Show(MenuPage.OnlineSetup);
+            if(Session.IsConnecting&&!Session.Running)
+            {var onlinePage=Session.IsPublicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup;if(Page!=onlinePage)Show(onlinePage);}
             if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
-            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+Session.IsMatchmaking+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
             if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
@@ -211,7 +212,7 @@ namespace Frontier.Runtime
             {
                 case MenuPage.Main:
                     headline.text="LITTLE LEGION";economy.text="Little armies. Big battles.";
-                    selection.text="Lead your faction from a tabletop battlefield. Play offline or join a LAN match.";
+                    selection.text="Lead your faction from a tabletop battlefield. Play offline or find an online opponent.";
                     status.text=Board.Placed?"Your saved play space is ready. Adjust it from New Match if needed.":"Open New Match to position your battlefield and start playing.";break;
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
@@ -219,7 +220,7 @@ namespace Frontier.Runtime
                     harvesting.text=Board.Placed?"BOARD READY":"BOARD NOT PLACED";
                     ((LocalizedText)harvesting).Append(Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.");
                     status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
-                case MenuPage.OnlineSetup:case MenuPage.OnlineEndpoint:
+                case MenuPage.OnlineSetup:case MenuPage.DirectSetup:case MenuPage.OnlineEndpoint:case MenuPage.PublicEndpoint:
                     UpdateOnlineHeader();break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
@@ -255,7 +256,7 @@ namespace Frontier.Runtime
                     economy.text="MATCH COMPLETE · "+Session.Map.title+" · "+ReportTime(Session.Tick);
                     selection.text=MatchDescription;
                     harvesting.text="POST-MATCH REPORT";
-                    status.text=Session.IsOnline?(Session.ResultReport==null?(Session.OnlineReportUnavailable?"The final report could not be received. The match result is preserved.":"Receiving the final report…"):"Final report received from the server. Join another match from Multiplayer LAN."):(Session.ArchiveStatus??"Both sides revealed after the match. Rematch starts a fresh report.");break;
+                    status.text=Session.IsOnline?(Session.ResultReport==null?(Session.OnlineReportUnavailable?"The final report could not be received. The match result is preserved.":"Receiving the final report…"):"Final report received from the server. You can now find another match."):(Session.ArchiveStatus??"Both sides revealed after the match. Rematch starts a fresh report.");break;
                 case MenuPage.History:
                     headline.text="MATCH HISTORY";economy.text="SAVED ON THIS DEVICE";
                     selection.text="Watch a replay, or choose a match for statistics, graphs and build order.";
@@ -336,13 +337,13 @@ namespace Frontier.Runtime
             {Session.Announce("Choose Continue in the tutorial card before resuming.");return;}
             if(moving){moving=false;SavePosition();}
             CloseSectionHelp();
-            if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.OnlineSetup||page==MenuPage.Result||page==MenuPage.Replay)menuHistory.Clear();
+            if(page==MenuPage.Main||page==MenuPage.Actions||page==MenuPage.Pause||page==MenuPage.MatchSetup||page==MenuPage.OnlineSetup||page==MenuPage.DirectSetup||page==MenuPage.Result||page==MenuPage.Replay)menuHistory.Clear();
             if(page==MenuPage.Settings&&Page!=MenuPage.Hotkeys)settingsTab=SettingsTab.Controls;
             if(page==MenuPage.Hotkeys&&Page!=MenuPage.Hotkeys)
             {hotkeysTouch=Quest.Active;hotkeysPage=0;hotkeysEditing=true;hotkeyMessage="Choose an input to change. Changes are saved on this device.";}
             if(page!=MenuPage.Hotkeys)DismissHotkeyModal();
             if(page==MenuPage.Guide&&Page!=MenuPage.Guide)controlGuidePage=0;
-            if(page!=MenuPage.MatchSetup&&page!=MenuPage.OnlineSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
+            if(page!=MenuPage.MatchSetup&&page!=MenuPage.OnlineSetup&&page!=MenuPage.DirectSetup&&page!=MenuPage.Result)Quest.CancelStartRequest();
             Page=page;signature=null;moving=false;
             if(page==MenuPage.Pause||page==MenuPage.Actions)Session.NotifyTutorialMenu(page==MenuPage.Pause);
             ApplyWindowScale();
@@ -369,7 +370,9 @@ namespace Frontier.Runtime
             {
                 case MenuPage.MatchSetup:Show(MenuPage.Main);break;
                 case MenuPage.OnlineSetup:CancelOnlineSetup();break;
-                case MenuPage.OnlineEndpoint:Show(MenuPage.OnlineSetup);break;
+                case MenuPage.DirectSetup:Quest.CancelStartRequest();Session.CancelOnline();Show(MenuPage.OnlineSetup);break;
+                case MenuPage.OnlineEndpoint:Show(MenuPage.DirectSetup);break;
+                case MenuPage.PublicEndpoint:Show(MenuPage.OnlineSetup);break;
                 case MenuPage.Settings:case MenuPage.Hotkeys:case MenuPage.Guides:case MenuPage.Guide:case MenuPage.UnitsGuide:case MenuPage.StructuresGuide:
                     Show(menuHistory.Count>0?menuHistory.Pop():Page==MenuPage.Hotkeys?MenuPage.Settings:Page==MenuPage.Guide||IsReferencePage?MenuPage.Guides:Session.Running?MenuPage.Pause:MenuPage.Main);break;
                 case MenuPage.Actions:Show(MenuPage.Pause);break;

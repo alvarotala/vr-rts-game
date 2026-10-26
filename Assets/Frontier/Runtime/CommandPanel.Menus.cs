@@ -86,13 +86,15 @@ namespace Frontier.Runtime
                     MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",new Vector2(264,0),new Vector2(512,116),()=>Show(MenuPage.MatchSetup),true,ConsoleTheme.Secondary);
                     MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
                     MainMenuTile("Guided tutorial",ConsoleGlyph.Kind.Tutorial,0,()=>Quest.RequestTutorial());
-                    MainMenuTile("Multiplayer LAN",ConsoleGlyph.Kind.Group,1,()=>Show(MenuPage.OnlineSetup),true);
+                    MainMenuTile("Multiplayer",ConsoleGlyph.Kind.Group,1,()=>Show(MenuPage.OnlineSetup),true);
                     MainMenuTile("Guides",ConsoleGlyph.Kind.Guide,2,()=>OpenSubmenu(MenuPage.Guides));
                     MainMenuTile("Match history",ConsoleGlyph.Kind.History,3,OpenHistory);
                     return true;
                 case MenuPage.History:BuildHistory();return true;
                 case MenuPage.Replay:BuildReplayPanel();return true;
                 case MenuPage.OnlineSetup:BuildOnlineSetup();return true;
+                case MenuPage.DirectSetup:BuildDirectSetup();return true;
+                case MenuPage.PublicEndpoint:BuildOnlineEndpoint();return true;
                 case MenuPage.OnlineEndpoint:BuildOnlineEndpoint();return true;
                 case MenuPage.MatchSetup:
                     FactionCard(false,Vector2.zero);

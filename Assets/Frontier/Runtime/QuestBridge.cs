@@ -28,7 +28,7 @@ namespace Frontier.Runtime
         private Transform anchorRoot;
         private float manualHeight=.75f;
         public float PlacementHeight=>manualHeight;
-        private bool useScene=true,busy,restoring,pendingStart,pendingOnline,pendingTutorial;
+        private bool useScene=true,busy,restoring,pendingStart,pendingOnline,pendingPublicMatch,pendingTutorial;
         private bool onlinePlacementRequired,onlinePlacementPending;
         private string pendingReplay;
         private bool restoredPlacement,checkingSavedBoard,savedPoseSample;
@@ -155,27 +155,32 @@ namespace Frontier.Runtime
             }
             catch(Exception e){Debug.LogWarning(e);Session.Announce("Could not load room data. Use manual placement.");}
         }
-        public void CancelStartRequest(){pendingStart=false;pendingReplay=null;pendingOnline=false;pendingTutorial=false;}
-        public void RequestStartMatch(){pendingReplay=null;pendingOnline=false;pendingTutorial=false;ContinueStartRequest();}
+        public void CancelStartRequest(){pendingStart=false;pendingReplay=null;pendingOnline=false;pendingPublicMatch=false;pendingTutorial=false;}
+        public void RequestStartMatch(){pendingReplay=null;pendingOnline=false;pendingPublicMatch=false;pendingTutorial=false;ContinueStartRequest();}
         public void RequestTutorial()
         {
             if(Session.Running||Session.IsConnecting)return;
-            pendingReplay=null;pendingOnline=false;pendingTutorial=true;ContinueStartRequest();
+            pendingReplay=null;pendingOnline=false;pendingPublicMatch=false;pendingTutorial=true;ContinueStartRequest();
         }
         public void RequestOnlineMatch()
         {
             if(Session.Running||Session.IsConnecting)return;
-            pendingReplay=null;pendingTutorial=false;pendingOnline=true;ContinueStartRequest();
+            pendingReplay=null;pendingTutorial=false;pendingPublicMatch=false;pendingOnline=true;ContinueStartRequest();
+        }
+        public void RequestPublicMatch()
+        {
+            if(Session.Running||Session.IsConnecting)return;
+            pendingReplay=null;pendingTutorial=false;pendingOnline=false;pendingPublicMatch=true;ContinueStartRequest();
         }
         public void RequestReplay(string id)
         {
             if(Session.Running){Session.Announce("Exit the current match or replay first.");return;}
-            pendingOnline=false;pendingTutorial=false;pendingReplay=id;ContinueStartRequest();
+            pendingOnline=false;pendingPublicMatch=false;pendingTutorial=false;pendingReplay=id;ContinueStartRequest();
         }
         private void CompleteStartRequest()
         {
-            string replay=pendingReplay;bool online=pendingOnline,tutorial=pendingTutorial;CancelStartRequest();
-            if(replay!=null)Session.StartReplay(replay);else if(online)Session.ConnectOnline();else if(tutorial)Session.StartTutorial(Active,countdown:true);else Session.StartMatch(countdown:true);
+            string replay=pendingReplay;bool online=pendingOnline,publicMatch=pendingPublicMatch,tutorial=pendingTutorial;CancelStartRequest();
+            if(replay!=null)Session.StartReplay(replay);else if(publicMatch)_=Session.FindPublicMatchAsync();else if(online)Session.ConnectOnline();else if(tutorial)Session.StartTutorial(Active,countdown:true);else Session.StartMatch(countdown:true);
         }
         private void ContinueStartRequest()
         {

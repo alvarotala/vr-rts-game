@@ -1,0 +1,9 @@
+FROM heroiclabs/nakama-pluginbuilder:3.41.0 AS builder
+WORKDIR /backend
+COPY backend/nakama/go.mod backend/nakama/go.sum ./
+RUN go mod download
+COPY backend/nakama/*.go backend/nakama/schema.sql ./
+RUN go test ./... && go build --buildmode=plugin -trimpath -o /backend/littlelegion.so .
+
+FROM heroiclabs/nakama:3.41.0
+COPY --from=builder /backend/littlelegion.so /nakama/data/modules/littlelegion.so

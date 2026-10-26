@@ -22,6 +22,7 @@ namespace Frontier.Networking
         public double RoundTripTimeSeconds => manager == null || !IsConnected ? 0 : manager.NetworkConfig.NetworkTransport.GetCurrentRtt(Unity.Netcode.NetworkManager.ServerClientId) / 1000d;
         private NetworkManager manager;
         private MatchWelcome welcome;
+        private string expectedMatchId;
         private PlayerView bufferedView;
         private FrameAssembler snapshots, results;
         private bool closing, ended, disconnectReported;
@@ -31,17 +32,19 @@ namespace Frontier.Networking
         private double connectedAt, lastStateAt;
         private ClientMetrics metrics;
 
-        public bool Connect(string address, ushort port, string faction)
+        public bool Connect(string address, ushort port, string faction, string matchId = null, string joinTicket = null)
         {
             if (manager != null || string.IsNullOrWhiteSpace(address) || address.Length > 255 || port == 0) return false;
             if (faction != "industrial" && faction != "biological") return false;
             try
             {
                 welcome = null; bufferedView = null; ended = closing = disconnectReported = false; pending.Clear(); acknowledged.Clear(); acknowledgementOrder.Clear();
+                expectedMatchId = matchId;
                 metrics = EnableNetworkMetrics || Array.IndexOf(Environment.GetCommandLineArgs(), "-frontier-network-metrics") >= 0 ? new ClientMetrics() : null;
                 snapshots = new FrameAssembler(NetworkWire.MaxSnapshotCompressed, NetworkWire.MaxSnapshotBytes);
                 results = new FrameAssembler(NetworkWire.MaxResultCompressed, NetworkWire.MaxResultBytes);
-                var hello = new ConnectionHello { protocol = MatchProtocol.Version, rules = Simulation.ReplayRulesVersion, faction = faction, contentHash = MatchProtocol.ContentHash() };
+                var hello = new ConnectionHello { protocol = MatchProtocol.Version, rules = Simulation.ReplayRulesVersion, faction = faction,
+                    contentHash = MatchProtocol.ContentHash(), matchId = matchId, joinTicket = joinTicket };
                 manager = MatchProtocol.CreateManager("Frontier client network", address.Trim(), port);
                 manager.NetworkConfig.ConnectionData = MatchProtocol.Encode(hello, MatchProtocol.MaxHelloBytes);
                 manager.OnClientConnectedCallback += Connected;
@@ -94,6 +97,7 @@ namespace Frontier.Networking
             {
                 var value = MatchProtocol.Decode<MatchWelcome>(MatchProtocol.Read(reader, 1024));
                 if (value == null || value.protocol != MatchProtocol.Version || value.player < 0 || value.player > 1
+                    || !string.IsNullOrEmpty(expectedMatchId) && value.matchId != expectedMatchId
                     || double.IsNaN(value.startServerTime) || double.IsInfinity(value.startServerTime) || value.startServerTime < 0
                     || Resources.Load<TextAsset>("Maps/" + value.mapId) == null) throw new InvalidOperationException("Invalid match welcome.");
                 welcome = value; lastStateAt = Time.realtimeSinceStartupAsDouble;

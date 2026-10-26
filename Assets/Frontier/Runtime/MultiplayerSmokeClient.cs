@@ -24,8 +24,33 @@ namespace Frontier.Runtime
         private int player=-1,sequence,lastDecision=-1,lastTick=-1,nextProgress,accepted,builds,trains,attacks,duplicateAcks;
         private bool duplicateSent,surrenderSent,finished;
         private float startedAt;
+        private IPublicMatchmaker publicMatchmaker;
+        private string expectedMatchId;
+
+        public static async void LaunchPublic(string backendUrl,string faction)
+        {
+            var smoke=Create();
+            smoke.publicMatchmaker=new NakamaMatchmaker(Guid.NewGuid().ToString("N")+Guid.NewGuid().ToString("N"));
+            try
+            {
+                var connection=await smoke.publicMatchmaker.FindAsync(backendUrl,faction,System.Threading.CancellationToken.None,
+                    message=>Debug.Log("FRONTIER_PUBLIC_SEARCH "+message));
+                if(smoke==null||smoke.finished)return;
+                smoke.expectedMatchId=connection.matchId;
+                Debug.Log("FRONTIER_PUBLIC_ALLOCATED match="+connection.matchId+" host="+connection.host+" port="+connection.port);
+                if(!smoke.client.Connect(connection.host,(ushort)connection.port,connection.faction,connection.matchId,connection.joinTicket))
+                    smoke.Fail("Could not start allocated NGO client.");
+            }
+            catch(Exception){if(smoke!=null&&!smoke.finished)smoke.Fail("Public matchmaking did not complete.");}
+        }
 
         public static void Launch(string address,ushort port,string faction)
+        {
+            var smoke=Create();
+            if(!smoke.client.Connect(address,port,faction))smoke.Fail("Could not start NGO client.");
+        }
+
+        private static MultiplayerSmokeClient Create()
         {
             Application.runInBackground=true;Application.targetFrameRate=60;
             var smoke=new GameObject("Network validation client").AddComponent<MultiplayerSmokeClient>();
@@ -37,11 +62,13 @@ namespace Frontier.Runtime
             smoke.client.Finished+=smoke.OnFinished;
             smoke.client.StatusChanged+=message=>Debug.Log("FRONTIER_SMOKE_STATUS "+message);
             smoke.client.Disconnected+=message=>{if(!smoke.finished)smoke.Fail("Disconnected before verified result: "+message);};
-            if(!smoke.client.Connect(address,port,faction))smoke.Fail("Could not start NGO client.");
+            return smoke;
         }
 
         private void OnStarted(MatchWelcome welcome)
         {
+            if(expectedMatchId!=null&&welcome.matchId!=expectedMatchId){Fail("NGO welcome differs from the authenticated allocation.");return;}
+            publicMatchmaker?.ConfirmJoined();
             player=welcome.player;
             catalog=new Catalog(JsonUtility.FromJson<CatalogDefinition>(Resources.Load<TextAsset>("catalog").text));
             map=JsonUtility.FromJson<MapDefinition>(Resources.Load<TextAsset>("Maps/"+welcome.mapId).text);
@@ -142,6 +169,7 @@ namespace Frontier.Runtime
             if(!finished&&Time.realtimeSinceStartup-startedAt>480)Fail("Timed out waiting for a complete match.");
         }
         private void QuitSuccessfully()=>Application.Quit(0);
+        private void OnDestroy()=>publicMatchmaker?.Dispose();
         private void Fail(string reason)
         {
             if(finished)return;

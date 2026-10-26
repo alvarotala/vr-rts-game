@@ -19,6 +19,7 @@ namespace Frontier.Networking
     {
         public int protocol, rules;
         public string contentHash, faction;
+        public string matchId, joinTicket;
     }
     [Serializable] internal sealed class MatchResultEnvelope
     {
