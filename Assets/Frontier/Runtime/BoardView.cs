@@ -353,7 +353,8 @@ namespace Frontier.Runtime
             UpdateFog(); UpdatePointer();
             UpdateBuildPlacementOverlay();
             tutorialMarker?.Update(this);
-            fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,Session.View?.tick/(float)Simulation.TickRate??0);
+            fogVisuals?.Update(Session.Running&&Session.View!=null&&Content.gameObject.activeInHierarchy,
+                Session.IsOnline?Session.OnlineAnimationTick/Simulation.TickRate:Session.View?.tick/(float)Simulation.TickRate??0);
             if(ground!=null)ground.SetFloat("_HoverWidth",0);
             if(Session.View==null){contactShadows?.SetVisible(false);weapons?.Clear();abilityEffects?.Clear();deathEffects?.Clear();harvestingMarkers?.Hide();workerVisuals?.Hide();orderQueueVisuals?.Hide();return;}
             workerVisuals.Begin(this,Time.unscaledDeltaTime);
@@ -402,7 +403,8 @@ namespace Frontier.Runtime
                     if(e.owner==Session.View.player&&e.order==CommandKind.Move){aim=null;attack=null;}
                     if(newlyVisible)
                     {
-                        cached.facing.Reset(target,aim.HasValue?Quaternion.LookRotation(aim.Value):Quaternion.identity,Session.View.tick);
+                        var facingPosition=Session.IsOnline?new Vector3(e.position.x,HeightAt(e.position),e.position.y):target;
+                        cached.facing.Reset(facingPosition,aim.HasValue?Quaternion.LookRotation(aim.Value):Quaternion.identity,Session.View.tick);
                         cached.soldier?.Reset(e.position,Session.View.tick);
                     }
                     if(pendingMoveFacing.TryGetValue(e.id,out var moveTarget))
@@ -411,7 +413,8 @@ namespace Frontier.Runtime
                             cached.facing.FaceDestination(target,new Vector3(moveTarget.x,target.y,moveTarget.y));
                         pendingMoveFacing.Remove(e.id);
                     }
-                    visual.localRotation=cached.facing.Step(target,Session.View.tick,Time.unscaledDeltaTime,Session.IsPaused&&!Session.IsOnline,aim);
+                    var facingSample=Session.IsOnline?new Vector3(e.position.x,HeightAt(e.position),e.position.y):target;
+                    visual.localRotation=cached.facing.Step(facingSample,Session.View.tick,Time.unscaledDeltaTime,Session.IsPaused&&!Session.IsOnline,aim);
                 }
                 else if(aim.HasValue)visual.localRotation=Quaternion.LookRotation(aim.Value);
                 visual.localPosition=Session.IsOnline||type.building||newlyVisible?target:Vector3.Lerp(visual.localPosition,target,1-Mathf.Exp(-Time.unscaledDeltaTime*22));

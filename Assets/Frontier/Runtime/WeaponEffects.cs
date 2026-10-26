@@ -37,6 +37,7 @@ namespace Frontier.Runtime
         {
             var session=board.Session;
             if(session.View==null||!board.Content.gameObject.activeInHierarchy){Clear();return 0;}
+            if(session.IsOnline)return session.OnlineAnimationTick;
             if(lastTick!=session.View.tick){lastTick=session.View.tick;clock=lastTick;}
             else if(!session.IsPaused||session.IsOnline)
                 clock=Mathf.Min(clock+Time.unscaledDeltaTime*Simulation.TickRate,lastTick+(session.View.winner>=0?Simulation.TickRate:1));

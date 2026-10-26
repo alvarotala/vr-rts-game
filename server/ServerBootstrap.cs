@@ -18,6 +18,7 @@ namespace Frontier.Dedicated
             Application.runInBackground = true;
             Application.targetFrameRate = 60;
             var server = new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
+            server.EnableNetworkMetrics = Array.IndexOf(args, "-frontier-network-metrics") >= 0;
             if (Array.IndexOf(args, "-frontier-smoke") >= 0) server.SimulationSpeed = 20;
             if (!server.StartServer(port, Argument(args, "-frontier-map", "rift"), Argument(args, "-frontier-listen", "0.0.0.0")))
                 Application.Quit(1);

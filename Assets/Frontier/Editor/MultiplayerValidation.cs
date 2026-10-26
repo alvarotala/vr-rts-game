@@ -22,6 +22,7 @@ namespace Frontier.Editor
         public static void RunRegressionChecks()
         {
             RunSessionChecks();
+            OnlinePresentationChecks.Run();
             OnlinePlacementChecks.Run();
             HotkeyValidationBatch.Run();
             ReplayValidation.Run();
@@ -106,7 +107,9 @@ namespace Frontier.Editor
                 var second=Clone(first);second.tick=2;
                 var moving=second.entities.Single(e=>e.id==remoteWorker);Point origin=moving.position;
                 moving.position=new Point(origin.x+1,origin.y);Call("OnlineState",second);
-                Field("remoteFrameTime",Time.unscaledTime-.05f);
+                var presentation=(OnlinePresentation)typeof(GameSession).GetField("remotePresentation",Private).GetValue(session);
+                double presentationNow=Time.unscaledTimeAsDouble;
+                presentation.Reset();presentation.Receive(first,presentationNow-.2);presentation.Receive(second,presentationNow-.1);
                 Point presented=session.PresentationPoint(moving);
                 Check(Mathf.Abs(presented.x-origin.x-.5f)<.03f,"Regular remote frames interpolate between known positions.");
                 moving.remembered=true;

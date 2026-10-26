@@ -52,13 +52,23 @@ namespace Frontier.Runtime
             game.Pause("tracking",true);
             var rect=button.GetComponent<RectTransform>();Vector3 center=rect.TransformPoint(rect.rect.center);var ray=new Ray(quest.Camera.transform.position,(center-quest.Camera.transform.position).normalized);
             panel.Point(ray,true,false);panel.Point(ray,false,true);
-            if(!game.IsPaused)Debug.LogError("Starting a match cleared a tracking pause");
+            if(!game.HasSystemPause)Debug.LogError("Starting a match cleared a tracking pause");
             game.Pause("tracking",false);
-            for(int i=0;i<90;i++)yield return null;
-            if(!game.Running){Debug.LogError("UI did not start the match");Application.Quit(1);yield break;}
+            float countdownDeadline=Time.realtimeSinceStartup+10;
+            GameObject consoleObject=null,handleObject=null;
+            while(Time.realtimeSinceStartup<countdownDeadline)
+            {
+                if(game.Running&&!game.IsCountingDown)
+                {
+                    consoleObject=GameObject.Find("Command console");handleObject=GameObject.Find("Move menu");
+                    if(consoleObject!=null&&handleObject!=null)break;
+                }
+                yield return null;
+            }
+            if(consoleObject==null||handleObject==null){Debug.LogError("Match countdown/HUD did not become ready");Application.Quit(1);yield break;}
             yield return Capture("02-match.png");
-            var console=GameObject.Find("Command console").transform;
-            var handle=GameObject.Find("Move menu").GetComponent<RectTransform>();
+            var console=consoleObject.transform;
+            var handle=handleObject.GetComponent<RectTransform>();
             Vector3 originalPanel=console.position;
             var handleCenter=handle.TransformPoint(handle.rect.center);
             var grabRay=new Ray(quest.Camera.transform.position,(handleCenter-quest.Camera.transform.position).normalized);
@@ -67,18 +77,18 @@ namespace Frontier.Runtime
             panel.Point(movedRay,false,false);panel.Point(movedRay,false,true);
             for(int i=0;i<5;i++)yield return null;
             bool menuMoved=Vector3.Distance(originalPanel,console.position)>.2f;
-            Vector3 menuOffset=board.transform.InverseTransformPoint(console.position);
-            // World placement must survive board relocation; view zoom must not move the menu.
+            Vector3 menuPosition=console.position;
+            // The shared window stays in world space through board relocation and zoom.
             var boardPosition=board.transform.position;var boardRotation=board.transform.rotation;
             board.transform.SetPositionAndRotation(boardPosition+new Vector3(.2f,0,.1f),Quaternion.Euler(0,35,0));
             yield return null;yield return null;
-            bool menuAnchored=Vector3.Distance(menuOffset,board.transform.InverseTransformPoint(console.position))<.001f;
+            bool menuAnchored=Vector3.Distance(menuPosition,console.position)<.001f;
             board.transform.SetPositionAndRotation(boardPosition,boardRotation);
             yield return null;yield return null;
             var worker=game.View.entities.First(e=>e.owner==0&&game.Catalog[e.definition].role=="worker");game.Select(worker.id,false);
             board.Zoom=2;board.Pan=new Vector2(-game.Map.width*.25f,-game.Map.height*.25f);
             for(int i=0;i<60;i++)yield return null;
-            menuAnchored &= Vector3.Distance(menuOffset,board.transform.InverseTransformPoint(console.position))<.001f;
+            menuAnchored &= Vector3.Distance(menuPosition,console.position)<.001f;
             yield return Capture("03-command-panel.png");
             board.Fit();panel.Recall();yield return null;yield return null;
             board.DrawSelection(new Point(44,32),new Point(84,72),true);

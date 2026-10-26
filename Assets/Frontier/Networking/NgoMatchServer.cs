@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Frontier.Networking
 {
-    // One dedicated process owns one match. No Unity transforms, physics, focus or local pause affect its rules.
+    // One dedicated process owns one match at a time. No Unity transforms, physics, focus or local pause affect its rules.
     public sealed class NgoMatchServer : MonoBehaviour
     {
         private sealed class Seat
@@ -32,6 +32,8 @@ namespace Frontier.Networking
         public int ConnectedPlayers => seats.Values.Count(s => s.connected);
         // Validation harness only. A normal server always uses the default logical 20 Hz rate.
         public float SimulationSpeed = 1;
+        // Opt-in diagnostics; one bounded summary every five active-match seconds.
+        public bool EnableNetworkMetrics;
         public int AcceptedCommands { get; private set; }
         public int RejectedCommands { get; private set; }
         private readonly Dictionary<ulong, Seat> seats = new Dictionary<ulong, Seat>();
@@ -43,6 +45,7 @@ namespace Frontier.Networking
         private double lastTime, accumulator, nextSnapshot, startServerTime;
         private long frame;
         private bool closing, finished;
+        private ServerMetrics metrics;
 
         public bool StartServer(ushort port = 7777, string mapId = "rift", string listenAddress = "0.0.0.0")
         {
@@ -54,10 +57,9 @@ namespace Frontier.Networking
                 if (catalogAsset == null || mapAsset == null) throw new ArgumentException("Requested multiplayer map or catalog is missing.");
                 catalog = new Catalog(JsonUtility.FromJson<CatalogDefinition>(catalogAsset.text));
                 map = JsonUtility.FromJson<MapDefinition>(mapAsset.text); _ = new GridMap(map);
-                this.mapId = mapId; matchId = Guid.NewGuid().ToString("N");
+                this.mapId = mapId;
                 _ = MatchProtocol.ContentHash();
-                closing = finished = false; frame = 0; accumulator = 0; AcceptedCommands = RejectedCommands = 0;
-                Match = null; seats.Clear(); clock.Restart(); lastTime = 0; nextSnapshot = 0;
+                closing = false; ResetMatch();
                 manager = MatchProtocol.CreateManager("Frontier dedicated network", "127.0.0.1", port, listenAddress);
                 manager.ConnectionApprovalCallback = Approve;
                 manager.OnClientConnectedCallback += Connected;
@@ -132,6 +134,7 @@ namespace Frontier.Networking
                 }
                 Status("Match started · " + matchId);
                 PublishSnapshots();
+                nextSnapshot = NextSnapshotTime(nextSnapshot, clock.Elapsed.TotalSeconds);
             }
             catch (Exception error) { Status("Could not start match: " + error.Message); StopServer(); }
         }
@@ -193,17 +196,24 @@ namespace Frontier.Networking
             if (AwaitingStart(manager.ServerTime.Time))
             {
                 accumulator = 0; lastTime = now;
-                if (now >= nextSnapshot) { PublishSnapshots(); nextSnapshot = now + .1; }
+                if (now >= nextSnapshot) { PublishSnapshots(); nextSnapshot = NextSnapshotTime(nextSnapshot, clock.Elapsed.TotalSeconds); }
                 return;
             }
             if (Match.Winner == -1)
             {
+                metrics?.BeginFrame(now, Match.Tick);
                 accumulator += Math.Min(.25, Math.Max(0, now - lastTime)) * Math.Max(1, Math.Min(20, SimulationSpeed));
                 lastTime = now;
                 int steps = 0;
                 while (accumulator >= 1d / Simulation.TickRate && steps++ < 128 && Match.Winner == -1)
-                { Match.Step(); accumulator -= 1d / Simulation.TickRate; }
-                if (now >= nextSnapshot) { PublishSnapshots(); nextSnapshot = now + .1; }
+                {
+                    long started = metrics == null ? 0 : Stopwatch.GetTimestamp();
+                    Match.Step();
+                    if (metrics != null) metrics.StepMilliseconds.Add(ElapsedMilliseconds(started));
+                    accumulator -= 1d / Simulation.TickRate;
+                }
+                if (now >= nextSnapshot) { PublishSnapshots(); nextSnapshot = NextSnapshotTime(nextSnapshot, clock.Elapsed.TotalSeconds); }
+                metrics?.ReportIfDue(clock.Elapsed.TotalSeconds, Match.Tick, matchId);
             }
             if (Match.Winner != -1) Finish();
             foreach (var seat in seats.Values)
@@ -216,9 +226,23 @@ namespace Frontier.Networking
             }
         }
 
+        private static double NextSnapshotTime(double deadline, double now)
+        {
+            const double interval = .1;
+            // Keep the original cadence, skipping periods missed during a stall or publication.
+            double periods = Math.Floor(Math.Max(0, now - deadline) / interval) + 1;
+            double next = deadline + periods * interval;
+            // Treat a floating-point remainder at the current boundary as already elapsed.
+            return next > now + 1e-9 ? next : next + interval;
+        }
+
         private void PublishSnapshots()
         {
             if (Match == null) return;
+            // Initial/countdown frames are excluded from active-match rates.
+            ServerMetrics timing = metrics != null && metrics.Started ? metrics : null;
+            long started = timing == null ? 0 : Stopwatch.GetTimestamp();
+            timing?.BeginSnapshot(clock.Elapsed.TotalSeconds);
             long id = ++frame;
             foreach (var seat in seats.Values)
             {
@@ -226,10 +250,12 @@ namespace Frontier.Networking
                 byte[] raw = MatchProtocol.Encode(Match.View(seat.player), NetworkWire.MaxSnapshotBytes);
                 byte[] packed = NetworkWire.Compress(raw, NetworkWire.MaxSnapshotBytes, NetworkWire.MaxSnapshotCompressed);
                 int count = NetworkWire.ChunkCount(packed.Length);
+                timing?.RecordSeat(seat.player, raw.Length, packed.Length, count);
                 for (int index = 0; index < count; index++)
                     // FrameAssembler sequences whole snapshots; the transport must preserve reordered chunks.
                     MatchProtocol.Send(manager, MatchProtocol.Snapshot, seat.client, NetworkWire.Chunk(id, packed, raw.Length, index), NetworkDelivery.Unreliable);
             }
+            if (timing != null) timing.SnapshotMilliseconds.Add(ElapsedMilliseconds(started));
         }
 
         private bool AwaitingStart(double serverTime)
@@ -268,6 +294,11 @@ namespace Frontier.Networking
         {
             if (closing || !seats.TryGetValue(client, out var seat)) return;
             seat.connected = false;
+            string reason = manager == null ? "" : manager.DisconnectReason ?? "";
+            reason = reason.Replace('\r', ' ').Replace('\n', ' ');
+            if (reason.Length > 512) reason = reason.Substring(0, 512);
+            Status("Player " + (seat.player + 1) + " disconnected · transport=" + (manager == null ? "Unavailable" : manager.DisconnectEvent.ToString())
+                + " · reason=" + reason + " · match=" + matchId + " · tick=" + (Match?.Tick ?? 0) + " · remaining=" + ConnectedPlayers);
             if (Match == null) { seats.Remove(client); Status("Waiting for two players."); return; }
             if (Match.Winner == -1)
             {
@@ -276,7 +307,89 @@ namespace Frontier.Networking
                 Match.Submit(new GameCommand { player = seat.player, kind = CommandKind.Surrender });
                 Finish();
             }
-            Status("Player " + (seat.player + 1) + " disconnected.");
+            // Preserve the terminal state and reliable result for any remaining
+            // participant. Reuse the listening server only after everyone leaves.
+            if (Match.Winner != -1 && ConnectedPlayers == 0)
+            {
+                ResetMatch();
+                Status("Waiting for two players.");
+            }
+        }
+
+        private void ResetMatch()
+        {
+            Match = null; seats.Clear(); finished = false;
+            matchId = Guid.NewGuid().ToString("N");
+            frame = 0; accumulator = lastTime = nextSnapshot = startServerTime = 0;
+            AcceptedCommands = RejectedCommands = 0;
+            metrics = EnableNetworkMetrics ? new ServerMetrics() : null;
+            clock.Restart();
+        }
+
+        private static double ElapsedMilliseconds(long started) => (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency;
+
+        // Ring buffers retain at most 256 observations per metric. Mean/max cover
+        // the whole five-second window; p95 uses the most recent bounded samples.
+        private sealed class Samples
+        {
+            private readonly double[] values = new double[256], sorted = new double[256];
+            private int retained, next;
+            public int Count { get; private set; }
+            public double Total { get; private set; }
+            public double Maximum { get; private set; }
+            public double Mean => Count == 0 ? 0 : Total / Count;
+            public void Add(double value)
+            {
+                values[next] = value; next = (next + 1) % values.Length;
+                retained = Math.Min(retained + 1, values.Length);
+                Count++; Total += value; Maximum = Math.Max(Maximum, value);
+            }
+            public double P95()
+            {
+                if (retained == 0) return 0;
+                Array.Copy(values, sorted, retained); Array.Sort(sorted, 0, retained);
+                return sorted[(int)((retained - 1) * .95)];
+            }
+            public void Clear() { retained = next = Count = 0; Total = Maximum = 0; }
+        }
+
+        private sealed class ServerMetrics
+        {
+            public bool Started { get; private set; }
+            public readonly Samples StepMilliseconds = new Samples(), SnapshotMilliseconds = new Samples();
+            private readonly Samples updateGaps = new Samples(), snapshotGaps = new Samples();
+            private readonly long[] rawBytes = new long[2], packedBytes = new long[2], chunks = new long[2];
+            private readonly int[] seatSnapshots = new int[2];
+            private double windowStart, lastUpdate, lastSnapshot;
+            private int windowTick, snapshots;
+
+            public void BeginFrame(double now, int tick)
+            {
+                if (!Started) { Started = true; windowStart = lastUpdate = now; windowTick = tick; return; }
+                updateGaps.Add(Math.Max(0, now - lastUpdate) * 1000); lastUpdate = now;
+            }
+            public void BeginSnapshot(double now)
+            {
+                if (lastSnapshot > 0) snapshotGaps.Add(Math.Max(0, now - lastSnapshot) * 1000);
+                lastSnapshot = now; snapshots++;
+            }
+            public void RecordSeat(int player, int raw, int packed, int count)
+            { seatSnapshots[player]++; rawBytes[player] += raw; packedBytes[player] += packed; chunks[player] += count; }
+            public void ReportIfDue(double now, int tick, string matchId)
+            {
+                double seconds = now - windowStart;
+                if (seconds < 5) return;
+                string message = FormattableString.Invariant($"FRONTIER_SERVER_METRICS match={matchId} tick={tick} seconds={seconds:F2} tickHz={(tick - windowTick) / seconds:F2} snapshotHz={snapshots / seconds:F2} ")
+                    + FormattableString.Invariant($"updateGapP95Ms={updateGaps.P95():F2} updateGapMaxMs={updateGaps.Maximum:F2} snapshotGapP95Ms={snapshotGaps.P95():F2} snapshotGapMaxMs={snapshotGaps.Maximum:F2} ")
+                    + FormattableString.Invariant($"stepAvgMs={StepMilliseconds.Mean:F3} stepP95Ms={StepMilliseconds.P95():F3} stepMaxMs={StepMilliseconds.Maximum:F3} publishAvgMs={SnapshotMilliseconds.Mean:F3} publishP95Ms={SnapshotMilliseconds.P95():F3} publishMaxMs={SnapshotMilliseconds.Maximum:F3} ")
+                    + FormattableString.Invariant($"p0Frames={seatSnapshots[0]} p0RawBytesAvg={Average(rawBytes, 0):F0} p0PackedBytesAvg={Average(packedBytes, 0):F0} p0ChunksAvg={Average(chunks, 0):F2} ")
+                    + FormattableString.Invariant($"p1Frames={seatSnapshots[1]} p1RawBytesAvg={Average(rawBytes, 1):F0} p1PackedBytesAvg={Average(packedBytes, 1):F0} p1ChunksAvg={Average(chunks, 1):F2}");
+                UnityEngine.Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", message);
+                windowStart = now; windowTick = tick; snapshots = 0;
+                updateGaps.Clear(); snapshotGaps.Clear(); StepMilliseconds.Clear(); SnapshotMilliseconds.Clear();
+                Array.Clear(rawBytes, 0, 2); Array.Clear(packedBytes, 0, 2); Array.Clear(chunks, 0, 2); Array.Clear(seatSnapshots, 0, 2);
+            }
+            private double Average(long[] totals, int player) => seatSnapshots[player] == 0 ? 0 : totals[player] / (double)seatSnapshots[player];
         }
 
         private void SendStatus(ulong client, string message) => MatchProtocol.Send(manager, MatchProtocol.Status, client, MatchProtocol.Encode(new NetworkStatus { message = message }, 2048));

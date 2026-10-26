@@ -16,6 +16,7 @@ namespace Frontier.Networking
         public event Action<string> Disconnected;
         public bool IsConnected => manager != null && manager.IsConnectedClient;
         public bool MatchStarted => welcome != null;
+        public bool EnableNetworkMetrics;
         public double CountdownRemaining => !IsConnected || welcome == null || ended ? 0
             : Math.Max(0, welcome.startServerTime - manager.ServerTime.Time);
         public double RoundTripTimeSeconds => manager == null || !IsConnected ? 0 : manager.NetworkConfig.NetworkTransport.GetCurrentRtt(Unity.Netcode.NetworkManager.ServerClientId) / 1000d;
@@ -28,6 +29,7 @@ namespace Frontier.Networking
         private readonly Dictionary<int, CommandAck> acknowledged = new Dictionary<int, CommandAck>();
         private readonly Queue<int> acknowledgementOrder = new Queue<int>();
         private double connectedAt, lastStateAt;
+        private ClientMetrics metrics;
 
         public bool Connect(string address, ushort port, string faction)
         {
@@ -36,6 +38,7 @@ namespace Frontier.Networking
             try
             {
                 welcome = null; bufferedView = null; ended = closing = disconnectReported = false; pending.Clear(); acknowledged.Clear(); acknowledgementOrder.Clear();
+                metrics = EnableNetworkMetrics || Array.IndexOf(Environment.GetCommandLineArgs(), "-frontier-network-metrics") >= 0 ? new ClientMetrics() : null;
                 snapshots = new FrameAssembler(NetworkWire.MaxSnapshotCompressed, NetworkWire.MaxSnapshotBytes);
                 results = new FrameAssembler(NetworkWire.MaxResultCompressed, NetworkWire.MaxResultBytes);
                 var hello = new ConnectionHello { protocol = MatchProtocol.Version, rules = Simulation.ReplayRulesVersion, faction = faction, contentHash = MatchProtocol.ContentHash() };
@@ -118,6 +121,7 @@ namespace Frontier.Networking
             if (view == null || welcome == null || view.player != welcome.player || view.tick < 0 || view.entities == null || view.visibility == null
                 || view.resources == null || view.attacks == null || view.abilityEvents == null || view.deaths == null) throw new InvalidOperationException("Invalid player state.");
             lastStateAt = Time.realtimeSinceStartupAsDouble;
+            if (CountdownRemaining <= 0 && view.winner == -1) metrics?.Record(lastStateAt, view.tick, RoundTripTimeSeconds * 1000);
             MatchProtocol.Emit(StateReceived, view);
         }
 
@@ -186,6 +190,7 @@ namespace Frontier.Networking
         {
             if (manager == null || closing || ended) return;
             double now = Time.realtimeSinceStartupAsDouble;
+            metrics?.ReportIfDue(now, welcome?.player ?? -1);
             if (!IsConnected && now - connectedAt > 20) { Fail("Connection timed out."); return; }
             if (welcome != null && now - lastStateAt > 15) Fail("The server stopped sending match state.");
         }
@@ -214,5 +219,40 @@ namespace Frontier.Networking
             old.Shutdown(); Destroy(old.gameObject);
         }
         private void OnDestroy() => Disconnect();
+
+        // Opt-in bounded diagnostics. Gaps describe complete decoded snapshots,
+        // not individual datagrams; a slow renderer or missing chunk is visible here.
+        private sealed class ClientMetrics
+        {
+            private readonly double[] gaps = new double[256], rtts = new double[256], sorted = new double[256];
+            private double windowStart = -1, previous = -1, maxGap;
+            private int retained, next, frames, firstTick, latestTick;
+            public void Record(double now, int tick, double rtt)
+            {
+                if (windowStart < 0) { windowStart = now; firstTick = tick; }
+                if (previous >= 0)
+                {
+                    double gap = (now - previous) * 1000;
+                    gaps[next] = gap; rtts[next] = rtt;
+                    next = (next + 1) % gaps.Length; retained = Math.Min(retained + 1, gaps.Length);
+                    maxGap = Math.Max(maxGap, gap);
+                }
+                previous = now; latestTick = tick; frames++;
+            }
+            public void ReportIfDue(double now, int player)
+            {
+                if (windowStart < 0 || now - windowStart < 5) return;
+                double elapsed = now - windowStart;
+                Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", FormattableString.Invariant(
+                    $"FRONTIER_CLIENT_METRICS player={player} seconds={elapsed:F2} tickHz={(latestTick-firstTick)/elapsed:F2} snapshotHz={frames/elapsed:F2} gapP95Ms={P95(gaps):F2} gapMaxMs={maxGap:F2} stateAgeMs={(now-previous)*1000:F2} rttP95Ms={P95(rtts):F2}"));
+                windowStart = now; firstTick = latestTick; retained = next = frames = 0; maxGap = 0;
+            }
+            private double P95(double[] values)
+            {
+                if (retained == 0) return 0;
+                Array.Copy(values, sorted, retained); Array.Sort(sorted, 0, retained);
+                return sorted[(int)((retained - 1) * .95)];
+            }
+        }
     }
 }

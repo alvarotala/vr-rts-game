@@ -29,8 +29,7 @@ namespace Frontier.Runtime
         private BuildPlacementValidity previewPlacement;
         private MapDefinition onlineSetupMap;
         private string onlineSetupFaction,onlineSetupEnemy;
-        private readonly Dictionary<int,VisibleEntity> previousRemoteEntities=new Dictionary<int,VisibleEntity>();
-        private float remoteFrameTime,remoteFrameDuration;
+        private readonly OnlinePresentation remotePresentation=new OnlinePresentation();
 
         public void ConnectOnline()
         {
@@ -76,11 +75,7 @@ namespace Frontier.Runtime
         {
             if(!IsOnline)return;
             bool first=!Running;
-            previousRemoteEntities.Clear();
-            if(View!=null&&view.tick>View.tick&&view.tick-View.tick<=6)
-                foreach(var entity in View.entities)previousRemoteEntities[entity.id]=entity;
-            remoteFrameDuration=View==null?0:(view.tick-View.tick)/(float)Simulation.TickRate;
-            remoteFrameTime=Time.unscaledTime;
+            remotePresentation.Receive(view,Time.unscaledTimeAsDouble,IsCountingDown);
             ApplyView(view);
             Selection.RemoveWhere(id=>!view.entities.Any(e=>e.id==id&&e.owner==view.player));
             IsConnecting=false;Running=true;
@@ -133,9 +128,9 @@ namespace Frontier.Runtime
                 client.Disconnect();Destroy(client.gameObject);
             }
             pendingCommands.Clear();IsConnecting=false;
-            previousRemoteEntities.Clear();
             if(!keepResult)
             {
+                remotePresentation.Reset();
                 IsOnline=false;remoteReport=null;remoteIdentity=new object();OnlineReportUnavailable=false;
                 if(onlineSetupMap!=null)
                 {
@@ -179,15 +174,22 @@ namespace Frontier.Runtime
             LastCommandKind=command.kind;LastCommandSequence=command.sequence;LastCommandTime=Time.unscaledTime;
         }
 
-        // One frame of visual buffering absorbs regular network cadence. Never
-        // extrapolate into fog or interpolate an entity that has just reappeared.
+        public float OnlineAnimationTick
+        {
+            get
+            {
+                remotePresentation.Advance(Time.unscaledTimeAsDouble,IsCountingDown);
+                return remotePresentation.AnimationTick;
+            }
+        }
+
+        // Buffer only positions; authoritative state/visibility/lifetime stay current.
         public Point PresentationPoint(VisibleEntity entity)
         {
-            if(!IsOnline||remoteFrameDuration<=0||entity.remembered||Catalog[entity.definition].building
-                ||!previousRemoteEntities.TryGetValue(entity.id,out var previous)||previous.remembered)
+            if(!IsOnline||entity.remembered||Catalog[entity.definition].building)
                 return entity.position;
-            float t=Mathf.Clamp01((Time.unscaledTime-remoteFrameTime)/remoteFrameDuration);
-            return new Point(Mathf.Lerp(previous.position.x,entity.position.x,t),Mathf.Lerp(previous.position.y,entity.position.y,t));
+            remotePresentation.Advance(Time.unscaledTimeAsDouble,IsCountingDown);
+            return remotePresentation.Position(entity);
         }
 
         // Resolve the same origin for the ghost and the submitted command. Only

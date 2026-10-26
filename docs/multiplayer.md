@@ -6,6 +6,15 @@ The server runs the existing simulation at 20 ticks/second. Clients send orders 
 
 This deliverable connects directly to a server address. Public matchmaking, accounts, ranking, cloud allocation and reconnecting into a running match are subsequent work. A disconnected player concedes; the other player receives the result. Opening a client's menu does not pause the server.
 
+Online presentation keeps a bounded history of filtered positions with a 150 ms
+buffer, so packet arrivals do not restart movement interpolation. Positions never
+extrapolate beyond observed state, and reappearing units start a fresh trajectory.
+Work, gait, fog and effect animations use a continuous cosmetic clock with a
+150 ms allowance between states, then stop if reception stalls. Entity lifetime,
+visibility, orders and game outcomes still use the latest server state. Offline
+and replay retain their existing timing. This smooths presentation; it does not
+predict command outcomes or remove network round-trip time.
+
 ## Build
 
 Use the project's Unity version from `ProjectSettings/ProjectVersion.txt`, currently **6000.3.26f1**. The desktop client uses the configured project. The Linux server builder stages only Core, Networking and map/catalog resources in a separate generated project because Meta XR SDK 203's build preprocessor rejects Linux targets. Both builds use the same simulation and protocol sources, **NGO 2.13.3** and **Unity Transport 2.7.4**. The server generator copies the actual resolved client package graph from `Packages/packages-lock.json`; it does not substitute NGO's older minimum transport dependency.
@@ -44,7 +53,7 @@ Wait for `FRONTIER_SERVER Listening on`. Compose publishes UDP 7777 on all host 
 FRONTIER_BIND_ADDRESS=127.0.0.1 docker compose -f compose.multiplayer.yml up -d
 ```
 
-`FRONTIER_PORT` changes the UDP port (default `7777`), `FRONTIER_MAP` chooses `rift`, `training` or `desert`, and `FRONTIER_SERVER_IMAGE` changes the local image tag (default `little-legion-server:ngo-local`). Use the same variables when recreating the service. One server process runs one match; use `docker compose -f compose.multiplayer.yml restart server` for another match after both players have left. `docker compose -f compose.multiplayer.yml down` removes this local deployment.
+`FRONTIER_PORT` changes the UDP port (default `7777`), `FRONTIER_MAP` chooses `rift`, `training` or `desert`, and `FRONTIER_SERVER_IMAGE` changes the local image tag (default `little-legion-server:ngo-local`). Use the same variables when recreating the service. One server process runs one match at a time. After both participants leave a completed match, it clears that session and accepts two new players automatically. A player still viewing the result keeps the session occupied until leaving. `docker compose -f compose.multiplayer.yml down` removes this local deployment.
 
 The image contains the compiled Linux server and runtime libraries, runs as user `frontier` (UID 10001), writes logs to standard output, and exposes UDP rather than TCP. It contains no Unity Editor or license. Ubuntu 22.04 is within Unity 6.3's supported Linux server OS list. [Unity server system requirements](https://docs.unity3d.com/6000.3/Documentation/Manual/system-requirements.html#server)
 
@@ -75,9 +84,19 @@ FRONTIER_BIND_ADDRESS=0.0.0.0 docker compose -f compose.multiplayer.yml up -d --
 docker compose -f compose.multiplayer.yml logs -f server
 ```
 
-Allow inbound **UDP 7777** on that host's firewall and network rules, or set `FRONTIER_PORT` consistently if selecting another port. `--no-build --pull never` uses the loaded artifact. The normal Compose file runs real-time matches; omit the smoke override. Each process serves one match, so restart the service after completion for the next match. This is a future deployment procedure; no production host has been deployed or validated. [Compose startup options](https://docs.docker.com/reference/cli/docker/compose/up/)
+Allow inbound **UDP 7777** on that host's firewall and network rules, or set `FRONTIER_PORT` consistently if selecting another port. `--no-build --pull never` uses the loaded artifact. The normal Compose file runs real-time matches; omit the smoke override. Each process serves one match at a time and becomes available for the next match after both participants leave. This is a future deployment procedure; no production host has been deployed or validated. [Compose startup options](https://docs.docker.com/reference/cli/docker/compose/up/)
 
 ## Run a match
+
+For cadence diagnostics at normal match speed, start Compose with the optional
+`-f compose.multiplayer.metrics.yml` override after the base file. The server logs
+`FRONTIER_SERVER_METRICS` every five active seconds: simulation/snapshot rates,
+update/snapshot gap p95 and maximum, simulation/publication costs, and payload sizes.
+Launch a desktop client with `-frontier-network-metrics` to log complete-snapshot
+arrival gaps, received tick rate, state age and transport RTT as
+`FRONTIER_CLIENT_METRICS`. These diagnostics use bounded sample buffers and do not
+change the protocol or simulation speed. Frame-rate reports remain separate from
+network cadence; high FPS alone does not establish smooth multiplayer presentation.
 
 Start the server, then connect two clients through the multiplayer menu. Use the server machine's LAN address from another machine; `127.0.0.1` only connects to a server on the same machine. Allow the selected UDP port through the server's firewall.
 
@@ -115,14 +134,13 @@ docker compose -f compose.multiplayer.yml logs server
 python3 scripts/check-multiplayer.py --external-server 127.0.0.1 --port 7777
 ```
 
-After the healthy baseline, restart the finished server and run a delayed, lossy connection through the harness's local UDP proxy:
+After the healthy baseline, wait for `Waiting for two players.` and run a delayed, lossy connection through the harness's local UDP proxy. The same process accepts the next pair after the first pair exits:
 
 ```sh
-docker compose -f compose.multiplayer.yml -f compose.multiplayer.smoke.yml restart server
 python3 scripts/check-multiplayer.py --external-server 127.0.0.1 --port 7777 --latency-ms 60 --jitter-ms 20 --loss-percent 1 --output TestResults/ngo-multiplayer-impaired
 ```
 
-Wait for the server's new `Listening on` line before starting clients. The proxy adds 60 ms in each direction (roughly 120 ms base RTT), uniform ±20 ms jitter and 1% datagram loss in each direction. It uses a fixed random seed, bounded queues, one upstream socket per client and no system firewall/network changes. The report records observed datagram counts and the requested profile; this is synthetic adversity, not a claim about every real internet connection. Restore normal pacing for human play with `docker compose -f compose.multiplayer.yml up -d --force-recreate`.
+The proxy adds 60 ms in each direction (roughly 120 ms base RTT), uniform ±20 ms jitter and 1% datagram loss in each direction. It uses a fixed random seed, bounded queues, one upstream socket per client and no system firewall/network changes. The report records observed datagram counts and the requested profile; this is synthetic adversity, not a claim about every real internet connection. Restore normal pacing for human play with `docker compose -f compose.multiplayer.yml up -d --force-recreate`.
 
 The check requires distinct seats, monotonic filtered views, accepted construction/training orders, idempotent duplicate acknowledgements, completed production/buildings and army casualties in the final report. It deliberately supplies the wrong player field in commands to verify that the server uses connection ownership. Both processes must exit successfully and agree on winner, final tick and the SHA-256 of the full report. Evidence goes to `TestResults/ngo-multiplayer/`, including `result.json`; success prints `FRONTIER_MULTIPLAYER_PASSED`.
 
@@ -131,6 +149,32 @@ Passing this check proves the local process path for the binaries used. It does 
 `Frontier.Editor.MultiplayerValidation.RunRegressionChecks` combines these adapter checks with online placement checks and the existing hotkey, menu, archive and replay validations. Run it in a graphics-capable Editor process because the existing UI checks render previews.
 
 ## Validation evidence
+
+### Presentation/cadence correction — 2026-10-26
+
+`Frontier.Editor.OnlinePresentationChecks.RunRegressionChecks` passed 1,291
+synthetic presentation assertions, 31 session adapter checks (including offline
+and replay transitions), and 17 server lifecycle/cadence checks. Evidence:
+`TestResults/lag-regression.log`. The synthetic presentation checks cover 10 Hz
+states rendered at 72 FPS, jitter, a lost state, prolonged stalls, fog reappearance,
+countdown and session reset.
+
+Two 40-second, normal-speed Docker samples used two independent desktop client
+processes. Before the cadence correction the server published about 9 states/s,
+with a maximum interval of 145 ms; afterwards it published about 10 states/s,
+with a maximum interval of 118 ms. Simulation remained about 20 ticks/s. The new
+clients observed complete-state gaps with p95 at most 119 ms and maximum 135 ms.
+Evidence: `TestResults/lag-cadence-baseline/` and `TestResults/lag-cadence-final/`.
+These were intentionally bounded timing samples, not complete-match assertions
+or physical Quest smoothness checks. Quest confirmation remains a manual playtest.
+
+Desktop and Quest builds passed (`TestResults/lag-desktop-final-build.log` and
+`TestResults/lag-quest-build.log`). The rebuilt Desktop offline smoke passed with
+zero errors, accepted movement, actual worker travel, menu dragging/world anchoring
+and board picking (`TestResults/lag-offline-final-smoke.log`). Its harness now waits
+for the existing countdown/HUD and checks the current world-space menu contract.
+
+### Earlier complete-match validation
 
 Local validation on 2026-10-21 used image `sha256:d1c5db345f01265ad4e41fed7ef8e561bb54ab909647058532460db1c212ca8c` (`linux/amd64`). The same image completed both matches. Afterwards the container was recreated with normal pacing. Compose now defaults to `0.0.0.0:7777/udp` for LAN/Quest access; the original two-client checks used the loopback endpoint.
 
