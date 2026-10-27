@@ -2,7 +2,7 @@
 
 **Pequeños ejércitos. Grandes batallas.**
 
-Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y búsqueda pública 1v1 con servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
+Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y partidas públicas 1v1 con ranking y búsqueda por nivel, sobre servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
@@ -50,6 +50,8 @@ python3 scripts/online-stack.py up
 
 Abrir **Multijugador → Buscar partida** en ambos clientes. El tablero se coloca antes de iniciar la búsqueda. Nakama conserva una identidad por instalación, encuentra dos jugadores compatibles y entrega a cada uno un ticket para el mismo servidor NGO. La configuración del servicio online se guarda separada de la conexión LAN. Desde Quest, usar `http://192.168.100.157:7350` como servicio; el endpoint de juego se recibe automáticamente.
 
+Las partidas públicas nuevas son clasificadas. Cada cuenta comienza con **1000 puntos Elo** y el servidor actualiza su puntuación al terminar, con **K=32**. El menú permite consultar el perfil y los diez primeros; una cuenta aparece en la tabla después de su primera partida clasificada. La búsqueda comienza en **±100 puntos**, amplía el rango cada 20 segundos hasta **±400**, y exige que ambos jugadores acepten la diferencia. Las partidas históricas anteriores a esta incorporación se conservan sin puntuación. Reglas y autoridad del resultado en [Ranking y búsqueda por nivel](docs/ranking.md).
+
 Para abrir Desktop con búsqueda automática, después de compilarlo:
 
 ```sh
@@ -58,7 +60,7 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
   -logFile /tmp/little-legion-online.log
 ```
 
-El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático, ranking ni reconexión a una partida en curso. La configuración, seguridad y ampliación manual del pool están en [Multiplayer público autohospedado](docs/nakama.md) y su [contrato de asignación](docs/online-contract.md).
+El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático ni reconexión a una partida en curso. Para actualizar una instalación existente, conservar el volumen, respaldar y comprobar restauración, y ejecutar nuevamente `python3 scripts/online-stack.py init` antes de reconstruir el backend: también actualiza la configuración de búsqueda mutua. El procedimiento está en [Multiplayer público autohospedado](docs/nakama.md), junto con la ampliación manual del pool y el [contrato de asignación](docs/online-contract.md).
 
 La API HTTP del ejemplo es para pruebas locales. Una instalación pública necesita HTTPS/WSS y acceso al puerto UDP de juego. Esta documentación no implica un despliegue WAN ni una validación del flujo público en Quest físico.
 
@@ -92,5 +94,6 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Arquitectura y próximas etapas](docs/architecture.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
+- [Ranking Elo y búsqueda de rivales por nivel](docs/ranking.md)
 - [Formato de mapas](docs/maps.md)
 - [Registro de validación y pendientes](docs/validation.md)

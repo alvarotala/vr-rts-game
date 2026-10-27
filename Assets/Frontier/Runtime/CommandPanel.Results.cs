@@ -32,6 +32,7 @@ namespace Frontier.Runtime
                 Label(actions,Session.OnlineReportUnavailable?"Final report unavailable":"Waiting for the final match report",new Vector2(24,-160),new Vector2(992,80),28,MenuMuted,TextAnchor.MiddleCenter);
                 ReportButton("Main menu",0,668,336,()=>Session.LeaveMatch());
                 if(Session.IsOnline)ReportButton(Session.IsPublicMatch?"Find another match":"Direct connection",704,668,336,ReturnToOnlineSetup,true);
+                if(Session.IsPublicMatch)ReportButton("Refresh ranking",352,668,336,()=>_=Session.RefreshMatchRatingAsync());
                 return;
             }
             if(shownReport!=report)
@@ -52,6 +53,7 @@ namespace Frontier.Runtime
             {
                 ReportButton("Main menu",0,668,336,()=>Session.LeaveMatch());
                 if(!Session.IsOnline&&Session.ArchiveFailed)ReportButton("Retry save",352,668,336,Session.RetryArchiveSave);
+                if(Session.IsPublicMatch)ReportButton("Refresh ranking",352,668,336,()=>_=Session.RefreshMatchRatingAsync());
                 if(Session.IsOnline)ReportButton(Session.IsPublicMatch?"Find another match":"Direct connection",704,668,336,ReturnToOnlineSetup,true);
                 else ReportButton("Rematch",704,668,336,Quest.RequestStartMatch,true);
             }

@@ -23,7 +23,7 @@ namespace Frontier.Runtime
         private Font font;
         private readonly List<Target> targets = new List<Target>();
         private string signature;
-        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay, OnlineSetup, OnlineEndpoint, DirectSetup, PublicEndpoint }
+        public enum MenuPage { Main, MatchSetup, Settings, Hotkeys, Actions, Pause, LeaveConfirmation, Result, Guide, Guides, UnitsGuide, StructuresGuide, History, HistoryReport, Replay, OnlineSetup, OnlineEndpoint, DirectSetup, PublicEndpoint, Ranking, OnlineConnection }
         public MenuPage Page { get; private set; } = MenuPage.Main;
         public bool AcceptsGameInput => Page==MenuPage.Actions&&Session.CanIssueOrders;
         public bool ShowsBoard => Session.Running||Page==MenuPage.MatchSetup||Page==MenuPage.OnlineSetup||Page==MenuPage.DirectSetup||Quest.Placing;
@@ -121,6 +121,7 @@ namespace Frontier.Runtime
             {var onlinePage=Session.IsPublicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup;if(Page!=onlinePage)Show(onlinePage);}
             if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+Session.IsMatchmaking+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+            if(Page==MenuPage.Ranking||Page==MenuPage.OnlineSetup||Page==MenuPage.Result)state+=":"+Session.RankingVersion;
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
             if(!AcceptsGameInput||Quest.Placing){CloseSectionHelp();HideActionHelp();}
@@ -220,8 +221,9 @@ namespace Frontier.Runtime
                     harvesting.text=Board.Placed?"BOARD READY":"BOARD NOT PLACED";
                     ((LocalizedText)harvesting).Append(Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.");
                     status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
-                case MenuPage.OnlineSetup:case MenuPage.DirectSetup:case MenuPage.OnlineEndpoint:case MenuPage.PublicEndpoint:
+                case MenuPage.OnlineSetup:case MenuPage.DirectSetup:case MenuPage.OnlineEndpoint:case MenuPage.PublicEndpoint:case MenuPage.OnlineConnection:
                     UpdateOnlineHeader();break;
+                case MenuPage.Ranking:UpdateRankingHeader();break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
                     selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":settingsTab==SettingsTab.Language?"Choose your interface language. System follows this device.":"Prepare your battlefield and choose where it sits in your room.";
@@ -256,7 +258,8 @@ namespace Frontier.Runtime
                     economy.text="MATCH COMPLETE · "+Session.Map.title+" · "+ReportTime(Session.Tick);
                     selection.text=MatchDescription;
                     harvesting.text="POST-MATCH REPORT";
-                    status.text=Session.IsOnline?(Session.ResultReport==null?(Session.OnlineReportUnavailable?"The final report could not be received. The match result is preserved.":"Receiving the final report…"):"Final report received from the server. You can now find another match."):(Session.ArchiveStatus??"Both sides revealed after the match. Rematch starts a fresh report.");break;
+                    status.text=Session.IsOnline?(Session.ResultReport==null?(Session.OnlineReportUnavailable?"The final report could not be received. The match result is preserved.":"Receiving the final report…"):"Final report received from the server. You can now find another match."):(Session.ArchiveStatus??"Both sides revealed after the match. Rematch starts a fresh report.");
+                    if(Session.IsPublicMatch)UpdateMatchRatingHeader();break;
                 case MenuPage.History:
                     headline.text="MATCH HISTORY";economy.text="SAVED ON THIS DEVICE";
                     selection.text="Watch a replay, or choose a match for statistics, graphs and build order.";
@@ -275,6 +278,7 @@ namespace Frontier.Runtime
         private void UpdateStatusStyle(bool error)
         {
             error|=Page==MenuPage.Replay&&Session.Replay?.Error!=null;
+            error|=Page==MenuPage.Ranking&&Session.RankingFailed||Page==MenuPage.Result&&Session.IsPublicMatch&&Session.MatchRatingFailed;
             statusBanner.GetComponent<Image>().color=Color.clear;
             statusAccent.gameObject.SetActive(false);statusIcon.gameObject.SetActive(false);
             status.fontStyle=FontStyle.Normal;
@@ -353,6 +357,7 @@ namespace Frontier.Runtime
             Session.Pause("menu",Session.Running&&page!=MenuPage.Actions&&page!=MenuPage.Result&&page!=MenuPage.Replay);
             Board.Hovered=0;Board.Pointer=null;Board.DrawSelection(default,default,false);
             Board.SetVisible(ShowsBoard);Rebuild();
+            if(Application.isPlaying&&!Session.IsConnecting&&(page==MenuPage.OnlineSetup||page==MenuPage.Ranking))_=Session.RefreshRankingAsync();
         }
         private void OpenSubmenu(MenuPage page){menuHistory.Push(Page);Show(page);}
         private void ToggleControllerHand()
@@ -372,7 +377,8 @@ namespace Frontier.Runtime
                 case MenuPage.OnlineSetup:CancelOnlineSetup();break;
                 case MenuPage.DirectSetup:Quest.CancelStartRequest();Session.CancelOnline();Show(MenuPage.OnlineSetup);break;
                 case MenuPage.OnlineEndpoint:Show(MenuPage.DirectSetup);break;
-                case MenuPage.PublicEndpoint:Show(MenuPage.OnlineSetup);break;
+                case MenuPage.PublicEndpoint:Show(MenuPage.OnlineConnection);break;
+                case MenuPage.OnlineConnection:case MenuPage.Ranking:Show(MenuPage.OnlineSetup);break;
                 case MenuPage.Settings:case MenuPage.Hotkeys:case MenuPage.Guides:case MenuPage.Guide:case MenuPage.UnitsGuide:case MenuPage.StructuresGuide:
                     Show(menuHistory.Count>0?menuHistory.Pop():Page==MenuPage.Hotkeys?MenuPage.Settings:Page==MenuPage.Guide||IsReferencePage?MenuPage.Guides:Session.Running?MenuPage.Pause:MenuPage.Main);break;
                 case MenuPage.Actions:Show(MenuPage.Pause);break;

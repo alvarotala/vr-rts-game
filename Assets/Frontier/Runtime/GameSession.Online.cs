@@ -78,6 +78,7 @@ namespace Frontier.Runtime
             if(IsPublicMatch&&(string.IsNullOrEmpty(publicAllocatedMatchId)||welcome.matchId!=publicAllocatedMatchId))
             {FailPublicSearch("Could not join the match. Search again.");return;}
             ConfirmPublicMatchJoined();
+            if(IsPublicMatch)BeginRankedMatch(welcome.matchId);
             LoadMap(welcome.mapId);
             Faction=welcome.player==0?welcome.faction0:welcome.faction1;
             EnemyFaction=welcome.player==0?welcome.faction1:welcome.faction0;
@@ -103,6 +104,7 @@ namespace Frontier.Runtime
             {
                 PrepareCountdown(0);
                 Announce(view.winner==view.player?"VICTORY · The territory is yours.":view.winner==2?"DRAW":"DEFEAT · Your colony has fallen.");
+                if(IsPublicMatch)RequestMatchRatingOnce();
             }
             Changed?.Invoke();
         }
@@ -111,6 +113,7 @@ namespace Frontier.Runtime
         {
             remoteReport=report;OnlineReportUnavailable=report==null;
             NetworkStatus=report==null?"Match finished. The detailed report is unavailable.":"Match finished.";
+            if(IsPublicMatch)RequestMatchRatingOnce();
             Changed?.Invoke();
         }
 
@@ -135,6 +138,7 @@ namespace Frontier.Runtime
 
         private void DisconnectOnline(bool keepResult=false)
         {
+            if(!keepResult)ResetRankingRequests();
             CancelPublicSearch();
             if(remoteClient!=null)
             {

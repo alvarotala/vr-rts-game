@@ -9393,6 +9393,191 @@
       "key": "Enter four numbers from 0 to 255, separated by dots.",
       "value": "Introduce cuatro números del 0 al 255, separados por puntos.",
       "template": false
+    },
+    {
+      "key": "Ranking",
+      "value": "Clasificación",
+      "template": false
+    },
+    {
+      "key": "Your rating and the top 10 players.",
+      "value": "Tu puntuación y los 10 mejores jugadores.",
+      "template": false
+    },
+    {
+      "key": "Connection",
+      "value": "Conexión",
+      "template": false
+    },
+    {
+      "key": "Online service and direct LAN connection.",
+      "value": "Servicio online y conexión LAN directa.",
+      "template": false
+    },
+    {
+      "key": "Find an opponent near your rating. The range widens while you wait.",
+      "value": "Busca un rival de puntuación similar. El rango se amplía mientras esperas.",
+      "template": false
+    },
+    {
+      "key": "Direct LAN matches do not affect your rating.",
+      "value": "Las partidas LAN directas no afectan tu puntuación.",
+      "template": false
+    },
+    {
+      "key": "Choose your online service or a direct LAN server.",
+      "value": "Elige el servicio online o un servidor LAN directo.",
+      "template": false
+    },
+    {
+      "key": "CONNECTION",
+      "value": "CONEXIÓN",
+      "template": false
+    },
+    {
+      "key": "Loading ranking…",
+      "value": "Cargando clasificación…",
+      "template": false
+    },
+    {
+      "key": "Complete a public match to enter the ranking.",
+      "value": "Completa una partida pública para entrar en la clasificación.",
+      "template": false
+    },
+    {
+      "key": "Ranking updates after each completed public match.",
+      "value": "La clasificación se actualiza al terminar cada partida pública.",
+      "template": false
+    },
+    {
+      "key": "Ranking is unavailable. Refresh to try again.",
+      "value": "La clasificación no está disponible. Actualiza para volver a intentarlo.",
+      "template": false
+    },
+    {
+      "key": "Updating your rating…",
+      "value": "Actualizando tu puntuación…",
+      "template": false
+    },
+    {
+      "key": "Rating updated for this match.",
+      "value": "Puntuación de esta partida actualizada.",
+      "template": false
+    },
+    {
+      "key": "This match does not affect your rating.",
+      "value": "Esta partida no afecta tu puntuación.",
+      "template": false
+    },
+    {
+      "key": "This match is still being recorded. Refresh ranking to check again.",
+      "value": "La partida todavía se está registrando. Actualiza la clasificación para consultar de nuevo.",
+      "template": false
+    },
+    {
+      "key": "Could not load the rating change. Refresh ranking to try again.",
+      "value": "No se pudo cargar el cambio de puntuación. Actualiza la clasificación para volver a intentarlo.",
+      "template": false
+    },
+    {
+      "key": "Loading your rating…",
+      "value": "Cargando tu puntuación…",
+      "template": false
+    },
+    {
+      "key": "Your rating appears here after connecting to the service.",
+      "value": "Tu puntuación aparecerá aquí al conectar con el servicio.",
+      "template": false
+    },
+    {
+      "key": "Rating {0} · Unranked",
+      "value": "Puntuación {0} · Sin clasificar",
+      "template": true
+    },
+    {
+      "key": "Rating {0} · Rank #{1}",
+      "value": "Puntuación {0} · Puesto #{1}",
+      "template": true
+    },
+    {
+      "key": "Rating {0} · Position updating…",
+      "value": "Puntuación {0} · Actualizando posición…",
+      "template": true
+    },
+    {
+      "key": "No ranked players yet. Complete a public match to join the ranking.",
+      "value": "Todavía no hay jugadores clasificados. Completa una partida pública para entrar.",
+      "template": false
+    },
+    {
+      "key": "Player",
+      "value": "Jugador",
+      "template": false
+    },
+    {
+      "key": "Refresh ranking",
+      "value": "Actualizar clasificación",
+      "template": false
+    },
+    {
+      "key": "RANKING",
+      "value": "CLASIFICACIÓN",
+      "template": false
+    },
+    {
+      "key": "PUBLIC 1V1 · TOP 10",
+      "value": "1V1 PÚBLICO · LOS 10 MEJORES",
+      "template": false
+    },
+    {
+      "key": "{0} games · {1} wins · {2} losses · {3} draws",
+      "value": "{0} partidas · {1} victorias · {2} derrotas · {3} empates",
+      "template": true
+    },
+    {
+      "key": "Only completed public matches affect your rating.",
+      "value": "Solo las partidas públicas terminadas afectan tu puntuación.",
+      "template": false
+    },
+    {
+      "key": "Rating: {0} → {1} ({2})",
+      "value": "Puntuación: {0} → {1} ({2})",
+      "template": true
+    },
+    {
+      "key": "UPDATING RATING",
+      "value": "ACTUALIZANDO PUNTUACIÓN",
+      "template": false
+    },
+    {
+      "key": "UNRATED MATCH",
+      "value": "PARTIDA SIN PUNTUACIÓN",
+      "template": false
+    },
+    {
+      "key": "RATING UPDATE PENDING",
+      "value": "PUNTUACIÓN PENDIENTE DE ACTUALIZAR",
+      "template": false
+    },
+    {
+      "key": "Searching for a similar opponent (rating {0}, range ±{1})…",
+      "value": "Buscando un rival similar (puntuación {0}, rango ±{1})…",
+      "template": true
+    },
+    {
+      "key": "OPPONENT",
+      "value": "RIVAL",
+      "template": false
+    },
+    {
+      "key": "OPPONENT · {0}",
+      "value": "RIVAL · {0}",
+      "template": true
+    },
+    {
+      "key": "OPPONENT - - -",
+      "value": "RIVAL - - -",
+      "template": false
     }
   ]
 }

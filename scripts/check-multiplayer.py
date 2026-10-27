@@ -135,6 +135,7 @@ def main():
     parser.add_argument("--client", type=Path, default=ROOT / "Builds/Desktop/LittleLegion.app")
     parser.add_argument("--port", type=int, default=0, help="UDP port; zero chooses a currently free port")
     parser.add_argument("--timeout", type=float, default=540)
+    parser.add_argument("--join-delay", type=float, default=0, help="Delay the second public client (0..120 seconds) to exercise widening while the first waits")
     parser.add_argument("--output", type=Path, default=ROOT / "TestResults/ngo-multiplayer")
     parser.add_argument("--latency-ms", type=float, default=0, help="One-way UDP delay applied in each direction")
     parser.add_argument("--jitter-ms", type=float, default=0, help="Uniform +/- delay variation per datagram")
@@ -152,6 +153,8 @@ def main():
             raise ValueError("Delay/jitter must be 0..5000 ms and packet loss 0..<100%.")
         if args.backend and (args.latency_ms or args.jitter_ms or args.loss_percent):
             raise ValueError("The local UDP impairment proxy currently supports direct connections only.")
+        if not 0 <= args.join_delay <= 120 or args.join_delay and not args.backend:
+            raise ValueError("Join delay requires public matchmaking and must be 0..120 seconds.")
         port = args.port or (7777 if args.external_server else available_port())
         address = args.external_server or "127.0.0.1"
         output = args.output.resolve()
@@ -190,8 +193,10 @@ def main():
             proxy = DatagramProxy(address, port, args.latency_ms, args.jitter_ms, args.loss_percent)
             address, player_port = "127.0.0.1", proxy.port
         connection_args = ["-frontier-public-smoke", "-frontier-backend", args.backend] if args.backend else ["-frontier-client", address]
-        clients = [launch("client-a", client, connection_args + ["-frontier-faction", "industrial"], player_port),
-                   launch("client-b", client, connection_args + ["-frontier-faction", "biological"], player_port)]
+        clients = [launch("client-a", client, connection_args + ["-frontier-faction", "industrial"], player_port)]
+        if args.join_delay:
+            time.sleep(args.join_delay)
+        clients.append(launch("client-b", client, connection_args + ["-frontier-faction", "biological"], player_port))
         deadline = time.monotonic() + args.timeout
         while time.monotonic() < deadline:
             if proxy is not None and proxy.error is not None:
@@ -232,6 +237,15 @@ def main():
                 raise RuntimeError("Public clients were not assigned the same authenticated match and endpoint.")
             result["match_id"], result["host"], assigned_port = allocations[0].groups()
             result["port"] = int(assigned_port)
+            ranks = [re.search(r"FRONTIER_RANK_PASSED player=(\d+) before=(\d+) after=(\d+) delta=(-?\d+) rank=(\d+)", logs[name].read_text())
+                     for name in ("client-a", "client-b")]
+            if any(value is None for value in ranks):
+                raise RuntimeError("Public clients did not verify their persisted rating and leaderboard position.")
+            result["ratings"] = [dict(zip(("player", "before", "after", "delta", "rank"), map(int, value.groups()))) for value in ranks]
+            if args.join_delay:
+                result["join_delay_seconds"] = args.join_delay
+                if args.join_delay >= 30 and "FRONTIER_PUBLIC_RANGE revision=1 radius=200" not in logs["client-a"].read_text():
+                    raise RuntimeError("The waiting public client did not renew its native ticket at the wider range.")
         if proxy is not None:
             result["network_impairment"] = proxy.stats()
             if proxy.overflow:

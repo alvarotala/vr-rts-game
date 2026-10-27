@@ -93,6 +93,8 @@ namespace Frontier.Runtime
                 case MenuPage.History:BuildHistory();return true;
                 case MenuPage.Replay:BuildReplayPanel();return true;
                 case MenuPage.OnlineSetup:BuildOnlineSetup();return true;
+                case MenuPage.OnlineConnection:BuildOnlineConnection();return true;
+                case MenuPage.Ranking:BuildRanking();return true;
                 case MenuPage.DirectSetup:BuildDirectSetup();return true;
                 case MenuPage.PublicEndpoint:BuildOnlineEndpoint();return true;
                 case MenuPage.OnlineEndpoint:BuildOnlineEndpoint();return true;

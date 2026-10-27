@@ -51,6 +51,7 @@ namespace Frontier.Runtime
             lifetime.CancelAfter(TimeSpan.FromMinutes(3));
             var token = lifetime.Token;
             ISocket ownedSocket = null;
+            IMatchmakerTicket queueTicket = null;
             bool handedOff = false;
             try
             {
@@ -70,24 +71,27 @@ namespace Frontier.Runtime
                 });
                 searchId = opened.searchId;
                 if (!IsOpaqueId(searchId)) throw new InvalidOperationException("The service returned an invalid search.");
+                ValidateSearchWindow(opened.rating, opened.searchRadius, opened.queueRevision);
                 CheckCancellation(token);
                 ownedSocket = socket = client.NewSocket();
                 await ownedSocket.ConnectAsync(session, appearOnline: false, connectTimeout: 8);
                 CheckCancellation(token);
-                string compatibility = MatchCompatibility.Key;
-                await ownedSocket.AddMatchmakerAsync("+properties.compat:\"" + compatibility + "\"", 2, 2,
-                    new Dictionary<string, string> { { "compat", compatibility }, { "searchId", searchId } });
+                queueTicket = await Enqueue(ownedSocket);
                 CheckCancellation(token);
                 string previousStatus = null;
+                int queuedRevision = opened.queueRevision;
                 while (true)
                 {
                     CheckCancellation(token);
                     var result = await Rpc<SearchState>("ll_search_status", new SearchReference { searchId = searchId });
                     CheckCancellation(token);
-                    if (result.status != previousStatus)
+                    if (result.status == "searching") ValidateSearchWindow(result.rating, result.searchRadius, result.queueRevision);
+                    if (result.status != previousStatus || result.status == "searching" && result.queueRevision != queuedRevision)
                     {
                         previousStatus = result.status;
-                        status?.Invoke(StatusText(result.status));
+                        status?.Invoke(result.status == "searching"
+                            ? $"Searching for a similar opponent (rating {result.rating}, range ±{result.searchRadius})…"
+                            : StatusText(result.status));
                     }
                     if (result.status == "ready")
                     {
@@ -102,6 +106,28 @@ namespace Frontier.Runtime
                         throw new InvalidOperationException("The service returned an invalid search state.");
                     if (result.status == "searching" && !ownedSocket.IsConnected)
                         throw new InvalidOperationException("The matchmaking connection was lost. Please search again.");
+                    if (result.status == "searching" && result.queueRevision != queuedRevision)
+                    {
+                        // Query ranges belong to the server. Refresh only the native
+                        // ticket; the search ID and its server-side age remain unchanged.
+                        // Matching can win the race with removal/addition. Re-poll that
+                        // same search after any socket error before deciding it failed.
+                        try
+                        {
+                            if (queueTicket != null)
+                            {
+                                try { await ownedSocket.RemoveMatchmakerAsync(queueTicket); }
+                                catch (Exception) { CheckCancellation(token); }
+                            }
+                            CheckCancellation(token);
+                            queueTicket = await Enqueue(ownedSocket);
+                            queuedRevision = result.queueRevision;
+                            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-frontier-public-smoke") >= 0)
+                                Debug.Log($"FRONTIER_PUBLIC_RANGE revision={queuedRevision} radius={result.searchRadius}");
+                        }
+                        catch (OperationCanceledException) { throw; }
+                        catch (Exception) { CheckCancellation(token); }
+                    }
                     await Task.Delay(1000, token);
                 }
             }
@@ -118,6 +144,19 @@ namespace Frontier.Runtime
                     await CloseSocket(ownedSocket);
                 }
             }
+        }
+
+        private Task<IMatchmakerTicket> Enqueue(ISocket value)
+        {
+            string compatibility = MatchCompatibility.Key;
+            return value.AddMatchmakerAsync("+properties.compat:\"" + compatibility + "\"", 2, 2,
+                new Dictionary<string, string> { { "compat", compatibility }, { "searchId", searchId } });
+        }
+
+        internal static void ValidateSearchWindow(int rating, int radius, int revision)
+        {
+            if (rating < 0 || radius < 100 || radius > 400 || radius % 100 != 0 || revision != radius / 100 - 1)
+                throw new InvalidOperationException("The service returned an invalid rating range.");
         }
 
         public async Task CancelAsync()
@@ -208,7 +247,7 @@ namespace Frontier.Runtime
                 throw new InvalidOperationException("The service returned an invalid match connection.");
         }
 
-        private static bool IsOpaqueId(string value)
+        internal static bool IsOpaqueId(string value)
         {
             if (string.IsNullOrEmpty(value) || value.Length < 24 || value.Length > 64) return false;
             foreach (char c in value)
@@ -216,7 +255,7 @@ namespace Frontier.Runtime
             return true;
         }
 
-        private static string Identity(Uri endpoint)
+        internal static string Identity(Uri endpoint)
         {
             string suffix;
             using (var sha = SHA256.Create())
@@ -247,8 +286,8 @@ namespace Frontier.Runtime
 
         [Serializable] private sealed class SearchRequest { public string faction, contentHash; public int protocol, rules; }
         [Serializable] private sealed class SearchReference { public string searchId; }
-        [Serializable] private sealed class SearchOpened { public string searchId; }
-        [Serializable] private sealed class SearchState { public string status, message; public PublicMatchConnection connection; }
+        [Serializable] private sealed class SearchOpened { public string searchId; public int rating, searchRadius, queueRevision; }
+        [Serializable] private sealed class SearchState { public string status, message; public int rating, searchRadius, queueRevision; public PublicMatchConnection connection; }
         [Serializable] private sealed class SearchCancelled { public bool ok; }
     }
 }

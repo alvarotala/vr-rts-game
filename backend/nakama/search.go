@@ -32,9 +32,13 @@ func searchOpen(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, pa
 	if err != sql.ErrNoRows {
 		return nil, err
 	}
+	rating, err := loadRating(ctx, tx, user)
+	if err != nil {
+		return nil, err
+	}
 	id := token()
-	_, err = tx.ExecContext(ctx, `INSERT INTO ll_searches(id,player_id,faction,protocol,rules,content_hash,status) VALUES($1,$2,$3,$4,$5,$6,'searching')`, id, user, req.Faction, req.Protocol, req.Rules, req.ContentHash)
-	return map[string]string{"searchId": id}, err
+	_, err = tx.ExecContext(ctx, `INSERT INTO ll_searches(id,player_id,faction,protocol,rules,content_hash,status,rating_at_search) VALUES($1,$2,$3,$4,$5,$6,'searching',$7)`, id, user, req.Faction, req.Protocol, req.Rules, req.ContentHash, rating.Rating)
+	return map[string]any{"searchId": id, "rating": rating.Rating, "searchRadius": 100, "queueRevision": 0}, err
 }
 
 type connection struct {
@@ -45,9 +49,12 @@ type connection struct {
 	Faction    string `json:"faction"`
 }
 type searchResult struct {
-	Status     string      `json:"status"`
-	Message    string      `json:"message"`
-	Connection *connection `json:"connection,omitempty"`
+	Status        string      `json:"status"`
+	Message       string      `json:"message"`
+	Connection    *connection `json:"connection,omitempty"`
+	Rating        int         `json:"rating"`
+	SearchRadius  int         `json:"searchRadius"`
+	QueueRevision int         `json:"queueRevision"`
 }
 
 func searchStatus(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, payload string) (any, error) {
@@ -57,13 +64,16 @@ func searchStatus(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, 
 	}
 	var result searchResult
 	var matchID string
-	err := tx.QueryRowContext(ctx, `UPDATE ll_searches SET seen_at=now() WHERE id=$1 AND player_id=$2 RETURNING status,message,COALESCE(match_id,'')`, req.SearchID, user).Scan(&result.Status, &result.Message, &matchID)
+	var age float64
+	err := tx.QueryRowContext(ctx, `UPDATE ll_searches SET seen_at=now() WHERE id=$1 AND player_id=$2 RETURNING status,message,COALESCE(match_id,''),rating_at_search,extract(epoch FROM now()-created_at)`, req.SearchID, user).Scan(&result.Status, &result.Message, &matchID, &result.Rating, &age)
 	if err == sql.ErrNoRows {
 		return nil, denied("Unknown search")
 	}
 	if err != nil {
 		return nil, err
 	}
+	result.SearchRadius = searchRadius(age)
+	result.QueueRevision = result.SearchRadius/100 - 1
 	if result.Status == "ready" {
 		var conn connection
 		var state string

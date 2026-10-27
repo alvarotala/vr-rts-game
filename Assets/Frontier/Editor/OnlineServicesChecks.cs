@@ -6,9 +6,16 @@ namespace Frontier.Editor
 {
     public static class OnlineServicesChecks
     {
+        public static void RunWithRankingPreview()
+        {
+            Run();
+            RankingPreview.Run();
+        }
+
         public static void Run()
         {
             PublicMatchmakingChecks.Run();
+            RankingPresentationChecks.Run();
             AllocatedServerChecks.Run();
             OnlinePresentationChecks.RunRegressionChecks();
             int checks = 0;

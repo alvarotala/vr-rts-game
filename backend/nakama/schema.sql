@@ -30,3 +30,27 @@ CREATE TABLE IF NOT EXISTS ll_players (
   claim_request TEXT, claimed_at TIMESTAMPTZ,
   PRIMARY KEY (match_id,player_id), UNIQUE(match_id,seat), UNIQUE(search_id)
 );
+
+-- Existing matches remain unranked. Only newly formed pairs opt in explicitly.
+ALTER TABLE ll_matches ADD COLUMN IF NOT EXISTS rank_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE ll_searches ADD COLUMN IF NOT EXISTS rating_at_search INTEGER NOT NULL DEFAULT 1000;
+CREATE TABLE IF NOT EXISTS ll_ratings (
+  player_id TEXT PRIMARY KEY, rating INTEGER NOT NULL DEFAULT 1000 CHECK (rating >= 0),
+  games INTEGER NOT NULL DEFAULT 0, wins INTEGER NOT NULL DEFAULT 0,
+  losses INTEGER NOT NULL DEFAULT 0, draws INTEGER NOT NULL DEFAULT 0,
+  version BIGINT NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (games = wins + losses + draws)
+);
+CREATE TABLE IF NOT EXISTS ll_rating_results (
+  match_id TEXT NOT NULL, player_id TEXT NOT NULL,
+  rating_before INTEGER NOT NULL, rating_after INTEGER NOT NULL,
+  delta INTEGER NOT NULL, opponent_rating INTEGER NOT NULL,
+  PRIMARY KEY (match_id, player_id),
+  FOREIGN KEY (match_id, player_id) REFERENCES ll_players(match_id, player_id)
+);
+-- A coalescing durable projection queue; the canonical rating and the terminal
+-- match commit atomically. Nakama's public leaderboard is an absolute SET view.
+CREATE TABLE IF NOT EXISTS ll_rating_outbox (
+  player_id TEXT PRIMARY KEY REFERENCES ll_ratings(player_id),
+  version BIGINT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
