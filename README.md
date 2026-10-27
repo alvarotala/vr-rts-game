@@ -4,6 +4,8 @@
 
 Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y búsqueda pública 1v1 con servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
+La versión de escritorio es un cliente web con three.js que juega en los mismos servidores que el Quest: una partida puede enfrentar a un jugador de Quest con uno de escritorio. Ver [cliente de escritorio y juego cruzado](docs/web-client.md).
+
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
 ## Requisitos y configuración
@@ -34,7 +36,22 @@ adb shell monkey -p app.sadmonkey.littlelegion 1
 
 El APK usa el firmado de desarrollo local, el identificador `app.sadmonkey.littlelegion` y el nombre visible **Little Legion**. Android lo instala como una aplicación nueva respecto al prototipo anterior; no migra sus datos y ambas instalaciones pueden coexistir. La publicación en una tienda, sus cuentas y su firmado de distribución no están configurados.
 
-La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`.
+La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`. Se conserva como herramienta de desarrollo.
+
+## Versión de escritorio (navegador)
+
+Requiere Node 22 o superior y el SDK de .NET 8, que compila la simulación a WebAssembly para jugar sin conexión:
+
+```sh
+cd web
+npm install
+npm run build:core
+npm run dev
+```
+
+`npm run build` genera el sitio estático en `web/dist`, y `python3 scripts/online-stack.py web` lo sirve en el puerto 8080. Desde el menú se juega contra la IA, por conexión directa a un servidor dedicado (puerto TCP 7877) o por búsqueda pública. Controles, despliegue con HTTPS y pendientes en [docs/web-client.md](docs/web-client.md).
+
+Para aceptar jugadores de escritorio, el servidor dedicado debe compilarse con esta versión del código. El APK actual sigue siendo compatible mientras catálogo, mapas y reglas no cambien.
 
 ## Multiplayer y servidor Docker
 
@@ -58,7 +75,7 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
   -logFile /tmp/little-legion-online.log
 ```
 
-El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático, ranking ni reconexión a una partida en curso. La configuración, seguridad y ampliación manual del pool están en [Multiplayer público autohospedado](docs/nakama.md) y su [contrato de asignación](docs/online-contract.md).
+El stack inicial tiene **un slot de partida** en UDP 7778 (TCP 7878 para navegadores); las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático, ranking ni reconexión a una partida en curso. La configuración, seguridad y ampliación manual del pool están en [Multiplayer público autohospedado](docs/nakama.md) y su [contrato de asignación](docs/online-contract.md).
 
 La API HTTP del ejemplo es para pruebas locales. Una instalación pública necesita HTTPS/WSS y acceso al puerto UDP de juego. Esta documentación no implica un despliegue WAN ni una validación del flujo público en Quest físico.
 
@@ -71,7 +88,7 @@ python3 scripts/build-server.py
 docker compose -f compose.multiplayer.yml up -d --build
 ```
 
-Abrir **Multijugador → Conexión directa** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú directo permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
+Abrir **Multijugador → Conexión directa** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Un jugador de escritorio se une al mismo servidor con **Conexión directa** y la dirección `127.0.0.1:7877`. Compose publica UDP 7777 y TCP 7877 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú directo permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
 
 La imagen contiene solamente el servidor Linux y se puede trasladar a un host compatible. Cada proceso directo atiende una partida a la vez; cuando ambos jugadores salen, vuelve a esperar otros dos sin reiniciar el contenedor. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
 
@@ -90,6 +107,7 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Identidad, skins y primeras razas](docs/identity.md)
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
+- [Cliente de escritorio (three.js) y juego cruzado con Quest](docs/web-client.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
 - [Formato de mapas](docs/maps.md)

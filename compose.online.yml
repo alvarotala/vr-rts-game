@@ -66,9 +66,12 @@ services:
       FRONTIER_SERVER_KEY: ${LL_RUNTIME_HTTP_KEY:?Run python3 scripts/online-stack.py init}
       FRONTIER_SERVER_ID: local-1
       FRONTIER_ADVERTISE_HOST: ${LL_PUBLIC_HOST:?Set the Mac LAN IP using online-stack.py init --host IP}
-    command: [-frontier-allocated, -frontier-port, "7778", -frontier-map, rift, -frontier-listen, 0.0.0.0]
+      # Port desktop clients use for this slot; set it when a TLS proxy (wss) fronts the listener.
+      FRONTIER_ADVERTISE_WS_PORT: ${LL_PUBLIC_WS_PORT:-}
+    command: [-frontier-allocated, -frontier-port, "7778", -frontier-ws-port, "7878", -frontier-map, rift, -frontier-listen, 0.0.0.0]
     ports:
       - "0.0.0.0:7778:7778/udp"
+      - "0.0.0.0:7878:7878/tcp"
     depends_on:
       nakama:
         condition: service_healthy
@@ -77,6 +80,18 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 15s
+
+  # Desktop client (three.js), static files only. Start it with: online-stack.py web
+  web:
+    image: ${LL_WEB_IMAGE:-little-legion-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    profiles: [web]
+    ports:
+      - "0.0.0.0:${LL_WEB_PORT:-8080}:8080"
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
 
 volumes:
   online-postgres:

@@ -12,7 +12,7 @@ namespace Frontier.Networking
     {
         [Serializable] private class LeaseRequest { public string serverId, bootId, leaseId; }
         [Serializable] private sealed class Registration
-        { public string serverId, bootId, host, contentHash; public int port, protocol, rules; }
+        { public string serverId, bootId, host, contentHash; public int port, wsPort, protocol, rules; }
         [Serializable] private sealed class LeaseResult { public string leaseId; }
         [Serializable] private sealed class PollResult { public AllocatedMatchAssignment assignment; }
         [Serializable] private sealed class AdmissionRequest : LeaseRequest { public string matchId, joinTicket, requestId; }
@@ -21,6 +21,7 @@ namespace Frontier.Networking
         private NgoMatchServer server;
         private string backendUrl, key, serverId, bootId, advertisedHost, leaseId;
         private ushort port;
+        private int advertisedWebSocketPort;
         private bool stopped, terminalAcknowledged;
         private double lastPollSuccess, lastWarning;
         private readonly List<AllocatedServerEvent> events = new List<AllocatedServerEvent>();
@@ -39,6 +40,14 @@ namespace Frontier.Networking
             var value = server.gameObject.AddComponent<AllocatedServerAgent>();
             value.server = server; value.backendUrl = url.TrimEnd('/'); value.key = key;
             value.serverId = id; value.advertisedHost = host; value.port = port;
+            // Browsers reach the websocket listener directly or through a TLS proxy port (FRONTIER_ADVERTISE_WS_PORT).
+            string wsPort = Environment.GetEnvironmentVariable("FRONTIER_ADVERTISE_WS_PORT");
+            value.advertisedWebSocketPort = -1;
+            if (!string.IsNullOrWhiteSpace(wsPort))
+            {
+                if (!ushort.TryParse(wsPort, out ushort advertised)) throw new InvalidOperationException("FRONTIER_ADVERTISE_WS_PORT must be 0..65535.");
+                value.advertisedWebSocketPort = advertised;
+            }
             value.bootId = Guid.NewGuid().ToString("N");
             server.ConfigureAllocatedMode(value);
             server.AllocationEvent += value.Enqueue;
@@ -49,10 +58,11 @@ namespace Frontier.Networking
         {
             if (server == null) yield break;
             while (!stopped && !server.IsRunning) yield return null;
+            if (advertisedWebSocketPort < 0) advertisedWebSocketPort = server.WebSocketPort;
             while (!stopped && server.IsRunning && string.IsNullOrEmpty(leaseId))
             {
                 yield return Rpc<Registration, LeaseResult>("ll_server_register", new Registration {
-                    serverId = serverId, bootId = bootId, host = advertisedHost, port = port,
+                    serverId = serverId, bootId = bootId, host = advertisedHost, port = port, wsPort = advertisedWebSocketPort,
                     protocol = MatchProtocol.Version, rules = Simulation.ReplayRulesVersion, contentHash = MatchProtocol.ContentHash()
                 }, response => { if (!string.IsNullOrEmpty(response.leaseId)) leaseId = response.leaseId; }, Warn);
                 if (string.IsNullOrEmpty(leaseId)) yield return new WaitForSecondsRealtime(2);

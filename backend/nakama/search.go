@@ -11,6 +11,8 @@ type searchRequest struct {
 	Protocol    int    `json:"protocol"`
 	Rules       int    `json:"rules"`
 	ContentHash string `json:"contentHash"`
+	// Browser clients cannot use UDP; their pair needs a server with a websocket listener.
+	Websocket bool `json:"websocket"`
 }
 type searchIDRequest struct {
 	SearchID string `json:"searchId"`
@@ -33,7 +35,7 @@ func searchOpen(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, pa
 		return nil, err
 	}
 	id := token()
-	_, err = tx.ExecContext(ctx, `INSERT INTO ll_searches(id,player_id,faction,protocol,rules,content_hash,status) VALUES($1,$2,$3,$4,$5,$6,'searching')`, id, user, req.Faction, req.Protocol, req.Rules, req.ContentHash)
+	_, err = tx.ExecContext(ctx, `INSERT INTO ll_searches(id,player_id,faction,protocol,rules,content_hash,status,websocket) VALUES($1,$2,$3,$4,$5,$6,'searching',$7)`, id, user, req.Faction, req.Protocol, req.Rules, req.ContentHash, req.Websocket)
 	return map[string]string{"searchId": id}, err
 }
 
@@ -41,6 +43,7 @@ type connection struct {
 	MatchID    string `json:"matchId"`
 	Host       string `json:"host"`
 	Port       int    `json:"port"`
+	WsPort     int    `json:"wsPort"`
 	JoinTicket string `json:"joinTicket"`
 	Faction    string `json:"faction"`
 }
@@ -67,7 +70,7 @@ func searchStatus(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, 
 	if result.Status == "ready" {
 		var conn connection
 		var state string
-		err = tx.QueryRowContext(ctx, `SELECT m.id,m.status,s.host,s.port,p.faction FROM ll_matches m JOIN ll_servers s ON s.id=m.server_id AND s.lease_id=m.lease_id JOIN ll_players p ON p.match_id=m.id WHERE m.id=$1 AND p.player_id=$2 AND s.active`, matchID, user).Scan(&conn.MatchID, &state, &conn.Host, &conn.Port, &conn.Faction)
+		err = tx.QueryRowContext(ctx, `SELECT m.id,m.status,s.host,s.port,s.ws_port,p.faction FROM ll_matches m JOIN ll_servers s ON s.id=m.server_id AND s.lease_id=m.lease_id JOIN ll_players p ON p.match_id=m.id WHERE m.id=$1 AND p.player_id=$2 AND s.active`, matchID, user).Scan(&conn.MatchID, &state, &conn.Host, &conn.Port, &conn.WsPort, &conn.Faction)
 		if err != nil {
 			return nil, err
 		}

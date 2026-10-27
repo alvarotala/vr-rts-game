@@ -20,12 +20,15 @@ namespace Frontier.Runtime
             bool smoke=Array.IndexOf(args,"-frontier-smoke")>=0;
             if(server)
             {
+                // Browser clients join over TCP; -frontier-ws-port 0 disables the websocket listener.
+                if(!ushort.TryParse(Argument(args,"-frontier-ws-port",(port+NgoMatchServer.WebSocketPortOffset).ToString()),out ushort webSocketPort))
+                {Debug.LogError("Invalid -frontier-ws-port (0..65535 required).");Application.Quit(2);return;}
                 Application.runInBackground=true;Application.targetFrameRate=60;
                 var dedicated=new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
                 dedicated.EnableNetworkMetrics=Array.IndexOf(args,"-frontier-network-metrics")>=0;
                 if(smoke)dedicated.SimulationSpeed=20;
                 if(Array.IndexOf(args,"-frontier-allocated")>=0)AllocatedServerAgent.Launch(dedicated,port);
-                if(!dedicated.StartServer(port,Argument(args,"-frontier-map","rift"),Argument(args,"-frontier-listen","0.0.0.0")))Application.Quit(1);
+                if(!dedicated.StartServer(port,Argument(args,"-frontier-map","rift"),Argument(args,"-frontier-listen","0.0.0.0"),webSocketPort))Application.Quit(1);
                 return;
             }
             if(Array.IndexOf(args,"-frontier-public-smoke")>=0)

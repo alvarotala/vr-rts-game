@@ -10,6 +10,7 @@ using UnityEngine;
 namespace Frontier.Networking
 {
     // One dedicated process owns one match at a time. No Unity transforms, physics, focus or local pause affect its rules.
+    // Seats are transport-neutral: NGO (Quest and Unity desktop) and websocket (browser) players share one match.
     public sealed partial class NgoMatchServer : MonoBehaviour
     {
         private sealed class Seat
@@ -47,7 +48,7 @@ namespace Frontier.Networking
         private bool closing, finished;
         private ServerMetrics metrics;
 
-        public bool StartServer(ushort port = 7777, string mapId = "rift", string listenAddress = "0.0.0.0")
+        public bool StartServer(ushort port = 7777, string mapId = "rift", string listenAddress = "0.0.0.0", ushort webSocketPort = 0)
         {
             if (manager != null || port == 0) return false;
             try
@@ -65,11 +66,12 @@ namespace Frontier.Networking
                 manager.OnClientConnectedCallback += Connected;
                 manager.OnClientDisconnectCallback += Disconnected;
                 if (!manager.StartServer()) throw new InvalidOperationException("Could not listen on the multiplayer port.");
-                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.Ready, Ready);
-                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.Command, Command);
-                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.ResultAck, ResultAcknowledged);
+                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.Ready, (client, reader) => ReceiveNamed(client, reader, Ready));
+                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.Command, (client, reader) => ReceiveNamed(client, reader, Command));
+                manager.CustomMessagingManager.RegisterNamedMessageHandler(MatchProtocol.ResultAck, (client, reader) => ReceiveNamed(client, reader, ResultAcknowledged));
+                if (webSocketPort != 0) StartWebSockets(webSocketPort, listenAddress);
                 Application.runInBackground = true;
-                Status("Listening on " + listenAddress + ":" + port + " · " + mapId);
+                Status("Listening on " + listenAddress + ":" + port + (webSocketPort != 0 ? " · websocket tcp " + WebSocketPort : "") + " · " + mapId);
                 return true;
             }
             catch (Exception error)
@@ -78,21 +80,51 @@ namespace Frontier.Networking
             }
         }
 
+        // NGO delivers named messages through readers; browser frames arrive as bytes.
+        // Both transports validate the same payload bytes in the shared handlers. An
+        // unreadable payload arrives as null, so each handler keeps its original verdict.
+        private void ReceiveNamed(ulong client, FastBufferReader reader, Action<ulong, byte[]> handler)
+        {
+            byte[] payload;
+            try { payload = MatchProtocol.Read(reader, MatchProtocol.MaxCommandBytes); }
+            catch { payload = null; }
+            handler(client, payload);
+        }
+
+        private string ValidateHello(byte[] payload, out ConnectionHello hello)
+        {
+            hello = null;
+            if (Match != null || seats.Count >= 2) return "The match already has two players.";
+            if (payload == null || payload.Length == 0 || payload.Length > MatchProtocol.MaxHelloBytes) return "Invalid connection request.";
+            try { hello = MatchProtocol.Decode<ConnectionHello>(payload); }
+            catch { return "Invalid connection request."; }
+            if (hello == null || hello.protocol != MatchProtocol.Version || hello.rules != Simulation.ReplayRulesVersion || hello.contentHash != MatchProtocol.ContentHash())
+                return "Incompatible game version, rules, maps or catalog.";
+            if (hello.faction != "industrial" && hello.faction != "biological") return "Unknown faction.";
+            return null;
+        }
+
+        private void AddDirectSeat(ulong client, string faction)
+        {
+            int player = seats.Values.Any(s => s.player == 0) ? 1 : 0;
+            seats.Add(client, new Seat { client = client, player = player, faction = faction, connectedAt = clock.Elapsed.TotalSeconds });
+        }
+
         private void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             response.Approved = false; response.CreatePlayerObject = false; response.Pending = false;
             try
             {
-                if (Match != null || seats.Count >= 2) { response.Reason = "The match already has two players."; return; }
-                if (request.Payload == null || request.Payload.Length == 0 || request.Payload.Length > MatchProtocol.MaxHelloBytes)
-                { response.Reason = "Invalid connection request."; return; }
-                var hello = MatchProtocol.Decode<ConnectionHello>(request.Payload);
-                if (hello == null || hello.protocol != MatchProtocol.Version || hello.rules != Simulation.ReplayRulesVersion || hello.contentHash != MatchProtocol.ContentHash())
-                { response.Reason = "Incompatible game version, rules, maps or catalog."; return; }
-                if (hello.faction != "industrial" && hello.faction != "biological") { response.Reason = "Unknown faction."; return; }
-                if (AllocatedMode) { BeginAllocatedApproval(request, response, hello); return; }
-                int player = seats.Values.Any(s => s.player == 0) ? 1 : 0;
-                seats.Add(request.ClientNetworkId, new Seat { client = request.ClientNetworkId, player = player, faction = hello.faction, connectedAt = clock.Elapsed.TotalSeconds });
+                string reason = ValidateHello(request.Payload, out var hello);
+                if (reason != null) { response.Reason = reason; return; }
+                if (AllocatedMode)
+                {
+                    // Pending first: the backend verdict can complete synchronously inside the call.
+                    response.Pending = true;
+                    if (!BeginAllocatedAdmission(request.ClientNetworkId, hello, response, null, out reason)) { response.Pending = false; response.Reason = reason; }
+                    return;
+                }
+                AddDirectSeat(request.ClientNetworkId, hello.faction);
                 response.Approved = true;
             }
             catch { response.Reason = "Invalid connection request."; }
@@ -100,28 +132,26 @@ namespace Frontier.Networking
 
         private void Connected(ulong client)
         {
-            if (!seats.TryGetValue(client, out var seat)) { manager.DisconnectClient(client, "Unapproved player."); return; }
+            if (!seats.TryGetValue(client, out var seat)) { Kick(client, "Unapproved player."); return; }
             if (AllocatedMode && (allocation == null || allocationAborted))
             {
                 // NGO may process an approval one frame after the backend cancels
                 // the assignment. Do not attach that late transport to the lobby.
-                seats.Remove(client); manager.DisconnectClient(client, "The match assignment was cancelled."); return;
+                seats.Remove(client); Kick(client, "The match assignment was cancelled."); return;
             }
             seat.connected = true; seat.connectedAt = clock.Elapsed.TotalSeconds;
+            // NGO clients learn this from their connection callback; browsers from this signal.
+            if (IsWebSocketClient(client)) gateway?.Send(client, WebSocketMatchCodec.Envelope(WebSocketMatchCodec.Admitted, MatchProtocol.Signal));
             SendStatus(client, "Connected. Waiting for both players to be ready.");
             Status("Player " + (seat.player + 1) + " connected (" + ConnectedPlayers + "/2).");
         }
 
-        private void Ready(ulong client, FastBufferReader reader)
+        private void Ready(ulong client, byte[] payload)
         {
             if (!seats.TryGetValue(client, out var seat) || !seat.connected || Match != null) return;
-            try
+            if (payload == null || payload.Length != 1 || payload[0] != 1)
             {
-                if (MatchProtocol.Read(reader, 1)[0] != 1) throw new ArgumentException("Invalid readiness signal.");
-            }
-            catch
-            {
-                manager.DisconnectClient(client, "Malformed readiness signal.");
+                Kick(client, "Malformed readiness signal.");
                 return;
             }
             try
@@ -144,25 +174,30 @@ namespace Frontier.Networking
                 foreach (var player in ordered)
                 {
                     var welcome = new MatchWelcome { protocol = MatchProtocol.Version, matchId = matchId, mapId = mapId,
-                        player = player.player, faction0 = ordered[0].faction, faction1 = ordered[1].faction, startServerTime = startServerTime };
-                    MatchProtocol.Send(manager, MatchProtocol.Welcome, player.client, MatchProtocol.Encode(welcome, 1024));
+                        player = player.player, faction0 = ordered[0].faction, faction1 = ordered[1].faction, startServerTime = startServerTime,
+                        countdownSeconds = MatchProtocol.StartCountdownSeconds };
+                    SendTo(player.client, MatchProtocol.Welcome, MatchProtocol.Encode(welcome, 1024));
                 }
                 Status("Match started · " + matchId);
                 PublishSnapshots();
                 nextSnapshot = NextSnapshotTime(nextSnapshot, clock.Elapsed.TotalSeconds);
         }
 
-        private void Command(ulong client, FastBufferReader reader)
+        private void Command(ulong client, byte[] payload)
         {
             if (!seats.TryGetValue(client, out var seat) || !seat.ready || Match == null) return;
             double arrival = clock.Elapsed.TotalSeconds;
             seat.requestTokens = Math.Min(120, seat.requestTokens + Math.Max(0, arrival - seat.requestTime) * 60); seat.requestTime = arrival;
-            if (seat.requestTokens < 1) { manager.DisconnectClient(client, "Command traffic limit exceeded."); return; }
+            if (seat.requestTokens < 1) { Kick(client, "Command traffic limit exceeded."); return; }
             seat.requestTokens -= 1;
             GameCommand command;
-            try { command = MatchProtocol.Decode<GameCommand>(MatchProtocol.Read(reader, MatchProtocol.MaxCommandBytes)); }
-            catch { manager.DisconnectClient(client, "Malformed command."); return; }
-            if (command == null || command.sequence <= 0) { manager.DisconnectClient(client, "Commands require a positive sequence."); return; }
+            try
+            {
+                if (payload == null || payload.Length == 0 || payload.Length > MatchProtocol.MaxCommandBytes) throw new InvalidOperationException("Invalid network message length.");
+                command = MatchProtocol.Decode<GameCommand>(payload);
+            }
+            catch { Kick(client, "Malformed command."); return; }
+            if (command == null || command.sequence <= 0) { Kick(client, "Commands require a positive sequence."); return; }
             if (seat.receipts.TryGet(command.sequence, out var previous)) { SendAck(seat, previous); return; }
             if (seat.receipts.WasProcessed(command.sequence))
             { SendAck(seat, new CommandAck { sequence = command.sequence, tick = Match.Tick, message = "This command sequence has already been processed." }); return; }
@@ -192,19 +227,21 @@ namespace Frontier.Networking
 
         private void SendAck(Seat seat, CommandAck acknowledgement)
         {
-            if (seat.connected) MatchProtocol.Send(manager, MatchProtocol.Ack, seat.client, MatchProtocol.Encode(acknowledgement, 2048));
+            if (seat.connected) SendTo(seat.client, MatchProtocol.Ack, MatchProtocol.Encode(acknowledgement, 2048));
         }
 
         private void Update()
         {
             if (!IsRunning || closing) return;
+            PollWebSockets();
+            if (closing) return;
             AdvanceAllocation();
             if (allocationAborted) return;
             double now = clock.Elapsed.TotalSeconds;
             foreach (var seat in seats.Values.ToArray())
                 if (!seat.ready && now - seat.connectedAt > 15)
                 {
-                    manager.DisconnectClient(seat.client, "Timed out waiting for player readiness.");
+                    Kick(seat.client, "Timed out waiting for player readiness.");
                     if (Match == null) seats.Remove(seat.client);
                 }
             if (Match == null) { lastTime = now; return; }
@@ -236,8 +273,7 @@ namespace Frontier.Networking
                 if (!seat.connected || seat.result == null || seat.resultAcknowledged) continue;
                 int total = NetworkWire.ChunkCount(seat.result.Length);
                 for (int sent = 0; sent < 8 && seat.resultNextChunk < total; sent++, seat.resultNextChunk++)
-                    MatchProtocol.Send(manager, MatchProtocol.Result, seat.client,
-                        NetworkWire.Chunk(1, seat.result, seat.resultRawLength, seat.resultNextChunk));
+                    SendTo(seat.client, MatchProtocol.Result, NetworkWire.Chunk(1, seat.result, seat.resultRawLength, seat.resultNextChunk));
             }
         }
 
@@ -268,7 +304,7 @@ namespace Frontier.Networking
                 timing?.RecordSeat(seat.player, raw.Length, packed.Length, count);
                 for (int index = 0; index < count; index++)
                     // FrameAssembler sequences whole snapshots; the transport must preserve reordered chunks.
-                    MatchProtocol.Send(manager, MatchProtocol.Snapshot, seat.client, NetworkWire.Chunk(id, packed, raw.Length, index), NetworkDelivery.Unreliable);
+                    SendTo(seat.client, MatchProtocol.Snapshot, NetworkWire.Chunk(id, packed, raw.Length, index), NetworkDelivery.Unreliable);
             }
             if (timing != null) timing.SnapshotMilliseconds.Add(ElapsedMilliseconds(started));
         }
@@ -300,21 +336,26 @@ namespace Frontier.Networking
             Status("Match finished · winner=" + Match.Winner + " tick=" + Match.Tick + " accepted=" + AcceptedCommands + " rejected=" + RejectedCommands);
         }
 
-        private void ResultAcknowledged(ulong client, FastBufferReader reader)
+        private void ResultAcknowledged(ulong client, byte[] payload)
         {
             if (!finished || !seats.TryGetValue(client, out var seat)) return;
-            try { if (MatchProtocol.Read(reader, 1)[0] == 1) { seat.resultAcknowledged = true; seat.result = null; } } catch { }
+            if (payload != null && payload.Length == 1 && payload[0] == 1) { seat.resultAcknowledged = true; seat.result = null; }
         }
 
         private void Disconnected(ulong client)
         {
+            string reason = manager == null ? "" : manager.DisconnectReason ?? "";
+            HandleDisconnect(client, manager == null ? "Unavailable" : manager.DisconnectEvent.ToString(), reason);
+        }
+
+        private void HandleDisconnect(ulong client, string transport, string reason)
+        {
             CancelPendingApproval(client, "Connection closed during admission.");
             if (closing || !seats.TryGetValue(client, out var seat)) return;
             seat.connected = false;
-            string reason = manager == null ? "" : manager.DisconnectReason ?? "";
-            reason = reason.Replace('\r', ' ').Replace('\n', ' ');
+            reason = (reason ?? "").Replace('\r', ' ').Replace('\n', ' ');
             if (reason.Length > 512) reason = reason.Substring(0, 512);
-            Status("Player " + (seat.player + 1) + " disconnected · transport=" + (manager == null ? "Unavailable" : manager.DisconnectEvent.ToString())
+            Status("Player " + (seat.player + 1) + " disconnected · transport=" + transport
                 + " · reason=" + reason + " · match=" + matchId + " · tick=" + (Match?.Tick ?? 0) + " · remaining=" + ConnectedPlayers);
             if (Match == null)
             {
@@ -349,6 +390,20 @@ namespace Frontier.Networking
             AcceptedCommands = RejectedCommands = 0;
             metrics = EnableNetworkMetrics ? new ServerMetrics() : null;
             clock.Restart();
+        }
+
+        // One outbound path for both transports. Browser frames carry the same
+        // payload bytes as the NGO named messages, prefixed by their kind.
+        private void SendTo(ulong client, string name, byte[] bytes, NetworkDelivery delivery = NetworkDelivery.ReliableFragmentedSequenced)
+        {
+            if (IsWebSocketClient(client)) { gateway?.Send(client, WebSocketMatchCodec.Envelope(WebSocketKind(name), bytes)); return; }
+            if (manager != null) MatchProtocol.Send(manager, name, client, bytes, delivery);
+        }
+
+        private void Kick(ulong client, string reason)
+        {
+            if (IsWebSocketClient(client)) { gateway?.Close(client, reason); return; }
+            manager?.DisconnectClient(client, reason);
         }
 
         private static double ElapsedMilliseconds(long started) => (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency;
@@ -417,7 +472,7 @@ namespace Frontier.Networking
             private double Average(long[] totals, int player) => seatSnapshots[player] == 0 ? 0 : totals[player] / (double)seatSnapshots[player];
         }
 
-        private void SendStatus(ulong client, string message) => MatchProtocol.Send(manager, MatchProtocol.Status, client, MatchProtocol.Encode(new NetworkStatus { message = message }, 2048));
+        private void SendStatus(ulong client, string message) => SendTo(client, MatchProtocol.Status, MatchProtocol.Encode(new NetworkStatus { message = message }, 2048));
         private void Status(string message)
         {
             UnityEngine.Debug.Log("FRONTIER_SERVER " + message);
@@ -428,6 +483,7 @@ namespace Frontier.Networking
         {
             closing = true; clock.Stop();
             InvalidateApprovals();
+            StopWebSockets();
             if (manager == null) return;
             var old = manager; manager = null;
             old.OnClientConnectedCallback -= Connected; old.OnClientDisconnectCallback -= Disconnected;

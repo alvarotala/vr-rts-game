@@ -59,13 +59,15 @@ def initialize(host=None):
     path = LOCAL / "config.yml"
     path.write_text(json.dumps(config, indent=2) + "\n")
     os.chmod(path, 0o600)
-    print(f"Local configuration ready. API http://{env['LL_PUBLIC_HOST']}:7350; NGO {env['LL_PUBLIC_HOST']}:7778/udp")
+    host = env['LL_PUBLIC_HOST']
+    print(f"Local configuration ready. API http://{host}:7350; NGO {host}:7778/udp; websocket {host}:7878/tcp; "
+          f"desktop client port 8080 (online-stack.py web)")
     return env
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("init", "up", "backend", "down", "status", "logs", "test"))
+    parser.add_argument("action", choices=("init", "up", "backend", "web", "down", "status", "logs", "test"))
     parser.add_argument("--host", help="Address reachable by the Quest; preserved on subsequent runs")
     args = parser.parse_args()
     if args.action == "init":
@@ -77,8 +79,9 @@ def main():
     commands = {
         "up": ["--profile", "game", "up", "--build", "-d", "--wait", "--wait-timeout", "90"],
         "backend": ["up", "--build", "-d", "--wait", "--wait-timeout", "90", "nakama"],
-        "down": ["--profile", "game", "down"],
-        "status": ["--profile", "game", "ps", "-a"],
+        "web": ["--profile", "web", "up", "--build", "-d", "web"],
+        "down": ["--profile", "game", "--profile", "web", "down"],
+        "status": ["--profile", "game", "--profile", "web", "ps", "-a"],
         "logs": ["logs", "--tail", "100", "nakama", "server"],
     }
     if args.action == "test":

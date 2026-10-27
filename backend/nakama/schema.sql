@@ -23,6 +23,11 @@ CREATE TABLE IF NOT EXISTS ll_matches (
   expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '10 minutes')
 );
 CREATE INDEX IF NOT EXISTS ll_matches_pending ON ll_matches(created_at) WHERE status='waitingServer';
+-- Browser clients join over websocket. Additive columns keep existing rows valid:
+-- old servers advertise no websocket port; old searches never require one.
+ALTER TABLE ll_servers ADD COLUMN IF NOT EXISTS ws_port INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE ll_searches ADD COLUMN IF NOT EXISTS websocket BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE ll_matches ADD COLUMN IF NOT EXISTS websocket BOOLEAN NOT NULL DEFAULT false;
 CREATE TABLE IF NOT EXISTS ll_players (
   match_id TEXT NOT NULL REFERENCES ll_matches(id), player_id TEXT NOT NULL,
   search_id TEXT NOT NULL REFERENCES ll_searches(id), seat INTEGER NOT NULL CHECK (seat IN (0,1)),

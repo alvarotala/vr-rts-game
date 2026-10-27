@@ -14,7 +14,7 @@ COPY --chown=frontier:frontier Builds/Server/ ./
 RUN test -f ./FrontierServer && chmod 755 ./FrontierServer
 
 USER frontier
-EXPOSE 7777/udp
+EXPOSE 7777/udp 7877/tcp
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/opt/frontier/FrontierServer", "-batchmode", "-nographics", "-frontier-server", "-logFile", "/dev/stdout"]
-CMD ["-frontier-port", "7777", "-frontier-map", "rift", "-frontier-listen", "0.0.0.0"]
+CMD ["-frontier-port", "7777", "-frontier-ws-port", "7877", "-frontier-map", "rift", "-frontier-listen", "0.0.0.0"]

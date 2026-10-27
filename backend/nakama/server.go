@@ -19,6 +19,7 @@ type registerRequest struct {
 	BootID      string `json:"bootId"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
+	WsPort      int    `json:"wsPort"`
 	Protocol    int    `json:"protocol"`
 	Rules       int    `json:"rules"`
 	ContentHash string `json:"contentHash"`
@@ -30,21 +31,21 @@ func serverRegister(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user
 	if err := decode(payload, &req); err != nil {
 		return nil, err
 	}
-	if !allowedServers[req.ServerID] || !safeID.MatchString(req.BootID) || len(req.Host) > 253 || strings.TrimSpace(req.Host) != req.Host || req.Host == "" || req.Host == "0.0.0.0" || req.Host == "::" || strings.ContainsAny(req.Host, "/\\\x00\r\n ") || req.Port < 1 || req.Port > 65535 || !validCompatibility(req.Protocol, req.Rules, req.ContentHash) {
+	if !allowedServers[req.ServerID] || !safeID.MatchString(req.BootID) || len(req.Host) > 253 || strings.TrimSpace(req.Host) != req.Host || req.Host == "" || req.Host == "0.0.0.0" || req.Host == "::" || strings.ContainsAny(req.Host, "/\\\x00\r\n ") || req.Port < 1 || req.Port > 65535 || req.WsPort < 0 || req.WsPort > 65535 || !validCompatibility(req.Protocol, req.Rules, req.ContentHash) {
 		return nil, invalid("Invalid registered server configuration")
 	}
 	if strings.Contains(req.Host, ":") && net.ParseIP(req.Host) == nil {
 		return nil, invalid("Host must not include a port")
 	}
 	var boot, lease, matchID, host, hash string
-	var port, protocol, rules int
+	var port, wsPort, protocol, rules int
 	var active bool
-	err := tx.QueryRowContext(ctx, `SELECT boot_id,lease_id,COALESCE(match_id,''),active,host,port,protocol,rules,content_hash FROM ll_servers WHERE id=$1`, req.ServerID).Scan(&boot, &lease, &matchID, &active, &host, &port, &protocol, &rules, &hash)
+	err := tx.QueryRowContext(ctx, `SELECT boot_id,lease_id,COALESCE(match_id,''),active,host,port,ws_port,protocol,rules,content_hash FROM ll_servers WHERE id=$1`, req.ServerID).Scan(&boot, &lease, &matchID, &active, &host, &port, &wsPort, &protocol, &rules, &hash)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 	if err == nil && boot == req.BootID && active {
-		if host != req.Host || port != req.Port || protocol != req.Protocol || rules != req.Rules || hash != req.ContentHash {
+		if host != req.Host || port != req.Port || wsPort != req.WsPort || protocol != req.Protocol || rules != req.Rules || hash != req.ContentHash {
 			return nil, conflict("An active process cannot change its endpoint or compatibility")
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE ll_servers SET heartbeat_at=now() WHERE id=$1`, req.ServerID)
@@ -62,7 +63,7 @@ func serverRegister(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user
 		}
 	}
 	lease = token()
-	_, err = tx.ExecContext(ctx, `INSERT INTO ll_servers(id,boot_id,lease_id,host,port,protocol,rules,content_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET boot_id=EXCLUDED.boot_id,lease_id=EXCLUDED.lease_id,host=EXCLUDED.host,port=EXCLUDED.port,protocol=EXCLUDED.protocol,rules=EXCLUDED.rules,content_hash=EXCLUDED.content_hash,active=true,heartbeat_at=now(),match_id=NULL`, req.ServerID, req.BootID, lease, req.Host, req.Port, req.Protocol, req.Rules, req.ContentHash)
+	_, err = tx.ExecContext(ctx, `INSERT INTO ll_servers(id,boot_id,lease_id,host,port,ws_port,protocol,rules,content_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(id) DO UPDATE SET boot_id=EXCLUDED.boot_id,lease_id=EXCLUDED.lease_id,host=EXCLUDED.host,port=EXCLUDED.port,ws_port=EXCLUDED.ws_port,protocol=EXCLUDED.protocol,rules=EXCLUDED.rules,content_hash=EXCLUDED.content_hash,active=true,heartbeat_at=now(),match_id=NULL`, req.ServerID, req.BootID, lease, req.Host, req.Port, req.WsPort, req.Protocol, req.Rules, req.ContentHash)
 	return map[string]string{"leaseId": lease}, err
 }
 

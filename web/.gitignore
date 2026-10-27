@@ -1,0 +1,6 @@
+node_modules/
+dist/
+public/core/
+core-wasm/bin/
+core-wasm/obj/
+.vitest/

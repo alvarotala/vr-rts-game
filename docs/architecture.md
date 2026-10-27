@@ -18,6 +18,8 @@ Los efectos iniciales son daño de área a enemigos actualmente visibles, inclui
 
 La IA `Strategist` recibe `PlayerView`, el catálogo y los datos estáticos públicos del mapa. No recibe `Simulation`, listas de enemigos ocultos ni recursos de otro jugador.
 
+`NgoMatchServer` mantiene asientos neutrales respecto del transporte. Además de NGO, `WebSocketGateway` (sin dependencias de Unity) acepta navegadores en un puerto TCP. Sus eventos se procesan en el hilo principal y comparten con NGO la validación del saludo, la admisión asignada, las órdenes, las vistas y los resultados. El cliente de escritorio en `web/` (three.js) usa ese transporte; sin conexión ejecuta `Frontier.Core` compilado a WebAssembly en un worker. Detalles en [cliente de escritorio](web-client.md).
+
 `BoardView` transforma coordenadas lógicas en una maqueta, interpola posiciones y recorta la representación al área física. Cambiar escala, orientación o zoom no modifica las distancias de la simulación. Las unidades enemigas no visibles no se presentan; edificios observados previamente aparecen como recuerdos sin actualizar su información.
 
 `BoardView` conserva la cuadrícula del terreno y la región de rampa de cada celda. `SurfaceHeight` evalúa la pendiente continua en el punto consultado; la malla, el collider, `HeightAt`, las unidades, los recursos y los efectos usan esa misma superficie. `TerrainRise` vale 3 para `theme="desert"` y 1,5 para los demás mapas, sin cambiar los dos niveles lógicos de `GridMap`. Las paredes verticales se generan únicamente en bordes expuestos al comparar las superficies vecinas; no se duplican caras interiores entre celdas de una meseta.

@@ -1,5 +1,23 @@
 # Registro de validación
 
+## Cliente de escritorio three.js y juego cruzado con Quest — fuentes, sin nuevo APK ni build Unity — 26 de octubre de 2026
+
+Se agregó un transporte WebSocket al servidor dedicado (puertos TCP 7877/7878), el registro de `wsPort` y la regla de asignación con jugadores de escritorio en Nakama, y el cliente web en `web/`: partidas contra la IA con `Frontier.Core` en WebAssembly, conexión directa y matchmaking público. Esta Mac no tiene Unity: no se compilaron el APK, el servidor Linux ni el build de escritorio de Unity.
+
+| Comprobación | Resultado | Evidencia |
+| --- | --- | --- |
+| Núcleo (.NET 8) | 2809 comprobaciones; `Frontier.Core` sin cambios | `TestResults/web-baseline-core.log` |
+| Red (.NET 8) | 2188 comprobaciones, incluidas 39 del servidor WebSocket | `tests/NetworkChecks` |
+| Arnés del servidor | 44 comprobaciones. Partida completa NGO contra WebSocket: ganador 0 en el tick 10493, mismo SHA-256 de informe en ambos transportes. También pérdida abrupta de un navegador, límites del protocolo y admisión asignada de navegador y Quest con eventos ready, started y finished | `TestResults/harness-full.log` |
+| Pruebas de Editor existentes, ejecutadas en el arnés | `AllocatedServerChecks` 38 y `ServerLifecycleChecks` 17, sin modificar sus fuentes | modo `editor-checks` |
+| Backend Nakama 3.41.0 y PostgreSQL 17 en Docker | 190 comprobaciones de integración, 32 nuevas de emparejamiento cruzado | `python3 scripts/online-stack.py test` |
+| Cliente web | 19 pruebas unitarias contra bytes producidos por C# (hash de contenido, fragmentos, resultado, orden de `CommandKind`), órdenes de sesión, construcción y traducciones | `npm test` |
+| Punta a punta | Cliente web contra el arnés con rival por NGO. Matchmaking público real con un jugador tipo Quest (NGO) y el cliente web (WebSocket), con el resultado persistido en PostgreSQL. Dos clientes web contra un servidor externo | `npm run e2e` |
+| Visual en Chromium headless | Menús en inglés y español, partidas contra la IA en los tres mapas, selección, construcción, combate, pausa, resultados y conexión directa | `TestResults/web/*.png` |
+| Imagen Docker del cliente | `Dockerfile.web` compilada y servida en el puerto 8080; una partida contra la IA funcionó desde esa imagen | `online-stack.py web` |
+
+Pendiente: compilar con Unity 6000.3.26f1 el servidor Linux, que necesita el cambio, y el APK, para confirmar que el proyecto compila; repetir la prueba punta a punta contra la imagen Docker real; una partida física Quest contra escritorio; TLS (wss) para un despliegue público; portar al cliente web el tutorial, el historial con replays y la reasignación de teclas.
+
 ## Guía de controles — validación completa y APK 0.1.9 — 21 de octubre de 2026
 
 Se confirmó la corrección ya presente en el directorio de trabajo: las comprobaciones de solapamiento usan `statusBanner`, que comparte el contenedor del panel con la guía y la navegación. El texto `status` es hijo del banner y tiene coordenadas locales distintas; usar su posición producía el falso error `Control guide overlaps footer`. El mismo ajuste aparece en las comprobaciones de hotkeys, historial, informe y espectador.

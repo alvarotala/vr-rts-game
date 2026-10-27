@@ -15,6 +15,11 @@ namespace Frontier.Dedicated
             {
                 Debug.LogError("Invalid -frontier-port (1..65535 required)."); Application.Quit(2); return;
             }
+            // Browser clients join over TCP; 0 disables the websocket listener.
+            if (!ushort.TryParse(Argument(args, "-frontier-ws-port", (port + NgoMatchServer.WebSocketPortOffset).ToString()), out ushort webSocketPort))
+            {
+                Debug.LogError("Invalid -frontier-ws-port (0..65535 required)."); Application.Quit(2); return;
+            }
             Application.runInBackground = true;
             Application.targetFrameRate = 60;
             var server = new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
@@ -25,7 +30,7 @@ namespace Frontier.Dedicated
                 try { AllocatedServerAgent.Launch(server, port); }
                 catch (Exception error) { Debug.LogError(error.Message); Application.Quit(2); return; }
             }
-            if (!server.StartServer(port, Argument(args, "-frontier-map", "rift"), Argument(args, "-frontier-listen", "0.0.0.0")))
+            if (!server.StartServer(port, Argument(args, "-frontier-map", "rift"), Argument(args, "-frontier-listen", "0.0.0.0"), webSocketPort))
                 Application.Quit(1);
         }
 
