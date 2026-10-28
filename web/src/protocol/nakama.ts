@@ -2,9 +2,17 @@ import type { Compatibility } from './matchConnection';
 
 export interface PublicConnection { matchId: string; host: string; port: number; wsPort: number; joinTicket: string; faction: string }
 type Status = (message: string) => void;
+interface SearchWindow { rating: number; searchRadius: number; queueRevision: number }
 
 const ServerKey = 'littlelegion';
 const OpaqueId = /^[A-Za-z0-9_-]{24,64}$/;
+
+function validateSearchWindow(value: SearchWindow): void {
+  if (!Number.isInteger(value.rating) || value.rating < 0 || !Number.isInteger(value.searchRadius)
+    || value.searchRadius < 100 || value.searchRadius > 400 || value.searchRadius % 100 !== 0
+    || value.queueRevision !== value.searchRadius / 100 - 1)
+    throw new Error('The service returned an invalid rating range.');
+}
 
 // Validates the online service URL like NakamaMatchmaker.ValidateEndpoint: plain HTTP
 // only for this computer or a private LAN; public services require HTTPS.
@@ -46,8 +54,10 @@ function statusText(state: string): string {
 }
 
 const delay = (ms: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
-  const timer = setTimeout(resolve, ms);
-  signal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Cancelled', 'AbortError')); }, { once: true });
+  signal.throwIfAborted();
+  const abort = () => { clearTimeout(timer); reject(signal.reason); };
+  const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, ms);
+  signal.addEventListener('abort', abort, { once: true });
 });
 
 // Same flow as the Unity NakamaMatchmaker: device session, ll_search_open, native
@@ -58,6 +68,10 @@ export class NakamaMatchmaker {
   private token = '';
   private searchId = '';
   private socket: WebSocket | null = null;
+  private readonly cancellation = new AbortController();
+  private cancelling: Promise<void> | null = null;
+  private used = false;
+  private cid = 0;
   private joined = false;
   constructor(
     private readonly compatibility: Compatibility,
@@ -66,27 +80,45 @@ export class NakamaMatchmaker {
   ) {}
 
   async find(backendUrl: string, faction: string, signal: AbortSignal, status: Status): Promise<PublicConnection> {
+    if (this.used) throw new Error('A search is already active.');
+    this.used = true;
     const endpoint = validateEndpoint(backendUrl);
     if (faction !== 'industrial' && faction !== 'biological') throw new Error('Unknown faction.');
     this.base = endpoint.origin;
+    signal = AbortSignal.any([signal, this.cancellation.signal]);
     let handedOff = false;
     try {
+      signal.throwIfAborted();
       status('Signing in…');
+      // Let bounded creation calls finish so a late search ID can still be cancelled.
       const session = await this.http('/v2/account/authenticate/device?create=true', { id: this.identityOverride ?? identity(endpoint.origin, this.storage) },
-        'Basic ' + btoa(ServerKey + ':'), signal) as { token?: string };
+        'Basic ' + btoa(ServerKey + ':'), AbortSignal.timeout(8000)) as { token?: string };
       if (typeof session.token !== 'string' || session.token.length < 16) throw new Error('The online service returned an invalid session.');
       this.token = session.token;
+      signal.throwIfAborted();
       const opened = await this.rpc('ll_search_open', { faction, protocol: this.compatibility.protocol, rules: this.compatibility.rules,
-        contentHash: this.compatibility.contentHash, websocket: true }, signal) as { searchId?: string };
+        contentHash: this.compatibility.contentHash, websocket: true }, AbortSignal.timeout(8000)) as SearchWindow & { searchId?: string };
       if (typeof opened.searchId !== 'string' || !OpaqueId.test(opened.searchId)) throw new Error('The service returned an invalid search.');
       this.searchId = opened.searchId;
-      await this.queue(endpoint, signal);
+      validateSearchWindow(opened);
+      signal.throwIfAborted();
+      const socket = await this.connect(endpoint, signal);
+      let queueTicket = await this.enqueue(socket, signal);
+      let queuedRevision = opened.queueRevision;
       let previous = '';
       for (;;) {
         signal.throwIfAborted();
-        const result = await this.rpc('ll_search_status', { searchId: this.searchId }, signal) as { status?: string; connection?: PublicConnection };
+        const result = await this.rpc('ll_search_status', { searchId: this.searchId }, signal) as SearchWindow & { status?: string; connection?: PublicConnection };
+        signal.throwIfAborted();
         const state = String(result.status ?? '');
-        if (state !== previous) { previous = state; status(statusText(state)); }
+        if (state === 'searching') validateSearchWindow(result);
+        if (state !== previous || state === 'searching' && result.queueRevision !== queuedRevision) {
+          previous = state;
+          status(state === 'searching'
+            ? `Searching for a similar opponent (rating ${result.rating}, range ±${result.searchRadius})…`
+            : statusText(state));
+        }
+        signal.throwIfAborted();
         if (state === 'ready') {
           const connection = result.connection;
           if (!connection || !OpaqueId.test(connection.matchId) || !connection.host || connection.host === '0.0.0.0'
@@ -100,6 +132,16 @@ export class NakamaMatchmaker {
         if (state === 'failed' || state === 'finished') throw new Error('The match is no longer available. Please search again.');
         if (state !== 'searching' && state !== 'waitingServer' && state !== 'preparing') throw new Error('The service returned an invalid search state.');
         if (state === 'searching' && this.socket?.readyState !== 1) throw new Error('The matchmaking connection was lost. Please search again.');
+        if (state === 'searching' && result.queueRevision !== queuedRevision) {
+          // Keep the search age and socket session. Matching can win either operation:
+          // only search_status decides whether the search failed or has a match ready.
+          try {
+            try { await this.socketRequest(socket, { matchmaker_remove: { ticket: queueTicket } }, signal); }
+            catch { signal.throwIfAborted(); }
+            queueTicket = await this.enqueue(socket, signal);
+            queuedRevision = result.queueRevision;
+          } catch { signal.throwIfAborted(); }
+        }
         await delay(1000, signal);
       }
     } finally {
@@ -111,12 +153,15 @@ export class NakamaMatchmaker {
   confirmJoined(): void { this.joined = true; this.searchId = ''; this.closeSocket(); }
 
   async cancel(): Promise<void> {
+    this.cancellation.abort();
+    this.closeSocket();
     const id = this.searchId;
     if (!this.joined && id && this.token) {
-      try { await this.rpc('ll_search_cancel', { searchId: id }, AbortSignal.timeout(5000)); } catch { /* backend expiry is the fallback */ }
-      if (this.searchId === id) this.searchId = '';
+      this.cancelling ??= this.rpc('ll_search_cancel', { searchId: id }, AbortSignal.timeout(5000))
+        .then(() => {}, () => { /* backend expiry is the fallback */ })
+        .finally(() => { if (this.searchId === id) this.searchId = ''; this.cancelling = null; });
+      await this.cancelling;
     }
-    this.closeSocket();
   }
 
   private closeSocket() {
@@ -124,28 +169,58 @@ export class NakamaMatchmaker {
     if (socket && socket.readyState <= 1) { try { socket.close(); } catch { /* ignore */ } }
   }
 
-  private queue(endpoint: URL, signal: AbortSignal): Promise<void> {
+  private connect(endpoint: URL, signal: AbortSignal): Promise<WebSocket> {
+    signal.throwIfAborted();
     const ws = (endpoint.protocol === 'https:' ? 'wss://' : 'ws://') + endpoint.host + '/ws?lang=en&status=false&format=json&token=' + encodeURIComponent(this.token);
-    const compat = `${this.compatibility.protocol}:${this.compatibility.rules}:${this.compatibility.contentHash}`;
     return new Promise((resolve, reject) => {
       const socket = new WebSocket(ws);
       this.socket = socket;
-      const timer = setTimeout(() => reject(new Error('The matchmaking connection timed out.')), 8000);
-      const abort = () => { clearTimeout(timer); reject(new DOMException('Cancelled', 'AbortError')); };
-      signal.addEventListener('abort', abort, { once: true });
-      socket.onopen = () => {
-        socket.send(JSON.stringify({ cid: '1', matchmaker_add: { min_count: 2, max_count: 2, query: `+properties.compat:"${compat}"`,
-          string_properties: { compat, searchId: this.searchId } } }));
-      };
-      socket.onmessage = (event) => {
-        let message: Record<string, unknown>;
-        try { message = JSON.parse(String(event.data)); } catch { return; }
-        if (message.cid !== '1') return;
+      const cleanup = () => {
         clearTimeout(timer); signal.removeEventListener('abort', abort);
-        if (message.error) reject(new Error('The online service refused the search.'));
-        else resolve();
+        socket.removeEventListener('open', open); socket.removeEventListener('close', lost); socket.removeEventListener('error', lost);
       };
-      socket.onclose = () => { clearTimeout(timer); reject(new Error('The matchmaking connection was lost. Please search again.')); };
+      const fail = (error: unknown) => { cleanup(); reject(error); };
+      const open = () => { cleanup(); resolve(socket); };
+      const lost = () => fail(new Error('The matchmaking connection was lost. Please search again.'));
+      const abort = () => fail(signal.reason);
+      const timer = setTimeout(() => fail(new Error('The matchmaking connection timed out.')), 8000);
+      signal.addEventListener('abort', abort, { once: true });
+      socket.addEventListener('open', open); socket.addEventListener('close', lost); socket.addEventListener('error', lost);
+    });
+  }
+
+  private async enqueue(socket: WebSocket, signal: AbortSignal): Promise<string> {
+    const compat = `${this.compatibility.protocol}:${this.compatibility.rules}:${this.compatibility.contentHash}`;
+    const response = await this.socketRequest(socket, { matchmaker_add: { min_count: 2, max_count: 2,
+      query: `+properties.compat:"${compat}"`, string_properties: { compat, searchId: this.searchId } } }, signal);
+    const ticket = (response.matchmaker_ticket as { ticket?: unknown } | undefined)?.ticket;
+    if (typeof ticket !== 'string' || !ticket) throw new Error('The online service returned an invalid matchmaking ticket.');
+    return ticket;
+  }
+
+  private socketRequest(socket: WebSocket, body: Record<string, unknown>, signal: AbortSignal): Promise<Record<string, unknown>> {
+    signal.throwIfAborted();
+    const cid = String(++this.cid);
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer); signal.removeEventListener('abort', abort);
+        socket.removeEventListener('message', message); socket.removeEventListener('close', lost); socket.removeEventListener('error', lost);
+      };
+      const fail = (error: unknown) => { cleanup(); reject(error); };
+      const lost = () => fail(new Error('The matchmaking connection was lost. Please search again.'));
+      const abort = () => fail(signal.reason);
+      const message = (event: MessageEvent) => {
+        let response: Record<string, unknown> | null;
+        try { response = JSON.parse(String(event.data)); } catch { return; }
+        if (response?.cid !== cid) return;
+        if (response.error) fail(new Error('The online service refused the search.'));
+        else { cleanup(); resolve(response); }
+      };
+      const timer = setTimeout(() => fail(new Error('The matchmaking connection timed out.')), 8000);
+      signal.addEventListener('abort', abort, { once: true });
+      socket.addEventListener('message', message); socket.addEventListener('close', lost); socket.addEventListener('error', lost);
+      if (socket.readyState !== 1) { lost(); return; }
+      try { socket.send(JSON.stringify({ cid, ...body })); } catch (error) { fail(error); }
     });
   }
 
