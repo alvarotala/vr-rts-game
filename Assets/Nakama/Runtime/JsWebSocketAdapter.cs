@@ -54,6 +54,7 @@ namespace Nakama
 
         private int Ref { get; set; } // unique jslib socket ref
         private Uri _uri;
+        private TaskCompletionSource<bool> connectionCompletion;
 
         public JsWebSocketAdapter()
         {
@@ -63,25 +64,29 @@ namespace Nakama
         /// <inheritdoc cref="ISocketAdapter.CloseAsync"/>
         public Task CloseAsync()
         {
-            UnityWebGLSocketBridge.Instance.Close(Ref);
+            bool active = Ref >= 0 || IsConnected || IsConnecting;
+            if (Ref >= 0) UnityWebGLSocketBridge.Instance.Close(Ref);
             Ref = -1;
             IsConnecting = false;
             IsConnected = false;
+            connectionCompletion?.TrySetCanceled();
+            // JS handlers are detached during explicit close. Notify the SDK here
+            // so it cancels any pending realtime requests as it does on remote close.
+            if (active) Closed?.Invoke("Connection closed.");
             return Task.CompletedTask;
         }
 
         /// <inheritdoc cref="ISocketAdapter.ConnectAsync"/>
         public Task ConnectAsync(Uri uri, int timeout)
         {
-            // TODO will need to use window.setTimeout to implement timeouts on DOM WebSocket.
             if (Ref > -1)
             {
-                return Task.CompletedTask;
+                return connectionCompletion?.Task ?? Task.CompletedTask;
             }
 
             _uri = uri;
             IsConnecting = true;
-            var tcs = new TaskCompletionSource<bool>();
+            var tcs = connectionCompletion = new TaskCompletionSource<bool>();
 
             Action open = () =>
             {
@@ -95,11 +100,13 @@ namespace Nakama
                 IsConnected = false;
                 IsConnecting = false;
                 Ref = -1;
+                tcs.TrySetException(new Exception("The matchmaking connection closed before it opened."));
                 Closed?.Invoke(reason);
             };
             Action<string> error = reason =>
             {
                 IsConnected = false;
+                IsConnecting = false;
                 Ref = -1;
                 if (!tcs.Task.IsCompleted)
                 {
@@ -114,14 +121,15 @@ namespace Nakama
             {
                 Received?.Invoke(new ArraySegment<byte>(Encoding.UTF8.GetBytes(message)));
             };
-            Ref = UnityWebGLSocketBridge.Instance.CreateSocket(uri.AbsoluteUri, open, close, error, handler);
+            Ref = UnityWebGLSocketBridge.Instance.CreateSocket(uri.AbsoluteUri, open, close, error, handler, timeout);
             return tcs.Task;
         }
 
         /// <inheritdoc cref="ISocketAdapter.SendAsync"/>
         public Task SendAsync(ArraySegment<byte> buffer, bool reliable = true, CancellationToken canceller = default)
         {
-            if (Ref == -1)
+            canceller.ThrowIfCancellationRequested();
+            if (Ref == -1 || !IsConnected)
             {
                 throw new SocketException((int)SocketError.NotConnected);
             }
@@ -194,7 +202,7 @@ namespace Nakama
         }
 
         public int CreateSocket(string address, Action socketOpenHandle, Action<int, string> socketCloseHandle,
-            Action<string> socketErrorHandle, Action<string> socketMessageHandle)
+            Action<string> socketErrorHandle, Action<string> socketMessageHandle, int timeoutSeconds = 8)
         {
             var handler = new UnityWebGLSocketBridgeHandler
             {
@@ -206,12 +214,13 @@ namespace Nakama
 
             var socketRef = _globalSocketRef++;
             _handlers.Add(socketRef, handler);
-            NKCreateSocket(socketRef, address);
+            NKCreateSocket(socketRef, address, Math.Max(1, timeoutSeconds) * 1000);
             return socketRef;
         }
 
         public void Close(int socketRef)
         {
+            _handlers.Remove(socketRef);
             NKCloseSocket(socketRef);
         }
 
@@ -228,7 +237,7 @@ namespace Nakama
         }
 
         [DllImport("__Internal")]
-        private static extern void NKCreateSocket(int socketRef, string address);
+        private static extern void NKCreateSocket(int socketRef, string address, int timeoutMilliseconds);
 
         [DllImport("__Internal")]
         private static extern void NKCloseSocket(int socketRef);
@@ -278,11 +287,13 @@ namespace Nakama
             var socketRef = Convert.ToInt32(tokens[0]);
             var code = Convert.ToInt32(tokens[1]);
             var reason = tokens[2];
+            string description;
+            if (!CloseErrorMessages.TryGetValue(code, out description)) description = "Closed";
             if (reason.Length > 0)
             {
-                 reason = CloseErrorMessages[code]+": "+reason;
+                 reason = description+": "+reason;
             } else {
-                 reason = CloseErrorMessages[code];
+                 reason = description;
             }
             GetHandler(socketRef)?.OnClose?.Invoke(code, reason);
             _handlers.Remove(socketRef);

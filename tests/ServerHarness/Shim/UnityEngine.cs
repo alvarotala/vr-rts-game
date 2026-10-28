@@ -128,6 +128,7 @@ namespace UnityEngine
 
     public static class Application
     {
+        public static string absoluteURL { get; set; } = "http://localhost/";
         public static bool runInBackground { get; set; }
         public static int targetFrameRate { get; set; }
         public static bool isEditor => false;

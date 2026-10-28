@@ -97,7 +97,12 @@ namespace Frontier.Runtime
                         _=RefreshRankingAsync();return;
                     }
                     if(value.status!="pending")throw new InvalidOperationException("Unknown rating state.");
-                    if(attempt<9)await Task.Delay(2000,cancellation.Token);
+                    if(attempt<9)
+#if UNITY_WEBGL && !UNITY_EDITOR
+                        await WebGlAsync.Delay(2000,cancellation.Token);
+#else
+                        await Task.Delay(2000,cancellation.Token);
+#endif
                 }
                 MatchRatingStatus="This match is still being recorded. Refresh ranking to check again.";
             }
