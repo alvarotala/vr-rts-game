@@ -105,6 +105,7 @@ const exact: Record<string, string> = {
   'The server sent an invalid message.': 'El servidor envió un mensaje no válido.',
   'Enter a server address such as 192.168.1.20:7877.': 'Ingresa una dirección de servidor, por ejemplo 192.168.1.20:7877.',
   'The assigned server does not accept browser players yet.': 'El servidor asignado todavía no acepta jugadores de navegador.',
+  'This server rejected browser matchmaking. Ask its administrator to update browser support.': 'Este servidor rechazó la búsqueda desde el navegador. Pide a su administrador que actualice el soporte web.',
   'The matchmaking connection timed out.': 'La conexión de emparejamiento agotó el tiempo de espera.',
   'The online service refused the search.': 'El servicio en línea rechazó la búsqueda.',
   'The online service returned an invalid session.': 'El servicio en línea devolvió una sesión no válida.',

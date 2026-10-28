@@ -234,7 +234,17 @@ export class NakamaMatchmaker {
       headers: { 'Content-Type': 'application/json', Authorization: authorization },
     });
     const text = await response.text();
-    if (!response.ok) throw new Error('The online service could not complete the search. Check the connection and try again.');
+    if (!response.ok) {
+      // Older deployments reject the browser-only websocket field in their strict decoder.
+      // Keep declaring it: omitting it can allocate a server that only accepts UDP clients.
+      if (path === '/v2/rpc/ll_search_open?unwrap' && response.status === 400 && text.length <= 16384) {
+        let failure: { code?: unknown; message?: unknown } | null = null;
+        try { failure = JSON.parse(text); } catch { /* Keep the generic error for non-JSON responses. */ }
+        if (failure?.code === 3 && failure.message === 'Invalid request')
+          throw new Error('This server rejected browser matchmaking. Ask its administrator to update browser support.');
+      }
+      throw new Error('The online service could not complete the search. Check the connection and try again.');
+    }
     if (text.length > 16384) throw new Error('The online service returned an invalid response.');
     return text ? JSON.parse(text) : {};
   }

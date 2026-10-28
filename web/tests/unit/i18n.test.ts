@@ -16,6 +16,8 @@ describe('Spanish interface', () => {
     setLanguage('es', false);
     expect(t('Not enough resources.')).toBe('Recursos insuficientes.');
     expect(t('Select a worker.')).toBe('Selecciona un trabajador.');
+    expect(t('This server rejected browser matchmaking. Ask its administrator to update browser support.'))
+      .toBe('Este servidor rechazó la búsqueda desde el navegador. Pide a su administrador que actualice el soporte web.');
     expect(tf('\nRequires: {0}', 'Barracks')).toContain('Requiere');
   });
   it('translates every string the desktop client shows', () => {

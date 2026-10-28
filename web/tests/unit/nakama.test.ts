@@ -406,6 +406,43 @@ describe('Nakama public matchmaking', { timeout: 5000 }, () => {
     clean(socket());
   });
 
+  it('explains the legacy backend rejection without retrying as a UDP-only player', async () => {
+    openResult = new Response(JSON.stringify({ code: 3, message: 'Invalid request' }), { status: 400 });
+    const run = start(); await flush();
+    await expect(run.result).rejects.toThrow('This server rejected browser matchmaking. Ask its administrator to update browser support.');
+    expect(requests('ll_search_open')).toHaveLength(1);
+    expect(requests('ll_search_open')[0].body.websocket).toBe(true);
+    expect(requests('ll_search_cancel')).toHaveLength(0);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    [503, JSON.stringify({ code: 3, message: 'Invalid request' })],
+    [400, JSON.stringify({ code: 13, message: 'Invalid request' })],
+    [400, JSON.stringify({ code: 3, message: 'Internal diagnostic details' })],
+    [400, '<html>Internal diagnostic details</html>'],
+    [400, 'null'],
+    [400, ' '.repeat(16385)],
+  ])('keeps other search failures generic (case %#)', async (status, body) => {
+    openResult = new Response(body, { status });
+    const run = start(); await flush();
+    await expect(run.result).rejects.toThrow('The online service could not complete the search. Check the connection and try again.');
+    expect(requests('ll_search_open')).toHaveLength(1);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
+  it.each(['auth', 'status'])('does not mistake an invalid %s request for missing browser support', async (stage) => {
+    const failure = new Response(JSON.stringify({ code: 3, message: 'Invalid request' }), { status: 400 });
+    if (stage === 'auth') authResult = failure;
+    else states = [failure];
+    const run = start(); await flush();
+    await expect(run.result).rejects.toThrow('The online service could not complete the search. Check the connection and try again.');
+    expect(requests('ll_search_cancel')).toHaveLength(stage === 'status' ? 1 : 0);
+    if (stage === 'status') clean(socket());
+    else expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
   it('preserves response-size validation and still cleans up the search', async () => {
     states = [new Response(' '.repeat(16385))];
     const run = start(); await flush();

@@ -56,7 +56,7 @@ describe.skipIf(!reachable || !env.LL_RUNTIME_HTTP_KEY)('public matchmaking betw
     expect(connection.port).toBe(17778);
     expect(connection.wsPort).toBe(17878);
     expect(connection.faction).toBe('biological');
-    const session = new GameSession(catalogText, mapTexts, new OnlineTransport('public', websocketUrl(connection.host, connection.wsPort), connection.faction,
+    const session = new GameSession(catalogText, mapTexts, new OnlineTransport('public', websocketUrl(connection.host, connection.wsPort, backend), connection.faction,
       { matchId: connection.matchId, joinTicket: connection.joinTicket }, () => finder.confirmJoined()), 'training');
     const acks: { kind: CommandKind; accepted: boolean }[] = [];
     session.onCommandResult = (accepted, kind) => acks.push({ kind, accepted });

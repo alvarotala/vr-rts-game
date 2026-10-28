@@ -79,13 +79,14 @@ async function findMatch() {
   const abort = new AbortController();
   searchAbort = abort;
   const finder = new NakamaMatchmaker(compatibility);
+  const backendUrl = settings.backendUrl;
   matchmaker = finder;
   screens.setStatus(t('Signing in for online play…'));
   try {
-    const connection = await finder.find(settings.backendUrl, settings.faction, abort.signal, (status) => screens.setStatus(t(status)));
+    const connection = await finder.find(backendUrl, settings.faction, abort.signal, (status) => screens.setStatus(t(status)));
     if (abort.signal.aborted) return;
     searchAbort = null;
-    const transport = new OnlineTransport('public', websocketUrl(connection.host, connection.wsPort), connection.faction,
+    const transport = new OnlineTransport('public', websocketUrl(connection.host, connection.wsPort, backendUrl), connection.faction,
       { matchId: connection.matchId, joinTicket: connection.joinTicket }, () => finder.confirmJoined());
     begin(transport, 'rift', t('Online · public match'), null, t('Opponent found. Connecting to your match…'), () => void finder.cancel());
   } catch (error) {

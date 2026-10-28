@@ -34,8 +34,10 @@ export class OnlineTransport implements MatchTransport {
   leave(): void { this.connection?.close(); this.connection = null; }
 }
 
-export function websocketUrl(host: string, port: number): string {
-  const secure = typeof location !== 'undefined' && location.protocol === 'https:';
+export function websocketUrl(host: string, port: number, backendUrl?: string): string {
+  // Public matches keep the service's TLS policy even when the page runs on localhost.
+  const secure = (typeof location !== 'undefined' && location.protocol === 'https:')
+    || (backendUrl !== undefined && new URL(backendUrl).protocol === 'https:');
   const bracketed = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
   return `${secure ? 'wss' : 'ws'}://${bracketed}:${port}/`;
 }

@@ -72,6 +72,8 @@ Luego elegir **Conexión directa** con la dirección `127.0.0.1:7877`. El arnés
 
 Una página servida por HTTPS solo puede abrir `wss://`. En producción hay que poner un proxy TLS delante del puerto WebSocket de cada servidor y declarar el puerto público con `FRONTIER_ADVERTISE_WS_PORT` (`LL_PUBLIC_WS_PORT` en `compose.online.yml`). El servicio Nakama también debe publicarse por HTTPS, como ya exigía el cliente Quest.
 
+Las partidas asignadas por un servicio HTTPS usan WSS incluso si se abre el cliente desde `http://localhost:5173`. Si `ll_search_open` rechaza el campo `websocket`, seguir la [actualización para jugadores de navegador](browser-matchmaking-update.md).
+
 ## Controles
 
 | Acción | Control |
