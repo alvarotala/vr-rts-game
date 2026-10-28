@@ -10,16 +10,18 @@ namespace Frontier.Runtime
     public sealed partial class CommandPanel
     {
         private const string ServerAddressKey="frontier.multiplayer.address.v1",ServerPortKey="frontier.multiplayer.port.v1";
-        private const string PublicBackendKey="frontier.multiplayer.service.v1";
+        // Start production builds on the public service even after a LAN playtest.
+        // Keep the old preference and all per-endpoint account identities intact.
+        private const string PublicBackendKey="frontier.multiplayer.service.v2";
         private bool endpointPort,endpointPublic;
         private string endpointDraft="",endpointMessage;
         private string MatchDescription=>Session.IsTutorial?"GUIDED TUTORIAL · PRACTICE AT YOUR OWN PACE":
             $"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · "+(Session.IsOnline?(Session.IsPublicMatch?"PUBLIC 1V1":"MULTIPLAYER LAN"):DifficultyLabel+" AI");
 
-        private void LoadOnlineEndpoint()
+        private void LoadOnlineEndpoint(string[] args=null)
         {
             // Explicit launch arguments take priority over a previously saved LAN endpoint.
-            var args=Environment.GetCommandLineArgs();
+            args=args??Environment.GetCommandLineArgs();
             if(Array.IndexOf(args,"-frontier-client")<0)
             {
                 string address=PlayerPrefs.GetString(ServerAddressKey,Session.ServerAddress);
@@ -29,10 +31,7 @@ namespace Frontier.Runtime
             }
             if(Array.IndexOf(args,"-frontier-backend")<0)
             {
-                string fallback=Session.PublicBackendUrl;
-                if(fallback=="http://127.0.0.1:7350"&&Session.ServerAddress!="127.0.0.1"&&ValidServerAddress(Session.ServerAddress))
-                    fallback="http://"+Session.ServerAddress+":7350";
-                string saved=PlayerPrefs.GetString(PublicBackendKey,fallback);
+                string saved=PlayerPrefs.GetString(PublicBackendKey,Session.PublicBackendUrl);
                 if(ValidPublicBackend(saved))Session.PublicBackendUrl=saved;
             }
         }
@@ -64,7 +63,7 @@ namespace Frontier.Runtime
         private void BuildOnlineConnection()
         {
             var service=PublicBackend();
-            MenuCard("Online service: "+service.Host,"Choose the address of your online service.",Vector2.zero,new Vector2(512,116),()=>EditOnlineEndpoint(false,true));
+            MenuCard("Online service",service.Host,Vector2.zero,new Vector2(512,116),()=>EditOnlineEndpoint(false,true));
             MenuCard("Service port: "+service.Port,"Use the port of your online service.",new Vector2(528,0),new Vector2(512,116),()=>EditOnlineEndpoint(true,true));
             MenuCard("Direct connection","Join a server by address on your local network.",new Vector2(0,-132),new Vector2(512,116),()=>Show(MenuPage.DirectSetup));
             Label(actions,"Direct LAN matches do not affect your rating.",new Vector2(552,-150),new Vector2(464,84),22,MenuMuted,TextAnchor.UpperLeft);
@@ -169,7 +168,7 @@ namespace Frontier.Runtime
         {
             bool publicMatch=Session.IsPublicMatch;Session.LeaveMatch();Show(publicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup);
         }
-        private Uri PublicBackend()=>ValidPublicBackend(Session.PublicBackendUrl)?new Uri(Session.PublicBackendUrl):new Uri("http://127.0.0.1:7350");
+        private Uri PublicBackend()=>ValidPublicBackend(Session.PublicBackendUrl)?new Uri(Session.PublicBackendUrl):new Uri(GameSession.DefaultPublicBackendUrl);
         private static bool ValidPublicBackend(string value)=>Uri.TryCreate(value,UriKind.Absolute,out var uri)
             &&(uri.Scheme==Uri.UriSchemeHttp||uri.Scheme==Uri.UriSchemeHttps)&&!string.IsNullOrEmpty(uri.Host)
             &&string.IsNullOrEmpty(uri.UserInfo)&&string.IsNullOrEmpty(uri.Query)&&string.IsNullOrEmpty(uri.Fragment)&&uri.AbsolutePath=="/";

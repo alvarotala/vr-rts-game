@@ -40,6 +40,13 @@ La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/u
 
 ### Búsqueda pública 1v1
 
+Los clientes usan **`https://server-us-1.littlelegion.app`** de forma predeterminada.
+Al actualizar desde las pruebas LAN, se deja de usar la preferencia antigua del
+servicio público; la conexión LAN directa y las identidades guardadas se conservan.
+Para probar Nakama local desde desktop, pasar `-frontier-backend http://127.0.0.1:7350`
+(o la IP privada del backend) al abrir el juego. El argumento prevalece sobre las
+preferencias guardadas.
+
 Con Linux Dedicated Server Build Support instalado para el mismo Editor, generar el servidor y levantar el stack online. Reemplazar la IP del ejemplo por la dirección LAN de esta Mac:
 
 ```sh

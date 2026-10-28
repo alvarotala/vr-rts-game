@@ -264,8 +264,12 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
   -logFile /tmp/little-legion-production.log
 ```
 
-En Quest configurar ese mismo servicio HTTPS, puerto 443, y usar **Buscar
-partida**. El cliente exige HTTPS para dominios públicos. Verificar con dos
+Los builds actuales de Quest y desktop ya seleccionan ese servicio HTTPS por
+defecto, puerto 443; usar **Buscar partida**. Al actualizar desde el prototipo
+local se ignora la preferencia antigua del backend, conservando la conexión LAN
+y las identidades por servicio. Un argumento explícito `-frontier-backend`
+permite seguir probando contra un backend de desarrollo.
+El cliente exige HTTPS para dominios públicos. Verificar con dos
 clientes una partida completa y el cambio de Elo. El endpoint UDP se recibe
 automáticamente. Las cuentas locales no se migran a producción y la identidad
 del cliente se guarda por endpoint: es esperable empezar sin ranking allí.

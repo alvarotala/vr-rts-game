@@ -7,7 +7,8 @@ namespace Frontier.Runtime
 {
     public sealed partial class GameSession
     {
-        public string PublicBackendUrl="http://127.0.0.1:7350";
+        public const string DefaultPublicBackendUrl="https://server-us-1.littlelegion.app";
+        public string PublicBackendUrl=DefaultPublicBackendUrl;
         public bool IsMatchmaking {get;private set;}
         public bool IsPublicMatch {get;private set;}
         public Func<IPublicMatchmaker> MatchmakerFactory=()=>new NakamaMatchmaker();

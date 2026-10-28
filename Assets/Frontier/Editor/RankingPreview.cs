@@ -23,10 +23,12 @@ namespace Frontier.Editor
                 {
                     typeof(QuestBridge).GetProperty("Active").SetValue(fixture.Quest,false);
                     fixture.Board.Placed=true;
+                    fixture.Session.PublicBackendUrl=GameSession.DefaultPublicBackendUrl;
                     fixture.Session.RankingServiceFactory=()=>new PreviewService();
                     fixture.Session.RefreshRankingAsync().GetAwaiter().GetResult();
                     Capture(CommandPanel.MenuPage.OnlineSetup,"es-multiplayer");
                     Capture(CommandPanel.MenuPage.Ranking,"es-top10");
+                    Capture(CommandPanel.MenuPage.OnlineConnection,"es-production-connection");
                     fixture.Session.StartMatch();
                     fixture.Session.Match.Submit(new GameCommand{player=1,kind=CommandKind.Surrender});
                     typeof(GameSession).GetProperty("View").SetValue(fixture.Session,fixture.Session.Match.View(0));
@@ -45,7 +47,7 @@ namespace Frontier.Editor
                             UnifiedWheelFixture.Field<PreviewRenderUtility>(fixture,"preview"));
                     }
                 }
-                Debug.Log("FRONTIER_RANKING_PREVIEW passed: 3 Spanish menu captures with text-fit checks; synthetic ranking data, no backend or headset proof");
+                Debug.Log("FRONTIER_RANKING_PREVIEW passed: 4 Spanish menu captures with text-fit checks; synthetic ranking data, no backend or headset proof");
             }
             finally
             {
