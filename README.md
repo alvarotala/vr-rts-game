@@ -62,7 +62,7 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
 
 El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático ni reconexión a una partida en curso. Para actualizar una instalación existente, conservar el volumen, respaldar y comprobar restauración, y ejecutar nuevamente `python3 scripts/online-stack.py init` antes de reconstruir el backend: también actualiza la configuración de búsqueda mutua. El procedimiento está en [Multiplayer público autohospedado](docs/nakama.md), junto con la ampliación manual del pool y el [contrato de asignación](docs/online-contract.md).
 
-La API HTTP del ejemplo es para pruebas locales. Una instalación pública necesita HTTPS/WSS y acceso al puerto UDP de juego. Esta documentación no implica un despliegue WAN ni una validación del flujo público en Quest físico.
+La API HTTP del ejemplo es para pruebas locales. Para instalar y operar el stack público en Ubuntu, seguir la [guía de producción: despliegue, actualizaciones, backups y recuperación](docs/deploy-production.md). Incluye el dominio `server-us-1.littlelegion.app`, HTTPS y el puerto UDP de juego. El estado de los contenedores no equivale a una partida verificada desde Quest.
 
 ### Conexión LAN directa
 
@@ -94,6 +94,7 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Arquitectura y próximas etapas](docs/architecture.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
+- [Despliegue y operación en producción](docs/deploy-production.md)
 - [Ranking Elo y búsqueda de rivales por nivel](docs/ranking.md)
 - [Formato de mapas](docs/maps.md)
 - [Registro de validación y pendientes](docs/validation.md)

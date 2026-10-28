@@ -8,6 +8,11 @@ PostgreSQL 17 conserva cuentas, búsquedas, asignaciones, admisiones, resultados
 y puntuaciones.
 No se necesita una cuenta de Heroic Cloud, servicios pagos ni Docker socket.
 
+Para el servidor Ubuntu público, usar la [guía de despliegue y operación en
+producción](deploy-production.md), que conserva el override HTTPS al actualizar,
+incluye backups con restauración comprobada y distingue los builds de Unity de
+los del backend. Los comandos del apartado siguiente son para el stack local.
+
 ## Stack local
 
 Primero generar la configuración local con la IP de la Mac que ven los Quest:
