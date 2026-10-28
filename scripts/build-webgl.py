@@ -78,6 +78,7 @@ def source_files(root: Path) -> dict[str, bytes]:
         for suffix in ("", ".meta"):
             relative = "Assets/Frontier/Settings/" + name + suffix
             files[relative] = (root / relative).read_bytes()
+    files["Assets/link.xml"] = (root / "webgl/link.xml").read_bytes()
     files["Assets/Editor/WebGLBuilder.cs"] = (root / "webgl/WebGLBuilder.cs").read_bytes()
     tree(root / "webgl/Template", "Assets/WebGLTemplates/LittleLegion")
     # The desktop platform adapter must compile during Editor import as well as

@@ -12,7 +12,7 @@ using UnityEngine;
 namespace Frontier.Harness
 {
     // C# counterpart of the browser transport: the same envelopes, chunk assembly,
-    // decompression and JSON payloads as web/src/protocol. Used by harness bots.
+    // decompression and JSON payloads as BrowserMatchClient. Used by harness bots.
     public sealed class WebSocketMatchClient : MonoBehaviour
     {
         public event Action<MatchWelcome> Started;

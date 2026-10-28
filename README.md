@@ -4,7 +4,7 @@
 
 Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y partidas públicas 1v1 con ranking y búsqueda por nivel, sobre servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
-La versión de escritorio es un cliente web con three.js que juega en los mismos servidores que el Quest: una partida puede enfrentar a un jugador de Quest con uno de escritorio. Ver [cliente de escritorio y juego cruzado](docs/web-client.md).
+La versión para navegadores de escritorio se compila con Unity WebGL y reutiliza las fuentes C# del juego, con interfaz y controles adaptados a desktop. Comparte simulación, IA, catálogo, mapas y render con Quest. El servidor admite ambos transportes para juego cruzado; la compatibilidad del despliegue se verifica por separado. Ver [cliente Unity WebGL y hosting](docs/web-client.md).
 
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
@@ -40,18 +40,22 @@ La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/u
 
 ## Versión de escritorio (navegador)
 
-Requiere Node 22 o superior y el SDK de .NET 8, que compila la simulación a WebAssembly para jugar sin conexión:
+Requiere Unity **6000.3.26f1** con **Web Build Support**, una licencia activada y Python **3.10+**:
 
 ```sh
-cd web
-npm install
-npm run build:core
-npm run dev
+python3 scripts/build-webgl.py
+python3 -m http.server 4174 --bind 127.0.0.1 --directory Builds/WebGL
 ```
 
-`npm run build` genera el sitio estático en `web/dist`, y `python3 scripts/online-stack.py web` lo sirve en el puerto 8080. Desde el menú se juega contra la IA, por conexión directa a un servidor dedicado (puerto TCP 7877) o por búsqueda pública. Controles, despliegue con HTTPS y pendientes en [docs/web-client.md](docs/web-client.md).
+Abrir `http://localhost:4174`. El script genera un proyecto reducido en `.cache/unity-webgl`; no cambiar el destino del proyecto raíz de Quest. La salida completa está en `Builds/WebGL`. La compilación y sus comprobaciones están en [docs/unity-webgl.md](docs/unity-webgl.md).
 
-Para aceptar jugadores de escritorio, el servidor dedicado debe compilarse con esta versión del código. El APK actual sigue siendo compatible mientras catálogo, mapas y reglas no cambien.
+Para empaquetar ese build en nginx y servirlo en el puerto 8080:
+
+```sh
+python3 scripts/online-stack.py web
+```
+
+Docker sirve los archivos ya compilados; no compila Unity ni una segunda implementación del juego. El cliente anterior, su pipeline Node/Vite y su compilación separada de .NET WebAssembly fueron retirados. Para aceptar jugadores de navegador, el backend debe aceptar `websocket: true`, asignar `wsPort` y publicar WSS cuando corresponda. Quest, WebGL y servidor deben coincidir en protocolo, reglas y contenido. Ver [hosting y juego cruzado](docs/web-client.md).
 
 ## Multiplayer y servidor Docker
 
@@ -117,7 +121,7 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Identidad, skins y primeras razas](docs/identity.md)
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
-- [Cliente de escritorio (three.js) y juego cruzado con Quest](docs/web-client.md)
+- [Cliente Unity WebGL, hosting y juego cruzado con Quest](docs/web-client.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
 - [Despliegue y operación en producción](docs/deploy-production.md)

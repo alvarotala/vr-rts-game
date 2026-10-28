@@ -63,8 +63,19 @@ def initialize(host=None):
     os.chmod(path, 0o600)
     host = env['LL_PUBLIC_HOST']
     print(f"Local configuration ready. API http://{host}:7350; NGO {host}:7778/udp; websocket {host}:7878/tcp; "
-          f"desktop client port 8080 (online-stack.py web)")
+          f"Unity WebGL client port 8080 (build-webgl.py, then online-stack.py web)")
     return env
+
+
+def require_webgl_build():
+    output = ROOT / "Builds" / "WebGL"
+    required = ("index.html", "source-manifest.json", "build-receipt.json")
+    player = output / "Build"
+    if not all((output / name).is_file() and (output / name).stat().st_size for name in required) or not all(
+        any(path.is_file() and path.stat().st_size for path in player.glob(pattern))
+        for pattern in ("*.loader.js", "*.framework.js*", "*.data*", "*.wasm*")
+    ):
+        raise SystemExit("Missing or incomplete Builds/WebGL. Run python3 scripts/build-webgl.py first; web hosting does not compile Unity.")
 
 
 def main():
@@ -75,6 +86,9 @@ def main():
     if args.action == "init":
         initialize(args.host)
         return
+    if args.action == "web":
+        # Fail before initializing private backend configuration or invoking Docker.
+        require_webgl_build()
     if args.host or not (LOCAL / "env").exists():
         initialize(args.host)
     compose = ["docker", "compose", "--env-file", str(LOCAL / "env"), "-f", str(ROOT / "compose.online.yml")]

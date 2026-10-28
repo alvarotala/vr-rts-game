@@ -30,7 +30,11 @@ namespace Frontier.Runtime
             hotkeysDevice=Label(hotkeys,"",new Vector2(16,-8),new Vector2(500,40),19,ConsoleTheme.Ink);
             hotkeysEditTab=HotkeyButton("Edit bindings",new Vector2(534,-8),new Vector2(230,40),()=>{hotkeysEditing=true;hotkeysPage=0;Rebuild();});
             Label(hotkeys,"SAVED LOCALLY",new Vector2(778,-8),new Vector2(246,40),16,ConsoleTheme.Ink,TextAnchor.MiddleRight);
+#if FRONTIER_BROWSER
+            var topics=DefaultControlCatalog.For(false);
+#else
             var topics=DefaultControlCatalog.For(true);
+#endif
             for(int i=0;i<hotkeysCategories.Length;i++)
             {
                 int index=i;

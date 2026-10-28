@@ -28,6 +28,7 @@ class BrowserProjectChecks(unittest.TestCase):
         for name, item in generated.items():
             self.assertEqual(item["version"], original[name]["version"], name)
         self.assertTrue((self.stage / "Assets/Frontier/Runtime/GameSession.cs").is_file())
+        self.assertEqual((self.stage / "Assets/link.xml").read_bytes(), (build.ROOT / "webgl/link.xml").read_bytes())
         self.assertTrue((self.stage / "Assets/Nakama/Runtime/Plugins/UnityWebGLSocketBridge.jslib").is_file())
         self.assertFalse((self.stage / "Assets/Frontier/Networking/WebSocketGateway.cs").exists())
         self.assertFalse((self.stage / "Assets/Frontier/Networking/NgoMatchServer.cs").exists())

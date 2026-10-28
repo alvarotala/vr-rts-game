@@ -81,7 +81,8 @@ services:
     security_opt: [no-new-privileges:true]
     stop_grace_period: 15s
 
-  # Desktop client (three.js), static files only. Start it with: online-stack.py web
+  # Precompiled Unity WebGL player. Build it with scripts/build-webgl.py first.
+  # Static hosting only; start it with: online-stack.py web
   web:
     image: ${LL_WEB_IMAGE:-little-legion-web:local}
     build:

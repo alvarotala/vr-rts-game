@@ -85,7 +85,14 @@ namespace Frontier.Runtime
             ReplayButton("Replay play / pause","Pause",182,642,220,Session.ToggleReplayPause,out replayPauseLabel);
             ReplayButton("Replay forward 15s","+15 seconds",414,642,170,()=>Session.SeekReplay(ReplayTransportTick+Simulation.TickRate*15),out _);
             ReplayButton("Replay restart","Restart",596,642,200,()=>Session.SeekReplay(0),out _);
-            ReplayButton("Replay full map","Full map",808,642,232,()=>Board.Fit(),out _);
+            ReplayButton("Replay full map","Full map",808,642,232,()=>
+            {
+#if FRONTIER_BROWSER
+                Quest.Navigation.Fit();
+#else
+                Board.Fit();
+#endif
+            },out _);
             Label(actions,"SPEED",new Vector2(0,-708),new Vector2(100,48),18,ConsoleTheme.Ink);
             for(int i=0;i<ReplaySpeeds.Length;i++)
             {
@@ -93,6 +100,9 @@ namespace Frontier.Runtime
                 replaySpeedButtons[i]=ReplayButton("Replay speed "+speed,title,112+i*130,708,118,()=>Session.SetReplaySpeed(speed),out _);
             }
             ReplayButton("Exit replay","Back to history",704,708,336,Session.StopReplay,out _);
+#if FRONTIER_BROWSER
+            ConfigureBrowserReplay();
+#endif
             UpdateReplayPanel();
         }
         private sealed class ReplayProductionGroup
@@ -185,7 +195,11 @@ namespace Frontier.Runtime
             }
             if(inside)
             {
+#if FRONTIER_BROWSER
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(replayTimeline,UnityEngine.InputSystem.Mouse.current.position.ReadValue(),null,out var point);
+#else
                 var point=replayTimeline.InverseTransformPoint(ray.GetPoint(distance));
+#endif
                 replayScrubTick=Mathf.RoundToInt(Mathf.Clamp01(point.x/replayTimeline.rect.width)*Session.Replay.EndTick);
             }
             UpdateReplayPanel();

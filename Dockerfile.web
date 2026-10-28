@@ -1,29 +1,9 @@
-# Desktop client (three.js). Builds the offline simulation (Frontier.Core → WebAssembly)
-# and the Vite app from the same catalog and maps as Unity, then serves static files.
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS core
-WORKDIR /src
-COPY Assets/Frontier/Core/ Assets/Frontier/Core/
-COPY web/core-wasm/FrontierCore.Web.csproj web/core-wasm/OfflineMatch.cs web/core-wasm/
-RUN dotnet publish web/core-wasm/FrontierCore.Web.csproj -c Release -o /out -nologo \
-    && find /out/wwwroot/_framework \( -name '*.br' -o -name '*.gz' -o -name '*.pdb' \) -delete
-
-FROM node:24-alpine AS client
-WORKDIR /src/web
-COPY web/package.json web/package-lock.json ./
-RUN npm ci --no-audit --no-fund
-WORKDIR /src
-COPY Assets/Frontier/Resources/catalog.json Assets/Frontier/Resources/
-COPY Assets/Frontier/Resources/Maps/ Assets/Frontier/Resources/Maps/
-COPY Assets/Frontier/Resources/Localization/ Assets/Frontier/Resources/Localization/
-COPY Assets/Frontier/Resources/Music/ Assets/Frontier/Resources/Music/
-COPY Assets/Frontier/Networking/MatchProtocol.cs Assets/Frontier/Networking/
-COPY Assets/Frontier/Core/MatchRecording.cs Assets/Frontier/Core/
-COPY web/index.html web/vite.config.ts web/tsconfig.json web/
-COPY web/src/ web/src/
-COPY --from=core /out/wwwroot/_framework/ web/public/core/_framework/
-RUN cd web && npx vite build
-
+# Static hosting only. Compile the shared Unity client first with:
+# python3 scripts/build-webgl.py
 FROM nginx:1.27-alpine
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=client /src/web/dist/ /usr/share/nginx/html/
+COPY hosting/webgl/nginx.conf /etc/nginx/conf.d/default.conf
+COPY Builds/WebGL/ /usr/share/nginx/html/
+RUN test -s /usr/share/nginx/html/index.html \
+    && test -s /usr/share/nginx/html/source-manifest.json \
+    && test -s /usr/share/nginx/html/build-receipt.json
 EXPOSE 8080

@@ -300,37 +300,31 @@ unity run . --log-file TestResults/unity-building-roles.log --no-tail -- \
 
 Guarda diez vistas en `TestResults/BuildingRoles`: galería aliada/enemiga, vista superior/opuesta, comparación entre base central y barraca de ambas facciones, recuerdo bajo niebla, construcción/daño, torre disparando y zoom/giro. Los rótulos son anotaciones de la galería y no se añaden al juego. Comprueba huellas, posición de vida/impactos, restauración de materiales al recuperar visión, orientación de torres y reutilización. También ejecuta las revisiones existentes de daño y armas porque comparten la representación de entidades. No genera ejecutables.
 
-## Cliente de escritorio y juego cruzado
+## Cliente Unity WebGL y juego cruzado
 
-El cliente three.js está en `web/` y su arquitectura en [cliente de escritorio](web-client.md). Sus comprobaciones no requieren Unity; usan Node 22+ y el SDK de .NET 8 (`DOTNET` o `.cache/dotnet-sdk`):
+El navegador usa el mismo motor Unity y las fuentes del juego. Compilación y pruebas del player en [Unity WebGL](unity-webgl.md); publicación de los archivos en [hosting](web-client.md). No se usa Node/Vite para compilar el juego ni un proyecto separado de simulación .NET WebAssembly.
 
 ```sh
-cd web
-npm run typecheck   # código del navegador y scripts
-npm test            # genera el fixture C# y prueba paridad de protocolo, sesión, construcción y traducciones
-npm run e2e         # cliente web contra el servidor real (arnés) con rival por NGO; matchmaking público si el backend local está activo
-FRONTIER_E2E=1 FRONTIER_E2E_SERVER=ws://127.0.0.1:7877/ npx vitest run tests/e2e/crossplay.test.ts   # dos clientes web contra un servidor externo
+python3 scripts/check-webgl-generator.py
+node --test tests/WebGlClientChecks/bridge.test.mjs
+.cache/dotnet-sdk/dotnet run --project tests/WebGlClientChecks/WebGlClientChecks.csproj
+.cache/dotnet-sdk/dotnet build tests/WebGlClientChecks/WebGlClientChecks.csproj -p:RealBrowserBridge=true
+python3 scripts/build-webgl.py
 ```
+
+Node ejecuta únicamente las pruebas de los puentes JavaScript, sin dependencias npm. Los checks C# requieren .NET 8 y usan un socket controlado; no sustituyen una build IL2CPP ni la prueba de navegador.
 
 `tests/ServerHarness` compila las fuentes reales de `Frontier.Core` y `Frontier.Networking` (incluido `AllocatedServerAgent`) contra una capa mínima de UnityEngine/NGO. NGO se reemplaza por un transporte en memoria que conserva la aprobación pendiente, los mensajes por nombre y las desconexiones; el WebSocket usa sockets reales:
 
 ```sh
-.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- check          # 44 comprobaciones de punta a punta
-.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- editor-checks  # AllocatedServerChecks y ServerLifecycleChecks sin cambios
-.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- serve --bot biological   # servidor de desarrollo
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- check
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- editor-checks
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- serve --bot biological
 ```
 
-El arnés valida la lógica del servidor y el transporte del navegador; no reemplaza el build Unity ni prueba el Unity Transport real. `JsonUtility` se emula, por eso el decodificador web acepta las variantes de `byte[]` y de cadenas nulas. Después de compilar el servidor con Unity, repetir la prueba con `FRONTIER_E2E_SERVER` contra la imagen Docker y jugar una partida Quest contra escritorio.
+El arnés valida la lógica del servidor y el transporte del navegador; no reemplaza el build Unity ni prueba el Unity Transport real. `tests/NetworkChecks` conserva las comprobaciones del servidor WebSocket: handshake, fragmentación, límites de tamaño, cierres, desbordamiento de envío y salud HTTP. Estas pruebas siguen siendo pertinentes para Unity WebGL y para el servidor compartido.
 
-Las comprobaciones visuales usan Chromium headless (Playwright) y guardan capturas en `TestResults/web/`. Con el servidor de desarrollo de Vite activo, ejecutar desde `web/` con `PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright`:
-
-| Script | Recorrido |
-| --- | --- |
-| `scripts/visual-smoke.mjs <url> <mapa>` | Partida contra la IA: selección por arrastre, construcción con atajo, entrenamiento, zoom y pausa |
-| `scripts/visual-combat.mjs <url>` | Partida acelerada (`?speed=8`) hasta el combate y los resultados |
-| `scripts/visual-online.mjs <url> <servidor> <idioma>` | Conexión directa, partida, rendición y resultados |
-
-`tests/NetworkChecks` incluye además 39 comprobaciones del servidor WebSocket: handshake, fragmentación, límites de tamaño, cierres, desbordamiento de envío y salud HTTP.
+Después de compilar, servir `Builds/WebGL` y comprobar en un navegador real: arranque, menús, cámara y entrada, audio tras interacción, IA, tutorial, historial después de recargar y replays. La validación online requiere además un backend compatible, conexión WS/WSS y una partida contra Quest; los resultados del cliente retirado no acreditan este recorrido.
 
 ## Resultados y entregas
 

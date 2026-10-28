@@ -45,7 +45,9 @@ namespace Frontier.Runtime
         private void Start()
         {
             Panel.PlaceRequested=Quest.BeginPlacement;Panel.TutorialInput=this;Session.Feedback+=Haptic;
+#if !FRONTIER_BROWSER
             controllerVisuals=new ControllerVisuals(transform);
+#endif
             var go=new GameObject("Pointer ray");laser=go.AddComponent<LineRenderer>();laser.sharedMaterial=new Material(Shader.Find("Universal Render Pipeline/Unlit"));laser.sharedMaterial.color=new Color(.3f,.95f,.94f);laser.positionCount=2;laser.widthMultiplier=.002f;laser.enabled=Quest.Active;
         }
         private void LateUpdate()
@@ -127,9 +129,21 @@ namespace Frontier.Runtime
             bool interactingWithPanel=panelButton!=PanelButton.None||Panel.IsDragging||(uiPointerInput&&Panel.ContainsPointer(ray));
             if(!Quest.Active&&Panel.Page!=CommandPanel.MenuPage.Hotkeys&&!interactingWithPanel&&!panelReleasePending)
             {
-                if(HotkeyInput.Read(bindings,false,"menu").Down)Panel.Recall();
+                if(HotkeyInput.Read(bindings,false,"menu").Down)
+#if FRONTIER_BROWSER
+                {Panel.ToggleMenu();CancelPanelInput();ClearPointer();return;}
+#else
+                    Panel.Recall();
+#endif
                 if(Panel.AcceptsGameInput||Panel.AcceptsReplayInput||Panel.Page==CommandPanel.MenuPage.MatchSetup)
-                {if(HotkeyInput.Read(bindings,false,"fit").Down)Board.Fit();}
+                {
+                    if(HotkeyInput.Read(bindings,false,"fit").Down)
+#if FRONTIER_BROWSER
+                        Quest.Navigation.Fit();
+#else
+                        Board.Fit();
+#endif
+                }
                 if(Panel.AcceptsGameInput)
                 {
                     bool save=HotkeyInput.Read(bindings,false,"save").Held;
@@ -164,12 +178,20 @@ namespace Frontier.Runtime
             if(cancel)
             {if(Panel.AcceptsGameInput&&(Session.HasTargetingMode))Session.CancelMode();else Panel.Back();CancelPanelInput();ClearPointer();return;}
             if(toggleMenu){Panel.ToggleMenu();CancelPanelInput();ClearPointer();return;}
+#if FRONTIER_BROWSER
+            // Hovering the screen HUD consumes map clicks, but keyboard camera
+            // movement remains available. The camera itself gates wheel zoom.
+            if(!Quest.Active&&(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup))
+                Quest.Navigation.Navigate(pan,zoom,Time.unscaledDeltaTime);
+#endif
             // Pointer UI uses stable controls even after gameplay selection is rebound.
             if(RoutePanel(ray,menuSelect.Down,menuSelect.Up,menuSelect.Held,menuAction.Down,menuAction.Up,menuAction.Held,menuDepth)){ClearPointer();return;}
             // Quest keeps the confirmed board view fixed. Navigation remains a desktop
             // development control; the active stick operates the wheel, placement or a grabbed menu.
+#if !FRONTIER_BROWSER
             if(!Quest.Active&&(Panel.AcceptsGameInput||Panel.Page==CommandPanel.MenuPage.MatchSetup))
                 Board.Navigate(pan,zoom,zoom!=0?1:Time.unscaledDeltaTime);
+#endif
             if(!Panel.AcceptsGameInput){ClearPointer();return;}
             PointBoard(ray,down,up,order,add);
         }
@@ -270,6 +292,7 @@ namespace Frontier.Runtime
             {
                 move=new Vector2((HotkeyInput.Read("key:D").Held?1:0)-(HotkeyInput.Read("key:A").Held?1:0),
                     (HotkeyInput.Read("key:W").Held?1:0)-(HotkeyInput.Read("key:S").Held?1:0));
+#if !FRONTIER_BROWSER
                 var mouse=Mouse.current;
                 if(mouse!=null)
                 {
@@ -278,6 +301,7 @@ namespace Frontier.Runtime
                     if(replayMiddleDrag)
                     {var delta=mouse.delta.ReadValue();Board.Navigate(new Vector2(-delta.x,-delta.y),0,.006f);}
                 }
+#endif
             }
             ApplyReplayControls(stick,play,back,grip,hintDown,move,scroll,Time.unscaledDeltaTime,touch);
             if(Panel.ContainsPointer(ray))ClearPointer();else PointReplayBoard(ray);
@@ -308,7 +332,12 @@ namespace Frontier.Runtime
                 }
             }
             if(hintDown&&touch)Wheel?.ToggleHints();
-            if(!touch)Board.Navigate(move,zoom,zoom!=0?1:delta);
+            if(!touch)
+#if FRONTIER_BROWSER
+                Quest.Navigation.Navigate(move,zoom,delta);
+#else
+                Board.Navigate(move,zoom,zoom!=0?1:delta);
+#endif
         }
         private void SeekReplayBy(int seconds)
         {

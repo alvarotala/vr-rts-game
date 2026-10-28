@@ -1,6 +1,6 @@
 # Actualización del servidor para jugadores de navegador
 
-## Diagnóstico del 28 de octubre de 2026
+## Diagnóstico histórico del 28 de octubre de 2026
 
 En `https://server-us-1.littlelegion.app`, el healthcheck, el preflight CORS y la
 autenticación respondieron HTTP 200. `ll_search_open` con `websocket: true`
@@ -12,43 +12,18 @@ no demuestra qué SHA está desplegado.
 La rama `feature/desktop-web-crossplay` ya contiene el soporte necesario en
 `backend/nakama/{search.go,server.go,matchmaker.go,pool.go,schema.sql}` y en el
 servidor dedicado. No retirar `websocket: true` del cliente: permite excluir
-servidores que solo admiten UDP. El cliente ahora explica ese rechazo y usa WSS
-para partidas de un servicio HTTPS incluso desde `http://localhost:5173`.
+servidores que solo admiten UDP. El cliente Unity WebGL usa WSS para partidas
+de un servicio HTTPS incluso desde `http://localhost:4174`. El diagnóstico
+anterior se obtuvo con el cliente retirado; debe repetirse para confirmar el
+estado del servicio desplegado, sin interpretar un healthcheck como matchmaking.
 
 ## Confirmar qué versión funciona antes de actualizar
 
-El cliente de esta rama es three.js/TypeScript; no es un build Unity WebGL. El
-repositorio también tiene un cliente Unity desktop nativo, que puede funcionar
-por UDP sin demostrar compatibilidad con este navegador. Pedir al administrador
-la URL o tipo de aplicación que funciona, su backend, la revisión desplegada y
-el transporte que usa. Si ya existe otro endpoint compatible, verificarlo y
-configurarlo en el port antes de concluir que hace falta un despliegue.
+El cliente de navegador actual es una build Unity WebGL de las fuentes C# compartidas. El repositorio también conserva el cliente Unity desktop nativo para desarrollo, que puede funcionar por UDP sin demostrar compatibilidad del navegador. Confirmar con el administrador el tipo de cliente, backend, revisión desplegada y transporte de la versión que funciona.
 
-La prueba HTTP no inspeccionó el binario Unity instalado: no demuestra que ese
-binario deba recompilarse. La compilación que puede hacer falta es la del
-servidor dedicado Linux, únicamente si todavía no contiene el transporte de
-esta rama. Compilar Unity para WebGL sería otro cliente y otro flujo de build.
+La prueba HTTP histórica no inspeccionó el binario Unity instalado: no demuestra que deba recompilarse. El servidor dedicado Linux necesita una nueva build únicamente si le falta el transporte compatible o cambian protocolo, reglas o contenido. Compilar el cliente WebGL mediante `scripts/build-webgl.py` genera el player del navegador y no actualiza ese servidor. El hosting de `Dockerfile.web` sirve el `Builds/WebGL` ya compilado; ver [cliente y hosting](web-client.md).
 
-## Entrega de fuentes
-
-El archivo `little-legion-browser-fix.bundle` contiene la rama integrada, no
-binarios Unity ni configuración privada. Requiere que el repositorio receptor
-contenga el commit `4e6d8e296e74ab130d637f74209d0bfa1c0370bc`. Esa es una base
-conocida del repositorio; comparar con la instalación real antes de integrar.
-
-En un checkout de revisión del mismo repositorio, adaptar la ruta del bundle:
-
-```sh
-git bundle verify /ruta/little-legion-browser-fix.bundle
-git bundle list-heads /ruta/little-legion-browser-fix.bundle
-git fetch /ruta/little-legion-browser-fix.bundle refs/heads/feature/desktop-web-crossplay:refs/heads/review/browser-support
-git diff --stat HEAD..review/browser-support
-```
-
-Revisar el diff completo: la entrega incluye el cliente web y el transporte del
-servidor, además del backend. Si la instalación está limpia y su HEAD es ancestro
-de la entrega, puede integrarse con `git merge --ff-only review/browser-support`.
-Si diverge, revisar e integrar sus cambios propios antes del mantenimiento.
+Preparar las fuentes y artefactos de una revisión identificada, revisar su diff contra la versión desplegada y conservar el SHA y cualquier corrección local. Los bundles y validaciones del port anterior son evidencia histórica y no sustituyen esa revisión.
 
 ## Pasos del administrador
 
@@ -92,13 +67,8 @@ Si diverge, revisar e integrar sus cambios propios antes del mantenimiento.
    navegador/Quest y cancelación de búsqueda. Registrar el SHA desplegado y los
    resultados; un healthcheck HTTP 200 no valida estos recorridos.
 
-## Estado de la entrega local
+## Límites de la evidencia
 
-Pasaron 116 pruebas unitarias, typecheck y la compilación web. También se comprobó
-en un navegador sin interfaz el mensaje español, simulando la respuesta del
-backend sin crear otra búsqueda pública. Las pruebas previas
-de backend, transporte y partida cruzada local constan en
-[validation.md](validation.md). Esta máquina no tiene Unity instalado ni acceso
-administrativo al servidor público. El bundle es una entrega de fuentes para
-revisión: no se verificó el binario instalado ni se hizo un despliegue o una
-partida pública. La necesidad de recompilar Unity depende de esa revisión.
+El diagnóstico HTTP y las partidas del cliente anterior se conservan como registro histórico en [validation.md](validation.md). Sus pruebas unitarias, typecheck y build no validan Unity WebGL. El player actual necesita su propia compilación IL2CPP y prueba en navegador; los requisitos están en [unity-webgl.md](unity-webgl.md).
+
+La disponibilidad HTTPS, CORS y un build local exitoso no verifican la aceptación de `websocket: true`, el `wsPort` asignado, el proxy WSS ni una partida pública contra Quest. Registrar cada comprobación y el SHA desplegado por separado.

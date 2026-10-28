@@ -1,5 +1,9 @@
 # Registro de validación
 
+## Estado del cliente de navegador — 28 de octubre de 2026
+
+El cliente anterior de `web/`, su render y sus herramientas Node/Vite/.NET WebAssembly fueron retirados. El único cliente de navegador se compila con Unity WebGL; ver [compilación](unity-webgl.md) y [hosting](web-client.md). Las dos entradas siguientes conservan evidencia histórica del port retirado y del transporte compartido. Sus comandos npm, capturas y partidas no validan la build Unity WebGL actual; no son instrucciones de ejecución vigentes.
+
 ## Integración de ranking y backend de producción en desktop web — 28 de octubre de 2026
 
 Se integró `origin/codex/public-matchmaking` (`4e6d8e2`) en `feature/desktop-web-crossplay`, conservando el transporte y la asignación WebSocket junto con Elo. El cliente web usa `https://server-us-1.littlelegion.app` por defecto; migra las preferencias antiguas sin borrar las identidades ni la configuración LAN y permite guardar un servicio local explícito.

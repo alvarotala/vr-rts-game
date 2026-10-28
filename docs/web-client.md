@@ -1,113 +1,66 @@
-# Cliente de escritorio (three.js) y juego cruzado con Quest
+# Cliente Unity WebGL, hosting y juego cruzado
 
-Para la migración al cliente C# de Unity en el navegador, usar la [ruta Unity WebGL](unity-webgl.md). Este documento describe el port three.js anterior, que permanece disponible en `web/`.
+La única versión de navegador de Little Legion se compila con Unity WebGL. Usa las fuentes C# originales de simulación, IA, catálogo, mapas, render, tutorial e historial, con interfaz, cámara y entrada adaptadas a desktop. El cliente anterior y su pipeline de compilación fueron retirados. El build Unity nativo de escritorio sigue disponible como herramienta de desarrollo.
 
-Este port usa three.js y corre en navegadores de escritorio. Usa los servidores dedicados compatibles con WebSocket: una partida puede tener un jugador en Quest y otro en el navegador. También puede jugar contra la IA sin conexión, con la simulación y la IA compartidas con Unity.
+## Compilar y ejecutar
 
-El código vive en `web/`. El build Unity nativo de escritorio (`bash scripts/unity.sh desktop`) sigue disponible como herramienta de desarrollo.
+Requiere Unity 6000.3.26f1 con Web Build Support, una licencia activada y Python 3.10+. No cambiar el destino del proyecto raíz de Quest; el script genera `.cache/unity-webgl` y compila ese proyecto:
+
+```sh
+python3 scripts/build-webgl.py
+python3 -m http.server 4174 --bind 127.0.0.1 --directory Builds/WebGL
+```
+
+Abrir `http://localhost:4174`. Las correcciones se hacen en las fuentes originales y luego se regenera el proyecto. Requisitos, recibos de build, persistencia y verificaciones en [Unity WebGL](unity-webgl.md).
+
+## Hosting estático con Docker
+
+Después de completar la compilación:
+
+```sh
+python3 scripts/online-stack.py web
+```
+
+Abrir `http://localhost:8080` o el puerto elegido mediante `LL_WEB_PORT`. El helper comprueba que estén el HTML, manifiesto, recibo, loader, framework, datos y WASM antes de iniciar Docker. `Dockerfile.web` solo copia `Builds/WebGL` y sirve esos archivos mediante nginx: no instala Node, no compila otra simulación y no ejecuta Unity. La configuración está en `hosting/webgl/nginx.conf`.
+
+También se puede empaquetar y ejecutar únicamente el hosting, sin levantar el stack online:
+
+```sh
+docker build -f Dockerfile.web -t little-legion-web:local .
+docker run --rm -p 127.0.0.1:8080:8080 little-legion-web:local
+```
+
+El build usa nombres de assets con hash y descompresión de respaldo del player. nginx entrega `.unityweb` como datos binarios sin `Content-Encoding`; el loader de Unity los descomprime. HTML, loader y manifiestos se revalidan, mientras que los assets con hash pueden conservarse en caché. Una ruta inexistente devuelve 404 para que un WASM o paquete de datos faltante no se confunda con HTML.
+
+Para publicar, transferir la carpeta completa `Builds/WebGL` o esa imagen a un hosting HTTPS. Mantener juntos los archivos de cada build y registrar el SHA de las fuentes, el diff local si existe y `source-manifest.json`. Cambiar de host, protocolo o puerto cambia el origen del navegador y puede separar los datos locales de historial y preferencias. Empaquetar o servir el cliente no actualiza el backend ni el servidor de partidas.
 
 ## Cómo funciona el juego cruzado
 
-El servidor dedicado (`NgoMatchServer`) sigue siendo la única autoridad. Ahora atiende dos transportes a la vez:
+El servidor dedicado `NgoMatchServer` mantiene la autoridad y atiende dos transportes:
 
 | Jugador | Transporte | Puerto por defecto |
 | --- | --- | --- |
-| Quest y build Unity | NGO / Unity Transport (UDP) | 7777 directo · 7778 asignado |
-| Navegador | WebSocket (TCP) | 7877 directo · 7878 asignado |
+| Quest y Unity desktop nativo | NGO / Unity Transport (UDP) | 7777 directo · 7778 asignado |
+| Unity WebGL | WebSocket (TCP) | 7877 directo · 7878 asignado |
 
-Los dos asientos son neutrales respecto del transporte. La validación del saludo (`ConnectionHello`), la admisión con ticket del matchmaking público, la espera de "listo", las órdenes con su límite de tráfico, las instantáneas filtradas (`PlayerView`), los ACK idempotentes, el resultado final y la concesión por desconexión usan exactamente el mismo código para ambos.
+Los dos asientos comparten validación del saludo, admisión mediante tickets, preparación de partida, órdenes, vistas filtradas, confirmaciones y resultado final. `BrowserMatchClient` usa `WebSocketMatchCodec`, `FrameAssembler` y el mismo protocolo C#; el pequeño puente JavaScript abre el socket del navegador. No ejecuta reglas del juego.
 
-`WebSocketGateway` es un servidor RFC 6455 sin dependencias de Unity, con hilos propios y límites de memoria por conexión. Los eventos se procesan en el hilo principal desde `Update`, así que el estado de la partida nunca se toca en paralelo. Cada mensaje binario lleva un byte de tipo y el mismo contenido que el mensaje NGO equivalente (`WebSocketMatchCodec`). Las instantáneas y el resultado conservan su compresión deflate y su fragmentación de 900 bytes. El navegador las reensambla con un puerto de `FrameAssembler`.
-
-Diferencias del transporte WebSocket:
-
-- El navegador envía primero el saludo. El servidor responde `Admitted` cuando el asiento queda reservado, lo que reemplaza el callback de conexión de NGO.
-- La bienvenida incluye `countdownSeconds`, porque el navegador no tiene el reloj sincronizado de NGO. Los clientes NGO ignoran el campo.
-- Un socket que no envía su saludo en 5 segundos se cierra. El motivo de cada rechazo viaja en el cierre del WebSocket.
-
-La versión de protocolo sigue en 3. Un APK de Quest ya instalado puede jugar contra navegadores en cuanto el servidor se recompila con este cambio.
-
-### Compatibilidad de contenido
-
-El cliente web calcula al compilar el mismo hash de catálogo y mapas que `MatchProtocol.ContentHash`, y lee la versión de protocolo y de reglas de las fuentes C#. Si cambia el catálogo, un mapa o las reglas, hay que recompilar el cliente web junto con el servidor y el APK. Un cliente desactualizado recibe el mismo rechazo que un APK desactualizado.
-
-## Matchmaking público
-
-El navegador usa `https://server-us-1.littlelegion.app` como servicio predeterminado, igual que Unity. Al actualizar, migra las preferencias web anteriores conservando controles, sonido y conexión directa; el antiguo servicio LAN deja paso al de producción. Desde **Multijugador** se puede guardar otro servicio para pruebas locales. Las identidades por servicio se conservan.
-
-El flujo es el mismo de Unity: sesión por dispositivo, `ll_search_open`, matchmaker nativo y consulta de `ll_search_status`. La búsqueda declara `websocket: true`. El backend registra el puerto WebSocket de cada servidor (`wsPort`) y solo asigna una pareja con un jugador de navegador a un servidor que lo tenga. Las parejas solo de Quest pueden usar cualquier servidor. El rango Elo comienza en ±100 y se amplía cada 20 segundos hasta ±400; el cliente renueva el ticket cuando cambia `queueRevision`, conservando la búsqueda y su antigüedad. El contrato completo está en [online-contract.md](online-contract.md).
-
-El hostname configurado no demuestra que el servidor desplegado ya incluya el transporte y las migraciones de esta rama. Para jugar desde una página HTTPS necesita anunciar `wsPort` y publicar el puerto de partida mediante WSS; ver [despliegue público](#despliegue-público).
-
-## Partidas sin conexión
-
-`web/core-wasm` compila las fuentes de `Assets/Frontier/Core` a WebAssembly con .NET 8, sin copiar ni reescribir reglas. La simulación y el `Strategist` corren en un Web Worker a 20 ticks por segundo. Las decisiones de la IA pueden tardar más de 100 ms en algunos ticks, y el worker evita que esos picos congelen el render. La página recibe el mismo `PlayerView` que en línea.
-
-## Ejecutar y compilar
-
-Requiere Node 22 o superior y el SDK de .NET 8 (la variable `DOTNET` permite indicar otra ruta).
-
-```sh
-cd web
-npm install
-npm run build:core      # publica la simulación WebAssembly en public/core
-npm run dev             # servidor de desarrollo en el puerto 5173
-npm run build           # verifica tipos y genera web/dist
-```
-
-`web/dist` es un sitio estático. Para servirlo junto al stack en línea:
-
-```sh
-python3 scripts/online-stack.py web    # imagen nginx en el puerto 8080
-```
-
-Para probar el juego en línea sin Unity, el arnés .NET levanta un servidor de desarrollo con el código real del servidor. Puede sumar un rival IA que entra por NGO, como un Quest:
-
-```sh
-.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- \
-  serve --port 7777 --ws-port 7877 --map rift --bot biological --bot-transport ngo
-```
-
-Luego elegir **Conexión directa** con la dirección `127.0.0.1:7877`. El arnés no reemplaza al servidor Unity: su transporte NGO es interno al proceso, así que un Quest real no puede conectarse a él.
+El cliente WebGL declara `websocket: true` al buscar una partida y utiliza `wsPort` para conectarse. El backend solo asigna parejas con navegador a servidores que anuncien ese puerto. Catálogo, mapas, reglas y protocolo deben coincidir entre todos los clientes y el servidor; cambiar el contenido requiere recompilar las plataformas afectadas. Contrato completo en [online-contract.md](online-contract.md).
 
 ### Despliegue público
 
-Una página servida por HTTPS solo puede abrir `wss://`. En producción hay que poner un proxy TLS delante del puerto WebSocket de cada servidor y declarar el puerto público con `FRONTIER_ADVERTISE_WS_PORT` (`LL_PUBLIC_WS_PORT` en `compose.online.yml`). El servicio Nakama también debe publicarse por HTTPS, como ya exigía el cliente Quest.
+El endpoint predeterminado es `https://server-us-1.littlelegion.app`. Su disponibilidad HTTPS no demuestra compatibilidad del servidor de partidas.
 
-Las partidas asignadas por un servicio HTTPS usan WSS incluso si se abre el cliente desde `http://localhost:5173`. Si `ll_search_open` rechaza el campo `websocket`, seguir la [actualización para jugadores de navegador](browser-matchmaking-update.md).
+Una página HTTPS y las partidas asignadas por un servicio HTTPS requieren WSS, también al abrir el cliente desde `http://localhost:4174`. Publicar un proxy TLS hacia el listener de partidas, anunciar su puerto mediante `FRONTIER_ADVERTISE_WS_PORT` (`LL_PUBLIC_WS_PORT` en Compose) y usar un certificado válido para el `host` anunciado. El WebSocket de partida en `/` es independiente del WebSocket de Nakama en `/ws`. Conservar el puerto UDP usado por Quest.
+
+El desarrollo local desde HTTP puede usar WS hacia localhost o una IP privada. Los pasos para revisar y actualizar el backend están en [soporte de jugadores de navegador](browser-matchmaking-update.md). Una build WebGL exitosa no confirma una partida pública ni crossplay con Quest.
 
 ## Controles
 
-| Acción | Control |
-| --- | --- |
-| Seleccionar · seleccionar un área | Clic izquierdo · arrastrar |
-| Agregar o quitar de la selección | Shift + clic |
-| Mismo tipo cercano · mismo tipo en pantalla | Doble clic · Ctrl + clic |
-| Orden contextual (mover, atacar, recolectar, reparar, punto de reunión) | Clic derecho |
-| Encolar la orden | Shift + clic derecho |
-| Avanzar al ataque | Doble clic derecho · A |
-| Detener · mantener posición | S · D |
-| Panel de órdenes (construir, entrenar, investigar, habilidades) | Q W E R T · Z X C V B |
-| Punto de reunión · cancelar | F · G |
-| Grupos: recuperar · guardar · agregar | 1–0 · Ctrl+1–0 · Shift+1–0 (doble pulsación centra la cámara) |
-| Trabajadores inactivos · ejército | F1 · F2 |
-| Cámara | Flechas, bordes de la pantalla, botón central, minimapa |
-| Zoom | Rueda del mouse |
-| Centrar en la selección · en la base | Espacio · Inicio |
-| Mostrar todas las barras de vida | Alt |
-| Cancelar · menú | Esc |
+La interfaz desktop presenta los controles y acciones disponibles para la selección actual. Clic izquierdo selecciona, arrastrar selecciona un área, clic derecho da una orden contextual y la rueda controla el zoom. Consultar la guía y la configuración de hotkeys del propio juego para los atajos activos. Las acciones llegan al mismo `GameSession` y al mismo validador de órdenes que Quest.
 
-La selección por área prefiere unidades: si el rectángulo incluye unidades, no suma edificios. Con Shift, colocar un edificio mantiene activa la construcción para colocar otro. Estas comodidades son locales del cliente y no cambian el protocolo.
+## Validación
 
-## Alcance actual y pendientes
+Los tests de `tests/WebGlClientChecks` comprueban el cliente C# y los puentes JavaScript. `tests/NetworkChecks`, `tests/ServerHarness` y las pruebas de Nakama conservan la cobertura del transporte y la autoridad compartidos. Las pruebas históricas del cliente retirado no acreditan este player.
 
-Incluido: partidas contra la IA (3 dificultades, 3 mapas, 2 facciones), conexión directa, matchmaking público, interfaz en inglés y español con el catálogo de traducciones del juego, informe final y música de cada mapa.
-
-No incluido todavía:
-
-- Tutorial guiado.
-- Historial de partidas y replays.
-- Reasignación de teclas.
-- Cola visible de órdenes por unidad con cancelación individual (la cola funciona; falta su panel).
-
-El servidor dedicado debe recompilarse con Unity 6000.3.26f1 para incluir el transporte WebSocket. El APK no cambia de comportamiento, pero conviene compilarlo para confirmar que el proyecto compila con los archivos nuevos de `Frontier.Networking`. Esta máquina no tiene Unity. Los cambios del servidor se validaron con el arnés .NET y con las pruebas de Editor existentes ejecutadas en ese arnés (ver [validación](validation.md)).
+Antes de distribuir una build nueva, probar su arranque, interfaz y controles, audio tras interacción, IA, tutorial, historial después de recargar y replays. Validar WS/WSS y una partida pública contra Quest por separado, usando un backend compatible y registrando la revisión desplegada.

@@ -73,7 +73,11 @@ namespace Frontier.Runtime
                             "Clears rally points for the selected production buildings. Units already deployed keep their orders; production queues are unchanged.");
                     else
                         result.Add("set-rally-point",singleProducer?"Set Rally Point":"Set Rally Points",singleProducer?"Set Rally":"Set Rallies","Choose a destination",()=>session.ChooseRallyPoint(),ActionCategory.Orders,
+#if FRONTIER_BROWSER
+                            "Left-click open terrain to set a rally point for the selected production buildings. Newly trained units move there. A context order on terrain also sets or replaces the rally point directly.");
+#else
                             "Point at open terrain and press Trigger to set a rally point for the selected production buildings. Newly trained units move there. A on terrain also sets or replaces the rally point directly.");
+#endif
                 }
                 if (result.Items.Count == 0) result.Hint = single ? "This building operates automatically." : "Select a single building to view its construction or production queue.";
             }

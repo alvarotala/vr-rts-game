@@ -1,9 +1,16 @@
 # Cliente Unity WebGL
 
 Esta ruta compila el cliente C# de Unity para navegador: reutiliza simulación,
-IA, interfaz, tutorial, historial, gráficos y controles desktop del juego.
-El proyecto three.js de `web/` queda disponible como port anterior. No se usa
-su render ni su Web Worker en el cliente Unity.
+IA, catálogo, tutorial, historial, gráficos y comandos del juego. El cliente
+Three.js anterior fue eliminado: no hay otro catálogo ni simulación web.
+
+La presentación browser usa cámara RTS, HUD de pantalla con recursos arriba,
+minimapa y selección/producción/acciones abajo, y menús centrados. Conserva
+la paleta, tipografía, modelos y lenguaje visual de Little Legion. Las acciones
+se obtienen de `SelectionActions` y se paginan automáticamente; agregar unidades
+o edificios al catálogo compartido no requiere duplicar una lista web.
+Los adaptadores están aislados con `FRONTIER_BROWSER`: VR mantiene su cámara,
+menús flotantes y controles Touch.
 
 ## Preparar y compilar
 
@@ -36,10 +43,33 @@ Para probar un build terminado desde la raíz del repositorio:
 python3 -m http.server 4174 --bind 127.0.0.1 --directory Builds/WebGL
 ```
 
-Abrir `http://localhost:4174`. El puerto 5173 sigue correspondiendo al port
-three.js. Servir siempre la carpeta del build; abrir `index.html` como archivo
+Abrir `http://localhost:4174`. El hosting de `compose.online.yml` también sirve
+esta build en el puerto 8080 por defecto (`LL_WEB_PORT` permite cambiarlo). Servir siempre la carpeta del build; abrir `index.html` como archivo
 local no carga el player correctamente. La plantilla admite descompresión en
 el navegador y sincronización automática del almacenamiento persistente.
+
+## Controles desktop
+
+La cámara empieza centrada en la base al iniciar la partida. El HUD muestra recursos y selección rápida arriba; minimapa, selección, colas y acciones quedan abajo. Los controles predeterminados son:
+
+| Acción | Control |
+| --- | --- |
+| Seleccionar · seleccionar un área | Clic izquierdo · arrastrar |
+| Añadir a la selección · encolar órdenes | Mantener Shift |
+| Orden contextual: mover, atacar, recolectar o reparar | Clic derecho |
+| Seleccionar el mismo tipo cercano · avanzar al ataque | Doble clic izquierdo · doble clic derecho |
+| Mover la cámara | WASD · arrastrar con el botón central |
+| Desplazar la cámara por bordes | Llevar el cursor al borde del campo de batalla; se activa o desactiva en Ajustes → Controles |
+| Zoom | Rueda del ratón |
+| Mover la cámara desde el minimapa | Clic izquierdo o arrastrar sobre el minimapa |
+| Ver el mapa completo | F; también el botón Mapa completo al preparar la partida |
+| Recuperar · guardar grupos | 1–4 · Ctrl+1–4 |
+| Cancelar una acción o abrir pausa | Esc |
+| Pausar · continuar | Espacio |
+
+Los botones superiores seleccionan trabajadores inactivos o el ejército. Las acciones disponibles se generan desde la selección y muestran una página adicional cuando hace falta; no usan una lista separada de unidades o edificios. Clic en un elemento de producción cancela ese elemento; clic en una orden encolada la retira.
+
+Los atajos configurables se cambian en Ajustes → Controles → Hotkeys. La navegación por botón central, bordes y minimapa corresponde al navegador. No se requiere colocar el tablero en una habitación ni usar mandos Touch.
 
 ## Proyecto generado
 
@@ -55,7 +85,10 @@ importación en el Editor y en el player. El proyecto reducido omite Meta/XR,
 configuración de Quest, recursos de controladores, herramientas de Editor
 nativas y procesos de servidor. Conserva URP, Input System, uGUI, NGO y Nakama
 en las versiones del lock original. El build retiene los shaders que el juego
-carga por nombre. No se invoca `ProjectBuilder.Configure`, que configura Quest.
+carga por nombre. `webgl/link.xml`, copiado solo al proyecto generado, conserva los componentes
+que `GameObject.CreatePrimitive` agrega desde código nativo: sin ellos, IL2CPP
+puede eliminar los colliders y provocar excepciones al iniciar o dibujar unidades.
+No se invoca `ProjectBuilder.Configure`, que configura Quest.
 
 `QuestBridge.Browser` mantiene la API que usa la interfaz compartida; las entradas
 Touch quedan inactivas y teclado/ratón siguen usando Input System. El render

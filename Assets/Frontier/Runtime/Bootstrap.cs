@@ -51,6 +51,9 @@ namespace Frontier.Runtime
             var quest=new GameObject("Platform adapter").AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
             board.Viewer=quest.Camera;
             var panel=new GameObject("Interface").AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;
+#if FRONTIER_BROWSER
+            quest.Navigation.Panel=panel;
+#endif
             var wheel=new GameObject("Controller actions").AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;
             var input=new GameObject("Commander input").AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;input.Wheel=wheel;
             var audio=session.gameObject.AddComponent<AudioFeedback>();audio.Session=session;audio.Board=board;

@@ -9583,6 +9583,251 @@
       "key": "OPPONENT - - -",
       "value": "RIVAL - - -",
       "template": false
+    },
+    {
+      "key": "Idle workers: {0}",
+      "value": "Inactivos: {0}",
+      "template": true
+    },
+    {
+      "key": "Army: {0}",
+      "value": "Ejército: {0}",
+      "template": true
+    },
+    {
+      "key": "Under construction",
+      "value": "En construcción",
+      "template": false
+    },
+    {
+      "key": "Selected: {0}",
+      "value": "Seleccionados: {0}",
+      "template": true
+    },
+    {
+      "key": "remaining",
+      "value": "restantes",
+      "template": false
+    },
+    {
+      "key": "Select a unit or building to see its name and available actions.",
+      "value": "Selecciona una unidad o edificio para ver su nombre y las acciones disponibles.",
+      "template": false
+    },
+    {
+      "key": "PRODUCTION · Click an item to cancel",
+      "value": "PRODUCCIÓN · Clic para cancelar",
+      "template": false
+    },
+    {
+      "key": "QUEUED ORDERS · Click an item to remove",
+      "value": "ÓRDENES EN COLA · Clic para quitar",
+      "template": false
+    },
+    {
+      "key": "Left-click: select · Right-click: order · Shift: queue",
+      "value": "Clic izq.: seleccionar · Clic der.: ordenar · Shift: encolar",
+      "template": false
+    },
+    {
+      "key": "Camera edges: On",
+      "value": "Cámara en bordes: activada",
+      "template": false
+    },
+    {
+      "key": "Camera edges: Off",
+      "value": "Cámara en bordes: desactivada",
+      "template": false
+    },
+    {
+      "key": "Move the camera at the edge of the battlefield.",
+      "value": "Mueve la cámara al llevar el cursor al borde del campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "{0} HP",
+      "value": "{0} PV",
+      "template": true
+    },
+    {
+      "key": "Camera, controls, sound and visuals.",
+      "value": "Cámara, controles, sonido y opciones visuales.",
+      "template": false
+    },
+    {
+      "key": "Choose Continue in the guide first.",
+      "value": "Elige Continuar en la guía primero.",
+      "template": false
+    },
+    {
+      "key": "Selection, orders and camera controls.",
+      "value": "Selección, órdenes y controles de cámara.",
+      "template": false
+    },
+    {
+      "key": "Both factions start equally. Choose your army, opponent and map, then start the match.",
+      "value": "Ambas facciones comienzan en igualdad. Elige tu ejército, rival y mapa, e inicia la partida.",
+      "template": false
+    },
+    {
+      "key": "Mouse / keyboard · Camera and gameplay controls.",
+      "value": "Ratón / teclado · Controles de cámara y del juego.",
+      "template": false
+    },
+    {
+      "key": "Camera",
+      "value": "Cámara",
+      "template": false
+    },
+    {
+      "key": "Pan the camera",
+      "value": "Desplazar la cámara",
+      "template": false
+    },
+    {
+      "key": "Move the camera across the battlefield.",
+      "value": "Mueve la cámara por el campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "Drag the camera",
+      "value": "Arrastrar la cámara",
+      "template": false
+    },
+    {
+      "key": "Hold middle mouse + drag",
+      "value": "Mantén el botón central + arrastra",
+      "template": false
+    },
+    {
+      "key": "Drag over the battlefield to move the camera.",
+      "value": "Arrastra sobre el campo de batalla para mover la cámara.",
+      "template": false
+    },
+    {
+      "key": "Zoom the camera",
+      "value": "Acercar o alejar la cámara",
+      "template": false
+    },
+    {
+      "key": "Mouse wheel over the battlefield",
+      "value": "Rueda del ratón sobre el campo de batalla",
+      "template": false
+    },
+    {
+      "key": "Move closer for detail or farther away to see more of the map.",
+      "value": "Acerca la cámara para ver detalles o aléjala para ver más del mapa.",
+      "template": false
+    },
+    {
+      "key": "Fit the whole battlefield in the available view.",
+      "value": "Ajusta la cámara para ver todo el campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "Navigate with the minimap",
+      "value": "Navegar con el minimapa",
+      "template": false
+    },
+    {
+      "key": "Left-click or drag on the minimap",
+      "value": "Clic izquierdo o arrastrar sobre el minimapa",
+      "template": false
+    },
+    {
+      "key": "Center the camera on that location. Enemy markers follow your army's vision.",
+      "value": "Centra la cámara en ese lugar. Los marcadores enemigos respetan la visión de tu ejército.",
+      "template": false
+    },
+    {
+      "key": "Hold for 0.5 s to remove that item from selection. Units keep their orders.",
+      "value": "Mantén 0,5 s para quitar ese elemento de la selección. Las unidades conservan sus órdenes.",
+      "template": false
+    },
+    {
+      "key": "Select the same type within 12 cells. Hold {0} to add them to the current selection.",
+      "value": "Selecciona el mismo tipo en un radio de 12 celdas. Mantén {0} para añadirlo a la selección actual.",
+      "template": true
+    },
+    {
+      "key": "{0} / {1} / Menu button",
+      "value": "{0} / {1} / botón Menú",
+      "template": true
+    },
+    {
+      "key": "Cancel an armed action first, or open the game menu. Escape goes back; Resume match continues playing.",
+      "value": "Cancela primero la acción preparada o abre el menú del juego. Escape vuelve atrás; Reanudar partida permite seguir jugando.",
+      "template": false
+    },
+    {
+      "key": "Menu > Return to main menu",
+      "value": "Menú > Volver al menú principal",
+      "template": false
+    },
+    {
+      "key": "Select a worker > choose a building",
+      "value": "Selecciona un trabajador > elige un edificio",
+      "template": false
+    },
+    {
+      "key": "Click its production card",
+      "value": "Haz clic en su tarjeta de producción",
+      "template": false
+    },
+    {
+      "key": "Cancel that exact item and refund its resource cost. Other items keep their order; cancelling the current item advances the queue.",
+      "value": "Cancela ese elemento y recupera su costo en recursos. Los demás mantienen su orden; al cancelar el elemento actual, avanza la cola.",
+      "template": false
+    },
+    {
+      "key": "Click Idle workers in the top bar",
+      "value": "Haz clic en Inactivos en la barra superior",
+      "template": false
+    },
+    {
+      "key": "Select all idle workers. Moving, working and queued workers stay out. An empty result keeps your selection.",
+      "value": "Selecciona todos los trabajadores inactivos. Excluye los que se mueven, trabajan o tienen órdenes en cola. Si no hay, conserva la selección.",
+      "template": false
+    },
+    {
+      "key": "Click Army in the top bar",
+      "value": "Haz clic en Ejército en la barra superior",
+      "template": false
+    },
+    {
+      "key": "Select your military units, including scouts and casters. Workers and buildings stay out.",
+      "value": "Selecciona tus unidades militares, incluidos exploradores y especialistas. Excluye trabajadores y edificios.",
+      "template": false
+    },
+    {
+      "key": "Remove a planned order",
+      "value": "Quitar una orden del plan",
+      "template": false
+    },
+    {
+      "key": "Click an order below the selection",
+      "value": "Haz clic en una orden debajo de la selección",
+      "template": false
+    },
+    {
+      "key": "Remove that command from selected units that share it. Cancelling the current order starts the next; Cancel all stops the units and clears their plans.",
+      "value": "Quita esa orden de las unidades seleccionadas que la comparten. Cancelar la orden actual inicia la siguiente; Cancelar todo detiene las unidades y borra sus planes.",
+      "template": false
+    },
+    {
+      "key": "PRODUCTION · Click an item to cancel and refund",
+      "value": "PRODUCCIÓN · Clic para cancelar y reembolsar",
+      "template": false
+    },
+    {
+      "key": "Left-click open terrain to set a rally point for the selected production buildings. Newly trained units move there. A context order on terrain also sets or replaces the rally point directly.",
+      "value": "Haz clic izquierdo en terreno libre para fijar un punto de reunión para los edificios de producción seleccionados. Las nuevas unidades irán allí. Una orden contextual en terreno también fija o reemplaza el punto directamente.",
+      "template": false
+    },
+    {
+      "key": "Use your server computer's LAN address. 127.0.0.1 refers to this device.",
+      "value": "Usa la dirección LAN del equipo servidor. 127.0.0.1 se refiere a este dispositivo.",
+      "template": false
     }
   ]
 }

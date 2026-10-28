@@ -23,8 +23,12 @@ namespace Frontier.Runtime
 
         private void ApplyWindowScale()
         {
+#if FRONTIER_BROWSER
+            if(root!=null)root.localScale=Vector3.one;
+#else
             windowScale = baseWindowScale * (windowScaleFactors.TryGetValue(Page, out float factor) ? factor : 1);
             if (root != null) root.localScale = Vector3.one * windowScale;
+#endif
         }
 
         private void AdjustWindowScale(float horizontal, float deltaTime)
