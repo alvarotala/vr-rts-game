@@ -54,7 +54,10 @@ namespace Frontier.Runtime
             var wheel=new GameObject("Controller actions").AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;
             var input=new GameObject("Commander input").AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;input.Wheel=wheel;
             var audio=session.gameObject.AddComponent<AudioFeedback>();audio.Session=session;audio.Board=board;
+#if !FRONTIER_BROWSER
+            // Native playtests export performance files; the browser uses its profiler.
             session.gameObject.AddComponent<FrameMetrics>().Session=session;
+#endif
             var light=new GameObject("Light").AddComponent<Light>();light.type=LightType.Directional;light.transform.rotation=Quaternion.Euler(50,-30,0);light.intensity=.8f;light.shadows=LightShadows.None;
             RenderSettings.ambientLight=new Color(.45f,.55f,.65f);
 #if !FRONTIER_BROWSER

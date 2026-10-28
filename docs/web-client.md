@@ -1,8 +1,10 @@
 # Cliente de escritorio (three.js) y juego cruzado con Quest
 
-La versión de escritorio se reemplazó por un cliente web con three.js que corre en cualquier navegador de escritorio actual. Juega en los mismos servidores dedicados que el Quest: una partida puede tener un jugador en Quest y otro en el navegador. También puede jugar contra la IA sin conexión, con la misma simulación y la misma IA que Unity.
+Para la migración al cliente C# de Unity en el navegador, usar la [ruta Unity WebGL](unity-webgl.md). Este documento describe el port three.js anterior, que permanece disponible en `web/`.
 
-El código vive en `web/`. El build Unity de escritorio (`bash scripts/unity.sh desktop`) sigue disponible como herramienta de desarrollo, pero ya no es la versión de escritorio para jugadores.
+Este port usa three.js y corre en navegadores de escritorio. Usa los servidores dedicados compatibles con WebSocket: una partida puede tener un jugador en Quest y otro en el navegador. También puede jugar contra la IA sin conexión, con la simulación y la IA compartidas con Unity.
+
+El código vive en `web/`. El build Unity nativo de escritorio (`bash scripts/unity.sh desktop`) sigue disponible como herramienta de desarrollo.
 
 ## Cómo funciona el juego cruzado
 
