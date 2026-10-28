@@ -2,6 +2,9 @@ using Frontier.Core;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+#if FRONTIER_BROWSER
+using OVRInput = Frontier.Runtime.BrowserTouchInput;
+#endif
 
 namespace Frontier.Runtime
 {

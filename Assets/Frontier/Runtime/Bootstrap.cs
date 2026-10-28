@@ -1,5 +1,7 @@
+#if !FRONTIER_BROWSER
 using System;
 using Frontier.Networking;
+#endif
 using UnityEngine;
 
 namespace Frontier.Runtime
@@ -9,6 +11,7 @@ namespace Frontier.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
         {
+#if !FRONTIER_BROWSER
             var args=Environment.GetCommandLineArgs();
             bool server=Array.IndexOf(args,"-frontier-server")>=0;
 #if UNITY_SERVER
@@ -35,12 +38,15 @@ namespace Frontier.Runtime
             {MultiplayerSmokeClient.LaunchPublic(Argument(args,"-frontier-backend","http://127.0.0.1:7350"),Argument(args,"-frontier-faction","industrial"));return;}
             if(smoke)
             {MultiplayerSmokeClient.Launch(address,port,Argument(args,"-frontier-faction","industrial"));return;}
+#endif
             if(UnityEngine.Object.FindFirstObjectByType<GameSession>()!=null)return;
             QualitySettings.vSyncCount=0;Application.targetFrameRate=72;
             Application.runInBackground=Application.platform!=RuntimePlatform.Android;
             var session=new GameObject("Game session").AddComponent<GameSession>();
+#if !FRONTIER_BROWSER
             if(Array.IndexOf(args,"-frontier-backend")>=0)
                 session.PublicBackendUrl=Argument(args,"-frontier-backend",GameSession.DefaultPublicBackendUrl);
+#endif
             var board=new GameObject("Physical board").AddComponent<BoardView>();board.Session=session;
             var quest=new GameObject("Platform adapter").AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
             board.Viewer=quest.Camera;
@@ -51,6 +57,7 @@ namespace Frontier.Runtime
             session.gameObject.AddComponent<FrameMetrics>().Session=session;
             var light=new GameObject("Light").AddComponent<Light>();light.type=LightType.Directional;light.transform.rotation=Quaternion.Euler(50,-30,0);light.intensity=.8f;light.shadows=LightShadows.None;
             RenderSettings.ambientLight=new Color(.45f,.55f,.65f);
+#if !FRONTIER_BROWSER
             if(Array.IndexOf(args,"-frontier-matchmake")>=0)
             {
                 session.Faction=Argument(args,"-frontier-faction","industrial");
@@ -62,12 +69,15 @@ namespace Frontier.Runtime
                 session.Faction=Argument(args,"-frontier-faction","industrial");
                 session.StartCoroutine(ConnectAfterStart(quest));
             }
+#endif
         }
+#if !FRONTIER_BROWSER
         private static string Argument(string[] args,string key,string fallback)
         {int index=Array.IndexOf(args,key);return index>=0&&index+1<args.Length?args[index+1]:fallback;}
         private static System.Collections.IEnumerator ConnectAfterStart(QuestBridge quest)
         {yield return null;quest.RequestOnlineMatch();}
         private static System.Collections.IEnumerator FindAfterStart(QuestBridge quest)
         {yield return null;quest.RequestPublicMatch();}
+#endif
     }
 }
