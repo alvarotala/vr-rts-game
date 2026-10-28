@@ -22,17 +22,24 @@ namespace Frontier.Runtime
         private readonly Dictionary<int,CommandKind> commands=new Dictionary<int,CommandKind>();
         private readonly Dictionary<int,bool> outcomes=new Dictionary<int,bool>();
         private int player=-1,sequence,lastDecision=-1,lastTick=-1,nextProgress,accepted,builds,trains,attacks,duplicateAcks;
-        private bool duplicateSent,surrenderSent,finished;
+        private bool duplicateSent,surrenderSent,finished,verifyingRank;
         private float startedAt;
         private IPublicMatchmaker publicMatchmaker;
         private string expectedMatchId;
+        private IRankingService rankingService;
+        private string rankingBackend;
 
         public static async void LaunchPublic(string backendUrl,string faction)
         {
             var smoke=Create();
-            smoke.publicMatchmaker=new NakamaMatchmaker(Guid.NewGuid().ToString("N")+Guid.NewGuid().ToString("N"));
+            string identity=Guid.NewGuid().ToString("N")+Guid.NewGuid().ToString("N");
+            smoke.publicMatchmaker=new NakamaMatchmaker(identity);
+            smoke.rankingService=new NakamaRankingService(identity);smoke.rankingBackend=backendUrl;
             try
             {
+                var rank=await smoke.rankingService.GetRankingAsync(backendUrl,System.Threading.CancellationToken.None);
+                if(rank.profile.rating!=1000||rank.profile.games!=0||rank.profile.rank!=0)
+                {smoke.Fail("A new ranked account did not start with the expected rating.");return;}
                 var connection=await smoke.publicMatchmaker.FindAsync(backendUrl,faction,System.Threading.CancellationToken.None,
                     message=>Debug.Log("FRONTIER_PUBLIC_SEARCH "+message));
                 if(smoke==null||smoke.finished)return;
@@ -61,7 +68,7 @@ namespace Frontier.Runtime
             smoke.client.CommandAcknowledged+=smoke.OnAcknowledged;
             smoke.client.Finished+=smoke.OnFinished;
             smoke.client.StatusChanged+=message=>Debug.Log("FRONTIER_SMOKE_STATUS "+message);
-            smoke.client.Disconnected+=message=>{if(!smoke.finished)smoke.Fail("Disconnected before verified result: "+message);};
+            smoke.client.Disconnected+=message=>{if(!smoke.finished&&!smoke.verifyingRank)smoke.Fail("Disconnected before verified result: "+message);};
             return smoke;
         }
 
@@ -151,13 +158,47 @@ namespace Frontier.Runtime
 
         private void TryFinish()
         {
-            if(finished||report==null||latest==null||latest.winner<0)return;
+            if(finished||verifyingRank||report==null||latest==null||latest.winner<0)return;
             if(report.Winner!=latest.winner||report.Tick!=latest.tick||accepted<10||builds<1||trains<1||duplicateAcks<1
                 ||report.Players.Any(p=>p.WorkersProduced<1||p.StructuresCompleted<1||p.ArmyProduced<1)
                 ||report.Players.Sum(p=>p.ArmyLost)<1)
             {Fail("Terminal view/report mismatch or missing economy, construction, combat or duplicate ACK evidence.");return;}
             string digest;
             using(var sha=SHA256.Create())digest=BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(JsonUtility.ToJson(MatchReportData.From(report))))).Replace("-","").ToLowerInvariant();
+            if(rankingService!=null){verifyingRank=true;VerifyPublicRating(digest);return;}
+            Complete(digest);
+        }
+
+        private async void VerifyPublicRating(string digest)
+        {
+            using(var timeout=new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(35)))
+            try
+            {
+                while(!finished)
+                {
+                    var value=await rankingService.GetMatchResultAsync(rankingBackend,expectedMatchId,timeout.Token);
+                    if(value.status=="pending"){await System.Threading.Tasks.Task.Delay(1000,timeout.Token);continue;}
+                    int delta=report.Winner==2?0:report.Winner==player?16:-16;
+                    if(value.status!="rated"||value.ratingBefore!=1000||value.ratingAfter!=1000+delta
+                        ||value.ratingDelta!=delta||value.opponentRating!=1000)
+                    {Fail("The authoritative rating does not match the completed game.");return;}
+                    var snapshot=await rankingService.GetRankingAsync(rankingBackend,timeout.Token);
+                    if(snapshot.profile.rank==0){await System.Threading.Tasks.Task.Delay(1000,timeout.Token);continue;}
+                    if(snapshot.profile.rating!=value.ratingAfter||snapshot.profile.games!=1
+                        ||snapshot.profile.wins!=(report.Winner==player?1:0)
+                        ||snapshot.profile.draws!=(report.Winner==2?1:0)
+                        ||snapshot.profile.losses!=(report.Winner!=2&&report.Winner!=player?1:0))
+                    {Fail("The ranked profile does not agree with its match result.");return;}
+                    Debug.Log($"FRONTIER_RANK_PASSED player={player} before={value.ratingBefore} after={value.ratingAfter} delta={value.ratingDelta} rank={snapshot.profile.rank}");
+                    Complete(digest);return;
+                }
+            }
+            catch(Exception){Fail("Could not verify the persisted match rating.");}
+        }
+
+        private void Complete(string digest)
+        {
+            if(finished)return;
             finished=true;
             Debug.Log($"FRONTIER_SMOKE_PASSED player={player} winner={report.Winner} tick={report.Tick} digest={digest} accepted={accepted} builds={builds} trains={trains} duplicateAcks={duplicateAcks}");
             // Give NGO a few frames to flush its final-report acknowledgement.

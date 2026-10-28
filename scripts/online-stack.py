@@ -54,7 +54,9 @@ def initialize(host=None):
         "session": {"encryption_key": env["LL_SESSION_KEY"], "refresh_encryption_key": env["LL_REFRESH_KEY"], "token_expiry_sec": 900, "refresh_token_expiry_sec": 2592000},
         "runtime": {"http_key": env["LL_RUNTIME_HTTP_KEY"], "env": [f"LL_TICKET_KEY={env['LL_TICKET_KEY']}", "LL_SERVER_IDS=local-1"]},
         "console": {"port": 7351, "username": "admin", "password": env["LL_CONSOLE_PASSWORD"], "signing_key": env["LL_CONSOLE_SIGNING_KEY"]},
-        "matchmaker": {"max_tickets": 1, "interval_sec": 1, "max_intervals": 2},
+        # Keep both players' ranges mandatory, including after a long wait.
+        "matchmaker": {"max_tickets": 1, "interval_sec": 1, "max_intervals": 2,
+                      "rev_precision": True, "rev_threshold": 0},
     }
     path = LOCAL / "config.yml"
     path.write_text(json.dumps(config, indent=2) + "\n")

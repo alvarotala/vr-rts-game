@@ -40,7 +40,7 @@ namespace Frontier.Runtime
             Application.runInBackground=Application.platform!=RuntimePlatform.Android;
             var session=new GameObject("Game session").AddComponent<GameSession>();
             if(Array.IndexOf(args,"-frontier-backend")>=0)
-                session.PublicBackendUrl=Argument(args,"-frontier-backend","http://127.0.0.1:7350");
+                session.PublicBackendUrl=Argument(args,"-frontier-backend",GameSession.DefaultPublicBackendUrl);
             var board=new GameObject("Physical board").AddComponent<BoardView>();board.Session=session;
             var quest=new GameObject("Platform adapter").AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
             board.Viewer=quest.Camera;

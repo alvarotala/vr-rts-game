@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -27,8 +28,10 @@ func beforeMatchmaker(ctx context.Context, logger runtime.Logger, db *sql.DB, nk
 	}
 	var protocol, rules int
 	var hash, queueSession string
+	var rating int
+	var age float64
 	searchID := req.StringProperties["searchId"]
-	err = tx.QueryRowContext(ctx, `SELECT protocol,rules,content_hash,queue_session FROM ll_searches WHERE id=$1 AND player_id=$2 AND status='searching'`, searchID, user).Scan(&protocol, &rules, &hash, &queueSession)
+	err = tx.QueryRowContext(ctx, `SELECT protocol,rules,content_hash,queue_session,rating_at_search,extract(epoch FROM now()-created_at) FROM ll_searches WHERE id=$1 AND player_id=$2 AND status='searching'`, searchID, user).Scan(&protocol, &rules, &hash, &queueSession, &rating, &age)
 	if err == sql.ErrNoRows {
 		return nil, denied("Open your own search first")
 	}
@@ -50,9 +53,10 @@ func beforeMatchmaker(ctx context.Context, logger runtime.Logger, db *sql.DB, nk
 	}
 	// Never accept a caller's wildcard query or ranking/faction properties.
 	// Keyword fields need escaped terms; quoted phrases tokenize punctuation.
-	req.Query = `+properties.compat:` + strings.NewReplacer(":", `\:`, "-", `\-`).Replace(expected)
+	radius := searchRadius(age)
+	req.Query = `+properties.compat:` + strings.NewReplacer(":", `\:`, "-", `\-`).Replace(expected) + fmt.Sprintf(" +properties.rating:>=%d +properties.rating:<=%d", rating-radius, rating+radius)
 	req.StringProperties = map[string]string{"compat": expected, "searchId": searchID}
-	req.NumericProperties = nil
+	req.NumericProperties = map[string]float64{"rating": float64(rating)}
 	return in, nil
 }
 
@@ -60,6 +64,7 @@ type matchedPlayer struct {
 	user, session, searchID, faction, content string
 	protocol, rules                           int
 	websocket                                 bool
+	rating, radius                            int
 }
 
 func matchmakerMatched(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, entries []runtime.MatchmakerEntry) (string, error) {
@@ -87,7 +92,8 @@ func matchmakerMatched(ctx context.Context, logger runtime.Logger, db *sql.DB, n
 		p.session = entry.GetPresence().GetSessionId()
 		p.searchID, _ = entry.GetProperties()["searchId"].(string)
 		var queued string
-		err = tx.QueryRowContext(ctx, `SELECT faction,protocol,rules,content_hash,queue_session,websocket FROM ll_searches WHERE id=$1 AND player_id=$2 AND status='searching'`, p.searchID, p.user).Scan(&p.faction, &p.protocol, &p.rules, &p.content, &queued, &p.websocket)
+		var age float64
+		err = tx.QueryRowContext(ctx, `SELECT faction,protocol,rules,content_hash,queue_session,websocket,rating_at_search,extract(epoch FROM now()-created_at) FROM ll_searches WHERE id=$1 AND player_id=$2 AND status='searching'`, p.searchID, p.user).Scan(&p.faction, &p.protocol, &p.rules, &p.content, &queued, &p.websocket, &p.rating, &age)
 		if err == sql.ErrNoRows {
 			valid = false
 			continue
@@ -97,11 +103,13 @@ func matchmakerMatched(ctx context.Context, logger runtime.Logger, db *sql.DB, n
 			return rejectID, nil
 		}
 		supplied, _ := entry.GetProperties()["compat"].(string)
-		if queued != p.session || supplied != compat(p.protocol, p.rules, p.content) {
+		suppliedRating, ratingOK := entry.GetProperties()["rating"].(float64)
+		p.radius = searchRadius(age)
+		if queued != p.session || supplied != compat(p.protocol, p.rules, p.content) || !ratingOK || suppliedRating != float64(p.rating) {
 			valid = false
 		}
 	}
-	if players[0].user == players[1].user || compat(players[0].protocol, players[0].rules, players[0].content) != compat(players[1].protocol, players[1].rules, players[1].content) {
+	if players[0].user == players[1].user || compat(players[0].protocol, players[0].rules, players[0].content) != compat(players[1].protocol, players[1].rules, players[1].content) || !ratingPairAllowed(players[0].rating, players[1].rating, players[0].radius, players[1].radius) {
 		valid = false
 	}
 	if !valid {
@@ -121,7 +129,7 @@ func matchmakerMatched(ctx context.Context, logger runtime.Logger, db *sql.DB, n
 	p := players[0]
 	// A pair including a browser player is only allocated to a server with a websocket listener.
 	websocket := players[0].websocket || players[1].websocket
-	_, err = tx.ExecContext(ctx, `INSERT INTO ll_matches(id,status,protocol,rules,content_hash,websocket) VALUES($1,'waitingServer',$2,$3,$4,$5)`, id, p.protocol, p.rules, p.content, websocket)
+	_, err = tx.ExecContext(ctx, `INSERT INTO ll_matches(id,status,protocol,rules,content_hash,websocket,rank_version) VALUES($1,'waitingServer',$2,$3,$4,$5,1)`, id, p.protocol, p.rules, p.content, websocket)
 	if err != nil {
 		logger.Error("Matchmaking allocation: %v", err)
 		return rejectID, nil

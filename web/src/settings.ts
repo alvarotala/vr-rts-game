@@ -3,17 +3,22 @@ export interface Settings {
   backendUrl: string; directAddress: string; faction: string; enemyFaction: string; difficulty: string; mapId: string;
 }
 
-const Key = 'frontier.web.settings.v1';
+const Key = 'frontier.web.settings.v2';
+const LegacyKey = 'frontier.web.settings.v1';
 const host = typeof location !== 'undefined' && location.hostname ? location.hostname : '127.0.0.1';
 export const defaults: Settings = {
   musicVolume: 0.35, effectsVolume: 0.65, edgeScroll: true, scrollSpeed: 1, shadows: true,
-  backendUrl: `http://${host === 'localhost' ? '127.0.0.1' : host}:7350`, directAddress: `${host === 'localhost' ? '127.0.0.1' : host}:7877`,
+  backendUrl: 'https://server-us-1.littlelegion.app', directAddress: `${host === 'localhost' ? '127.0.0.1' : host}:7877`,
   faction: 'industrial', enemyFaction: 'biological', difficulty: 'normal', mapId: 'rift',
 };
 
 export function loadSettings(): Settings {
   try {
-    const saved = JSON.parse(localStorage.getItem(Key) ?? '{}') as Partial<Settings>;
+    const current = localStorage.getItem(Key);
+    const saved = JSON.parse(current ?? localStorage.getItem(LegacyKey) ?? '{}') as Partial<Settings>;
+    // Retain desktop preferences while retiring the old LAN service default.
+    // Explicit service choices saved by this version still override production.
+    if (current === null) delete saved.backendUrl;
     return { ...defaults, ...saved };
   } catch { return { ...defaults }; }
 }

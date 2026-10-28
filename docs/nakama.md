@@ -1,10 +1,17 @@
 # Multiplayer público autohospedado
 
-Nakama OSS 3.41.0 administra cuentas y matchmaking nativo. El módulo Go en
-`backend/nakama` asigna partidas a un pool explícito de servidores NGO. La
+Nakama OSS 3.41.0 administra cuentas, matchmaking nativo por nivel y una tabla
+de clasificación autoritativa. El módulo Go en `backend/nakama` asigna partidas
+a un pool explícito de servidores NGO y calcula sus cambios de Elo. La
 simulación continúa en el servidor Unity dedicado; no se ejecuta en Nakama.
-PostgreSQL 17 conserva cuentas, búsquedas, asignaciones, admisiones y resultados.
+PostgreSQL 17 conserva cuentas, búsquedas, asignaciones, admisiones, resultados
+y puntuaciones.
 No se necesita una cuenta de Heroic Cloud, servicios pagos ni Docker socket.
+
+Para el servidor Ubuntu público, usar la [guía de despliegue y operación en
+producción](deploy-production.md), que conserva el override HTTPS al actualizar,
+incluye backups con restauración comprobada y distingue los builds de Unity de
+los del backend. Los comandos del apartado siguiente son para el stack local.
 
 ## Stack local
 
@@ -61,6 +68,48 @@ Ese comando conserva el volumen `little-legion-online_online-postgres`. No usar
 oficiales de Nakama; el plugin crea sus tablas `ll_*` con operaciones aditivas.
 No modifica las tablas internas de cuentas de Nakama.
 
+### Actualizar un stack existente
+
+Actualizar fuera de una partida activa. Primero respaldar PostgreSQL y comprobar
+que el respaldo se restaura en una base o instancia temporal; inspeccionar sólo
+el índice del dump no demuestra una restauración. Conservar el volumen existente
+y la configuración privada de `.cache/online`. Después:
+
+```sh
+docker compose --env-file .cache/online/env -f compose.online.yml stop server
+python3 scripts/online-stack.py init
+python3 scripts/online-stack.py backend
+python3 scripts/online-stack.py up
+```
+
+El paso `init` conserva claves y host, y regenera la configuración de Nakama con
+`matchmaker.rev_precision=true` y `rev_threshold=0`. Es necesario ejecutarlo al
+actualizar: `up` por sí solo no regenera un archivo de configuración existente.
+Las migraciones agregan tablas de ranking y columnas de compatibilidad; no
+resetean cuentas, búsquedas ni resultados. Las partidas anteriores conservan
+`rank_version=0`, sin puntuación retroactiva; las parejas públicas nuevas usan
+`rank_version=1`. No ejecutar `down -v` ni recrear el volumen para incorporar ranking.
+
+## Ranking y búsqueda por nivel
+
+Todas las partidas públicas nuevas son clasificadas. El perfil comienza en
+**1000 puntos Elo**, usa **K=32** y tiene mínimo **0**. El menú muestra puntos,
+posición, victorias, derrotas, empates y los diez primeros. Las cuentas sin
+partidas clasificadas todavía no tienen puesto en la tabla.
+
+La ventana inicial de búsqueda es **±100 puntos**; aumenta en 100 cada 20 segundos
+hasta **±400**. PostgreSQL mide la espera y ambos jugadores deben estar dentro de
+la ventana del otro. El cliente no puede declarar su propio nivel ni ampliar
+el rango enviando otras propiedades o consultas al matchmaker.
+
+Sólo el resultado `finished` del servidor autenticado aplica puntos. Se guardan
+el resultado y los cambios de ambos jugadores en una sola transacción; los
+reintentos no puntúan otra vez. Una derrota por rendición o desconexión en partida
+cuenta. Cancelaciones, no-show y abortos no cambian Elo. La proyección a la tabla
+nativa `ll_ranked_1v1_v1` usa una cola persistente y escrituras absolutas; los
+clientes no pueden escribir ni borrar su puntuación. Reglas, desempates y RPC
+en [Ranking y rivales de nivel parecido](ranking.md).
+
 ## Contrato y seguridad
 
 El contrato completo está en [online-contract.md](online-contract.md). Los DTO
@@ -72,8 +121,9 @@ el emparejamiento utiliza `RegisterMatchmakerMatched` de Nakama.
   hardware. Reinstalar sin conservarla pierde el acceso a esa cuenta hasta que
   se agregue vinculación con otro método de login.
 - Cada búsqueda pertenece al `userId` de la sesión autenticada. El before hook
-  valida la búsqueda y fija la consulta de compatibilidad; el matched hook
-  comprueba nuevamente las identidades, sesiones y configuración persistida.
+  valida la búsqueda y fija la consulta de compatibilidad y rango de nivel; el
+  matched hook comprueba nuevamente las identidades, sesiones, rating y ventanas
+  persistidos. La antigüedad se conserva al renovar un ticket para ampliar el rango.
 - Las claves y los resultados de partida nunca se aceptan de un jugador. Los
   RPC de servidor requieren el `runtime.http_key` privado y rechazan contexto
   autenticado de jugador. El registro acepta únicamente IDs habilitados en
@@ -111,6 +161,7 @@ Detener sólo el slot online durante la prueba para evitar competir por `local-1
 ```sh
 docker compose --env-file .cache/online/env -f compose.online.yml stop server
 python3 scripts/online-stack.py test
+python3 backend/nakama/tests/ranking_integration.py
 ```
 
 Cubre login persistente y refresh, aislamiento de búsquedas, suplantación de
@@ -120,12 +171,20 @@ resultados inmutables, dos sesiones completas, reinicio y expiración de leases 
 no-show. Para probar expiraciones sin esperar minutos adelanta sólo el reloj de
 filas propias del fixture; no borra ni resetea datos.
 
+La prueba de ranking agrega Elo con resultados concurrentes e idempotentes,
+re-login, empates sin cambio de puntos, proyección nativa y trabajo atrasado de
+la cola persistente. También rechaza escritura y borrado desde el cliente,
+comprueba que cancelaciones/no-show no puntúan y verifica las ventanas mutuas
+con ratings y relojes de cuentas y búsquedas creadas por la propia prueba.
+
 Para la prueba integrada con clientes Unity reales, el override
 `compose.online.smoke.yml` activa `-frontier-smoke` en el servidor NGO:
 
 ```sh
 docker compose --env-file .cache/online/env -f compose.online.yml -f compose.online.smoke.yml --profile game up -d --build
 python3 scripts/check-multiplayer.py --backend http://127.0.0.1:7350 --output TestResults/online-e2e
+# Retrasar al segundo cliente verifica la renovación real del ticket al ampliar el rango:
+python3 scripts/check-multiplayer.py --backend http://127.0.0.1:7350 --join-delay 35 --output TestResults/ranking-e2e
 ```
 
 Después de la prueba volver al comando `python3 scripts/online-stack.py up` para
@@ -133,7 +192,35 @@ recrear el servidor en tiempo real. Las pruebas de backend no validan el APK, la
 conexión física de un Quest ni la fluidez del render; esas comprobaciones son
 independientes.
 
-### Validación local del 26 de octubre de 2026
+### Validación del backend con ranking
+
+- `TestResults/nakama-ranking-integration.log`: **266 checks** contra Nakama,
+  PostgreSQL y WebSocket nativo, con el servidor NGO sustituido por un agente de
+  prueba autenticado.
+- `TestResults/nakama-ranking-regression.log`: **158 checks** de la integración
+  anterior, repetidos después de incorporar ranking.
+
+Estas pruebas no ejecutan la UI Unity del ranking ni el APK. La comprobación de
+una partida clasificada completa con esos builds es una evidencia independiente.
+
+### Validación integrada del ranking
+
+- `TestResults/ranking-unity-checks.log`: 19 checks nuevos de presentación y
+  respuestas tardías, más las regresiones de sesión, servidor y presentación.
+  Tres capturas de menús en español con control de texto en `TestResults/Ranking`.
+- Builds desktop y APK ARM64 completos (`TestResults/ranking-*-build.log`).
+  Smoke offline desktop sin errores (`TestResults/ranking-offline-smoke.log`).
+- `TestResults/ranking-e2e/result.json`: dos clientes Unity reales y servidor NGO
+  Docker. El primer cliente esperó 35 segundos, renovó su ticket de ±100 a ±200,
+  encontró rival y completó una partida con el mismo ganador, tick y reporte en
+  ambos clientes. Sus consultas autenticadas confirmaron 1000→1016 y 1000→984,
+  estadísticas y posiciones en la clasificación nativa. Los registros de
+  PostgreSQL coincidieron. El servidor se dejó después a velocidad normal.
+
+El build del APK no equivale a ejecutarlo en un Quest. Quedan pendientes la prueba
+física de este APK y la conectividad por Internet.
+
+### Validación del flujo anterior al ranking (26 de octubre de 2026)
 
 - Backend real: 158 comprobaciones con Nakama, PostgreSQL y WebSocket nativo.
 - Unity: búsqueda/cancelación, admisión asignada y recuperación de ACK perdido,
@@ -171,10 +258,10 @@ Los servidores registran `wsPort` y las búsquedas del navegador declaran `webso
 
 Validación local: la prueba de integración pasó con 190 comprobaciones contra Nakama 3.41.0 y PostgreSQL 17 en Docker, incluidas las nuevas de emparejamiento cruzado. Además, un jugador tipo Quest (NGO) y el cliente web (WebSocket) fueron emparejados por el matchmaker nativo, asignados por el agente real al mismo servidor y terminaron una partida con el mismo resultado persistido. El servidor de esa prueba fue el arnés .NET, no el build Unity.
 
-Este entregable guarda resultados para una próxima etapa de ranking. Todavía no
-calcula MMR ni publica una tabla de clasificación. La alta disponibilidad de
-Nakama, recuperación de una partida en curso y ampliación dinámica del pool
-quedan fuera del pool local inicial.
+La alta disponibilidad de Nakama, recuperación de una partida en curso y
+ampliación dinámica del pool quedan fuera del pool local inicial. El ranking
+actual no incorpora temporadas, ligas ni vinculación de cuentas después de
+reinstalar; esas extensiones están separadas del cálculo de Elo y matchmaking.
 
 ## Dependencias y referencias
 

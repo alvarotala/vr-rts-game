@@ -273,6 +273,9 @@ func serverEvent(ctx context.Context, logger runtime.Logger, tx *sql.Tx, user, p
 			return nil, conflict("Only a started match can finish")
 		}
 		err = terminal(ctx, tx, req.MatchID, "finished", req.Reason, req.Winner, req.Tick)
+		if err == nil {
+			err = rateFinished(ctx, tx, req.MatchID, req.Winner)
+		}
 	case "aborted":
 		if terminalState {
 			return ok(), nil

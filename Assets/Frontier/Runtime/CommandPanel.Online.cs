@@ -10,16 +10,18 @@ namespace Frontier.Runtime
     public sealed partial class CommandPanel
     {
         private const string ServerAddressKey="frontier.multiplayer.address.v1",ServerPortKey="frontier.multiplayer.port.v1";
-        private const string PublicBackendKey="frontier.multiplayer.service.v1";
+        // Start production builds on the public service even after a LAN playtest.
+        // Keep the old preference and all per-endpoint account identities intact.
+        private const string PublicBackendKey="frontier.multiplayer.service.v2";
         private bool endpointPort,endpointPublic;
         private string endpointDraft="",endpointMessage;
         private string MatchDescription=>Session.IsTutorial?"GUIDED TUTORIAL · PRACTICE AT YOUR OWN PACE":
             $"{ShortFaction(Session.Faction)} vs {ShortFaction(Session.EnemyFaction)} · "+(Session.IsOnline?(Session.IsPublicMatch?"PUBLIC 1V1":"MULTIPLAYER LAN"):DifficultyLabel+" AI");
 
-        private void LoadOnlineEndpoint()
+        private void LoadOnlineEndpoint(string[] args=null)
         {
             // Explicit launch arguments take priority over a previously saved LAN endpoint.
-            var args=Environment.GetCommandLineArgs();
+            args=args??Environment.GetCommandLineArgs();
             if(Array.IndexOf(args,"-frontier-client")<0)
             {
                 string address=PlayerPrefs.GetString(ServerAddressKey,Session.ServerAddress);
@@ -29,10 +31,7 @@ namespace Frontier.Runtime
             }
             if(Array.IndexOf(args,"-frontier-backend")<0)
             {
-                string fallback=Session.PublicBackendUrl;
-                if(fallback=="http://127.0.0.1:7350"&&Session.ServerAddress!="127.0.0.1"&&ValidServerAddress(Session.ServerAddress))
-                    fallback="http://"+Session.ServerAddress+":7350";
-                string saved=PlayerPrefs.GetString(PublicBackendKey,fallback);
+                string saved=PlayerPrefs.GetString(PublicBackendKey,Session.PublicBackendUrl);
                 if(ValidPublicBackend(saved))Session.PublicBackendUrl=saved;
             }
         }
@@ -54,13 +53,21 @@ namespace Frontier.Runtime
                 MenuFooter("Cancel search",CancelOnlineSetup,352,336);return;
             }
             FactionCard(false,Vector2.zero);
-            MenuCard("Direct connection","Join a server by address on your local network.",new Vector2(528,0),new Vector2(512,116),()=>Show(MenuPage.DirectSetup));
-            var service=PublicBackend();
-            MenuCard("Online service: "+service.Host,"Choose the address of your online service.",new Vector2(0,-132),new Vector2(512,116),()=>EditOnlineEndpoint(false,true));
-            MenuCard("Service port: "+service.Port,"Use the port of your online service.",new Vector2(528,-132),new Vector2(512,116),()=>EditOnlineEndpoint(true,true));
+            MenuCard("Ranking","Your rating and the top 10 players.",new Vector2(528,0),new Vector2(512,116),()=>Show(MenuPage.Ranking));
+            MenuCard("Connection","Online service and direct LAN connection.",new Vector2(0,-132),new Vector2(512,116),()=>Show(MenuPage.OnlineConnection));
+            Label(actions,"Find an opponent near your rating. The range widens while you wait.",new Vector2(552,-150),new Vector2(464,84),22,MenuMuted,TextAnchor.UpperLeft);
             MenuFooter("Back",CancelOnlineSetup,0,336);
             MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
             MenuFooter("FIND MATCH",()=>{endpointMessage=null;Quest.RequestPublicMatch();Rebuild();},704,336,true);
+        }
+        private void BuildOnlineConnection()
+        {
+            var service=PublicBackend();
+            MenuCard("Online service",service.Host,Vector2.zero,new Vector2(512,116),()=>EditOnlineEndpoint(false,true));
+            MenuCard("Service port: "+service.Port,"Use the port of your online service.",new Vector2(528,0),new Vector2(512,116),()=>EditOnlineEndpoint(true,true));
+            MenuCard("Direct connection","Join a server by address on your local network.",new Vector2(0,-132),new Vector2(512,116),()=>Show(MenuPage.DirectSetup));
+            Label(actions,"Direct LAN matches do not affect your rating.",new Vector2(552,-150),new Vector2(464,84),22,MenuMuted,TextAnchor.UpperLeft);
+            MenuFooter("Back",()=>Show(MenuPage.OnlineSetup),352,336);
         }
         private void BuildDirectSetup()
         {
@@ -103,7 +110,7 @@ namespace Frontier.Runtime
                     UpdateMenuText();
                 }});
             }
-            MenuFooter("Cancel",()=>Show(endpointPublic?MenuPage.OnlineSetup:MenuPage.DirectSetup),0,336);
+            MenuFooter("Cancel",()=>Show(endpointPublic?MenuPage.OnlineConnection:MenuPage.DirectSetup),0,336);
             MenuFooter("Clear",()=>{endpointDraft="";endpointMessage=null;UpdateMenuText();},352,336);
             MenuFooter("Save",SaveOnlineEndpoint,704,336,true);
         }
@@ -126,7 +133,7 @@ namespace Frontier.Runtime
                 }
                 Session.PublicBackendUrl=service.Uri.GetLeftPart(UriPartial.Authority);
                 PlayerPrefs.SetString(PublicBackendKey,Session.PublicBackendUrl);PlayerPrefs.Save();
-                endpointMessage=null;Show(MenuPage.OnlineSetup);return;
+                endpointMessage=null;Show(MenuPage.OnlineConnection);return;
             }
             if(endpointPort)
             {
@@ -149,10 +156,10 @@ namespace Frontier.Runtime
         private void UpdateOnlineHeader()
         {
             bool editing=Page==MenuPage.OnlineEndpoint||Page==MenuPage.PublicEndpoint;
-            bool publicPage=Page==MenuPage.OnlineSetup||Page==MenuPage.PublicEndpoint;
-            headline.text=editing?(endpointPort?"SERVER PORT":"SERVER ADDRESS"):publicPage?"MULTIPLAYER":"MULTIPLAYER LAN";
+            bool publicPage=Page==MenuPage.OnlineSetup||Page==MenuPage.PublicEndpoint||Page==MenuPage.OnlineConnection;
+            headline.text=editing?(endpointPort?"SERVER PORT":"SERVER ADDRESS"):Page==MenuPage.OnlineConnection?"CONNECTION":publicPage?"MULTIPLAYER":"MULTIPLAYER LAN";
             economy.text=editing?"EDIT CONNECTION":Session.IsConnecting?(Session.IsMatchmaking?"SEARCHING FOR AN OPPONENT":"CONNECTING / WAITING"):publicPage?"PUBLIC 1V1":"DIRECT CONNECTION · 1V1";
-            selection.text=editing?endpointDraft+"_":publicPage?"Find another player and join a dedicated match.":Session.ServerAddress+":"+Session.ServerPort;
+            selection.text=editing?endpointDraft+"_":Page==MenuPage.OnlineSetup?RankingSummary:publicPage?"Choose your online service or a direct LAN server.":Session.ServerAddress+":"+Session.ServerPort;
             harvesting.text=editing?"Point and select keys. Save applies the new value.":Board.Placed?"BOARD READY":"POSITION YOUR BOARD BEFORE JOINING";
             status.text=editing?(endpointMessage??"Use the keypad on Quest or desktop."):
                 !string.IsNullOrEmpty(Session.NetworkStatus)?Session.NetworkStatus:"Join the same dedicated server as your opponent.";
@@ -161,7 +168,7 @@ namespace Frontier.Runtime
         {
             bool publicMatch=Session.IsPublicMatch;Session.LeaveMatch();Show(publicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup);
         }
-        private Uri PublicBackend()=>ValidPublicBackend(Session.PublicBackendUrl)?new Uri(Session.PublicBackendUrl):new Uri("http://127.0.0.1:7350");
+        private Uri PublicBackend()=>ValidPublicBackend(Session.PublicBackendUrl)?new Uri(Session.PublicBackendUrl):new Uri(GameSession.DefaultPublicBackendUrl);
         private static bool ValidPublicBackend(string value)=>Uri.TryCreate(value,UriKind.Absolute,out var uri)
             &&(uri.Scheme==Uri.UriSchemeHttp||uri.Scheme==Uri.UriSchemeHttps)&&!string.IsNullOrEmpty(uri.Host)
             &&string.IsNullOrEmpty(uri.UserInfo)&&string.IsNullOrEmpty(uri.Query)&&string.IsNullOrEmpty(uri.Fragment)&&uri.AbsolutePath=="/";

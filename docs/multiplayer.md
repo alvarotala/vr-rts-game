@@ -6,7 +6,7 @@ The same server also accepts the desktop web client over a websocket (TCP): 7877
 
 The server runs the existing simulation at 20 ticks/second. Clients send orders and receive their filtered `PlayerView`; they never receive the active opponent's private economy, production queues or complete authoritative simulation. Seat ownership comes from the server's connection mapping. Reliable command acknowledgements preserve the original outcome for duplicate sequences. State frames are compressed, bounded, fragmented and published only after complete assembly. Final statistics are sent after the game ends. If that payload exceeds the final-message limits (8 MiB expanded or 2 MiB compressed), the server delivers the terminal player view with an explicit report-unavailable flag. The outcome remains readable even when statistics cannot be delivered.
 
-The public flow uses Nakama OSS for persistent account sessions and native matchmaking, a Go module to allocate an explicit pool of NGO servers, and PostgreSQL for persistent searches, allocations, admissions and outcomes. The current pool contains one statically configured game slot; additional pairs wait for capacity. The backend does not create containers or scale automatically. Ranking and reconnecting into a running match remain subsequent work. Once a match starts, a disconnected player concedes; the other player receives the result. Opening a client's menu does not pause the server.
+The public flow uses Nakama OSS for persistent account sessions, native skill-based matchmaking and an authoritative leaderboard. A Go module allocates an explicit pool of NGO servers and commits match outcomes and Elo changes in PostgreSQL. The current pool contains one statically configured game slot; additional pairs wait for capacity. The backend does not create containers or scale automatically. Reconnecting into a running match remains subsequent work. Once a match starts, a disconnected player concedes; the other player receives the result. Opening a client's menu does not pause the server.
 
 Online presentation keeps a bounded history of filtered positions with a 150 ms
 buffer, so packet arrivals do not restart movement interpolation. Positions never
@@ -24,6 +24,13 @@ credential generation, persistent volumes, production TLS and pool expansion.
 The [online allocation contract](online-contract.md) specifies the authenticated
 player flow and the server-only lifecycle RPCs.
 
+All newly created public matches are ranked. Accounts start at 1000 Elo with
+K=32; only an authoritative completed match changes the score. The multiplayer
+menu exposes the player's rating, record, position and top ten. Search starts at
+±100 Elo, widens by 100 every 20 seconds and stops at ±400. Both players' windows
+must permit the match, even if one has waited longer. Existing match history
+remains unranked and is not backfilled. See [ranking rules and persistence](ranking.md).
+
 After building the Linux server below, initialize the stack with the address the
 Quest can reach and start it:
 
@@ -31,6 +38,13 @@ Quest can reach and start it:
 python3 scripts/online-stack.py init --host 192.168.100.157
 python3 scripts/online-stack.py up
 ```
+
+For an existing stack, back up PostgreSQL and verify restoration before updating.
+Run `python3 scripts/online-stack.py init` again to regenerate the private config
+with permanent reverse matching (`rev_precision=true`, `rev_threshold=0`), then
+rebuild the backend and restart the game slot. Initialization preserves existing
+credentials and the advertised host. The [upgrade procedure](nakama.md#actualizar-un-stack-existente)
+keeps the current database volume and never resets accounts or match history.
 
 The example address must be replaced when this Mac's LAN address changes. The
 online service listens on TCP 7350, its allocated NGO slot on UDP 7778, and its
@@ -59,6 +73,15 @@ game ports. The local HTTP stack and local-process checks do not establish WAN
 reachability or physical Quest behavior for this new flow. Build/test evidence
 for the earlier direct-connect deliverable below must not be read as proof of
 the new account, matchmaking and allocation path.
+
+The ranked backend has separately passed 266 real Nakama/PostgreSQL checks and
+all 158 checks of the original backend regression. These cover scoring retries,
+draws, leaderboard authority, durable projection, cancellation/no-show and mutual
+skill windows. A separate desktop E2E passed with a 35-second delayed opponent,
+native ticket renewal, a complete NGO match and verified 1016/984 ratings. Unity
+presentation checks and Spanish menu captures passed; desktop and Quest APK
+builds completed. Physical Quest and WAN validation remain pending; see
+[validation details](nakama.md#validación-del-backend-con-ranking) for artifacts.
 
 ## Build
 

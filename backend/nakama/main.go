@@ -47,12 +47,16 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if _, err := db.ExecContext(ctx, schema); err != nil {
 		return fmt.Errorf("application schema: %w", err)
 	}
+	if err := nk.LeaderboardCreate(ctx, rankedLeaderboard, true, "desc", "set", "", map[string]interface{}{"rules": "elo-1000-k32-v1", "tieBreak": "games"}, true); err != nil {
+		return fmt.Errorf("ranked leaderboard: %w", err)
+	}
 	endpoints := []struct {
 		name   string
 		server bool
 		fn     rpcFunc
 	}{
 		{"ll_search_open", false, searchOpen}, {"ll_search_status", false, searchStatus}, {"ll_search_cancel", false, searchCancel},
+		{"ll_rank_result", false, rankMatchResult},
 		{"ll_server_register", true, serverRegister}, {"ll_server_poll", true, serverPoll}, {"ll_server_admit", true, serverAdmit}, {"ll_server_event", true, serverEvent},
 	}
 	for _, endpoint := range endpoints {
@@ -60,13 +64,20 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 			return err
 		}
 	}
+	if err := initializer.RegisterRpc("ll_rank_profile", rankRead(false)); err != nil {
+		return err
+	}
+	if err := initializer.RegisterRpc("ll_rank_top", rankRead(true)); err != nil {
+		return err
+	}
 	if err := initializer.RegisterBeforeRt("MatchmakerAdd", beforeMatchmaker); err != nil {
 		return err
 	}
 	if err := initializer.RegisterMatchmakerMatched(matchmakerMatched); err != nil {
 		return err
 	}
-	logger.Info("Little Legion allocation module ready (static NGO pool)")
+	go rankingWorker(logger, db, nk)
+	logger.Info("Little Legion ranked allocation module ready (static NGO pool)")
 	return nil
 }
 

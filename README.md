@@ -2,7 +2,7 @@
 
 **Pequeños ejércitos. Grandes batallas.**
 
-Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y búsqueda pública 1v1 con servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
+Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y partidas públicas 1v1 con ranking y búsqueda por nivel, sobre servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
 La versión de escritorio es un cliente web con three.js que juega en los mismos servidores que el Quest: una partida puede enfrentar a un jugador de Quest con uno de escritorio. Ver [cliente de escritorio y juego cruzado](docs/web-client.md).
 
@@ -57,6 +57,14 @@ Para aceptar jugadores de escritorio, el servidor dedicado debe compilarse con e
 
 ### Búsqueda pública 1v1
 
+Los clientes usan **`https://server-us-1.littlelegion.app`** de forma predeterminada.
+Al actualizar desde las pruebas LAN, se deja de usar la preferencia antigua del
+servicio público; la conexión LAN directa y las identidades guardadas se conservan.
+Para probar Nakama local desde el navegador, editar **Servicio online** en el menú
+Multijugador. En el build Unity de desarrollo, pasar
+`-frontier-backend http://127.0.0.1:7350` (o la IP privada del backend) al abrir el
+juego; el argumento prevalece sobre las preferencias guardadas.
+
 Con Linux Dedicated Server Build Support instalado para el mismo Editor, generar el servidor y levantar el stack online. Reemplazar la IP del ejemplo por la dirección LAN de esta Mac:
 
 ```sh
@@ -67,6 +75,8 @@ python3 scripts/online-stack.py up
 
 Abrir **Multijugador → Buscar partida** en ambos clientes. El tablero se coloca antes de iniciar la búsqueda. Nakama conserva una identidad por instalación, encuentra dos jugadores compatibles y entrega a cada uno un ticket para el mismo servidor NGO. La configuración del servicio online se guarda separada de la conexión LAN. Desde Quest, usar `http://192.168.100.157:7350` como servicio; el endpoint de juego se recibe automáticamente.
 
+Las partidas públicas nuevas son clasificadas. Cada cuenta comienza con **1000 puntos Elo** y el servidor actualiza su puntuación al terminar, con **K=32**. El menú de Unity permite consultar el perfil y los diez primeros; una cuenta aparece en la tabla después de su primera partida clasificada. La búsqueda comienza en **±100 puntos**, amplía el rango cada 20 segundos hasta **±400**, y exige que ambos jugadores acepten la diferencia. Las partidas históricas anteriores a esta incorporación se conservan sin puntuación. Reglas y autoridad del resultado en [Ranking y búsqueda por nivel](docs/ranking.md).
+
 Para abrir Desktop con búsqueda automática, después de compilarlo:
 
 ```sh
@@ -75,9 +85,9 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
   -logFile /tmp/little-legion-online.log
 ```
 
-El stack inicial tiene **un slot de partida** en UDP 7778 (TCP 7878 para navegadores); las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático, ranking ni reconexión a una partida en curso. La configuración, seguridad y ampliación manual del pool están en [Multiplayer público autohospedado](docs/nakama.md) y su [contrato de asignación](docs/online-contract.md).
+El stack inicial tiene **un slot de partida** en UDP 7778 (TCP 7878 para navegadores); las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático ni reconexión a una partida en curso. Para actualizar una instalación existente, conservar el volumen, respaldar y comprobar restauración, y ejecutar nuevamente `python3 scripts/online-stack.py init` antes de reconstruir el backend: también actualiza la configuración de búsqueda mutua. El procedimiento está en [Multiplayer público autohospedado](docs/nakama.md), junto con la ampliación manual del pool y el [contrato de asignación](docs/online-contract.md).
 
-La API HTTP del ejemplo es para pruebas locales. Una instalación pública necesita HTTPS/WSS y acceso al puerto UDP de juego. Esta documentación no implica un despliegue WAN ni una validación del flujo público en Quest físico.
+La API HTTP del ejemplo es para pruebas locales. Para instalar y operar el stack público en Ubuntu, seguir la [guía de producción: despliegue, actualizaciones, backups y recuperación](docs/deploy-production.md). Incluye el dominio `server-us-1.littlelegion.app`, HTTPS y el puerto UDP de juego. El estado de los contenedores no equivale a una partida verificada desde Quest.
 
 ### Conexión LAN directa
 
@@ -110,5 +120,7 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 - [Cliente de escritorio (three.js) y juego cruzado con Quest](docs/web-client.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
+- [Despliegue y operación en producción](docs/deploy-production.md)
+- [Ranking Elo y búsqueda de rivales por nivel](docs/ranking.md)
 - [Formato de mapas](docs/maps.md)
 - [Registro de validación y pendientes](docs/validation.md)

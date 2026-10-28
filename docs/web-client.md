@@ -31,7 +31,11 @@ El cliente web calcula al compilar el mismo hash de catálogo y mapas que `Match
 
 ## Matchmaking público
 
-El navegador usa el mismo flujo de Nakama que Unity: sesión por dispositivo, `ll_search_open`, matchmaker nativo y consulta de `ll_search_status`. La búsqueda declara `websocket: true`. El backend registra el puerto WebSocket de cada servidor (`wsPort`) y solo asigna una pareja con un jugador de navegador a un servidor que lo tenga. Las parejas solo de Quest pueden usar cualquier servidor. El contrato completo está en [online-contract.md](online-contract.md).
+El navegador usa `https://server-us-1.littlelegion.app` como servicio predeterminado, igual que Unity. Al actualizar, migra las preferencias web anteriores conservando controles, sonido y conexión directa; el antiguo servicio LAN deja paso al de producción. Desde **Multijugador** se puede guardar otro servicio para pruebas locales. Las identidades por servicio se conservan.
+
+El flujo es el mismo de Unity: sesión por dispositivo, `ll_search_open`, matchmaker nativo y consulta de `ll_search_status`. La búsqueda declara `websocket: true`. El backend registra el puerto WebSocket de cada servidor (`wsPort`) y solo asigna una pareja con un jugador de navegador a un servidor que lo tenga. Las parejas solo de Quest pueden usar cualquier servidor. El rango Elo comienza en ±100 y se amplía cada 20 segundos hasta ±400; el cliente renueva el ticket cuando cambia `queueRevision`, conservando la búsqueda y su antigüedad. El contrato completo está en [online-contract.md](online-contract.md).
+
+El hostname configurado no demuestra que el servidor desplegado ya incluya el transporte y las migraciones de esta rama. Para jugar desde una página HTTPS necesita anunciar `wsPort` y publicar el puerto de partida mediante WSS; ver [despliegue público](#despliegue-público).
 
 ## Partidas sin conexión
 
