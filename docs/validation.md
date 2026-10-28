@@ -1,5 +1,18 @@
 # Registro de validación
 
+## Integración de ranking y backend de producción en desktop web — 28 de octubre de 2026
+
+Se integró `origin/codex/public-matchmaking` (`4e6d8e2`) en `feature/desktop-web-crossplay`, conservando el transporte y la asignación WebSocket junto con Elo. El cliente web usa `https://server-us-1.littlelegion.app` por defecto; migra las preferencias antiguas sin borrar las identidades ni la configuración LAN y permite guardar un servicio local explícito.
+
+- `go test ./...` del backend: aprobado con el SDK Go local.
+- Núcleo: **2809 comprobaciones**; red: **2188**, incluidas **39 de WebSocket**.
+- Arnés .NET del servidor: **44 comprobaciones**, con una partida completa entre los transportes NGO y WebSocket y el mismo informe final. Las comprobaciones de Editor ejecutables en el arnés aprobaron **38 de admisión/asignación** y **17 de ciclo de vida**.
+- WebAssembly recompilado con `npm run build:core`; `npm run build` y los tipos TypeScript aprobados. Las pruebas unitarias cubren además la migración de preferencias y la conservación de un servicio local elegido después de actualizar.
+- Punta a punta local: **1 prueba aprobada** en `crossplay.test.ts`; la variante contra un servidor externo se omitió porque no se configuró uno. No se ejecutó `public.test.ts` ni se leyó su configuración privada.
+- Chromium headless: el formulario muestra el endpoint HTTPS de producción y una partida offline avanza al menos 20 ticks con el WebAssembly recompilado, sin errores de página. Capturas: `TestResults/web/merge-production-service.png` y `merge-offline-playing.png`.
+
+Estas comprobaciones son locales. No se accedió al servidor desplegado, no se verificó matchmaking público contra producción y no se recompilaron Unity ni el APK. El operador del servidor debe confirmar que su versión incluye las migraciones WebSocket, anuncia `wsPort` y publica la conexión de partida mediante WSS para páginas HTTPS. La configuración del hostname por sí sola no verifica esos requisitos.
+
 ## Cliente de escritorio three.js y juego cruzado con Quest — fuentes, sin nuevo APK ni build Unity — 26 de octubre de 2026
 
 Se agregó un transporte WebSocket al servidor dedicado (puertos TCP 7877/7878), el registro de `wsPort` y la regla de asignación con jugadores de escritorio en Nakama, y el cliente web en `web/`: partidas contra la IA con `Frontier.Core` en WebAssembly, conexión directa y matchmaking público. Esta Mac no tiene Unity: no se compilaron el APK, el servidor Linux ni el build de escritorio de Unity.
