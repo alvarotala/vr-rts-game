@@ -254,6 +254,11 @@ namespace Frontier.Runtime
         private void TutorialText(string title,string description)
         {tutorialTitle.text=title;tutorialDescription.text=description;}
         private void TutorialInstruction(string key,params object[] arguments)
-        {((LocalizedText)tutorialInstruction).SetKey(key,arguments);}
+        {
+#if FRONTIER_BROWSER
+            if(BrowserMobileInput.IsTouchMode)key=MobileTutorialInstruction(key);
+#endif
+            ((LocalizedText)tutorialInstruction).SetKey(key,arguments);
+        }
     }
 }

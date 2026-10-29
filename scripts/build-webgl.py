@@ -29,9 +29,11 @@ EXCLUDED_NETWORK = ("NgoMatchServer", "AllocatedServerAgent", "WebSocketGateway"
 EXCLUDED_RUNTIME = ("DesktopSmokeTest", "MultiplayerSmokeClient")
 
 
-def package_graph(root: Path) -> tuple[dict, dict]:
+def package_graph(root: Path, mobile: bool = False) -> tuple[dict, dict]:
     locked = json.loads((root / "Packages/packages-lock.json").read_text())["dependencies"]
     names = list(PACKAGES) + ["com.unity.modules." + module for module in MODULES]
+    if mobile:
+        names.append("com.unity.modules.androidjni")
     dependencies = {name: locked[name]["version"] for name in names}
     graph = {}
     queue = [(name, 0) for name in names]
@@ -52,7 +54,7 @@ def package_graph(root: Path) -> tuple[dict, dict]:
     return dependencies, graph
 
 
-def source_files(root: Path) -> dict[str, bytes]:
+def source_files(root: Path, mobile: bool = False) -> dict[str, bytes]:
     files = {}
 
     def tree(source: Path, target: str, excluded=()):
@@ -79,22 +81,26 @@ def source_files(root: Path) -> dict[str, bytes]:
             relative = "Assets/Frontier/Settings/" + name + suffix
             files[relative] = (root / relative).read_bytes()
     files["Assets/link.xml"] = (root / "webgl/link.xml").read_bytes()
-    files["Assets/Editor/WebGLBuilder.cs"] = (root / "webgl/WebGLBuilder.cs").read_bytes()
-    tree(root / "webgl/Template", "Assets/WebGLTemplates/LittleLegion")
+    if mobile:
+        files["Assets/Editor/MobileBuilder.cs"] = (root / "app/MobileBuilder.cs").read_bytes()
+    else:
+        files["Assets/Editor/WebGLBuilder.cs"] = (root / "webgl/WebGLBuilder.cs").read_bytes()
+        tree(root / "webgl/Template", "Assets/WebGLTemplates/LittleLegion")
     # The desktop platform adapter must compile during Editor import as well as
     # in the player. UNITY_WEBGL alone is insufficient for a generated project.
-    files["Assets/csc.rsp"] = b"-define:FRONTIER_BROWSER\n"
+    files["Assets/csc.rsp"] = ("-define:FRONTIER_BROWSER" + (";FRONTIER_MOBILE" if mobile else "") + "\n").encode()
     return files
 
 
-def prepare(root: Path = ROOT, stage: Path = STAGE) -> dict:
+def prepare(root: Path = ROOT, stage: Path = STAGE, mobile: bool = False) -> dict:
     def safe(path: Path):
         if path.is_symlink() or any(parent.is_symlink() for parent in path.parents):
             raise RuntimeError("Refusing a symlinked generated-project path.")
 
     safe(stage)
-    marker = stage / MARKER
-    for name in (MARKER, "Packages/manifest.json", "Packages/packages-lock.json",
+    marker_name = ".frontier-generated-mobile.json" if mobile else MARKER
+    marker = stage / marker_name
+    for name in (marker_name, "Packages/manifest.json", "Packages/packages-lock.json",
                  "ProjectSettings/ProjectVersion.txt", "ProjectSettings/ProjectSettings.asset", "Temp/UnityLockfile"):
         safe(stage / name)
     if stage.exists() and not marker.exists() and any(stage.iterdir()):
@@ -105,8 +111,8 @@ def prepare(root: Path = ROOT, stage: Path = STAGE) -> dict:
     version = re.search(r"^m_EditorVersion:\s*(\S+)", version_text, re.MULTILINE)
     if not version or not version[1].startswith("6000.3."):
         raise RuntimeError("Review this generator when changing the Unity 6.3 editor version.")
-    dependencies, graph = package_graph(root)
-    files = source_files(root)
+    dependencies, graph = package_graph(root, mobile)
+    files = source_files(root, mobile)
     # Stable metadata for templates and folders which have no authored .meta.
     paths = set(files)
     for name in list(paths):
@@ -129,12 +135,17 @@ def prepare(root: Path = ROOT, stage: Path = STAGE) -> dict:
         safe(target)
         if target.exists() and not name.endswith((".meta", ".asset")) and hashlib.sha256(target.read_bytes()).hexdigest() != digest:
             raise RuntimeError("Generated asset was edited; preserve it before refreshing: " + name)
-    stage.mkdir(parents=True, exist_ok=True)
+    # Validate every destination before writing any source. Otherwise a late
+    # unmanaged-file conflict could leave a partially updated project whose
+    # older manifest mistakes our earlier writes for the user's local edits.
     for name, contents in files.items():
         target = stage / name
         safe(target)
         if target.exists() and name not in previous and target.read_bytes() != contents:
             raise RuntimeError("Unmanaged file in generated assets: " + name)
+    stage.mkdir(parents=True, exist_ok=True)
+    for name, contents in files.items():
+        target = stage / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(contents)
     for name in previous.keys() - files.keys():
@@ -146,7 +157,7 @@ def prepare(root: Path = ROOT, stage: Path = STAGE) -> dict:
     (stage / "ProjectSettings/ProjectVersion.txt").write_text(version_text)
     settings = stage / "ProjectSettings/ProjectSettings.asset"
     if not settings.exists():
-        settings.write_text("""%YAML 1.1
+        settings_text = """%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!129 &1
 PlayerSettings:
@@ -162,9 +173,13 @@ PlayerSettings:
   scriptingDefineSymbols:
     Standalone: FRONTIER_BROWSER
     WebGL: FRONTIER_BROWSER
-""")
+"""
+        if mobile:
+            settings_text = settings_text.replace("FRONTIER_BROWSER", "FRONTIER_BROWSER;FRONTIER_MOBILE")
+            settings_text += "    Android: FRONTIER_BROWSER;FRONTIER_MOBILE\n    iPhone: FRONTIER_BROWSER;FRONTIER_MOBILE\n"
+        settings.write_text(settings_text)
     assets = {name: hashlib.sha256(value).hexdigest() for name, value in sorted(files.items())}
-    record = {"generator": "scripts/build-webgl.py", "editorVersion": version[1],
+    record = {"generator": "app/build.py" if mobile else "scripts/build-webgl.py", "editorVersion": version[1],
               "sourceDigest": hashlib.sha256(json.dumps(assets, sort_keys=True).encode()).hexdigest(),
               "packages": dependencies, "assets": assets}
     marker.write_text(json.dumps(record, indent=2) + "\n")

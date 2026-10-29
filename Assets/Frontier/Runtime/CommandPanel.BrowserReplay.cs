@@ -67,25 +67,28 @@ namespace Frontier.Runtime
             consoleBrand.gameObject.SetActive(false);consoleBrandSmall.gameObject.SetActive(false);
             moveHandle.gameObject.SetActive(false);resetHandle.gameObject.SetActive(false);
             matchHud.gameObject.SetActive(false);browserHud.gameObject.SetActive(false);
-            float dockX=(size.x-1104)*.5f,dockTop=size.y-BrowserReplayDockHeight-12;
+            var safe=BrowserSafeArea(size);
+            float dockScale=BrowserMobileInput.IsTouchMode?Mathf.Min(1,(safe.width-16)/1104):1;
+            float dockX=safe.center.x-1104*dockScale*.5f,dockTop=size.y-safe.y-BrowserReplayDockHeight*dockScale-12;
             TopLeft(browserReplayDock,new Vector2(dockX,-dockTop),new Vector2(1104,BrowserReplayDockHeight));
-            TopLeft(browserReplayHeader,new Vector2(12,-12),new Vector2(size.x-24,48));
-            float statisticsScale=Mathf.Min(.78f,Mathf.Min((size.x-32)/1040,(dockTop-84)/546));
+            browserReplayDock.localScale=Vector3.one*dockScale;
+            TopLeft(browserReplayHeader,new Vector2(safe.x+12,-(size.y-safe.yMax+12)),new Vector2(safe.width-24,48));
+            float statisticsScale=Mathf.Min(.78f,Mathf.Min((safe.width-32)/1040,(dockTop-84)/546));
             TopLeft(browserReplayStatistics,new Vector2((size.x-1040*statisticsScale)*.5f,-72),new Vector2(1040,546));
             browserReplayStatistics.localScale=Vector3.one*statisticsScale;
             browserReplayStatistics.gameObject.SetActive(browserReplayStatisticsOpen);
             browserReplayStatisticsButton.normal=browserReplayStatisticsOpen?ConsoleTheme.Primary:button;
             if(hovered!=browserReplayStatisticsButton)browserReplayStatisticsButton.image.color=browserReplayStatisticsButton.normal;
-            TopLeft(statusBanner,new Vector2(dockX+32,-dockTop-200),new Vector2(1040,44));
-            TopLeft(status.rectTransform,Vector2.zero,new Vector2(1040,44));status.fontSize=15;status.alignment=TextAnchor.MiddleCenter;
+            TopLeft(statusBanner,new Vector2(dockX+32*dockScale,-dockTop-200*dockScale),new Vector2(1040*dockScale,44*dockScale));
+            TopLeft(status.rectTransform,Vector2.zero,statusBanner.sizeDelta);status.fontSize=15;status.alignment=TextAnchor.MiddleCenter;
             statusBanner.GetComponent<Image>().color=Color.clear;
             statusBanner.SetAsLastSibling();
-            Quest.Navigation?.SetViewport(new Rect(0,(BrowserReplayDockHeight+24)/size.y,1,
-                Mathf.Max(.2f,(size.y-BrowserReplayDockHeight-96)/size.y)));
+            Quest.Navigation?.SetViewport(new Rect(safe.x/size.x,(safe.y+BrowserReplayDockHeight*dockScale+24)/size.y,safe.width/size.x,
+                Mathf.Max(.2f,(safe.height-BrowserReplayDockHeight*dockScale-96)/size.y)));
         }
 
-        private bool BrowserReplayContainsPointer(Ray ray)=>(UnityEngine.InputSystem.Mouse.current!=null
-            &&!Quest.Camera.pixelRect.Contains(UnityEngine.InputSystem.Mouse.current.position.ReadValue()))||Hit(browserReplayDock,ray,out _)
+        private bool BrowserReplayContainsPointer(Ray ray)=>(BrowserMobileInput.HasPointer
+            &&!Quest.Camera.pixelRect.Contains(BrowserMobileInput.PointerPosition))||Hit(browserReplayDock,ray,out _)
             ||Hit(browserReplayHeader,ray,out _)||Hit(browserReplayStatistics,ray,out _);
     }
 }

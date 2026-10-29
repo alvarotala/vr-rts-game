@@ -4,7 +4,7 @@
 
 Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y partidas públicas 1v1 con ranking y búsqueda por nivel, sobre servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
-La versión para navegadores de escritorio se compila con Unity WebGL y reutiliza las fuentes C# del juego, con interfaz y controles adaptados a desktop. Comparte simulación, IA, catálogo, mapas y render con Quest. El servidor admite ambos transportes para juego cruzado; la compatibilidad del despliegue se verifica por separado. Ver [cliente Unity WebGL y hosting](docs/web-client.md).
+La versión para navegadores se compila con Unity WebGL y reutiliza las fuentes C# del juego, con interfaz de pantalla, ratón/teclado y controles táctiles. La app móvil en [`app/`](app/README.md) prepara proyectos nativos Android e iOS con esa misma presentación. Todas comparten simulación, IA, catálogo, mapas y render con Quest. El servidor admite ambos transportes para juego cruzado; la compatibilidad del despliegue se verifica por separado. Ver [cliente Unity WebGL y hosting](docs/web-client.md).
 
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
@@ -38,7 +38,22 @@ El APK usa el firmado de desarrollo local, el identificador `app.sadmonkey.littl
 
 La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`. Se conserva como herramienta de desarrollo.
 
-## Versión de escritorio (navegador)
+## App móvil (Android e iOS)
+
+La ruta móvil usa Unity sin las dependencias de Quest/XR. Para preparar los proyectos:
+
+```sh
+python3 app/build.py android --prepare-only
+python3 app/build.py ios --prepare-only
+```
+
+Con Unity **6000.3.26f1**, licencia activa y el módulo correspondiente, quitar
+`--prepare-only` genera un APK Android o exporta el proyecto Xcode para iOS en
+`Builds/Mobile/`. El APK móvil tiene un identificador separado del de Quest.
+Los mismos controles táctiles se usan en la web móvil. Requisitos, controles,
+firma y límites de validación en [app/README.md](app/README.md).
+
+## Versión web (escritorio y móvil)
 
 Requiere Unity **6000.3.26f1** con **Web Build Support**, una licencia activada y Python **3.10+**:
 

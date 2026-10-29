@@ -21,6 +21,13 @@ La escena `Assets/Frontier/Scenes/Frontier.unity` crea sus componentes en ejecuc
 
 ## Comprobaciones
 
+La ruta móvil está en [`app/`](../app/README.md). Comparte las fuentes de Unity;
+`FRONTIER_BROWSER` habilita la presentación de pantalla y `FRONTIER_MOBILE`
+fija entrada táctil en los proyectos nativos. La raíz sigue configurada para
+Quest. `python3 scripts/check-mobile-generator.py` valida la generación sin
+Editor y `dotnet run --project tests/MobileInputChecks` prueba el clasificador
+de gestos compartido. No editar las copias en `app/.generated/`.
+
 ```sh
 bash scripts/check-core.sh
 bash scripts/check-core.sh --caster-only

@@ -400,7 +400,23 @@ namespace Frontier.Runtime
         private static bool IsMobileCommand(CommandKind kind) => kind==CommandKind.Move||kind==CommandKind.Attack||kind==CommandKind.AttackMove
             ||kind==CommandKind.Gather||kind==CommandKind.Repair||kind==CommandKind.Build||kind==CommandKind.Stop||kind==CommandKind.Hold
             ||kind==CommandKind.Cast||kind==CommandKind.CancelUnitOrder;
-        private void OnApplicationFocus(bool focused) { if(!focused)UpdateArchive(true); if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
-        private void OnApplicationPause(bool paused) { if(paused)UpdateArchive(true); if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }
+        private void OnApplicationFocus(bool focused)
+        {
+            if(!focused)UpdateArchive(true);
+#if FRONTIER_BROWSER
+            Pause("focus", !focused);
+#else
+            if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("focus", !focused);
+#endif
+        }
+        private void OnApplicationPause(bool paused)
+        {
+            if(paused)UpdateArchive(true);
+#if FRONTIER_BROWSER
+            Pause("application", paused);
+#else
+            if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused);
+#endif
+        }
     }
 }

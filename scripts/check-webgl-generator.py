@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("webgl_build", Path(__file__).with_name("build-webgl.py"))
 build = importlib.util.module_from_spec(spec)
@@ -63,6 +64,24 @@ class BrowserProjectChecks(unittest.TestCase):
         asset.write_text(asset.read_text() + "# Editor serialization\n")
         build.prepare(stage=self.stage)
         self.assertEqual(asset.read_bytes(), (build.ROOT / "Assets/Frontier/Settings/MobileURP.asset").read_bytes())
+
+    def test_conflict_is_detected_before_updating_other_sources(self):
+        build.prepare(stage=self.stage)
+        source = self.stage / "Assets/Frontier/Runtime/GameSession.cs"
+        original = source.read_bytes()
+        marker = (self.stage / build.MARKER).read_bytes()
+        conflict = self.stage / "Assets/NewRuntime.cs"
+        conflict.write_text("// user source\n")
+        incoming = build.source_files(build.ROOT)
+        incoming["Assets/Frontier/Runtime/GameSession.cs"] += b"\n// upstream update\n"
+        incoming["Assets/NewRuntime.cs"] = b"// new upstream source\n"
+        with patch.object(build, "source_files", return_value=incoming):
+            with self.assertRaisesRegex(RuntimeError, "Unmanaged file"):
+                build.prepare(stage=self.stage)
+        self.assertEqual(source.read_bytes(), original)
+        self.assertEqual((self.stage / build.MARKER).read_bytes(), marker)
+        self.assertEqual(conflict.read_text(), "// user source\n")
+        build.prepare(stage=self.stage)
 
     def test_rejects_links_in_config_and_marker_before_writing(self):
         build.prepare(stage=self.stage)

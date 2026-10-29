@@ -1,5 +1,36 @@
 # Registro de validación
 
+## App móvil Unity y controles web táctiles — 28 de octubre de 2026
+
+Tras actualizar `feature/desktop-web-crossplay` hasta `67be63e`, se agregó
+`app/` para generar proyectos nativos Android/iOS sin Meta/XR, reutilizando
+las fuentes Unity y la presentación de pantalla del navegador. El HUD táctil,
+la cámara y los gestos también se usan en WebGL móvil.
+
+- Generadores: 6 comprobaciones móviles y 8 web, incluidas protección de
+  fuentes locales, conflictos antes de escribir, dependencias fijadas sin XR,
+  configuración de ambos destinos y rechazo de recibos de build obsoletos.
+- Entrada: 37 comprobaciones .NET del clasificador de gestos real; toque,
+  arrastre, pellizco, mantener y soltar, selección de área, propiedad del
+  gesto de UI y cancelación por foco, contacto perdido o dedos adicionales.
+- JavaScript: 10 pruebas de plantilla y puentes; carga por gesto, orientación,
+  resolución, fullscreen fallido, pérdida de contexto y sockets.
+- Cliente C# WebGL: 46 comprobaciones existentes aprobadas.
+- Chromium headless con viewport 390×844/844×390: flujo cargar/listo/jugar,
+  aviso de orientación y cierre, canvas horizontal, fullscreen oculto durante
+  juego y ausencia de errores de script. Capturas locales en
+  `TestResults/MobileWebPreview/`. **El loader era un fixture: no se ejecutó
+  Unity ni se validó gameplay, audio o hardware móvil.**
+
+Se prepararon los proyectos Android/iOS, pero esta Mac no tiene el Editor
+Unity instalado. No se generó APK, proyecto Xcode ni player WebGL. Quedan
+pendientes la compilación IL2CPP, el render/HUD real y pruebas en Android,
+iPhone/iPad y navegadores móviles, incluida una partida completa offline y
+otra online cruzada. Reportes, ranking y catálogo conservan el diseño
+compartido escalado; los controles de replay son pequeños en vertical.
+No se publicó ni se probó contra producción. Instrucciones en
+[app/README.md](../app/README.md).
+
 ## Estado del cliente de navegador — 28 de octubre de 2026
 
 El cliente anterior de `web/`, su render y sus herramientas Node/Vite/.NET WebAssembly fueron retirados. El único cliente de navegador se compila con Unity WebGL; ver [compilación](unity-webgl.md) y [hosting](web-client.md). Las dos entradas siguientes conservan evidencia histórica del port retirado y del transporte compartido. Sus comandos npm, capturas y partidas no validan la build Unity WebGL actual; no son instrucciones de ejecución vigentes.

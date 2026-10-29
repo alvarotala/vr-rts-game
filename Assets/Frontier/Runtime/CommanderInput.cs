@@ -8,7 +8,7 @@ using OVRInput = Frontier.Runtime.BrowserTouchInput;
 
 namespace Frontier.Runtime
 {
-    public sealed class CommanderInput:MonoBehaviour
+    public sealed partial class CommanderInput:MonoBehaviour
     {
         public GameSession Session;public BoardView Board;public CommandPanel Panel;public QuestBridge Quest;public ActionWheel Wheel;
         private Point start;private bool dragging, startedOnMap;private LineRenderer laser;private float hapticEnd;
@@ -59,7 +59,16 @@ namespace Frontier.Runtime
         private void Update()
         {
             UpdateHaptics();
-            if(Board.Content==null){ResetMapGestures();Wheel?.TickHint(default,false);return;}
+            if(Board.Content==null)
+            {
+#if FRONTIER_BROWSER
+                mobileGesture.CancelUntilRelease();
+#endif
+                ResetMapGestures();Wheel?.TickHint(default,false);return;
+            }
+#if FRONTIER_BROWSER
+            if(!Quest.Active&&BrowserMobileInput.IsTouchMode){RouteMobileInput();return;}
+#endif
             bool down=false,up=false,order=false,add=false,cancel=false,toggleMenu=false;Vector2 pan=Vector2.zero;float zoom=0,menuDepth=0;Ray ray;
             Vector2 primaryStick=Vector2.zero;bool wheelPressed=false,wheelHeld=false,wheelReleased=false,triggerHeld=false,gripDown=false;
             bool gameplay=Panel.AcceptsGameInput&&!Quest.Placing;
@@ -599,8 +608,26 @@ namespace Frontier.Runtime
             hapticController=OVRInput.Controller.None;hapticEnd=0;
         }
         private void OnApplicationFocus(bool focused)
-        {if(!focused){placementInputReady=false;placementHeightDirection=0;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}}
-        private void OnDisable(){placementInputReady=false;placementHeightDirection=0;controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();}
+        {
+            if(!focused)
+            {
+#if FRONTIER_BROWSER
+                mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;
+#endif
+                placementInputReady=false;placementHeightDirection=0;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
+            }
+        }
+#if FRONTIER_BROWSER
+        private void OnApplicationPause(bool paused)
+        {if(paused){mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;}}
+#endif
+        private void OnDisable()
+        {
+#if FRONTIER_BROWSER
+            mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;
+#endif
+            placementInputReady=false;placementHeightDirection=0;controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
+        }
         private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;controllerVisuals?.Dispose();if(laser!=null){if(Application.isPlaying){Destroy(laser.sharedMaterial);Destroy(laser.gameObject);}else{DestroyImmediate(laser.sharedMaterial);DestroyImmediate(laser.gameObject);}}}
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}

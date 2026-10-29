@@ -15,7 +15,8 @@ namespace Frontier.Runtime
 
         private void CreateGroupFeedback(int index,Target target)
         {
-            // Group assignment is a modifier click, never a duration-based action.
+            // Desktop/Quest assignment uses a modifier. Mobile handles a held
+            // touch on release below, rather than this generic hold callback.
             target.hold=null;
         }
 
@@ -49,6 +50,9 @@ namespace Frontier.Runtime
                 // The modifier belongs to the press. Changing it before release
                 // cannot turn a recall into an assignment, or the reverse.
                 bool assign=groupGestureAssign;int index=Array.IndexOf(groupTargets,target);
+#if FRONTIER_BROWSER
+                if(BrowserMobileInput.IsTouchMode&&Time.unscaledTime-pressedAt>.65f)assign=true;
+#endif
                 pressed=null;ResetGroupGesture();
                 if(assign)AssignControlGroup(index);
                 else

@@ -93,6 +93,15 @@ namespace Frontier.Runtime
         }
         public void Pan(Vector2 mapDelta)
         {fitted=false;Target+=mapDelta;ClampTarget();}
+        public void NavigateTouch(Vector2 screenDelta,float zoomRatio)
+        {
+            if(Session?.Map==null)return;
+            // Finger movement pans in map space; spreading fingers decreases
+            // distance. The caller owns the gesture and excludes HUD touches.
+            Pan(-screenDelta*(smoothDistance*.9f/Mathf.Max(1,Camera.pixelRect.height)));
+            if(zoomRatio>0&&Mathf.Abs(zoomRatio-1)>.0001f)
+            {fitted=false;Distance=Mathf.Clamp(Distance*zoomRatio,MinimumDistance,maximumDistance);}
+        }
         private void ClampTarget()
         {
             if(Session?.Map==null)return;
@@ -125,6 +134,7 @@ namespace Frontier.Runtime
         }
         private void ReadPointerNavigation()
         {
+            if(BrowserMobileInput.IsTouchMode){middleDrag=false;return;}
             var mouse=Mouse.current;
             bool enabled=Application.isFocused&&Panel!=null&&!Panel.IsDragging
                 &&(Panel.AcceptsGameInput||Panel.AcceptsReplayInput||Panel.Page==CommandPanel.MenuPage.MatchSetup);

@@ -132,6 +132,9 @@ namespace Frontier.Runtime
             {var onlinePage=Session.IsPublicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup;if(Page!=onlinePage)Show(onlinePage);}
             if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+Session.IsMatchmaking+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+#if FRONTIER_BROWSER
+            state+=":"+BrowserMobileInput.IsTouchMode+":"+((RectTransform)canvas.transform).rect.size+":"+Screen.safeArea;
+#endif
             if(Page==MenuPage.Ranking||Page==MenuPage.OnlineSetup||Page==MenuPage.Result)state+=":"+Session.RankingVersion;
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
@@ -342,6 +345,9 @@ namespace Frontier.Runtime
             HideActionHelp();
             moveHandle.GetComponentInChildren<Text>(true).text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
             LayoutPage();
+#if FRONTIER_BROWSER
+            if(BrowserMobileInput.IsTouchMode&&BuildMobileMenu())return;
+#endif
             BuildControlGuide();
             BuildHotkeys();
             BuildReferenceGuide();
@@ -441,11 +447,11 @@ namespace Frontier.Runtime
         }
         // A shortcut can still recover the shared window if it is out of view.
         public void Recall(){if(Session.IsCountingDown)return;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset in front of you.");}
-        public void CancelPointerInteraction()
+        public void CancelPointerInteraction(bool closeHelp=true)
         {
             if(moving){moving=false;SavePosition();}
             ResetGroupGesture();
-            CloseSectionHelp();
+            if(closeHelp)CloseSectionHelp();
             CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
@@ -495,8 +501,8 @@ namespace Frontier.Runtime
             if(root==null||!root.gameObject.activeInHierarchy)return false;
             if(SectionHelpOpen)return PointSectionHelp(ray,down,up);
 #if FRONTIER_BROWSER
-            if(Page==MenuPage.Actions&&!Hit(tutorialCard,ray,out _)&&browserMinimap!=null&&UnityEngine.InputSystem.Mouse.current!=null
-                &&browserMinimap.Point(UnityEngine.InputSystem.Mouse.current.position.ReadValue(),down,!up&&UnityEngine.InputSystem.Mouse.current.leftButton.isPressed))
+            if(Page==MenuPage.Actions&&!Hit(tutorialCard,ray,out _)&&browserMinimap!=null&&BrowserMobileInput.HasPointer
+                &&browserMinimap.Point(BrowserMobileInput.PointerPosition,down,!up&&BrowserMobileInput.PointerHeld))
             {CancelPointerInteraction();return true;}
 #endif
             if(moving)
@@ -551,7 +557,7 @@ namespace Frontier.Runtime
         {
             distance=0;if(rect==null||!rect.gameObject.activeInHierarchy)return false;
 #if FRONTIER_BROWSER
-            return UnityEngine.InputSystem.Mouse.current!=null&&RectTransformUtility.RectangleContainsScreenPoint(rect,UnityEngine.InputSystem.Mouse.current.position.ReadValue(),null);
+            return BrowserMobileInput.HasPointer&&RectTransformUtility.RectangleContainsScreenPoint(rect,BrowserMobileInput.PointerPosition,null);
 #else
             if(!new Plane(rect.forward,rect.position).Raycast(ray,out distance)||distance>8)return false;
             var local=rect.InverseTransformPoint(ray.GetPoint(distance));return rect.rect.Contains(new Vector2(local.x,local.y));

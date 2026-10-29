@@ -20,7 +20,8 @@ namespace Frontier.Runtime
         private BrowserMinimap browserMinimap;
         private readonly List<Target> browserButtons=new List<Target>(),browserQueueTargets=new List<Target>();
         private readonly List<(int producer,int order,int depth,Text state,Image fill,float width)> browserProductionItems=new List<(int,int,int,Text,Image,float)>();
-        private int browserActionPage;
+        private int browserActionPage,mobileOrdersPage;
+        private string mobileOrdersContext;
         private string browserActionContext,browserQueueSignature;
         private Vector2 browserScreenSize;
         private uint browserMessageVersion;
@@ -61,6 +62,7 @@ namespace Frontier.Runtime
                 TopLeft(target.rect.GetComponentInChildren<Text>().rectTransform,new Vector2(6,0),new Vector2(24,38));
                 groupTargets[i]=target;groupCounts[i]=Label(target.rect,"Empty",new Vector2(36,0),new Vector2(96,38),14,ConsoleTheme.Muted);CreateGroupFeedback(i,target);
             }
+            CreateMobileHud();
         }
 
         private Target BrowserButton(RectTransform parent,string title,Vector2 position,Vector2 size,Action click)
@@ -98,20 +100,29 @@ namespace Frontier.Runtime
         private void LayoutBrowserScreen()
         {
             if(browserHud==null)return;
+            ConfigureMobileCanvas();
             Vector2 size=((RectTransform)canvas.transform).rect.size;
             if(size.x<1||size.y<1)return;
             bool hud=Page==MenuPage.Actions;
             if(Page==MenuPage.Replay){LayoutBrowserReplay(size);return;}
             root.anchorMin=root.anchorMax=root.pivot=Vector2.one*.5f;
             root.anchoredPosition=Vector2.zero;root.localRotation=Quaternion.identity;
+            if(BrowserMobileInput.IsTouchMode)
+            {
+                if(hud){LayoutMobileHud(size);return;}
+                if(IsMobileMenu){LayoutMobileMenu(size);Quest.Navigation?.SetViewport(new Rect(0,0,1,1));return;}
+            }
             if(!hud)
             {
-                float fit=Mathf.Min(1,Mathf.Min((size.x-64)/root.sizeDelta.x,(size.y-64)/root.sizeDelta.y));
+                var safe=BrowserSafeArea(size);
+                root.anchoredPosition=safe.center-size*.5f;
+                float fit=Mathf.Min(1,Mathf.Min((safe.width-32)/root.sizeDelta.x,(safe.height-32)/root.sizeDelta.y));
                 root.localScale=Vector3.one*fit;
                 Quest.Navigation?.SetViewport(new Rect(0,0,1,1));
                 return;
             }
             root.localScale=Vector3.one;root.sizeDelta=size;
+            RestoreDesktopHud();
             root.GetComponent<Image>().color=Color.clear;
             TopLeft(browserHud,Vector2.zero,size);
             TopLeft(browserBar,new Vector2(12,-12),new Vector2(size.x-24,BrowserBarHeight));
@@ -139,13 +150,23 @@ namespace Frontier.Runtime
             if(Hit(tutorialCard,ray,out _))return true;
             if(Page==MenuPage.Replay)return BrowserReplayContainsPointer(ray);
             if(Page!=MenuPage.Actions)return Hit(root,ray,out _);
-            if(UnityEngine.InputSystem.Mouse.current!=null&&!Quest.Camera.pixelRect.Contains(UnityEngine.InputSystem.Mouse.current.position.ReadValue()))return true;
+            if(BrowserMobileInput.HasPointer&&!Quest.Camera.pixelRect.Contains(BrowserMobileInput.PointerPosition))return true;
             return Hit(browserBar,ray,out _)||Hit(browserMapCard,ray,out _)||Hit(browserInfo,ray,out _)
-                ||Hit(browserCommandCard,ray,out _)||Hit(browserGroupBar,ray,out _)||Hit(actionHelp,ray,out _);
+                ||Hit(browserCommandCard,ray,out _)||Hit(browserGroupBar,ray,out _)||Hit(mobileToolbar,ray,out _)||Hit(actionHelp,ray,out _);
+        }
+
+        public bool BrowserContainsScreenPoint(Vector2 position)
+        {
+            bool Inside(RectTransform rect)=>rect!=null&&rect.gameObject.activeInHierarchy&&RectTransformUtility.RectangleContainsScreenPoint(rect,position,null);
+            if(SectionHelpOpen||Inside(tutorialCard))return true;
+            if(Page==MenuPage.Replay)return Inside(browserReplayDock)||Inside(browserReplayHeader)||Inside(browserReplayStatistics);
+            if(Page!=MenuPage.Actions)return Inside(root);
+            return Inside(browserBar)||Inside(browserMapCard)||Inside(browserInfo)||Inside(browserCommandCard)||Inside(browserGroupBar)||Inside(mobileToolbar)||Inside(actionHelp);
         }
 
         private void BuildBrowserActions()
         {
+            if(BrowserMobileInput.IsTouchMode){BuildMobileActions();return;}
             targets.AddRange(browserButtons);targets.AddRange(groupTargets);
             var available=SelectionActions.For(Session);
             string context=string.Join(",",Session.Selection.OrderBy(id=>id))+":"+string.Join(",",available.Items.Select(a=>a.Id));
@@ -188,7 +209,7 @@ namespace Frontier.Runtime
             ((LocalizedText)browserIdle).SetKey("Idle workers: {0}",Session.IdleWorkers.Count());
             ((LocalizedText)browserArmy).SetKey("Army: {0}",Session.Army.Count());
             var selected=view.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
-            browserPortrait.gameObject.SetActive(selected.Length>0);browserHealth.text="";
+            browserPortrait.gameObject.SetActive(selected.Length>0&&!BrowserMobileInput.IsTouchMode);browserHealth.text="";
             if(selected.Length==1)
             {
                 var entity=selected[0];var type=Session.Catalog[entity.definition];browserName.text=type.name;browserPortrait.SetType(type);
@@ -235,13 +256,14 @@ namespace Frontier.Runtime
             var match=Session.SessionIdentity;var ids=Session.Selection.OrderBy(id=>id).ToArray();
             if(producers.Length>0)
             {
-                browserQueueTitle.text="PRODUCTION · Click an item to cancel and refund";
+                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?"PRODUCTION · Tap to cancel and refund":"PRODUCTION · Click an item to cancel and refund";
                 var queue=VisibleProduction(producers);float width=(browserQueue.rect.width-16)/5;
                 for(int i=0;i<queue.Length;i++)
                 {
                     var item=queue[i];if(item.order==null||item.order.id<=0)continue;
                     int producer=producers[item.producer-1].id,orderId=item.order.id;
-                    var target=BrowserButton(browserQueue,QueueLabel(item.order.definition),new Vector2(i*(width+4),0),new Vector2(width,54),()=>
+                    bool mobile=BrowserMobileInput.IsTouchMode;
+                    var target=BrowserButton(browserQueue,QueueLabel(item.order.definition),new Vector2(i*(width+4),0),new Vector2(width,mobile?72:54),()=>
                     {
                         if(!AcceptsGameInput||Session.SessionIdentity!=match||!Session.Selection.OrderBy(id=>id).SequenceEqual(ids)
                             ||!SelectedProducers().Any(p=>p.id==producer&&p.queue.Any(q=>q.id==orderId)))return;
@@ -249,11 +271,11 @@ namespace Frontier.Runtime
                             Session.Announce(Session.IsOnline?"Cancellation requested.":QueueLabel(item.order.definition)+" cancelled. Resources refunded.");
                         nextText=0;
                     });
-                    var name=target.rect.GetComponentInChildren<Text>();name.fontSize=13;
-                    TopLeft(name.rectTransform,new Vector2(5,-2),new Vector2(width-10,28));
-                    var state=Label(target.rect,"",new Vector2(5,-31),new Vector2(width-10,17),11,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
-                    Section(target.rect,"Progress track",new Vector2(5,-49),new Vector2(width-10,3),ConsoleTheme.Track);
-                    var fill=Section(target.rect,"Progress",new Vector2(5,-49),new Vector2(0,3),ConsoleTheme.Accent).GetComponent<Image>();
+                    var name=target.rect.GetComponentInChildren<Text>();name.fontSize=mobile?17:13;
+                    TopLeft(name.rectTransform,new Vector2(5,-2),new Vector2(width-10,mobile?42:28));
+                    var state=Label(target.rect,"",new Vector2(5,mobile?-46:-31),new Vector2(width-10,17),mobile?14:11,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
+                    Section(target.rect,"Progress track",new Vector2(5,mobile?-67:-49),new Vector2(width-10,3),ConsoleTheme.Track);
+                    var fill=Section(target.rect,"Progress",new Vector2(5,mobile?-67:-49),new Vector2(0,3),ConsoleTheme.Accent).GetComponent<Image>();
                     browserProductionItems.Add((producer,orderId,item.depth,state,fill,width-10));
                     browserQueueTargets.Add(target);targets.Add(target);
                 }
@@ -262,17 +284,26 @@ namespace Frontier.Runtime
             else
             {
                 var orders=DisplayedUnitOrders(out var representative);
-                browserQueueTitle.text=orders.Length>0?"QUEUED ORDERS · Click an item to remove":"Left-click: select · Right-click: order · Shift: queue";
+                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Tap: select / order · Drag: camera · Pinch: zoom"):
+                    orders.Length>0?"QUEUED ORDERS · Click an item to remove":"Left-click: select · Right-click: order · Shift: queue";
                 var signatureAtBind=OrderPlanSignature();
-                int count=orders.Length+(orders.Length>1?1:0),columns=Mathf.Min(6,Mathf.Max(1,count));
+                int count=orders.Length+(orders.Length>1?1:0);
+                bool mobile=BrowserMobileInput.IsTouchMode;
+                string context=string.Join(",",ids);
+                if(context!=mobileOrdersContext){mobileOrdersContext=context;mobileOrdersPage=0;}
+                int pages=Mathf.Max(1,(count+2)/3);
+                mobileOrdersPage=Mathf.Clamp(mobileOrdersPage,0,pages-1);
+                int first=mobile?mobileOrdersPage*3:0,visible=mobile?Mathf.Min(3,count-first):count;
+                int columns=mobile?Mathf.Max(1,visible+(pages>1?1:0)):Mathf.Min(6,Mathf.Max(1,count));
                 float width=(browserQueue.rect.width-(columns-1)*4)/columns;
-                for(int i=0;i<count;i++)
+                for(int slot=0;slot<visible;slot++)
                 {
+                    int i=first+slot;
                     bool clear=i==orders.Length;var order=clear?null:orders[i];
                     int[] affected=SelectedMobileUnits().Where(e=>clear||(order.sourceSequence==0?e.id==representative.id:
                         e.order!=CommandKind.Stop&&e.activeOrderSequence==order.sourceSequence||e.pendingOrders.Any(q=>q.sourceSequence==order.sourceSequence)))
                         .Select(e=>e.id).ToArray();
-                    var target=BrowserButton(browserQueue,clear?"Cancel all":PlanOrderLabel(order.kind),new Vector2(i%columns*(width+4),-i/columns*29),new Vector2(width,26),()=>
+                    var target=BrowserButton(browserQueue,clear?"Cancel all":PlanOrderLabel(order.kind),new Vector2(slot%columns*(width+4),-slot/columns*29),new Vector2(width,mobile?58:26),()=>
                     {
                         if(!AcceptsGameInput||Session.SessionIdentity!=match||OrderPlanSignature()!=signatureAtBind
                             ||!Session.Selection.OrderBy(id=>id).SequenceEqual(ids))return;
@@ -280,8 +311,14 @@ namespace Frontier.Runtime
                             Session.Announce(Session.IsOnline?"Cancellation requested.":clear?"Current and queued orders cancelled.":"Unit order cancelled.");
                         nextText=0;
                     });
-                    target.rect.GetComponentInChildren<Text>().fontSize=12;browserQueueTargets.Add(target);targets.Add(target);
+                    target.rect.GetComponentInChildren<Text>().fontSize=BrowserMobileInput.IsTouchMode?17:12;browserQueueTargets.Add(target);targets.Add(target);
                     target.normal=clear?ConsoleTheme.Danger:i==0?QueueActiveTint:button;target.image.color=target.normal;
+                }
+                if(mobile&&pages>1)
+                {
+                    var next=BrowserButton(browserQueue,(mobileOrdersPage+1)+" / "+pages+"  ›",new Vector2(visible*(width+4),0),new Vector2(width,58),()=>
+                    {mobileOrdersPage=(mobileOrdersPage+1)%pages;browserQueueSignature=null;RefreshBrowserQueues();});
+                    browserQueueTargets.Add(next);targets.Add(next);
                 }
             }
         }
@@ -306,7 +343,9 @@ namespace Frontier.Runtime
         {
             if(!actionHelp.gameObject.activeSelf||SectionHelpOpen)return;
             const float width=470,height=224;
-            TopLeft(actionHelp,new Vector2(root.rect.width-width-12,-root.rect.height+BrowserDockHeight+height+24),new Vector2(width,height));
+            if(BrowserMobileInput.IsTouchMode)
+                TopLeft(actionHelp,new Vector2(Mathf.Max(8,mobileActionPosition.x+mobileActionSize.x-width),mobileActionPosition.y+height+16),new Vector2(width,height));
+            else TopLeft(actionHelp,new Vector2(root.rect.width-width-12,-root.rect.height+BrowserDockHeight+height+24),new Vector2(width,height));
             TopLeft(helpCategory.rectTransform,new Vector2(16,-12),new Vector2(width-32,22));helpCategory.fontSize=13;
             TopLeft(helpTitle.rectTransform,new Vector2(16,-40),new Vector2(width-32,30));helpTitle.fontSize=22;
             TopLeft(helpDescription.rectTransform,new Vector2(16,-78),new Vector2(width-32,88));helpDescription.fontSize=16;
@@ -317,12 +356,13 @@ namespace Frontier.Runtime
         private void PositionBrowserTutorial()
         {
             var size=((RectTransform)canvas.transform).rect.size;
-            float scale=Mathf.Min(.68f,(size.x-32)/TutorialCardWidth);
+            var safe=BrowserSafeArea(size);
+            float scale=Mathf.Min(BrowserMobileInput.IsTouchMode ? .85f : .68f,(safe.width-32)/TutorialCardWidth);
             bool briefing=Session.Tutorial.Briefing||Session.Tutorial.Complete;
             float width=tutorialCard.rect.width*scale;
             // A fixed screen card leaves both the battlefield and bottom command
             // dock available. World targets retain the shared violet map marker.
-            TopLeft(tutorialCard,new Vector2(briefing?(size.x-width)*.5f:16,-84),tutorialCard.sizeDelta);
+            TopLeft(tutorialCard,new Vector2(briefing?safe.center.x-width*.5f:safe.x+16,-(size.y-safe.yMax+96)),tutorialCard.sizeDelta);
             tutorialCard.localScale=Vector3.one*scale;tutorialCard.localRotation=Quaternion.identity;
             tutorialCard.SetAsLastSibling();
             tutorialMenuDim.gameObject.SetActive(false);

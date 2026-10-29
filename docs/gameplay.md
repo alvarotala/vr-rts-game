@@ -4,6 +4,16 @@ Los controles indicados a continuación son los predeterminados y se pueden pers
 
 ## Empezar una partida
 
+En la app móvil y en la web táctil se usa un tablero de pantalla, sin colocación
+en una habitación. Tocar **Nueva partida**, elegir facción/mapa/dificultad y
+comenzar. Un toque selecciona aliados; con una selección activa, tocar terreno,
+enemigos o recursos envía una orden. Mantener 0,55 segundos y soltar envía una
+orden explícita sobre aliados para reparar o reanudar una construcción. Arrastrar
+mueve la cámara y pellizcar ajusta el zoom. **Seleccionar área** permite arrastrar
+un rectángulo; en **Grupos**, mantener un grupo lo guarda y tocarlo lo recupera.
+El HUD ofrece acciones paginadas, cancelación y minimapa. Controles completos y
+requisitos en [app/README.md](../app/README.md).
+
 Al abrir el juego en Quest, el menú principal aparece frente a tu posición actual, a unos 1,25 m, con **New Match**, **Guides** y **Settings**, sin pedir colocar el tablero ni permiso de superficies. Su posición es independiente del ancla guardada. Si lo movés, conserva esa ubicación al terminar una partida, volver desde pausa o resultado y recuperar el foco o seguimiento del visor. Girar la cabeza o moverse cerca no lo recoloca. Solo vuelve automáticamente frente a vos si queda a más de 3,25 m; **Reset position** permite recuperarlo manualmente. Al cerrar y abrir de nuevo la app, el menú aparece frente a la posición actual. Si hay un ancla guardada, se intenta restaurar en segundo plano: tras estabilizarse el seguimiento, se conserva si está cerca y se olvida automáticamente si el tablero queda a más de 3 m en horizontal o en otro nivel con más de 2,5 m de diferencia vertical. En ese caso, se pide colocar el mapa al iniciar la partida. **Settings → Play space → Reposition board** sigue disponible para ajustar una posición cercana. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 
 **New Match** reúne cuatro selectores: facción, rival, dificultad y mapa, junto con **Back**, **Position board** y **START MATCH**. **Position board**, al lado de comenzar, permite colocar o reajustar el mapa directamente; confirmar deja el tablero listo sin iniciar la partida y cancelar conserva su posición anterior si existía. Las preferencias y los ajustes avanzados del espacio siguen en **Settings**. **START MATCH** inicia directamente si el tablero ya está colocado; si falta, abre la colocación y la partida comienza al confirmar con A (X en la mano izquierda). Cancelar vuelve a la preparación sin iniciar. Si todavía se está restaurando el ancla o comprobando su distancia al visor, espera ese resultado antes de iniciar o pedir una nueva ubicación.

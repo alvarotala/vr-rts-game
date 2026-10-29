@@ -12,6 +12,14 @@ o edificios al catálogo compartido no requiere duplicar una lista web.
 Los adaptadores están aislados con `FRONTIER_BROWSER`: VR mantiene su cámara,
 menús flotantes y controles Touch.
 
+En teléfonos, el mismo player activa HUD y gestos táctiles: toque para
+seleccionar/ordenar, mantener y soltar para ordenar sobre aliados, arrastre
+para mover cámara y pellizco para zoom. La plantilla respeta safe area, limita
+la densidad de render e inicia mediante interacción. Los proyectos Android/iOS
+de [`app/`](../app/README.md) reutilizan esa presentación con `FRONTIER_MOBILE`
+y el transporte nativo. La preparación de fuentes y las pruebas automatizadas
+no sustituyen la validación del player en dispositivos reales.
+
 ## Preparar y compilar
 
 Requiere Python 3.10 o posterior, Unity **6000.3.26f1** con **Web Build Support**

@@ -196,7 +196,7 @@ namespace Frontier.Runtime
             if(inside)
             {
 #if FRONTIER_BROWSER
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(replayTimeline,UnityEngine.InputSystem.Mouse.current.position.ReadValue(),null,out var point);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(replayTimeline,BrowserMobileInput.PointerPosition,null,out var point);
 #else
                 var point=replayTimeline.InverseTransformPoint(ray.GetPoint(distance));
 #endif

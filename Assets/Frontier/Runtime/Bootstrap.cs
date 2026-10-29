@@ -40,8 +40,14 @@ namespace Frontier.Runtime
             {MultiplayerSmokeClient.Launch(address,port,Argument(args,"-frontier-faction","industrial"));return;}
 #endif
             if(UnityEngine.Object.FindFirstObjectByType<GameSession>()!=null)return;
-            QualitySettings.vSyncCount=0;Application.targetFrameRate=72;
+            QualitySettings.vSyncCount=0;
+#if FRONTIER_BROWSER
+            Application.targetFrameRate=60;
+            Application.runInBackground=!Application.isMobilePlatform;
+#else
+            Application.targetFrameRate=72;
             Application.runInBackground=Application.platform!=RuntimePlatform.Android;
+#endif
             var session=new GameObject("Game session").AddComponent<GameSession>();
 #if !FRONTIER_BROWSER
             if(Array.IndexOf(args,"-frontier-backend")>=0)
