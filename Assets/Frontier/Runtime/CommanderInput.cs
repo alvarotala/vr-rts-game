@@ -612,19 +612,19 @@ namespace Frontier.Runtime
             if(!focused)
             {
 #if FRONTIER_BROWSER
-                mobileGesture.CancelUntilRelease();ClearMobileLasso();
+                BrowserMobileInput.ResetShift();mobileGesture.CancelUntilRelease();ClearMobileLasso();
 #endif
                 placementInputReady=false;placementHeightDirection=0;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
             }
         }
 #if FRONTIER_BROWSER
         private void OnApplicationPause(bool paused)
-        {if(paused){mobileGesture.CancelUntilRelease();ClearMobileLasso();}}
+        {if(paused){BrowserMobileInput.ResetShift();mobileGesture.CancelUntilRelease();ClearMobileLasso();}}
 #endif
         private void OnDisable()
         {
 #if FRONTIER_BROWSER
-            mobileGesture.CancelUntilRelease();ClearMobileLasso();
+            BrowserMobileInput.ResetShift();mobileGesture.CancelUntilRelease();ClearMobileLasso();
 #endif
             placementInputReady=false;placementHeightDirection=0;controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
         }

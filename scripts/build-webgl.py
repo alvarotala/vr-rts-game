@@ -83,6 +83,7 @@ def source_files(root: Path, mobile: bool = False) -> dict[str, bytes]:
     files["Assets/link.xml"] = (root / "webgl/link.xml").read_bytes()
     if mobile:
         files["Assets/Editor/MobileBuilder.cs"] = (root / "app/MobileBuilder.cs").read_bytes()
+        files["Assets/Editor/MobileHudPreview.cs"] = (root / "app/MobileHudPreview.cs").read_bytes()
     else:
         files["Assets/Editor/WebGLBuilder.cs"] = (root / "webgl/WebGLBuilder.cs").read_bytes()
         tree(root / "webgl/Template", "Assets/WebGLTemplates/LittleLegion")
@@ -176,6 +177,13 @@ PlayerSettings:
 """
         if mobile:
             settings_text = settings_text.replace("FRONTIER_BROWSER", "FRONTIER_BROWSER;FRONTIER_MOBILE")
+            settings_text = settings_text.replace("  scriptingDefineSymbols:\n", """  defaultScreenOrientation: 4
+  allowedAutorotateToPortrait: 1
+  allowedAutorotateToPortraitUpsideDown: 0
+  allowedAutorotateToLandscapeLeft: 1
+  allowedAutorotateToLandscapeRight: 1
+  scriptingDefineSymbols:
+""")
             settings_text += "    Android: FRONTIER_BROWSER;FRONTIER_MOBILE\n    iPhone: FRONTIER_BROWSER;FRONTIER_MOBILE\n"
         settings.write_text(settings_text)
     assets = {name: hashlib.sha256(value).hexdigest() for name, value in sorted(files.items())}

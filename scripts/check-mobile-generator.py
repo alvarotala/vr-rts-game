@@ -43,6 +43,9 @@ class MobileProjectChecks(unittest.TestCase):
         settings = (self.stage / "ProjectSettings/ProjectSettings.asset").read_text()
         for target in ("Standalone", "Android", "iPhone"):
             self.assertIn(target + ": FRONTIER_BROWSER;FRONTIER_MOBILE", settings)
+        for setting in ("defaultScreenOrientation: 4", "allowedAutorotateToPortrait: 1",
+                        "allowedAutorotateToLandscapeLeft: 1", "allowedAutorotateToLandscapeRight: 1"):
+            self.assertIn(setting, settings)
 
     def test_refuses_webgl_stage_and_unmanaged_content(self):
         mobile.shared.prepare(stage=self.stage)
@@ -94,7 +97,8 @@ class MobileProjectChecks(unittest.TestCase):
                 (output / "Unity-iPhone.xcodeproj").mkdir(parents=True)
                 (output / "Unity-iPhone.xcodeproj/project.pbxproj").touch()
                 (output / "Data").mkdir()
-                (output / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": "app.sadmonkey.littlelegion.mobile"}))
+                (output / "Info.plist").write_bytes(plistlib.dumps({"CFBundleIdentifier": "app.sadmonkey.littlelegion.mobile",
+                    "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]}))
                 receipt = output / "build-receipt.json"
             data = {"buildId": "new", "unityVersion": "6000.3.26f1", "platform": platform,
                     "configuration": "development", "version": "0.1.0", "buildNumber": 1}
@@ -169,6 +173,22 @@ class MobileProjectChecks(unittest.TestCase):
         self.assertEqual(actual, original)
         mobile.configure_ios_project(output)
         self.assertEqual(plist.read_bytes(), first)
+
+    def test_ios_export_requires_portrait_and_both_landscapes_in_phone_and_ipad_metadata(self):
+        output = self.stage.parent / "ios"
+        output.mkdir()
+        path = output / "Info.plist"
+        supported = ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]
+        path.write_bytes(plistlib.dumps({"UISupportedInterfaceOrientations": supported}))
+        mobile.validate_ios_orientations(output)
+        for key in ("UISupportedInterfaceOrientations", "UISupportedInterfaceOrientations~ipad"):
+            for missing in supported:
+                with self.subTest(key=key, missing=missing):
+                    data = {"UISupportedInterfaceOrientations": supported, "UISupportedInterfaceOrientations~ipad": supported}
+                    data[key] = [item for item in supported if item != missing]
+                    path.write_bytes(plistlib.dumps(data))
+                    with self.assertRaisesRegex(RuntimeError, "portrait and both landscape"):
+                        mobile.validate_ios_orientations(output)
 
     def test_ios_network_patch_rejects_missing_invalid_and_symlinked_plists(self):
         output = self.stage.parent / "ios"

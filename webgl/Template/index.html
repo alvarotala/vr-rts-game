@@ -17,14 +17,12 @@
     h2 { font-size: clamp(24px, 4vw, 36px); }
     .eyebrow { color: #83d9e7; font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
     progress { width: min(320px, 80vw); accent-color: #28b5d9; }
-    #status, #rotate p { max-width: 520px; line-height: 1.5; color: #bed2df; }
+    #status { max-width: 520px; line-height: 1.5; color: #bed2df; }
     button { min-height: 48px; padding: 12px 22px; color: #08131d; background: #83d9e7; border: 1px solid #83d9e7; border-radius: 8px; font: inherit; font-weight: 650; cursor: pointer; touch-action: manipulation; }
     button:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
     button:disabled { opacity: .65; cursor: wait; }
     #fullscreen { padding: 10px 14px; font-size: 13px; color: #e6eff7; background: #142b3e; border-color: #46647a; }
     #notice { max-width: 480px; padding: 12px; background: #142b3e; border-radius: 8px; }
-    #rotate { background: #08131df5; }
-    .phone { width: 70px; height: 40px; border: 3px solid #83d9e7; border-radius: 9px; }
     @media (max-height: 430px) { .cover { gap: 12px; } h1 { font-size: 32px; } }
   </style>
 </head>
@@ -41,12 +39,6 @@
       <p id="notice" role="status" hidden></p>
       <noscript>Activa JavaScript para jugar. / Enable JavaScript to play.</noscript>
     </section>
-    <section id="rotate" class="cover" aria-labelledby="rotate-title" hidden>
-      <div class="phone" aria-hidden="true"></div>
-      <h2 id="rotate-title">Gira el teléfono</h2>
-      <p id="rotate-text">Juega en horizontal para ver todo el campo de batalla.</p>
-      <button id="portrait" type="button">Continuar en vertical</button>
-    </section>
   </main>
   <script>
     var canvas = document.getElementById('game');
@@ -55,12 +47,10 @@
     var progress = document.getElementById('progress');
     var start = document.getElementById('start');
     var fullscreen = document.getElementById('fullscreen');
-    var rotate = document.getElementById('rotate');
     var notice = document.getElementById('notice');
     var touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
     var english = !(navigator.language || 'en').toLowerCase().startsWith('es');
     var phase = 'idle';
-    var portraitDismissed = false;
     document.documentElement.lang = english ? 'en' : 'es';
     function words(es, en) { return english ? en : es; }
     document.getElementById('title').textContent = words('Tu legión te espera.', 'Your legion awaits.');
@@ -69,31 +59,16 @@
     progress.setAttribute('aria-label', words('Carga del juego', 'Game loading'));
     fullscreen.textContent = words('Pantalla completa', 'Full screen');
     fullscreen.hidden = !(document.documentElement.requestFullscreen && document.fullscreenEnabled !== false);
-    document.getElementById('rotate-title').textContent = words('Gira el teléfono', 'Rotate your phone');
-    document.getElementById('rotate-text').textContent = words('Juega en horizontal para ver todo el campo de batalla.', 'Play in landscape to see the whole battlefield.');
-    document.getElementById('portrait').textContent = words('Continuar en vertical', 'Continue in portrait');
 
     function failed() {
       phase = 'failed';
       loading.hidden = false;
-      rotate.hidden = true;
       fullscreen.hidden = true;
       progress.hidden = true;
       start.disabled = false;
       start.textContent = words('Volver a cargar', 'Reload');
       statusText.textContent = words('El juego no pudo iniciar. Recarga la página e inténtalo de nuevo.', 'The game could not start. Reload the page and try again.');
     }
-    function orientationChanged() {
-      var portrait = window.innerHeight > window.innerWidth;
-      if (!portrait) portraitDismissed = false;
-      rotate.hidden = phase !== 'playing' || !touch || !portrait || portraitDismissed;
-    }
-    document.getElementById('portrait').onclick = function () {
-      portraitDismissed = true;
-      orientationChanged();
-      canvas.focus();
-    };
-    window.addEventListener('resize', orientationChanged);
     canvas.addEventListener('contextmenu', function (event) { event.preventDefault(); });
     canvas.addEventListener('webglcontextlost', failed);
     var config = {
@@ -145,7 +120,6 @@
       phase = 'playing';
       loading.hidden = true;
       fullscreen.hidden = true;
-      orientationChanged();
       canvas.focus();
     };
     fullscreen.onclick = function () {
@@ -162,7 +136,6 @@
     document.addEventListener('fullscreenchange', function () {
       fullscreen.textContent = document.fullscreenElement ? words('Salir de pantalla completa', 'Exit full screen') : words('Pantalla completa', 'Full screen');
       notice.hidden = true;
-      orientationChanged();
     });
   </script>
 </body>

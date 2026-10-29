@@ -38,7 +38,7 @@ internal static class Program
             Check(Feed(gesture,held).Kind==MobileGesture.Kind.Tap,"short tap after long hold remains an ordinary tap");
             held=Finger(down:true);held.Time=13.2f;Feed(gesture,held);
             held=Finger(up:true);held.Time=13.3f;
-            Check(Feed(gesture,held).Kind==MobileGesture.Kind.Tap,"second short tap remains eligible for shared double-tap selection");
+            Check(Feed(gesture,held).Kind==MobileGesture.Kind.Tap,"second short tap remains a separate confirmed tap");
 
             gesture=new MobileGesture();Feed(gesture,Finger(down:true));
             var drag=Feed(gesture,Finger(125,100));
@@ -88,20 +88,25 @@ internal static class Program
             gesture=new MobileGesture();Feed(gesture,Finger(down:true));
             Check(Feed(gesture,new MobileGesture.Sample{AllowMap=true}).Cancelled,"device disappearance without a release edge cannot send a tap/order");
 
-            gesture=new MobileGesture();var lassoPress=Finger(down:true);lassoPress.LassoSelection=true;
+            gesture=new MobileGesture();var ordinaryPress=Finger(down:true);ordinaryPress.LassoSelection=true;
+            Feed(gesture,ordinaryPress);
+            Check(Feed(gesture,Finger(130,100)).Kind==MobileGesture.Kind.Pan,"ordinary gameplay drag pans even when lasso selection is available");
+            Check(Feed(gesture,Finger(130,100,up:true)).Kind==MobileGesture.Kind.Pan,"ordinary pan release never selects units");
+
+            gesture=new MobileGesture();var lassoPress=Finger(down:true);lassoPress.LassoSelection=true;lassoPress.Shift=true;
             result=Feed(gesture,lassoPress);
-            Check(result.Kind==MobileGesture.Kind.None,"default gameplay finger waits to distinguish tap from lasso");
+            Check(result.Kind==MobileGesture.Kind.None,"Shift contact waits to distinguish attack tap from lasso");
             result=Feed(gesture,Finger(130,100));
-            Check(result.Kind==MobileGesture.Kind.Lasso&&result.Down&&result.StartX==100&&result.StartY==100,"drag begins lasso at original contact without a mode button");
+            Check(result.Kind==MobileGesture.Kind.Lasso&&result.Down&&result.Shift&&result.StartX==100&&result.StartY==100,"Shift drag begins lasso at original contact and keeps modifier if it is released");
             result=Feed(gesture,Finger(300,300,up:true));
             Check(result.Kind==MobileGesture.Kind.Lasso&&result.Up,"lasso completes only on release");
             Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));
             result=Feed(gesture,Finger(100,100,up:true));
             Check(result.Kind==MobileGesture.Kind.Lasso,"returning to start never converts a closed circle into a tap");
             Feed(gesture,lassoPress);result=Feed(gesture,Finger(up:true));
-            Check(result.Kind==MobileGesture.Kind.Tap,"default lasso still permits ordinary tap selection");
+            Check(result.Kind==MobileGesture.Kind.Tap&&result.Shift,"Shift tap retains attack modifier through release");
             lassoPress.Time=20;Feed(gesture,lassoPress);held=Finger(up:true);held.Time=20.7f;
-            Check(Feed(gesture,held).Kind==MobileGesture.Kind.LongPress,"default lasso still permits held contextual order");
+            Check(Feed(gesture,held).Kind==MobileGesture.Kind.LongPress,"Shift lasso mode still distinguishes a held contact");
             Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));result=Feed(gesture,Pair());
             Check(result.Kind==MobileGesture.Kind.Pinch&&result.Cancelled,"second finger cancels lasso before camera navigation");
             Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.None,"cancelled lasso cannot select on release");
@@ -115,6 +120,13 @@ internal static class Program
             Feed(gesture,Finger(up:true));Feed(gesture,lassoPress);var replaced=Finger(300,300);replaced.Finger=9;
             Check(Feed(gesture,replaced).Cancelled,"replacement contact cannot jump or complete an earlier finger's lasso");
 
+            gesture=new MobileGesture();Feed(gesture,ordinaryPress);var lateShift=Finger(130,100);lateShift.Shift=true;lateShift.LassoSelection=true;
+            Check(Feed(gesture,lateShift).Kind==MobileGesture.Kind.Pan,"pressing Shift after a pan starts cannot change it into selection");
+            var lateRelease=Finger(130,100,up:true);lateRelease.Shift=true;
+            Check(!Feed(gesture,lateRelease).Shift,"modifier is captured at initial contact only");
+
+            CheckShiftRouting();
+            CheckTapIntent();
             CheckLassoGeometry();
 
             Console.WriteLine($"Mobile input checks passed: {checks} (shared gesture classifier, no Unity/device rendering implied).");
@@ -122,6 +134,74 @@ internal static class Program
         }
         catch(Exception error){Console.Error.WriteLine(error);return 1;}
     }
+    private static MobileTouchRouter.Contact Contact(int id,float x=100,float y=100,bool down=false,bool up=false,bool shift=false)
+        =>new MobileTouchRouter.Contact{Id=id,X=x,Y=y,Held=!up,Down=down,Up=up,OnShift=shift};
+
+    private static void CheckShiftRouting()
+    {
+        var router=new MobileTouchRouter();
+        var sample=router.Read(new[]{Contact(5,down:true,shift:true)},1,true);
+        Check(router.ShiftActive&&sample.Count==0&&!sample.Down,"Shift button contact is active without becoming a map/UI press");
+        sample=router.Read(new[]{Contact(5,up:true,shift:true)},1.1f,true);
+        Check(router.ShiftActive&&sample.Count==0&&!sample.Up,"Shift tap latches without emitting a map release");
+        router.Read(new[]{Contact(5,down:true,shift:true)},2,true);
+        router.Read(new[]{Contact(5,up:true,shift:true)},2.1f,true);
+        Check(!router.ShiftActive,"second Shift tap disables the latch");
+
+        router.Read(new[]{Contact(5,down:true,shift:true)},3,true);
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,250,300,down:true)},3.1f,true);
+        Check(sample.Count==1&&sample.Finger==8&&sample.X==250&&sample.Down&&sample.Shift,"held Shift plus map finger produces a shifted single contact at map coordinates");
+        var gesture=new MobileGesture();sample.AllowMap=true;sample.LassoSelection=true;Feed(gesture,sample);
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,280,300)},3.2f,true);
+        sample.AllowMap=true;sample.LassoSelection=true;
+        Check(Feed(gesture,sample).Kind==MobileGesture.Kind.Lasso,"held Shift plus map drag enters lasso, never pinch");
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,280,330,up:true)},3.3f,true);
+        sample.AllowMap=true;sample.LassoSelection=true;
+        var released=Feed(gesture,sample);
+        Check(sample.Up&&sample.Count==0&&sample.X==280&&sample.Y==330&&released.Kind==MobileGesture.Kind.Lasso&&released.Up,"map finger release completes lasso while Shift finger remains held");
+        router.Read(new[]{Contact(5,up:true,shift:true)},3.4f,true);
+        Check(!router.ShiftActive,"momentary Shift does not latch after being used with another finger");
+
+        router.ShiftActive=true;
+        router.Read(new[]{Contact(5,down:true,shift:true),Contact(8,250,300,down:true)},4,true);
+        router.Read(new[]{Contact(5,up:true,shift:true),Contact(8,250,300,up:true)},4.1f,true);
+        Check(router.ShiftActive,"simultaneous modifier use preserves an existing latch");
+        router.ResetShift();
+        router.Read(new[]{Contact(5,down:true,shift:true)},5,true);
+        router.Read(new[]{Contact(5,200,200,up:true)},5.1f,true);
+        Check(!router.ShiftActive,"sliding off Shift before releasing does not toggle it");
+        var cancelled=Contact(5,up:true,shift:true);cancelled.Cancelled=true;
+        router.Read(new[]{Contact(5,down:true,shift:true)},6,true);
+        sample=router.Read(new[]{cancelled},6.1f,true);
+        Check(sample.Cancelled&&!router.ShiftActive,"OS-cancelled Shift never toggles and cancels dependent gestures");
+        router.ShiftActive=true;
+        router.Read(Array.Empty<MobileTouchRouter.Contact>(),7,false);
+        Check(!router.ShiftActive,"hidden or disabled Shift clears its state on menus or blocked gameplay");
+
+        router.Read(new[]{Contact(5,down:true,shift:true)},8,true);
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,250,300,down:true),Contact(9,350,300,down:true)},8.1f,true);
+        Check(sample.Count==2&&sample.Finger==8&&sample.OtherFinger==9,"Shift is excluded while two real map fingers remain available for pinch");
+        sample=router.Read(new[]{Contact(9,360,300),Contact(5,shift:true),Contact(8,240,300)},8.2f,true);
+        Check(sample.Finger==8&&sample.OtherFinger==9&&sample.X==240,"device contact order cannot switch the logical primary finger");
+        router.Read(Array.Empty<MobileTouchRouter.Contact>(),8.3f,true);
+        sample=router.Read(new[]{Contact(8,200,250,down:true,up:true)},9,true);
+        Check(sample.Down&&sample.Up&&sample.Count==0&&sample.X==200,"very quick map tap preserves both edges and final coordinates");
+    }
+
+    private static void CheckTapIntent()
+    {
+        Check(MobileGesture.ResolveTap(false,false,false,false,false,true)==MobileGesture.TapAction.Select,"tap with no selection selects a friendly target");
+        Check(MobileGesture.ResolveTap(true,false,false,false,false,true)==MobileGesture.TapAction.Select,"Shift without selected units can still select a target");
+        Check(MobileGesture.ResolveTap(false,false,false,true,true,false)==MobileGesture.TapAction.Context,"selected units tap ground or enemy issues contextual order");
+        Check(MobileGesture.ResolveTap(false,false,false,true,true,true)==MobileGesture.TapAction.Context,"selected units tap ally orders movement or worker repair instead of replacing selection");
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,false)==MobileGesture.TapAction.AttackMove,"Shift tap with units attacks along route to tapped point");
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,true)==MobileGesture.TapAction.AttackMove,"Shift tap ally remains an attack-move destination");
+        Check(MobileGesture.ResolveTap(true,false,true,true,true,false)==MobileGesture.TapAction.Context,"explicit build ability or rally targeting has priority over Shift");
+        Check(MobileGesture.ResolveTap(false,false,false,false,true,true)==MobileGesture.TapAction.Select,"building-only selection can switch to another friendly target");
+        Check(MobileGesture.ResolveTap(false,false,false,false,true,false)==MobileGesture.TapAction.Context,"building-only selection retains ground rally command");
+        Check(MobileGesture.ResolveTap(false,true,false,false,true,true)==MobileGesture.TapAction.Context,"held tap retains explicit context order on friendly target");
+    }
+
     private static void CheckLassoGeometry()
     {
         var lasso=new ScreenLasso();lasso.Begin(0,0,1);lasso.Add(100,0);lasso.Add(100,100);lasso.Add(0,100);

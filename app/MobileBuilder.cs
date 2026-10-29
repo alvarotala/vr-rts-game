@@ -57,7 +57,7 @@ namespace Frontier.Mobile.Editor
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
-            PlayerSettings.allowedAutorotateToPortrait = false;
+            PlayerSettings.allowedAutorotateToPortrait = true;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             // HTTP is only available for local development builds; public defaults use HTTPS.
             PlayerSettings.insecureHttpOption = release ? InsecureHttpOption.NotAllowed : InsecureHttpOption.DevelopmentOnly;

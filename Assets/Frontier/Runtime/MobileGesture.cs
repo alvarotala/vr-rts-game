@@ -9,23 +9,32 @@ namespace Frontier.Runtime
     public sealed class MobileGesture
     {
         public enum Kind { None, Ui, Tap, LongPress, Pan, Pinch, Lasso }
+        public enum TapAction { Select, Context, AttackMove }
         public const float LongPressSeconds=.55f;
         public struct Sample
         {
             public int Count,Finger,OtherFinger;
             public float X,Y,OtherX,OtherY,Time;
-            public bool Down,Up,Cancelled,OverUi,SecondOverMap,AllowMap,LassoSelection;
+            public bool Down,Up,Cancelled,OverUi,SecondOverMap,AllowMap,LassoSelection,Shift;
         }
         public struct Result
         {
             public Kind Kind;
-            public bool Down,Up,Held,Cancelled;
+            public bool Down,Up,Held,Cancelled,Shift;
             public float DeltaX,DeltaY,ZoomRatio,StartX,StartY;
         }
-        private bool captured,ui,lasso,moving,multi,draining;
+        private bool captured,ui,lasso,shift,moving,multi,draining;
         private float startX,startY,lastX,lastY,lastSpan,pressedAt;
         private int firstFinger,secondFinger;
         public bool Captured=>captured;
+
+        public static TapAction ResolveTap(bool shifted,bool forceOrder,bool targeting,bool selectedUnits,bool ownSelection,bool ownTarget)
+        {
+            if(targeting)return TapAction.Context;
+            if(shifted&&selectedUnits)return TapAction.AttackMove;
+            if(forceOrder||selectedUnits||ownSelection&&!ownTarget)return TapAction.Context;
+            return TapAction.Select;
+        }
 
         public void CancelUntilRelease()
         {captured=ui=lasso=moving=multi=false;draining=true;lastSpan=0;}
@@ -43,7 +52,7 @@ namespace Frontier.Runtime
             {
                 // Ignore fingers already held when the app resumes or a page opens.
                 if(!sample.Down)return default;
-                captured=true;ui=sample.OverUi;lasso=!ui&&sample.LassoSelection;
+                captured=true;ui=sample.OverUi;shift=sample.Shift;lasso=!ui&&shift&&sample.LassoSelection;
                 startX=lastX=sample.X;startY=lastY=sample.Y;
                 firstFinger=sample.Finger;
                 pressedAt=sample.Time;
@@ -83,7 +92,7 @@ namespace Frontier.Runtime
             bool wasMoving=moving;
             moving|=distanceX*distanceX+distanceY*distanceY>=dragThreshold*dragThreshold;
             var output=new Result{Kind=moving?(lasso?Kind.Lasso:Kind.Pan):released?(sample.Time-pressedAt>=LongPressSeconds?Kind.LongPress:Kind.Tap):Kind.None,
-                Down=moving&&!wasMoving,Up=released,Held=!released,StartX=startX,StartY=startY,DeltaX=sample.X-lastX,DeltaY=sample.Y-lastY};
+                Down=moving&&!wasMoving,Up=released,Held=!released,Shift=shift,StartX=startX,StartY=startY,DeltaX=sample.X-lastX,DeltaY=sample.Y-lastY};
             lastX=sample.X;lastY=sample.Y;
             if(released)captured=false;
             return output;

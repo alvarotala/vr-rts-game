@@ -6,6 +6,17 @@
     "Spanish"
   ],
   "entries": [
+    {"key":"Clear selection, then tap this worker.","value":"Limpia la selección y toca este trabajador.","template":false},
+    {"key":"Clear selection, then tap your headquarters.","value":"Limpia la selección y toca tu sede central.","template":false},
+    {"key":"Clear selection, then tap this military building.","value":"Limpia la selección y toca este edificio militar.","template":false},
+    {"key":"Idle: {0}","value":"Libres: {0}","template":true},
+    {"key":"Drag: camera · Shift + drag: select","value":"Arrastrar: cámara · Shift + arrastrar: seleccionar","template":false},
+    {"key":"Drag to move the camera. Use Shift to circle units.","value":"Arrastra para mover la cámara. Usa Shift para rodear unidades.","template":false},
+    {"key":"Tap an ally when nothing is selected. Clear selection to choose another unit.","value":"Toca un aliado sin selección activa. Borra la selección para elegir otra unidad.","template":false},
+    {"key":"With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.","value":"Con unidades seleccionadas, toca para mover o atacar. Shift + toque mueve y ataca enemigos en el camino.","template":false},
+    {"key":"Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra con un dedo para mover la cámara. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
+    {"key":"Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.","value":"Toca o mantén Shift y dibuja alrededor de las unidades. Toca Shift otra vez para desactivarlo.","template":false},
+    {"key":"Activate Shift, draw around your three soldiers, then release. Turn Shift off when done.","value":"Activa Shift, rodea los tres soldados y suelta. Desactiva Shift al terminar.","template":false},
     {"key":"Group 1 already contains a squad. Tap group 1 to replace it with your selected soldiers, or Cancel.","value":"El grupo 1 ya tiene un escuadrón. Toca el grupo 1 para reemplazarlo con los soldados seleccionados o Cancelar.","template":false},
     {"key":"Tap group 1 to replace it with your selected soldiers.","value":"Toca el grupo 1 para reemplazarlo con los soldados seleccionados.","template":false},
     {"key":"Group selection","value":"Agrupar","template":false},

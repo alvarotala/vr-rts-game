@@ -59,6 +59,25 @@ def validate_build(output: Path, build_id: str, version: str, platform: str,
         complete = (output / "Unity-iPhone.xcodeproj/project.pbxproj").is_file() and (output / "Data").is_dir() and (output / "Info.plist").is_file()
     if not complete:
         raise RuntimeError("Unity exited without a complete mobile build. Inspect the log.")
+    if platform == "ios":
+        validate_ios_orientations(output)
+
+
+def validate_ios_orientations(output: Path) -> None:
+    """Reject exports that would still lock the phone or iPad to landscape."""
+    try:
+        data = plistlib.loads((output / "Info.plist").read_bytes())
+    except (OSError, ValueError, plistlib.InvalidFileException, ExpatError) as error:
+        raise RuntimeError("Unity did not export valid iOS orientation metadata.") from error
+    if not isinstance(data, dict):
+        raise RuntimeError("Unity exported invalid iOS orientation metadata.")
+    required = {"UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
+    for key in ("UISupportedInterfaceOrientations", "UISupportedInterfaceOrientations~ipad"):
+        if key.endswith("~ipad") and key not in data:
+            continue
+        orientations = data.get(key)
+        if not isinstance(orientations, list) or not all(isinstance(item, str) for item in orientations) or not required.issubset(orientations):
+            raise RuntimeError(f"iOS export must support portrait and both landscape orientations: {key}.")
 
 
 def configure_ios_project(output: Path) -> None:

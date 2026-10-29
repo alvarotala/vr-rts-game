@@ -1,4 +1,6 @@
 #if FRONTIER_BROWSER
+using Frontier.Core;
+using System.Linq;
 using UnityEngine;
 
 namespace Frontier.Runtime
@@ -15,20 +17,21 @@ namespace Frontier.Runtime
 
         private void RouteMobileInput()
         {
-            var sample=BrowserMobileInput.Read();
             if(!ReferenceEquals(mobileSession,Session.SessionIdentity))
             {
                 mobileSession=Session.SessionIdentity;
+                BrowserMobileInput.ResetShift();
                 if(mobileGesture.Captured)CancelMobileGesture();
                 ClearMobileLasso();ResetMapGestures();
             }
+            var sample=BrowserMobileInput.Read(Panel.AcceptsGameInput&&Panel.BrowserShiftAvailable);
             var screenSize=new Vector2(Screen.width,Screen.height);
             if((mobileViewport!=Quest.Camera.pixelRect||mobileScreenSize!=screenSize)&&mobileGesture.Captured)CancelMobileGesture();
             mobileViewport=Quest.Camera.pixelRect;mobileScreenSize=screenSize;
             var position=new Vector2(sample.X,sample.Y);
             var ray=Quest.Camera.ScreenPointToRay(position);
             if(!Application.isFocused||Session.HasSystemPause)
-            {CancelMobileGesture();return;}
+            {BrowserMobileInput.ResetShift();CancelMobileGesture();return;}
             if((Session.IsCountingDown||countdownReleasePending)&&BlockCountdownInput(sample.Count>0))
             {mobileGesture.CancelUntilRelease();ClearMobileLasso();return;}
             if(HotkeyInput.Read("key:Escape").Down)
@@ -77,7 +80,7 @@ namespace Frontier.Runtime
                 return;
             }
             if((result.Kind==MobileGesture.Kind.Tap||result.Kind==MobileGesture.Kind.LongPress)&&Panel.AcceptsGameInput&&!sample.OverUi)
-            {TapMobileBoard(ray,result.Kind==MobileGesture.Kind.LongPress);return;}
+            {TapMobileBoard(ray,result.Kind==MobileGesture.Kind.LongPress,result.Shift);return;}
             if(mobileGesture.Captured&&mapAllowed&&!sample.OverUi)PointReplayBoard(ray);
             else
             {
@@ -101,7 +104,7 @@ namespace Frontier.Runtime
             }
             Session.SelectVisibleEntities(mobileLassoSelection);
         }
-        private void TapMobileBoard(Ray ray,bool forceOrder)
+        private void TapMobileBoard(Ray ray,bool forceOrder,bool shifted)
         {
             if(!Board.RayToMap(ray,out var point,out var hit))return;
             Board.ResolvePointerTarget(ray,point,hit,out int entity,out int resource);
@@ -109,10 +112,17 @@ namespace Frontier.Runtime
                 e=>e.id==entity&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
             bool ownSelection=Session.View!=null&&System.Array.Exists(Session.View.entities,
                 e=>Session.Selection.Contains(e.id)&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
-            // Holding and releasing explicitly orders even on a friendly target:
-            // workers can repair/resume structures without replacing selection.
-            if(forceOrder||Session.HasTargetingMode||ownSelection&&!own)
-            {PointBoard(ray,false,false,true,false);return;}
+            var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own);
+            if(action!=MobileGesture.TapAction.Select)
+            {
+                // Touch orders are explicit: repeated normal taps remain moves,
+                // while Shift always attacks along the route to the tapped point.
+                // Explicit building/ability/rally targeting retains its priority.
+                ResetMapGestures();Board.Pointer=point;Board.Hovered=entity;Board.HoveredResource=resource;
+                if(action==MobileGesture.TapAction.AttackMove)Session.Send(CommandKind.AttackMove,position:point);
+                else Session.Context(point,entity,resource);
+                return;
+            }
             // Both edges are delivered together only after a confirmed tap, so
             // dragging the camera cannot select or issue a targeting-mode order.
             PointBoard(ray,true,true,false,false);

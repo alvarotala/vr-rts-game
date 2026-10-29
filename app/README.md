@@ -76,14 +76,17 @@ funcionan en Android, donde no cambian el firmado de desarrollo del APK.
 El recibo y el manifiesto de fuentes registran plataforma, configuración,
 versión y número; la validación rechaza un recibo que no coincida.
 
-La exportación iOS utiliza Metal y declara pantalla completa para el diseño
-horizontal. Agrega a `Info.plist` la explicación del acceso a servidores de
+La exportación iOS utiliza Metal y declara pantalla completa, con autorrotación
+entre vertical y horizontal. Agrega a `Info.plist` la explicación del acceso a servidores de
 partidas en la red local que requiere
 [Apple para conexiones locales, incluidas UDP](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
 El sistema pide permiso cuando se usa esa conexión; no habilita HTTP en release
 ni cambia el equipo o perfil de firma.
 
-Ambos destinos usan IL2CPP, URP y orientación horizontal en ambos sentidos.
+Ambos destinos usan IL2CPP, URP y autorrotación: vertical y horizontal en ambos
+sentidos. El HUD se adapta al tamaño y área segura de la pantalla. La validación
+del proyecto exportado a iOS rechaza configuraciones que omitan vertical o
+alguno de los dos sentidos horizontales, también para iPad si tiene una lista propia.
 `--editor` o `UNITY_EDITOR` permite indicar otra ubicación del Editor;
 `--output` elige una salida dedicada (dentro del repo debe quedar bajo `Builds/`).
 Logs: `TestResults/unity-mobile-android.log` y `unity-mobile-ios.log`. El comando
@@ -150,7 +153,7 @@ Es el mismo player WebGL para escritorio y teléfonos. El HUD detecta entrada
 táctil, la plantilla respeta el área segura y limita la resolución de render
 en pantallas de alta densidad. **Cargar juego** inicia la descarga; **Jugar**
 aporta un nuevo gesto después de inicializar Unity para habilitar el audio.
-Se recomienda horizontal, con opción de continuar en vertical en la web.
+Se puede jugar en vertical u horizontal y girar sin un aviso que tape el juego.
 La pantalla completa depende del navegador. No hay service worker ni garantía
 de iniciar sin conexión; las partidas contra IA no requieren el backend una vez
 cargado el juego.
@@ -163,11 +166,19 @@ temperatura, batería y fluidez aún deben medirse. El build conserva los
 
 ## Juego y conexión
 
-- Toque en unidad o edificio propio: seleccionar. Doble toque: seleccionar del mismo tipo.
-- Con selección activa, toque en terreno, enemigo o recurso: orden contextual.
+El campo de batalla ocupa toda la pantalla. El HUD móvil flota con fondos
+translúcidos: una fila de acciones en horizontal y dos en vertical. Las órdenes
+y la producción se despliegan desde su botón; los espacios vacíos dejan pasar
+los gestos al mapa. La cámara ajusta su distancia al girar el teléfono.
+
+- Arrastrar con un dedo mueve la cámara, incluso durante la partida.
+- Sin unidades seleccionadas, tocar una unidad o edificio propio lo selecciona.
+- Con unidades seleccionadas, tocar el mapa envía una orden contextual: mover, atacar, recolectar o, con trabajadores, reparar/reanudar un aliado. **Cancelar / limpiar** permite quitar la selección antes de elegir otra unidad. Al seleccionar sólo edificios, tocar otro aliado cambia la selección salvo que haya un destino de acción pendiente.
 - Mantener y soltar sobre un objetivo: orden contextual explícita; permite reparar o reanudar una construcción propia con trabajadores seleccionados.
-- Durante la partida, rodear unidades con un dedo dibuja un lazo visible; al soltar se cierra y selecciona los aliados cuyos centros quedan dentro. No hace falta activar un modo ni dibujar un círculo perfecto. Un trazo demasiado pequeño o una línea no cambia la selección.
-- Dos dedos desplazan la cámara; pellizcar acerca o aleja. En preparación y replay también se puede mover la cámara con un dedo.
+- **Shift** activa/desactiva el modificador táctil; también se puede mantener con otro dedo. El estado se toma al empezar el gesto.
+- **Shift + arrastrar** dibuja un lazo visible alrededor de unidades; al soltar se cierra y selecciona los aliados cuyos centros quedan dentro. No hace falta un círculo perfecto. Un trazo demasiado pequeño o una línea no cambia la selección.
+- **Shift + toque**, con unidades seleccionadas, ordena **Avanzar atacando** hacia el punto. Sin unidades seleccionadas, el toque permite seleccionar.
+- Dos dedos también desplazan la cámara; pellizcar acerca o aleja.
 - Acciones del HUD: construir, producir, atacar y habilidades del catálogo compartido.
 - Los destinos de construcción/ataque/habilidad se confirman con un toque; cancelar está en el HUD.
 - El minimapa mueve la cámara. Los menús y acciones se activan al soltar el dedo.
@@ -207,3 +218,11 @@ de gestos, la geometría del lazo, la gestión de grupos y el flujo de carga web
 No compilan ni ejecutan Unity. Para validar el producto se necesita compilar y probar en Android
 e iPhone: selección y órdenes, construcción, producción, combate, menús, giro,
 área segura, interrupciones, partida IA completa y partida online cruzada.
+
+El proyecto generado también incluye `Frontier.Mobile.Editor.MobileHudPreview.Run`.
+Ejecutarlo con Unity en `-batchmode -force-metal -quit` (sin `-nographics`),
+`-projectPath app/.generated/ios`, `-buildTarget iOS` y `-executeMethod` con ese
+nombre. `-frontier-preview-output` acepta una carpeta absoluta para las ocho
+capturas y el informe JSON de ambas orientaciones, rotación, minimapa y tutorial.
+Es renderizado real de Unity con área segura simulada; no reemplaza los gestos
+ni las mediciones de rendimiento en el teléfono.

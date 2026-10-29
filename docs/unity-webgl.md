@@ -12,9 +12,14 @@ o edificios al catálogo compartido no requiere duplicar una lista web.
 Los adaptadores están aislados con `FRONTIER_BROWSER`: VR mantiene su cámara,
 menús flotantes y controles Touch.
 
-En teléfonos, el mismo player activa HUD y gestos táctiles: toque para
-seleccionar/ordenar, mantener y soltar para ordenar sobre aliados, lazo con un
-dedo para seleccionar un grupo y dos dedos para mover cámara/pellizcar zoom.
+En teléfonos, el mismo player adapta el HUD a vertical y horizontal sin tapar
+el juego al girar. Arrastrar con un dedo mueve la cámara. Sin unidades
+seleccionadas, un toque selecciona; con unidades seleccionadas, envía una orden
+contextual al mapa, incluidos aliados para reparar/reanudar con trabajadores.
+El botón **Shift** se puede alternar o mantener: **Shift + arrastrar** dibuja el
+lazo de selección y **Shift + toque** con unidades seleccionadas ordena
+**Avanzar atacando**. Dos dedos permiten mover la cámara y pellizcar para zoom.
+El modificador se toma al empezar el gesto; **Cancelar / limpiar** quita la selección.
 Las acciones de la selección incluyen **Agrupar**; los grupos se recuperan
 tocando sus iconos persistentes durante la partida. La plantilla respeta safe area, limita
 la densidad de render e inicia mediante interacción. Los proyectos Android/iOS

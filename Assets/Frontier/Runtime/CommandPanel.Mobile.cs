@@ -11,8 +11,10 @@ namespace Frontier.Runtime
     // stay in canvas units; the safe area also protects browser landscape notches.
     public sealed partial class CommandPanel
     {
-        private RectTransform mobileToolbar;
-        private Target mobileClear;
+        private RectTransform mobileToolbar,mobileQueuePanel;
+        private Target mobileClear,mobileQueueToggle,mobileShift;
+        private bool mobileQueueExpanded;
+        private int mobileQueueCount,mobileActionColumns=6;
         private bool mobileLayoutApplied,mobileReplacingGroup;
         private object mobileGroupMatch;
         private int[] mobileGroupSelection=Array.Empty<int>();
@@ -50,8 +52,17 @@ namespace Frontier.Runtime
             mobileClear=BrowserButton(mobileToolbar,"Cancel / clear",Vector2.zero,new Vector2(160,72),()=>
             {
                 if(mobileReplacingGroup){CancelMobileGroupReplacement();Rebuild();return;}
-                Session.CancelMode();Session.Select(0,false);
+                mobileQueueExpanded=false;BrowserMobileInput.ResetShift();Session.CancelMode();Session.Select(0,false);
             });
+            mobileQueueToggle=BrowserButton(browserInfo,"Orders",Vector2.zero,new Vector2(136,64),()=>
+            {mobileQueueExpanded=!mobileQueueExpanded;browserQueueSignature=null;RefreshBrowserQueues();});
+            mobileQueueToggle.actionId="mobile-orders";
+            // The input adapter owns tap-to-toggle and held Shift contacts, so
+            // this visual target must not toggle again on the UI click callback.
+            mobileShift=BrowserButton(browserHud,"Shift",Vector2.zero,new Vector2(88,88),()=>{});
+            mobileShift.actionId="mobile-shift";BrowserMobileInput.ShiftButton=mobileShift.rect;
+            mobileQueuePanel=Section(browserHud,"Touch orders popover",Vector2.zero,new Vector2(720,112),MobileGlass(ConsoleTheme.Background,.86f));
+            mobileQueuePanel.gameObject.SetActive(false);mobileQueueToggle.rect.gameObject.SetActive(false);
             for(int i=0;i<groupTargets.Length;i++)
             {
                 mobileGroupGlyphs[i]=Glyph(groupTargets[i].rect,ConsoleGlyph.Kind.Group,new Vector2(8,-14),44,ConsoleTheme.Muted);
@@ -62,79 +73,155 @@ namespace Frontier.Runtime
         }
 
         private void LayoutMobileHud(Vector2 size)
+            =>LayoutMobileHud(size,BrowserSafeArea(size));
+
+        private void LayoutMobileHud(Vector2 size,Rect safe)
         {
             mobileLayoutApplied=true;
-            var safe=BrowserSafeArea(size);bool portrait=safe.height>safe.width;
-            float left=safe.x+8,top=size.y-safe.yMax+8,width=safe.width-16,bottom=size.y-safe.y+8;
-            float dockHeight=portrait?480:244,dockTop=bottom-dockHeight-16,toolsTop=dockTop-88;
+            bool portrait=safe.height>safe.width;
+            float left=safe.x+8,top=size.y-safe.yMax+8,width=safe.width-16,bottom=size.y-safe.y-8;
+            float mapSide=portrait?120:136,commandX=portrait?left:left+mapSide+12;
+            float commandWidth=left+width-commandX,actionHeight=portrait?MobileActionHeight*2+8:MobileActionHeight;
+            float actionTop=bottom-actionHeight,infoTop=actionTop-(portrait?144:76);
+            mobileActionColumns=portrait?3:6;
             root.localScale=Vector3.one;root.sizeDelta=size;root.GetComponent<Image>().color=Color.clear;
             TopLeft(browserHud,Vector2.zero,size);
-            TopLeft(browserBar,new Vector2(left,-top),new Vector2(width,80));
-            LayoutMobileButton(browserButtons[0],new Vector2(4,-4),new Vector2(104,72));
+            foreach(var surface in new[]{browserBar,browserCommandCard,browserGroupBar,mobileToolbar})
+                surface.GetComponent<Image>().color=Color.clear;
+            browserInfo.GetComponent<Image>().color=MobileGlass(ConsoleTheme.Background,.32f);
+            browserMapCard.GetComponent<Image>().color=MobileGlass(ConsoleTheme.Background,.3f);
+            browserMinimap.color=new Color(1,1,1,.82f);
+            TopLeft(browserBar,new Vector2(left,-top),new Vector2(width,76));
+            LayoutMobileButton(browserButtons[0],Vector2.zero,new Vector2(104,76));
             var resources=new[]{browserMinerals,browserGas,browserSupply};
             var glyphs=browserBar.GetComponentsInChildren<ConsoleGlyph>();
-            float resourceWidth=(width-124-(portrait?0:100))/3;
+            float resourceWidth=portrait?(width-120)/3:Mathf.Min(156,(width-620)/3);
             for(int i=0;i<resources.Length;i++)
             {
                 float x=120+i*resourceWidth;
-                if(i<glyphs.Length)TopLeft(glyphs[i].rectTransform,new Vector2(x,-28),new Vector2(24,24));
-                TopLeft(resources[i].rectTransform,new Vector2(x+30,-10),new Vector2(resourceWidth-34,60));resources[i].fontSize=24;
+                if(i<glyphs.Length)TopLeft(glyphs[i].rectTransform,new Vector2(x,-26),new Vector2(24,24));
+                TopLeft(resources[i].rectTransform,new Vector2(x+30,-8),new Vector2(resourceWidth-34,60));resources[i].fontSize=24;
+                MobileTextShadow(resources[i]);
             }
             browserClock.gameObject.SetActive(!portrait);
-            TopLeft(browserClock.rectTransform,new Vector2(width-104,-10),new Vector2(92,60));
+            TopLeft(browserClock.rectTransform,new Vector2(width-80,-8),new Vector2(76,60));MobileTextShadow(browserClock);
 
             mobileToolbar.gameObject.SetActive(true);
-            TopLeft(mobileToolbar,new Vector2(left,-toolsTop),new Vector2(width,80));
+            float toolsX=portrait?left:left+width-476,toolsTop=portrait?top+84:top;
+            TopLeft(mobileToolbar,new Vector2(toolsX,-toolsTop),new Vector2(392,76));
             browserButtons[1].rect.SetParent(mobileToolbar,false);browserButtons[2].rect.SetParent(mobileToolbar,false);
             var tools=new[]{browserButtons[1],browserButtons[2],mobileClear};
-            float quickWidth=width*.43f,toolWidth=(quickWidth-16)/3,groupsWidth=width-quickWidth-8,groupWidth=(groupsWidth-12)/4;
-            for(int i=0;i<tools.Length;i++)LayoutMobileButton(tools[i],new Vector2(4+i*(toolWidth+4),-4),new Vector2(toolWidth,72));
-            foreach(var target in tools){target.rect.gameObject.SetActive(true);target.rect.GetComponentInChildren<Text>().fontSize=portrait?17:21;}
-            mobileClear.rect.GetComponentInChildren<Text>().text=mobileReplacingGroup?"Cancel":"Cancel / clear";
+            var toolWidths=new[]{136f,112f,128f};float toolX=0;
+            for(int i=0;i<tools.Length;i++)
+            {
+                LayoutMobileButton(tools[i],new Vector2(toolX,0),new Vector2(toolWidths[i],76));toolX+=toolWidths[i]+8;
+                tools[i].rect.gameObject.SetActive(true);tools[i].rect.GetComponentInChildren<Text>().fontSize=20;
+            }
+            foreach(var target in tools.Concat(new[]{browserButtons[0]}))MobileButtonGlass(target);
+            mobileClear.rect.GetComponentInChildren<Text>().text=mobileReplacingGroup?"Cancel":"Clear selection";
+            LayoutMobileButton(mobileShift,new Vector2(left+width-88,-(top+safe.height*.46f)),new Vector2(88,88));
+            ConsoleTheme.StylePill(mobileShift.image);
+            mobileShift.normal=MobileGlass(BrowserMobileInput.ShiftActive?ConsoleTheme.Accent:ConsoleTheme.Track,.84f);
+            mobileShift.image.color=mobileShift.normal;
+            var shiftLabel=mobileShift.rect.GetComponentInChildren<Text>();shiftLabel.fontSize=22;
+            shiftLabel.color=BrowserMobileInput.ShiftActive?ConsoleTheme.HoverInk:ConsoleTheme.Ink;
+            mobileShift.rect.gameObject.SetActive(true);
+
+            const float groupWidth=84,groupHeight=72;
+            int visibleGroups=Enumerable.Range(0,groupTargets.Length).Count(i=>Session.GroupSize(i)>0||mobileReplacingGroup);
+            float groupsWidth=Mathf.Max(0,visibleGroups*(groupWidth+6)-6);
             browserGroupBar.gameObject.SetActive(true);
-            TopLeft(browserGroupBar,new Vector2(left+quickWidth,-toolsTop-4),new Vector2(groupsWidth,72));
+            float groupTop=actionTop-80;
+            TopLeft(browserGroupBar,new Vector2(left+width-groupsWidth,-groupTop),new Vector2(groupsWidth,groupHeight));
+            int groupSlot=0;
             for(int i=0;i<groupTargets.Length;i++)
             {
-                var target=groupTargets[i];LayoutMobileButton(target,new Vector2(i*(groupWidth+4),0),new Vector2(groupWidth,72));
-                TopLeft(target.rect.GetComponentInChildren<Text>().rectTransform,new Vector2(groupWidth-34,-4),new Vector2(28,28));
-                TopLeft(groupCounts[i].rectTransform,new Vector2(groupWidth-38,-38),new Vector2(32,26));groupCounts[i].fontSize=17;
-                float iconSize=Mathf.Min(44,groupWidth-44);
-                TopLeft(mobileGroupGlyphs[i].rectTransform,new Vector2(6,-(72-iconSize)*.5f),new Vector2(iconSize,iconSize));
-                TopLeft(mobileGroupPortraits[i].rectTransform,new Vector2(6,-(72-iconSize)*.5f),new Vector2(iconSize,iconSize));
+                var target=groupTargets[i];bool visible=Session.GroupSize(i)>0||mobileReplacingGroup;
+                target.rect.gameObject.SetActive(visible);if(!visible)continue;
+                LayoutMobileButton(target,new Vector2(groupSlot++*(groupWidth+6),0),new Vector2(groupWidth,groupHeight));
+                TopLeft(target.rect.GetComponentInChildren<Text>().rectTransform,new Vector2(54,-4),new Vector2(26,28));
+                TopLeft(groupCounts[i].rectTransform,new Vector2(50,-38),new Vector2(30,26));groupCounts[i].fontSize=18;
+                TopLeft(mobileGroupGlyphs[i].rectTransform,new Vector2(6,-16),new Vector2(42,42));
+                TopLeft(mobileGroupPortraits[i].rectTransform,new Vector2(6,-16),new Vector2(42,42));
             }
 
-            float mapSide=portrait?144:180,infoWidth=portrait?width-mapSide-8:Mathf.Max(244,width*.25f);
-            TopLeft(browserMapCard,new Vector2(left,-dockTop),new Vector2(mapSide,mapSide));
+            float mapTop=portrait?actionTop-mapSide-12:bottom-mapSide;
+            float infoX=portrait?left+mapSide+12:commandX;
+            float infoWidth=portrait?width-mapSide-12:commandWidth-(visibleGroups>0?groupsWidth+12:0);
+            TopLeft(browserMapCard,new Vector2(left,-mapTop),new Vector2(mapSide,mapSide));
             TopLeft(browserMinimap.rectTransform,new Vector2(6,-6),new Vector2(mapSide-12,mapSide-12));
-            TopLeft(browserInfo,new Vector2(left+mapSide+8,-dockTop),new Vector2(infoWidth,portrait?144:244));
+            TopLeft(browserInfo,new Vector2(infoX,-infoTop),new Vector2(infoWidth,64));
             browserPortrait.gameObject.SetActive(false);
-            TopLeft(browserName.rectTransform,new Vector2(12,-8),new Vector2(infoWidth-24,32));browserName.fontSize=24;
-            TopLeft(browserHealth.rectTransform,new Vector2(12,-42),new Vector2(infoWidth-24,26));browserHealth.fontSize=19;
-            TopLeft(browserDescription.rectTransform,new Vector2(12,-72),new Vector2(infoWidth-24,portrait?56:48));browserDescription.fontSize=18;
+            float textWidth=infoWidth-(mobileQueueCount>0?148:16);
+            TopLeft(browserName.rectTransform,new Vector2(8,-2),new Vector2(textWidth*.62f,28));browserName.fontSize=22;
+            TopLeft(browserHealth.rectTransform,new Vector2(8+textWidth*.62f,-2),new Vector2(textWidth*.38f,28));browserHealth.fontSize=18;
+            TopLeft(browserDescription.rectTransform,new Vector2(8,-32),new Vector2(textWidth,28));browserDescription.fontSize=18;
+            LayoutMobileButton(mobileQueueToggle,new Vector2(infoWidth-140,0),new Vector2(136,64));
+            mobileQueueToggle.rect.GetComponentInChildren<Text>().fontSize=19;MobileButtonGlass(mobileQueueToggle);
+            browserQueue.SetParent(mobileQueuePanel,false);browserQueueTitle.transform.SetParent(mobileQueuePanel,false);
+            float queueWidth=Mathf.Min(commandWidth,760);
+            TopLeft(mobileQueuePanel,new Vector2(commandX,-infoTop+120),new Vector2(queueWidth,112));
+            TopLeft(browserQueueTitle.rectTransform,new Vector2(8,-4),new Vector2(queueWidth-16,26));browserQueueTitle.fontSize=16;
+            TopLeft(browserQueue,new Vector2(8,-32),new Vector2(queueWidth-16,72));
             browserQueue.gameObject.SetActive(true);browserQueueTitle.gameObject.SetActive(true);
-            browserQueue.SetParent(portrait?browserCommandCard:browserInfo,false);
-            browserQueueTitle.transform.SetParent(portrait?browserCommandCard:browserInfo,false);
-            TopLeft(browserQueueTitle.rectTransform,new Vector2(12,-128),new Vector2(infoWidth-24,40));browserQueueTitle.fontSize=16;
-            TopLeft(browserQueue,new Vector2(12,-174),new Vector2(infoWidth-24,64));
+            mobileQueuePanel.gameObject.SetActive(mobileQueueExpanded&&mobileQueueCount>0);
 
-            float commandX=portrait?left:left+mapSide+infoWidth+24,commandTop=portrait?dockTop+152:dockTop;
-            float commandWidth=portrait?width:left+width-commandX;
-            TopLeft(browserCommandCard,new Vector2(commandX,-commandTop),new Vector2(commandWidth,portrait?328:244));
-            if(portrait)
-            {
-                TopLeft(browserQueue,new Vector2(8,-246),new Vector2(commandWidth-16,72));
-                TopLeft(browserQueueTitle.rectTransform,new Vector2(8,-222),new Vector2(commandWidth-16,22));
-            }
-            TopLeft(browserCommandTitle.rectTransform,new Vector2(12,-6),new Vector2(commandWidth-24,28));browserCommandTitle.fontSize=18;
-            mobileActionPosition=new Vector2(commandX+8,-commandTop-38);
-            mobileActionSize=new Vector2(commandWidth-16,portrait?248:198);
+            TopLeft(browserCommandCard,new Vector2(commandX,-actionTop),new Vector2(commandWidth,actionHeight));
+            browserCommandTitle.gameObject.SetActive(false);
+            mobileActionPosition=new Vector2(commandX,-actionTop);
+            mobileActionSize=new Vector2(commandWidth,actionHeight);
             TopLeft(actions,mobileActionPosition,mobileActionSize);
-            TopLeft(statusBanner,new Vector2(left+8,-top-88),new Vector2(width-16,60));
+            float messageWidth=Mathf.Min(820,width-16);
+            TopLeft(statusBanner,new Vector2(left+(width-messageWidth)*.5f,-top-(portrait?168:84)),new Vector2(messageWidth,48));
             status.fontSize=21;status.alignment=TextAnchor.MiddleCenter;
             TopLeft(status.rectTransform,Vector2.zero,statusBanner.sizeDelta);
-            float viewportBottom=(size.y-toolsTop+8)/size.y,viewportTop=(size.y-top-88)/size.y;
-            Quest.Navigation?.SetViewport(new Rect(safe.x/size.x,viewportBottom,safe.width/size.x,Mathf.Max(.15f,viewportTop-viewportBottom)));
+            // Controls respect the notch, but the battlefield fills the display.
+            Quest.Navigation?.SetViewport(new Rect(0,0,1,1));
             if(browserScreenSize!=size){browserScreenSize=size;browserQueueSignature=null;}
+        }
+
+        private static Color MobileGlass(Color color,float opacity=.68f)
+        {color.a=opacity;return color;}
+
+        // The modifier is captured separately from the normal UI pointer. It
+        // must still respect help cards drawn above the battlefield controls.
+        public bool BrowserShiftAvailable
+        {
+            get
+            {
+                if(SectionHelpOpen||mobileShift==null||!mobileShift.rect.gameObject.activeInHierarchy)return false;
+                var corners=new Vector3[4];
+                Rect Bounds(RectTransform rect)
+                {
+                    rect.GetWorldCorners(corners);
+                    var lower=RectTransformUtility.WorldToScreenPoint(null,corners[0]);
+                    var upper=RectTransformUtility.WorldToScreenPoint(null,corners[2]);
+                    return Rect.MinMaxRect(lower.x,lower.y,upper.x,upper.y);
+                }
+                var shiftBounds=Bounds(mobileShift.rect);
+                foreach(var overlay in new[]{tutorialCard,actionHelp})
+                    if(overlay!=null&&overlay.gameObject.activeInHierarchy&&shiftBounds.Overlaps(Bounds(overlay)))return false;
+                return true;
+            }
+        }
+
+        private static void MobileButtonGlass(Target target)
+        {target.normal=MobileGlass(target.normal);target.image.color=target.normal;}
+
+        private static void MobileTextShadow(Text text)
+        {
+            var shadow=text.GetComponent<Shadow>();if(shadow==null)shadow=text.gameObject.AddComponent<Shadow>();
+            shadow.effectColor=new Color(0,0,0,.8f);shadow.effectDistance=new Vector2(1,-1);
+        }
+
+        private void RefreshMobileQueuePresentation(int count,bool production)
+        {
+            if(!BrowserMobileInput.IsTouchMode)return;
+            mobileQueueCount=count;
+            if(count==0)mobileQueueExpanded=false;
+            mobileQueueToggle.rect.gameObject.SetActive(count>0);
+            mobileQueueToggle.rect.GetComponentInChildren<Text>().text=Localization.Text(production?"Production":"Orders")+" · "+count+(mobileQueueExpanded?"  ▾":"  ▴");
+            mobileQueuePanel.gameObject.SetActive(mobileQueueExpanded&&count>0);
         }
 
         private static void LayoutMobileButton(Target target,Vector2 position,Vector2 size)
@@ -146,22 +233,22 @@ namespace Frontier.Runtime
 
         private void BuildMobileActions()
         {
-            targets.AddRange(browserButtons);targets.Add(mobileClear);targets.AddRange(groupTargets);
+            targets.AddRange(browserButtons);targets.Add(mobileClear);targets.Add(mobileQueueToggle);targets.Add(mobileShift);targets.AddRange(groupTargets);
             var available=SelectionActions.For(Session);
             ValidateMobileGroupReplacement();
             bool canGroup=Session.CanSaveMobileGroup;
             string context=string.Join(",",Session.Selection.OrderBy(id=>id))+":"+string.Join(",",available.Items.Select(a=>a.Id))+":"+canGroup+":"+mobileReplacingGroup;
-            if(context!=browserActionContext){browserActionContext=context;browserActionPage=0;}
+            if(context!=browserActionContext){browserActionContext=context;browserActionPage=0;mobileQueueExpanded=false;}
             const int pageSize=5;
             int itemCount=available.Items.Count+(canGroup?1:0);
             int pages=Mathf.Max(1,(itemCount+pageSize-1)/pageSize);
             browserActionPage=Mathf.Clamp(browserActionPage,0,pages-1);
             browserCommandTitle.text=available.Heading;
-            float width=(mobileActionSize.x-16)/3;
+            float width=(mobileActionSize.x-(mobileActionColumns-1)*8)/mobileActionColumns;
             for(int slot=0;slot<pageSize;slot++)
             {
                 int index=browserActionPage*pageSize+slot;if(index>=itemCount)break;
-                var position=new Vector2(slot%3*(width+8),-slot/3*(MobileActionHeight+8));
+                var position=new Vector2(slot%mobileActionColumns*(width+8),-slot/mobileActionColumns*(MobileActionHeight+8));
                 if(canGroup&&index==0)
                 {
                     var group=BrowserButton(actions,mobileReplacingGroup?"Cancel replacement":"Group selection",position,new Vector2(width,MobileActionHeight),()=>
@@ -169,16 +256,16 @@ namespace Frontier.Runtime
                         if(mobileReplacingGroup)CancelMobileGroupReplacement();else SaveMobileGroup();
                         Rebuild();
                     });
-                    group.actionId="mobile-group";group.normal=mobileReplacingGroup?ConsoleTheme.Danger:ConsoleTheme.Primary;group.image.color=group.normal;
+                    group.actionId="mobile-group";group.normal=MobileGlass(mobileReplacingGroup?ConsoleTheme.Danger:ConsoleTheme.Primary);group.image.color=group.normal;
                     group.rect.GetComponentInChildren<Text>().fontSize=22;targets.Add(group);continue;
                 }
                 if(canGroup)index--;
                 var action=available.Items[index];
                 var target=HudButton(actions,action.Label,MatchActionDetail(action,false),position,
-                    new Vector2(width,MobileActionHeight),()=>{CancelMobileGroupReplacement();action.Execute();},null,out var detail);
+                    new Vector2(width,MobileActionHeight),()=>{mobileQueueExpanded=false;CancelMobileGroupReplacement();action.Execute();},null,out var detail);
                 target.actionId=action.Id;target.help=action;
                 bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition||action.Id=="attack-move"&&Session.AttackMoveMode||action.Id=="set-rally-point"&&Session.RallyPointMode;
-                target.normal=active?ConsoleTheme.Primary:Color.Lerp(button,ActionTint(action.Category).linear,.16f);target.image.color=target.normal;
+                target.normal=MobileGlass(active?ConsoleTheme.Primary:Color.Lerp(button,ActionTint(action.Category).linear,.16f));target.image.color=target.normal;
                 var title=target.rect.GetComponentInChildren<Text>();title.fontSize=20;title.fontStyle=FontStyle.Bold;
                 TopLeft(title.rectTransform,new Vector2(8,-6),new Vector2(width-16,44));
                 title.resizeTextForBestFit=true;title.resizeTextMinSize=17;title.resizeTextMaxSize=20;
@@ -188,8 +275,8 @@ namespace Frontier.Runtime
             if(pages>1)
             {
                 var next=BrowserButton(actions,(browserActionPage+1)+" / "+pages+"  ›",
-                    new Vector2(2*(width+8),-MobileActionHeight-8),new Vector2(width,MobileActionHeight),()=>{browserActionPage=(browserActionPage+1)%pages;Rebuild();});
-                next.rect.GetComponentInChildren<Text>().fontSize=22;
+                    new Vector2(5%mobileActionColumns*(width+8),-5/mobileActionColumns*(MobileActionHeight+8)),new Vector2(width,MobileActionHeight),()=>{browserActionPage=(browserActionPage+1)%pages;Rebuild();});
+                next.rect.GetComponentInChildren<Text>().fontSize=22;MobileButtonGlass(next);
                 targets.Add(next);
             }
             browserQueueSignature=null;RefreshBrowserQueues();UpdateBrowserHud();
@@ -248,7 +335,7 @@ namespace Frontier.Runtime
                 mobileGroupGlyphs[index].gameObject.SetActive(!hasModel);mobileGroupPortraits[index].gameObject.SetActive(hasModel);
                 if(hasModel)mobileGroupPortraits[index].SetType(Session.Catalog[definition]);
                 bool confirmed=groupConfirmationMatch==Session.SessionIdentity&&Time.unscaledTime<groupConfirmedUntil[index];
-                target.normal=mobileReplacingGroup?ConsoleTheme.Danger:Session.MobileGroupMatchesSelection(index)?ConsoleTheme.Primary:button;
+                target.normal=MobileGlass(mobileReplacingGroup?ConsoleTheme.Danger:Session.MobileGroupMatchesSelection(index)?ConsoleTheme.Primary:button);
                 ApplyTargetHover(target,hovered==target,confirmed?QueueActiveTint:target.normal);
                 groupCounts[index].text=count==0?"–":count.ToString();
             }
@@ -257,7 +344,11 @@ namespace Frontier.Runtime
         private void RestoreDesktopHud()
         {
             if(!mobileLayoutApplied)return;mobileLayoutApplied=false;
+            mobileQueuePanel.gameObject.SetActive(false);mobileQueueToggle.rect.gameObject.SetActive(false);
+            mobileShift.rect.gameObject.SetActive(false);
             mobileToolbar.gameObject.SetActive(false);browserGroupBar.gameObject.SetActive(true);
+            browserInfo.gameObject.SetActive(true);browserCommandTitle.gameObject.SetActive(true);browserMinimap.color=Color.white;
+            foreach(var surface in new[]{browserBar,browserMapCard,browserInfo,browserCommandCard})surface.GetComponent<Image>().color=ConsoleTheme.Background;
             browserClock.gameObject.SetActive(true);browserQueue.gameObject.SetActive(true);browserQueueTitle.gameObject.SetActive(true);
             browserQueue.SetParent(browserInfo,false);
             browserQueueTitle.transform.SetParent(browserInfo,false);
@@ -267,6 +358,7 @@ namespace Frontier.Runtime
             for(int i=0;i<browserButtons.Count;i++)
             {
                 browserButtons[i].rect.gameObject.SetActive(true);
+                browserButtons[i].normal=button;browserButtons[i].image.color=button;
                 LayoutMobileButton(browserButtons[i],positions[i],new Vector2(widths[i],40));
                 browserButtons[i].rect.GetComponentInChildren<Text>().fontSize=17;
             }
@@ -281,6 +373,7 @@ namespace Frontier.Runtime
             {
                 mobileGroupGlyphs[i].gameObject.SetActive(false);mobileGroupPortraits[i].gameObject.SetActive(false);
                 groupTargets[i].normal=button;
+                groupTargets[i].rect.gameObject.SetActive(true);
                 TopLeft(groupTargets[i].rect,new Vector2(i*146,0),new Vector2(138,38));
                 TopLeft(groupTargets[i].rect.GetComponentInChildren<Text>().rectTransform,new Vector2(6,0),new Vector2(24,38));
                 groupTargets[i].rect.GetComponentInChildren<Text>().fontSize=17;
@@ -389,15 +482,15 @@ namespace Frontier.Runtime
                     card("Fog density: "+Mathf.RoundToInt(Board.FogDensity*100)+"%","Visual mist over unseen terrain. Unseen enemies stay hidden.",()=>{Board.SetFogDensity(Board.FogDensity>=1?0:Board.FogDensity+.25f);Rebuild();});
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guides:
-                    card("Control guide","Circle units. Use two fingers to move the camera.",()=>OpenSubmenu(MenuPage.Guide));
+                    card("Control guide","Drag to move the camera. Use Shift to circle units.",()=>OpenSubmenu(MenuPage.Guide));
                     card("Units","Costs, combat and abilities.",()=>OpenSubmenu(MenuPage.UnitsGuide));
                     card("Structures","Construction, requirements and production.",()=>OpenSubmenu(MenuPage.StructuresGuide));
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guide:
-                    card("Select","Tap an ally. Double-tap selects its type.",()=>{});
-                    card("Order","Tap a destination. Hold and release on an ally to repair or assist.",()=>{});
-                    card("Camera","Drag with two fingers to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
-                    card("Circle units","Draw around your units with one finger, then release to select them.",()=>{});
+                    card("Select","Tap an ally when nothing is selected. Clear selection to choose another unit.",()=>{});
+                    card("Order","With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.",()=>{});
+                    card("Camera","Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
+                    card("Circle units","Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.",()=>{});
                     card("Groups / actions","Tap Group selection to save. Tap its persistent icon to select the group.",()=>{});
                     card("Back","Return to the previous menu.",Back);break;
             }
@@ -409,9 +502,9 @@ namespace Frontier.Runtime
             switch(key)
             {
                 case "Click Continue. Let's play!":return "Tap Continue. Let's play!";
-                case "Point at this worker and press {0}.":case "First, select this worker with {0}.":return "Tap this worker to select it.";
-                case "Select your headquarters with {0}.":case "First, select your headquarters with {0}.":return "Tap your headquarters to select it.";
-                case "Select this military building with {0}.":return "Tap this military building to select it.";
+                case "Point at this worker and press {0}.":case "First, select this worker with {0}.":return "Clear selection, then tap this worker.";
+                case "Select your headquarters with {0}.":case "First, select your headquarters with {0}.":return "Clear selection, then tap your headquarters.";
+                case "Select this military building with {0}.":return "Clear selection, then tap this military building.";
                 case "Point at the violet marker and press {0}.":case "Point at the violet outline and press {0}.":case "Aim at the ground marker and press {0}.":return "Tap the violet marker on the battlefield.";
                 case "Aim at the enemy marker and press {0}.":return "Tap the enemy marker on the battlefield.";
                 case "Point at this gas deposit and press {0}.":return "Tap this gas deposit to send your worker.";
@@ -422,7 +515,7 @@ namespace Frontier.Runtime
                 case "Click Attack Move in the console.":return "Tap Attack Move in the actions.";
                 case "Press {0}, or choose Pause in the console.":return "Tap the menu button at the top of the screen.";
                 case "Choose Resume match, or press {0}.":return "Tap Resume match.";
-                case "Hold {0} and drag a box around your three soldiers.":return "Draw a circle around your three soldiers, then release.";
+                case "Hold {0} and drag a box around your three soldiers.":return "Activate Shift, draw around your three soldiers, then release. Turn Shift off when done.";
                 case "Hold {0} and press {1} to save group 1.":
                     tutorialCueAction=mobileReplacingGroup?"group:0":"mobile-group";
                     return mobileReplacingGroup?"Tap group 1 to replace it with your selected soldiers.":"Tap Group selection to save your squad as group 1.";

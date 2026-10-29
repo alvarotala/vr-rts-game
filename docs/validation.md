@@ -1,5 +1,43 @@
 # Registro de validación
 
+## HUD móvil, Shift táctil y orientación vertical — 29 de octubre de 2026
+
+- El campo conserva el viewport completo. El HUD móvil usa superficies
+  translúcidas, acciones en una fila horizontal o dos verticales, órdenes
+  desplegables e iconos sólo para los grupos guardados. Los huecos y textos
+  pasivos dejan pasar los gestos al mapa.
+- Un dedo desplaza la cámara; Shift circular admite toque persistente o un
+  dedo mantenido y permite dibujar la selección con el otro. Con unidades
+  seleccionadas, toque contextual y Shift + toque para avanzar atacando.
+  El modificador se reinicia al perder foco; la rotación cancela gestos en curso.
+- `tests/MobileInputChecks`: **91 comprobaciones** del clasificador, separación
+  del contacto Shift, liberación del dedo de mapa, zoom y decisión de órdenes.
+  `tests/MobileGroupChecks`: **120 comprobaciones** de selección y grupos.
+- Generadores: **12 pruebas móviles y 8 web**. Plantilla web: **6 pruebas**,
+  incluyendo rotación sin reiniciar Unity ni tapar el juego. Entrega iOS:
+  **15 pruebas**; el exportador exige portrait y ambos landscapes.
+- `Frontier.Mobile.Editor.MobileHudPreview.Run`: Unity **6000.3.26f1**, Metal,
+  **937 comprobaciones / 8 capturas** en 2340×1080 y 1080×2340. Usa la sesión,
+  tablero, minimapa y geometría real del HUD. Verifica botones dentro del área
+  segura, ausencia de superposiciones, páginas de acciones, producción, grupos,
+  Shift junto al tutorial y conservación de estado/escala al rotar la misma sesión.
+  Con selección mixta, los controles bloquean aproximadamente **21 %** del área
+  segura; el resto acepta gestos. Evidencia: `TestResults/MobileHudCompact/`
+  y `TestResults/unity-mobile-hud-preview.log`.
+- Entrega física: Unity exportó Release/IL2CPP y Xcode terminó con
+  **BUILD SUCCEEDED**. Firma de StartNode verificada; **Little Legion 0.1.0 (2)**
+  instalada y abierta por USB en el **iPhone 13 mini**. `devicectl` confirmó
+  build 2 y proceso activo **88 segundos después de abrirlo**. El `Info.plist`
+  de la app firmada declara vertical y ambos horizontales.
+  Evidencia: `TestResults/ios-device-delivery-build-2.log`,
+  `TestResults/ios-device-app-build-2.json`, `TestResults/ios-device-process-build-2.json`.
+  Artefactos: `Builds/Mobile/iOS-delivery/20261029T053627Z-device-2-82d71bd655bc/`.
+
+Las capturas usan área segura simulada y renderizado de Mac; no son capturas
+del iPhone ni una medición de fluidez o comodidad táctil en hardware. La
+instalación comprueba el arranque; la partida completa y la sensación de los
+gestos quedan para la prueba del usuario en el teléfono. No se subió a TestFlight.
+
 ## Instalación y apertura en iPhone 13 mini — 29 de octubre de 2026
 
 - Compilación real de las fuentes de `8c63daa`: Unity **6000.3.26f1** ARM64

@@ -4,13 +4,18 @@ Los controles indicados a continuación son los predeterminados y se pueden pers
 
 ## Empezar una partida
 
-En la app móvil y en la web táctil se usa un tablero de pantalla, sin colocación
-en una habitación. Tocar **Nueva partida**, elegir facción/mapa/dificultad y
-comenzar. Un toque selecciona aliados; con una selección activa, tocar terreno,
-enemigos o recursos envía una orden. Mantener 0,55 segundos y soltar envía una
-orden explícita sobre aliados para reparar o reanudar una construcción. Rodear
-aliados con un dedo dibuja un lazo y los selecciona al soltar. Dos dedos mueven
-la cámara y pellizcar ajusta el zoom. Las acciones aparecen según la selección;
+En la app móvil y en la web táctil se usa un tablero de pantalla, en vertical u
+horizontal y sin colocación en una habitación. Tocar **Nueva partida**, elegir
+facción/mapa/dificultad y comenzar. Arrastrar con un dedo mueve la cámara. Sin
+unidades seleccionadas, tocar un aliado lo selecciona; con unidades seleccionadas,
+tocar el mapa envía una orden, también sobre aliados para reparar o reanudar
+con trabajadores. **Cancelar / limpiar** quita la selección. Mantener 0,55
+segundos y soltar conserva la orden contextual explícita.
+**Shift** se activa/desactiva con un toque o se mantiene con otro dedo:
+**Shift + arrastrar** rodea aliados con un lazo y los selecciona al soltar;
+**Shift + toque** con unidades seleccionadas ordena **Avanzar atacando**.
+El modificador se toma al empezar el gesto. Dos dedos también mueven la cámara
+y pellizcar ajusta el zoom. Las acciones aparecen según la selección;
 **Agrupar** la guarda en uno de cuatro iconos visibles del HUD, y tocar un icono
 recupera ese grupo. Si los espacios están llenos se elige cuál reemplazar.
 Los grupos conservan sólo sus integrantes vivos y se reinician con cada partida.

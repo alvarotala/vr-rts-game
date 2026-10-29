@@ -119,15 +119,28 @@ namespace Frontier.Runtime
         private void LateUpdate()
         {
             if(Session?.Map==null||Board?.Content==null)return;
-            if(knownMap!=Session.Map||resetRequested)
+            bool resetView=knownMap!=Session.Map||resetRequested;
+            if(resetView)
             {
                 knownMap=Session.Map;resetRequested=false;maximumDistance=FitDistance();
-                if(Session.Running){Distance=smoothDistance=34;CenterOnBase();}
+                if(Session.Running){Distance=smoothDistance=34/(BrowserMobileInput.IsTouchMode?Mathf.Clamp(Camera.aspect,.1f,1):1);CenterOnBase();}
                 else Fit();
             }
             var viewportSize=Camera.pixelRect.size;
             if(viewportSize!=previousViewportSize)
-            {previousViewportSize=viewportSize;maximumDistance=FitDistance();if(fitted)Distance=smoothDistance=maximumDistance;}
+            {
+                maximumDistance=FitDistance();
+                if(fitted)Distance=smoothDistance=maximumDistance;
+                else if(BrowserMobileInput.IsTouchMode&&!resetView&&previousViewportSize.x>0&&previousViewportSize.y>0)
+                {
+                    // Preserve the view along the shorter screen axis when a
+                    // phone rotates. Initial/reset distance already uses this scale.
+                    float scale=Mathf.Clamp(previousViewportSize.x/previousViewportSize.y,.1f,1)/Mathf.Clamp(Camera.aspect,.1f,1);
+                    Distance=Mathf.Clamp(Distance*scale,MinimumDistance,maximumDistance);
+                    smoothDistance=Mathf.Clamp(smoothDistance*scale,MinimumDistance,maximumDistance);
+                }
+                previousViewportSize=viewportSize;
+            }
             ReadPointerNavigation();
             smoothDistance=Mathf.Lerp(smoothDistance,Distance,1-Mathf.Exp(-12*Mathf.Min(Time.unscaledDeltaTime,.1f)));
             Apply();

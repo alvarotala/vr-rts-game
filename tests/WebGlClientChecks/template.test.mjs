@@ -55,7 +55,7 @@ function shell({ touch = true, language = 'es', fullscreen = false, rejectFullsc
   return {
     elements, scripts, window, document, unityCalls, context,
     click: id => elements.get(id).onclick(),
-    resize(width, height) { window.innerWidth = width; window.innerHeight = height; windowListeners.resize(); },
+    resize(width, height) { window.innerWidth = width; window.innerHeight = height; windowListeners.resize?.(); },
     get reloads() { return reloads; },
     async ready() { this.click('start'); scripts[0].onload(); await Promise.resolve(); await Promise.resolve(); },
   };
@@ -80,19 +80,16 @@ test('touch player loads once on request and waits for a gesture after Unity ini
   assert.equal(app.elements.get('fullscreen').hidden, true);
 });
 
-test('portrait advice is dismissible and rotation recovers without reloading Unity', async () => {
+test('portrait and landscape remain playable without an orientation cover or another Unity instance', async () => {
   const app = shell(); await app.ready(); app.click('start');
-  assert.equal(app.elements.get('rotate').hidden, false);
-  app.click('portrait');
-  assert.equal(app.elements.get('rotate').hidden, true);
-  app.resize(390, 800);
-  assert.equal(app.elements.get('rotate').hidden, true);
-  app.resize(844, 390);
-  assert.equal(app.elements.get('rotate').hidden, true);
-  app.resize(390, 844);
-  assert.equal(app.elements.get('rotate').hidden, false);
-  app.resize(844, 390);
-  assert.equal(app.elements.get('rotate').hidden, true);
+  assert.equal(app.elements.has('rotate'), false);
+  assert.equal(app.elements.has('portrait'), false);
+  for (const [width, height] of [[390, 800], [844, 390], [390, 844], [844, 390]]) {
+    app.resize(width, height);
+    assert.equal(app.elements.get('loading').hidden, true);
+    assert.equal(app.context.phase, 'playing');
+    assert.equal(app.elements.get('game').focused, true);
+  }
   assert.equal(app.unityCalls.length, 1);
 });
 
@@ -102,7 +99,7 @@ test('desktop keeps its resolution cap and never shows touch orientation advice'
   await app.ready();
   assert.equal(app.document.documentElement.lang, 'en');
   assert.equal(app.unityCalls[0].config.devicePixelRatio, 2);
-  assert.equal(app.elements.get('rotate').hidden, true);
+  assert.equal(app.elements.has('rotate'), false);
   assert.equal(app.elements.get('fullscreen').hidden, false);
   app.click('fullscreen');
   assert.equal(app.elements.get('fullscreen').textContent, 'Exit full screen');
@@ -110,7 +107,7 @@ test('desktop keeps its resolution cap and never shows touch orientation advice'
   assert.equal(app.document.fullscreenElement, null);
   app.click('start');
   assert.equal(app.elements.get('fullscreen').hidden, true);
-  assert.equal(app.elements.get('rotate').hidden, true);
+  assert.equal(app.elements.has('rotate'), false);
 });
 
 test('fullscreen rejection leaves the player usable', async () => {

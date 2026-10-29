@@ -151,6 +151,7 @@ namespace Frontier.Runtime
             if(Page==MenuPage.Replay)return BrowserReplayContainsPointer(ray);
             if(Page!=MenuPage.Actions)return Hit(root,ray,out _);
             if(BrowserMobileInput.HasPointer&&!Quest.Camera.pixelRect.Contains(BrowserMobileInput.PointerPosition))return true;
+            if(BrowserMobileInput.IsTouchMode)return BrowserMobileInput.HasPointer&&BrowserMobileHudContainsScreenPoint(BrowserMobileInput.PointerPosition);
             return Hit(browserBar,ray,out _)||Hit(browserMapCard,ray,out _)||Hit(browserInfo,ray,out _)
                 ||Hit(browserCommandCard,ray,out _)||Hit(browserGroupBar,ray,out _)||Hit(mobileToolbar,ray,out _)||Hit(actionHelp,ray,out _);
         }
@@ -161,7 +162,19 @@ namespace Frontier.Runtime
             if(SectionHelpOpen||Inside(tutorialCard))return true;
             if(Page==MenuPage.Replay)return Inside(browserReplayDock)||Inside(browserReplayHeader)||Inside(browserReplayStatistics);
             if(Page!=MenuPage.Actions)return Inside(root);
+            if(BrowserMobileInput.IsTouchMode)return BrowserMobileHudContainsScreenPoint(position);
             return Inside(browserBar)||Inside(browserMapCard)||Inside(browserInfo)||Inside(browserCommandCard)||Inside(browserGroupBar)||Inside(mobileToolbar)||Inside(actionHelp);
+        }
+
+        private bool BrowserMobileHudContainsScreenPoint(Vector2 position)
+        {
+            bool Inside(RectTransform rect)=>rect!=null&&rect.gameObject.activeInHierarchy&&RectTransformUtility.RectangleContainsScreenPoint(rect,position,null);
+            if(Inside(tutorialCard)||Inside(actionHelp))return true;
+            if(browserMinimap!=null&&browserMinimap.isActiveAndEnabled&&Inside(browserMinimap.rectTransform))return true;
+            // Floating controls own their bounds; transparent layout containers
+            // and passive labels leave the map available to both fingers and lasso.
+            foreach(var target in targets)if(Inside(target.rect))return true;
+            return false;
         }
 
         private void BuildBrowserActions()
@@ -206,9 +219,10 @@ namespace Frontier.Runtime
             browserMinerals.text=view.minerals.ToString("N0");browserGas.text=view.catalyst.ToString("N0");browserSupply.text=view.supply+" / "+view.capacity;
             browserSupply.color=view.supply>=view.capacity?WarningTint:ConsoleTheme.Ink;
             browserClock.text=ReportTime(view.tick);
-            ((LocalizedText)browserIdle).SetKey("Idle workers: {0}",Session.IdleWorkers.Count());
+            ((LocalizedText)browserIdle).SetKey(BrowserMobileInput.IsTouchMode?"Idle: {0}":"Idle workers: {0}",Session.IdleWorkers.Count());
             ((LocalizedText)browserArmy).SetKey("Army: {0}",Session.Army.Count());
             var selected=view.entities.Where(e=>Session.Selection.Contains(e.id)).ToArray();
+            browserInfo.gameObject.SetActive(!BrowserMobileInput.IsTouchMode||selected.Length>0||Session.SelectedResource!=0);
             browserPortrait.gameObject.SetActive(selected.Length>0&&!BrowserMobileInput.IsTouchMode);browserHealth.text="";
             if(selected.Length==1)
             {
@@ -234,7 +248,8 @@ namespace Frontier.Runtime
             if(browserMessageVersion!=Session.MessageVersion){browserMessageVersion=Session.MessageVersion;browserMessageUntil=Time.unscaledTime+8;}
             status.text=Time.unscaledTime<browserMessageUntil?Session.Message:"";status.color=Session.MessageIsError?ErrorTint:ConsoleTheme.Ink;
             if(BrowserMobileInput.IsTouchMode&&mobileReplacingGroup){status.text=MobileGroupReplacementPrompt;status.color=ConsoleTheme.Ink;}
-            statusBanner.GetComponent<Image>().color=string.IsNullOrEmpty(status.text)?Color.clear:ConsoleTheme.Background;
+            statusBanner.GetComponent<Image>().color=string.IsNullOrEmpty(status.text)?Color.clear:
+                BrowserMobileInput.IsTouchMode?MobileGlass(ConsoleTheme.Background,.75f):ConsoleTheme.Background;
             var available=SelectionActions.For(Session);
             foreach(var target in targets.Where(t=>t.actionId!=null))
             {
@@ -248,12 +263,15 @@ namespace Frontier.Runtime
         {
             if(Page!=MenuPage.Actions||browserQueue==null)return;
             var producers=SelectedMobileUnits().Length>0?Array.Empty<VisibleEntity>():SelectedProducers();
+            var orders=DisplayedUnitOrders(out var representative);
+            RefreshMobileQueuePresentation(producers.Length>0?producers.Sum(p=>p.queue.Length):orders.Length,producers.Length>0);
             string key=browserQueue.rect.width+":"+OrderPlanSignature()+":"+string.Join(";",producers.Select(p=>p.id+":"+string.Join(",",p.queue.Select(q=>q.id))));
             if(key==browserQueueSignature){UpdateBrowserProduction(producers);return;}browserQueueSignature=key;
             foreach(var target in browserQueueTargets){targets.Remove(target);if(pressed==target)pressed=null;if(hovered==target)hovered=null;}
             browserQueueTargets.Clear();
             browserProductionItems.Clear();
-            foreach(Transform child in browserQueue){child.gameObject.SetActive(false);Destroy(child.gameObject);}
+            foreach(Transform child in browserQueue.Cast<Transform>().ToArray())
+            {child.gameObject.SetActive(false);if(Application.isPlaying)Destroy(child.gameObject);else DestroyImmediate(child.gameObject);}
             var match=Session.SessionIdentity;var ids=Session.Selection.OrderBy(id=>id).ToArray();
             if(producers.Length>0)
             {
@@ -272,6 +290,7 @@ namespace Frontier.Runtime
                             Session.Announce(Session.IsOnline?"Cancellation requested.":QueueLabel(item.order.definition)+" cancelled. Resources refunded.");
                         nextText=0;
                     });
+                    if(mobile)MobileButtonGlass(target);
                     var name=target.rect.GetComponentInChildren<Text>();name.fontSize=mobile?17:13;
                     TopLeft(name.rectTransform,new Vector2(5,-2),new Vector2(width-10,mobile?42:28));
                     var state=Label(target.rect,"",new Vector2(5,mobile?-46:-31),new Vector2(width-10,17),mobile?14:11,ConsoleTheme.Muted,TextAnchor.MiddleCenter);
@@ -284,8 +303,7 @@ namespace Frontier.Runtime
             }
             else
             {
-                var orders=DisplayedUnitOrders(out var representative);
-                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Circle: select · Two fingers: camera / zoom"):
+                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Drag: camera · Shift + drag: select"):
                     orders.Length>0?"QUEUED ORDERS · Click an item to remove":"Left-click: select · Right-click: order · Shift: queue";
                 var signatureAtBind=OrderPlanSignature();
                 int count=orders.Length+(orders.Length>1?1:0);
@@ -314,11 +332,13 @@ namespace Frontier.Runtime
                     });
                     target.rect.GetComponentInChildren<Text>().fontSize=BrowserMobileInput.IsTouchMode?17:12;browserQueueTargets.Add(target);targets.Add(target);
                     target.normal=clear?ConsoleTheme.Danger:i==0?QueueActiveTint:button;target.image.color=target.normal;
+                    if(mobile)MobileButtonGlass(target);
                 }
                 if(mobile&&pages>1)
                 {
                     var next=BrowserButton(browserQueue,(mobileOrdersPage+1)+" / "+pages+"  ›",new Vector2(visible*(width+4),0),new Vector2(width,58),()=>
                     {mobileOrdersPage=(mobileOrdersPage+1)%pages;browserQueueSignature=null;RefreshBrowserQueues();});
+                    MobileButtonGlass(next);
                     browserQueueTargets.Add(next);targets.Add(next);
                 }
             }
