@@ -1,5 +1,28 @@
 # Registro de validación
 
+## Selección con lazo y grupos móviles — 28 de octubre de 2026
+
+Un dedo dibuja un contorno que se cierra al soltar y selecciona aliados vivos
+visibles por su centro renderizado. La cámara se desplaza con dos dedos. Las
+acciones incluyen **Agrupar**; cuatro iconos persistentes muestran modelo,
+número y cantidad, y recuperan la selección al tocarlos. Cuando están llenos,
+el reemplazo requiere elegir un icono. El tutorial enseña el mismo recorrido.
+
+- `tests/MobileInputChecks`: **63 comprobaciones** aprobadas del clasificador
+  de gestos y geometría de producción. Incluyen contornos cóncavos, bordes,
+  trazos inválidos, límite de memoria, UI, foco, pinch y sustitución de dedos.
+- `tests/MobileGroupChecks`: **120 comprobaciones** aprobadas de las APIs
+  reales de selección/grupos y del núcleo del tutorial. Incluyen filtros de
+  propiedad/visibilidad/salud, selección atómica, grupos repetidos, espacios
+  llenos, reemplazo explícito, bajas, recuperación y ambas facciones. El host
+  sustituye únicamente el estado y efectos Unity; no verifica render ni HUD.
+- Generadores: **6 comprobaciones móviles y 8 web** aprobadas. Proyectos
+  Android, iOS y WebGL preparados nuevamente con estas fuentes.
+
+Sin Editor Unity instalado en esta Mac: no se compiló un player ni se probó
+el HUD, el trazo o su comodidad en un dispositivo real. La validación visual,
+IL2CPP y una partida móvil completa siguen pendientes. No se publicó.
+
 ## App móvil Unity y controles web táctiles — 28 de octubre de 2026
 
 Tras actualizar `feature/desktop-web-crossplay` hasta `67be63e`, se agregó

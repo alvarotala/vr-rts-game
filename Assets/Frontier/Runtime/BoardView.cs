@@ -536,6 +536,19 @@ namespace Frontier.Runtime
             var bounds=body[0].bounds;for(int i=1;i<body.Length;i++)bounds.Encapsulate(body[i].bounds);
             top=new Vector3(bounds.center.x,bounds.max.y,bounds.center.z);return true;
         }
+        public bool TryEntityVisualCenter(int id,out Vector3 center)
+        {
+            center=default;
+            if(!entities.TryGetValue(id,out var visual)||!visual.gameObject.activeInHierarchy
+                ||!observedEntities.TryGetValue(id,out var entity)||entity.remembered)return false;
+            var body=parts[visual].body;bool found=false;var bounds=new Bounds();
+            foreach(var renderer in body)
+            {
+                if(renderer==null||!renderer.enabled||!renderer.gameObject.activeInHierarchy)continue;
+                if(found)bounds.Encapsulate(renderer.bounds);else{bounds=renderer.bounds;found=true;}
+            }
+            if(found)center=bounds.center;return found;
+        }
         public bool TryCombatCenter(int id,out Vector3 center)
         {
             center=default;

@@ -94,11 +94,18 @@ temperatura, batería y fluidez aún deben medirse. El build conserva los
 - Toque en unidad o edificio propio: seleccionar. Doble toque: seleccionar del mismo tipo.
 - Con selección activa, toque en terreno, enemigo o recurso: orden contextual.
 - Mantener y soltar sobre un objetivo: orden contextual explícita; permite reparar o reanudar una construcción propia con trabajadores seleccionados.
-- Arrastre de un dedo: mover cámara; dos dedos: mover y pellizcar para zoom.
-- **Seleccionar área** permite arrastrar un rectángulo para seleccionar varias unidades.
+- Durante la partida, rodear unidades con un dedo dibuja un lazo visible; al soltar se cierra y selecciona los aliados cuyos centros quedan dentro. No hace falta activar un modo ni dibujar un círculo perfecto. Un trazo demasiado pequeño o una línea no cambia la selección.
+- Dos dedos desplazan la cámara; pellizcar acerca o aleja. En preparación y replay también se puede mover la cámara con un dedo.
 - Acciones del HUD: construir, producir, atacar y habilidades del catálogo compartido.
 - Los destinos de construcción/ataque/habilidad se confirman con un toque; cancelar está en el HUD.
 - El minimapa mueve la cámara. Los menús y acciones se activan al soltar el dedo.
+
+Después de seleccionar, **Agrupar** guarda las unidades en el primer espacio
+libre. Su icono, número y cantidad quedan visibles en el HUD; un toque vuelve
+a seleccionar al grupo. Los cuatro grupos son los mismos del juego compartido,
+descuentan las bajas y duran hasta terminar la partida. Guardar de nuevo la
+misma selección reutiliza su icono. Si están llenos, **Agrupar** permite elegir
+explícitamente cuál reemplazar o cancelar, sin descartar otro grupo automáticamente.
 
 Al pasar a segundo plano se guarda el registro y se pausa la simulación local.
 Una partida online sigue ejecutándose en el servidor y puede desconectarse si
@@ -117,12 +124,14 @@ clientes contra el mismo despliegue y versión de protocolo.
 python3 scripts/check-mobile-generator.py
 python3 scripts/check-webgl-generator.py
 .cache/dotnet-sdk/dotnet run --project tests/MobileInputChecks
+.cache/dotnet-sdk/dotnet run --project tests/MobileGroupChecks
 node --test tests/WebGlClientChecks/template.test.mjs
 ```
 
 Usar `dotnet` en lugar de `.cache/dotnet-sdk/dotnet` si el SDK .NET 8 está instalado
 en el sistema. Estas pruebas verifican aislamiento de proyectos, versiones
 fijadas, protección de cambios locales y recibos de build, el clasificador real
-de gestos y el flujo de carga web. No compilan ni ejecutan Unity. Para validar el producto se necesita compilar y probar en Android
+de gestos, la geometría del lazo, la gestión de grupos y el flujo de carga web.
+No compilan ni ejecutan Unity. Para validar el producto se necesita compilar y probar en Android
 e iPhone: selección y órdenes, construcción, producción, combate, menús, giro,
 área segura, interrupciones, partida IA completa y partida online cruzada.

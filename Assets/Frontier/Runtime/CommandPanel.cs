@@ -485,6 +485,9 @@ namespace Frontier.Runtime
         {
             if(root==null)return;
             if(focused)return;
+#if FRONTIER_BROWSER
+            CancelMobileGroupReplacement();
+#endif
             if(HotkeyModalOpen)CancelHotkeyChange();
             if(moving){moving=false;SavePosition();}
             CancelPointerInteraction();

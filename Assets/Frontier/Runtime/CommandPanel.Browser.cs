@@ -233,6 +233,7 @@ namespace Frontier.Runtime
             }
             if(browserMessageVersion!=Session.MessageVersion){browserMessageVersion=Session.MessageVersion;browserMessageUntil=Time.unscaledTime+8;}
             status.text=Time.unscaledTime<browserMessageUntil?Session.Message:"";status.color=Session.MessageIsError?ErrorTint:ConsoleTheme.Ink;
+            if(BrowserMobileInput.IsTouchMode&&mobileReplacingGroup){status.text=MobileGroupReplacementPrompt;status.color=ConsoleTheme.Ink;}
             statusBanner.GetComponent<Image>().color=string.IsNullOrEmpty(status.text)?Color.clear:ConsoleTheme.Background;
             var available=SelectionActions.For(Session);
             foreach(var target in targets.Where(t=>t.actionId!=null))
@@ -284,7 +285,7 @@ namespace Frontier.Runtime
             else
             {
                 var orders=DisplayedUnitOrders(out var representative);
-                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Tap: select / order · Drag: camera · Pinch: zoom"):
+                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Circle: select · Two fingers: camera / zoom"):
                     orders.Length>0?"QUEUED ORDERS · Click an item to remove":"Left-click: select · Right-click: order · Shift: queue";
                 var signatureAtBind=OrderPlanSignature();
                 int count=orders.Length+(orders.Length>1?1:0);

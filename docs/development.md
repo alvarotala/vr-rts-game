@@ -26,7 +26,9 @@ La ruta móvil está en [`app/`](../app/README.md). Comparte las fuentes de Unit
 fija entrada táctil en los proyectos nativos. La raíz sigue configurada para
 Quest. `python3 scripts/check-mobile-generator.py` valida la generación sin
 Editor y `dotnet run --project tests/MobileInputChecks` prueba el clasificador
-de gestos compartido. No editar las copias en `app/.generated/`.
+de gestos y geometría del lazo compartidos. `dotnet run --project
+tests/MobileGroupChecks` ejecuta las partials reales de grupos con un host de
+estado sin Unity. No editar las copias en `app/.generated/`.
 
 ```sh
 bash scripts/check-core.sh

@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Assets/Frontier/Runtime/MobileGesture.cs" Link="MobileGesture.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/ScreenLasso.cs" Link="ScreenLasso.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

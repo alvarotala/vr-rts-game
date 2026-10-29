@@ -12,10 +12,18 @@ namespace Frontier.Runtime
     public sealed partial class CommandPanel
     {
         private RectTransform mobileToolbar;
-        private Target mobileArea,mobileClear,mobileGroups;
-        private bool mobileGroupsOpen,mobileLayoutApplied;
+        private Target mobileClear;
+        private bool mobileLayoutApplied,mobileReplacingGroup;
+        private object mobileGroupMatch;
+        private int[] mobileGroupSelection=Array.Empty<int>();
+        private readonly SelectionPortrait[] mobileGroupPortraits=new SelectionPortrait[GameSession.ControlGroupCount];
+        private readonly ConsoleGlyph[] mobileGroupGlyphs=new ConsoleGlyph[GameSession.ControlGroupCount];
         private Vector2 mobileActionPosition,mobileActionSize;
         private const float MobileActionHeight=88;
+        private const string MobileGroupReplaceMessage="All four groups are occupied. Tap a group icon to replace it, or Cancel.";
+        private const string MobileTutorialGroupReplaceMessage="Group 1 already contains a squad. Tap group 1 to replace it with your selected soldiers, or Cancel.";
+        private string MobileGroupReplacementPrompt=>Session.IsTutorial&&Session.Tutorial.Step==TutorialStep.SaveGroup
+            ?MobileTutorialGroupReplaceMessage:MobileGroupReplaceMessage;
         private bool IsMobileMenu=>Page==MenuPage.Main||Page==MenuPage.MatchSetup||Page==MenuPage.Pause
             ||Page==MenuPage.Settings||Page==MenuPage.LeaveConfirmation||Page==MenuPage.Guide||Page==MenuPage.Guides
             ||Page==MenuPage.OnlineSetup||Page==MenuPage.OnlineConnection||Page==MenuPage.DirectSetup;
@@ -39,11 +47,17 @@ namespace Frontier.Runtime
         private void CreateMobileHud()
         {
             mobileToolbar=Section(browserHud,"Touch selection controls",Vector2.zero,new Vector2(720,80),ConsoleTheme.Background);
-            mobileArea=BrowserButton(mobileToolbar,"Select area",Vector2.zero,new Vector2(160,72),()=>
-            {BrowserMobileInput.AreaSelection=!BrowserMobileInput.AreaSelection;Session.CancelMode();});
             mobileClear=BrowserButton(mobileToolbar,"Cancel / clear",Vector2.zero,new Vector2(160,72),()=>
-            {Session.CancelMode();Session.Select(0,false);BrowserMobileInput.AreaSelection=false;});
-            mobileGroups=BrowserButton(mobileToolbar,"Groups",Vector2.zero,new Vector2(160,72),()=>{mobileGroupsOpen=!mobileGroupsOpen;Rebuild();});
+            {
+                if(mobileReplacingGroup){CancelMobileGroupReplacement();Rebuild();return;}
+                Session.CancelMode();Session.Select(0,false);
+            });
+            for(int i=0;i<groupTargets.Length;i++)
+            {
+                mobileGroupGlyphs[i]=Glyph(groupTargets[i].rect,ConsoleGlyph.Kind.Group,new Vector2(8,-14),44,ConsoleTheme.Muted);
+                mobileGroupPortraits[i]=ModelPortrait(groupTargets[i].rect,new Vector2(8,-14),new Vector2(44,44));
+                mobileGroupGlyphs[i].gameObject.SetActive(false);mobileGroupPortraits[i].gameObject.SetActive(false);
+            }
             mobileToolbar.gameObject.SetActive(false);
         }
 
@@ -51,7 +65,6 @@ namespace Frontier.Runtime
         {
             mobileLayoutApplied=true;
             var safe=BrowserSafeArea(size);bool portrait=safe.height>safe.width;
-            if(Session.IsTutorial&&!Session.Tutorial.Briefing&&(Session.Tutorial.Step==TutorialStep.SaveGroup||Session.Tutorial.Step==TutorialStep.RecallGroup))mobileGroupsOpen=true;
             float left=safe.x+8,top=size.y-safe.yMax+8,width=safe.width-16,bottom=size.y-safe.y+8;
             float dockHeight=portrait?480:244,dockTop=bottom-dockHeight-16,toolsTop=dockTop-88;
             root.localScale=Vector3.one;root.sizeDelta=size;root.GetComponent<Image>().color=Color.clear;
@@ -73,20 +86,21 @@ namespace Frontier.Runtime
             mobileToolbar.gameObject.SetActive(true);
             TopLeft(mobileToolbar,new Vector2(left,-toolsTop),new Vector2(width,80));
             browserButtons[1].rect.SetParent(mobileToolbar,false);browserButtons[2].rect.SetParent(mobileToolbar,false);
-            var tools=new[]{browserButtons[1],browserButtons[2],mobileArea,mobileClear,mobileGroups};
-            float toolWidth=(width-24)/5;
+            var tools=new[]{browserButtons[1],browserButtons[2],mobileClear};
+            float quickWidth=width*.43f,toolWidth=(quickWidth-16)/3,groupsWidth=width-quickWidth-8,groupWidth=(groupsWidth-12)/4;
             for(int i=0;i<tools.Length;i++)LayoutMobileButton(tools[i],new Vector2(4+i*(toolWidth+4),-4),new Vector2(toolWidth,72));
-            foreach(var target in tools.Take(4))target.rect.gameObject.SetActive(!mobileGroupsOpen);
-            mobileGroups.rect.GetComponentInChildren<Text>().text=mobileGroupsOpen?"Selection":"Groups";
-            mobileArea.normal=BrowserMobileInput.AreaSelection?ConsoleTheme.Primary:button;
-            if(hovered!=mobileArea)mobileArea.image.color=mobileArea.normal;
-            browserGroupBar.gameObject.SetActive(mobileGroupsOpen);
-            TopLeft(browserGroupBar,new Vector2(left+4,-toolsTop-4),new Vector2(width-toolWidth-12,72));
+            foreach(var target in tools){target.rect.gameObject.SetActive(true);target.rect.GetComponentInChildren<Text>().fontSize=portrait?17:21;}
+            mobileClear.rect.GetComponentInChildren<Text>().text=mobileReplacingGroup?"Cancel":"Cancel / clear";
+            browserGroupBar.gameObject.SetActive(true);
+            TopLeft(browserGroupBar,new Vector2(left+quickWidth,-toolsTop-4),new Vector2(groupsWidth,72));
             for(int i=0;i<groupTargets.Length;i++)
             {
-                var target=groupTargets[i];LayoutMobileButton(target,new Vector2(i*(toolWidth+4),0),new Vector2(toolWidth,72));
-                TopLeft(target.rect.GetComponentInChildren<Text>().rectTransform,new Vector2(4,-2),new Vector2(toolWidth-8,32));
-                TopLeft(groupCounts[i].rectTransform,new Vector2(4,-36),new Vector2(toolWidth-8,30));groupCounts[i].fontSize=17;
+                var target=groupTargets[i];LayoutMobileButton(target,new Vector2(i*(groupWidth+4),0),new Vector2(groupWidth,72));
+                TopLeft(target.rect.GetComponentInChildren<Text>().rectTransform,new Vector2(groupWidth-34,-4),new Vector2(28,28));
+                TopLeft(groupCounts[i].rectTransform,new Vector2(groupWidth-38,-38),new Vector2(32,26));groupCounts[i].fontSize=17;
+                float iconSize=Mathf.Min(44,groupWidth-44);
+                TopLeft(mobileGroupGlyphs[i].rectTransform,new Vector2(6,-(72-iconSize)*.5f),new Vector2(iconSize,iconSize));
+                TopLeft(mobileGroupPortraits[i].rectTransform,new Vector2(6,-(72-iconSize)*.5f),new Vector2(iconSize,iconSize));
             }
 
             float mapSide=portrait?144:180,infoWidth=portrait?width-mapSide-8:Mathf.Max(244,width*.25f);
@@ -132,21 +146,36 @@ namespace Frontier.Runtime
 
         private void BuildMobileActions()
         {
-            targets.AddRange(browserButtons);targets.Add(mobileArea);targets.Add(mobileClear);targets.Add(mobileGroups);targets.AddRange(groupTargets);
+            targets.AddRange(browserButtons);targets.Add(mobileClear);targets.AddRange(groupTargets);
             var available=SelectionActions.For(Session);
-            string context=string.Join(",",Session.Selection.OrderBy(id=>id))+":"+string.Join(",",available.Items.Select(a=>a.Id));
+            ValidateMobileGroupReplacement();
+            bool canGroup=Session.CanSaveMobileGroup;
+            string context=string.Join(",",Session.Selection.OrderBy(id=>id))+":"+string.Join(",",available.Items.Select(a=>a.Id))+":"+canGroup+":"+mobileReplacingGroup;
             if(context!=browserActionContext){browserActionContext=context;browserActionPage=0;}
             const int pageSize=5;
-            int pages=Mathf.Max(1,(available.Items.Count+pageSize-1)/pageSize);
+            int itemCount=available.Items.Count+(canGroup?1:0);
+            int pages=Mathf.Max(1,(itemCount+pageSize-1)/pageSize);
             browserActionPage=Mathf.Clamp(browserActionPage,0,pages-1);
             browserCommandTitle.text=available.Heading;
             float width=(mobileActionSize.x-16)/3;
             for(int slot=0;slot<pageSize;slot++)
             {
-                int index=browserActionPage*pageSize+slot;if(index>=available.Items.Count)break;
+                int index=browserActionPage*pageSize+slot;if(index>=itemCount)break;
+                var position=new Vector2(slot%3*(width+8),-slot/3*(MobileActionHeight+8));
+                if(canGroup&&index==0)
+                {
+                    var group=BrowserButton(actions,mobileReplacingGroup?"Cancel replacement":"Group selection",position,new Vector2(width,MobileActionHeight),()=>
+                    {
+                        if(mobileReplacingGroup)CancelMobileGroupReplacement();else SaveMobileGroup();
+                        Rebuild();
+                    });
+                    group.actionId="mobile-group";group.normal=mobileReplacingGroup?ConsoleTheme.Danger:ConsoleTheme.Primary;group.image.color=group.normal;
+                    group.rect.GetComponentInChildren<Text>().fontSize=22;targets.Add(group);continue;
+                }
+                if(canGroup)index--;
                 var action=available.Items[index];
-                var target=HudButton(actions,action.Label,MatchActionDetail(action,false),new Vector2(slot%3*(width+8),-slot/3*(MobileActionHeight+8)),
-                    new Vector2(width,MobileActionHeight),()=>{BrowserMobileInput.AreaSelection=false;action.Execute();},null,out var detail);
+                var target=HudButton(actions,action.Label,MatchActionDetail(action,false),position,
+                    new Vector2(width,MobileActionHeight),()=>{CancelMobileGroupReplacement();action.Execute();},null,out var detail);
                 target.actionId=action.Id;target.help=action;
                 bool active=action.Building&&action.Id=="build:"+Session.BuildDefinition||action.Id=="attack-move"&&Session.AttackMoveMode||action.Id=="set-rally-point"&&Session.RallyPointMode;
                 target.normal=active?ConsoleTheme.Primary:Color.Lerp(button,ActionTint(action.Category).linear,.16f);target.image.color=target.normal;
@@ -164,6 +193,65 @@ namespace Frontier.Runtime
                 targets.Add(next);
             }
             browserQueueSignature=null;RefreshBrowserQueues();UpdateBrowserHud();
+        }
+
+        private void SaveMobileGroup()
+        {
+            if(!AcceptsGameInput||!Session.CanSaveMobileGroup)return;
+            int saved=Session.SaveMobileSelectionGroup();
+            if(saved>=0){ConfirmMobileGroup(saved);return;}
+            mobileReplacingGroup=true;mobileGroupMatch=Session.SessionIdentity;mobileGroupSelection=Session.Selection.ToArray();
+            Session.Announce(MobileGroupReplacementPrompt);
+        }
+
+        private void CancelMobileGroupReplacement()
+        {
+            if(!mobileReplacingGroup)return;
+            mobileReplacingGroup=false;mobileGroupMatch=null;mobileGroupSelection=Array.Empty<int>();
+            if(Session.Message==MobileGroupReplaceMessage||Session.Message==MobileTutorialGroupReplaceMessage)
+            {browserMessageUntil=0;browserMessageVersion=Session.MessageVersion;}
+            browserActionContext=null;signature=null;
+        }
+
+        private void ValidateMobileGroupReplacement()
+        {
+            if(mobileReplacingGroup&&(!AcceptsGameInput||mobileGroupMatch!=Session.SessionIdentity
+                ||!Session.CanSaveMobileGroup||!Session.Selection.SetEquals(mobileGroupSelection)))CancelMobileGroupReplacement();
+        }
+
+        private void ConfirmMobileGroup(int index)
+        {
+            CancelMobileGroupReplacement();groupConfirmationMatch=Session.SessionIdentity;
+            groupConfirmedUntil[index]=Time.unscaledTime+GroupConfirmationDuration;
+            Session.GetComponent<AudioFeedback>()?.Navigation(true);
+        }
+
+        private void HandleMobileGroupTap(int index)
+        {
+            bool replacing=mobileReplacingGroup;ValidateMobileGroupReplacement();
+            if(replacing)
+            {
+                if(mobileReplacingGroup&&Session.ReplaceMobileSelectionGroup(index))ConfirmMobileGroup(index);
+                CancelMobileGroupReplacement();Rebuild();return;
+            }
+            Session.GetComponent<AudioFeedback>()?.Navigation(true);Session.RecallMobileGroup(index);
+        }
+
+        private void RenderMobileGroupFeedback()
+        {
+            ValidateMobileGroupReplacement();
+            for(int index=0;index<groupTargets.Length;index++)
+            {
+                var target=groupTargets[index];if(target==null||target.image==null||mobileGroupGlyphs[index]==null)continue;
+                int count=Session.GroupSize(index);string definition=Session.MobileGroupDefinition(index);
+                bool hasModel=count>0&&!string.IsNullOrEmpty(definition)&&Session.Catalog.Has(definition);
+                mobileGroupGlyphs[index].gameObject.SetActive(!hasModel);mobileGroupPortraits[index].gameObject.SetActive(hasModel);
+                if(hasModel)mobileGroupPortraits[index].SetType(Session.Catalog[definition]);
+                bool confirmed=groupConfirmationMatch==Session.SessionIdentity&&Time.unscaledTime<groupConfirmedUntil[index];
+                target.normal=mobileReplacingGroup?ConsoleTheme.Danger:Session.MobileGroupMatchesSelection(index)?ConsoleTheme.Primary:button;
+                ApplyTargetHover(target,hovered==target,confirmed?QueueActiveTint:target.normal);
+                groupCounts[index].text=count==0?"–":count.ToString();
+            }
         }
 
         private void RestoreDesktopHud()
@@ -191,6 +279,8 @@ namespace Frontier.Runtime
             }
             for(int i=0;i<groupTargets.Length;i++)
             {
+                mobileGroupGlyphs[i].gameObject.SetActive(false);mobileGroupPortraits[i].gameObject.SetActive(false);
+                groupTargets[i].normal=button;
                 TopLeft(groupTargets[i].rect,new Vector2(i*146,0),new Vector2(138,38));
                 TopLeft(groupTargets[i].rect.GetComponentInChildren<Text>().rectTransform,new Vector2(6,0),new Vector2(24,38));
                 groupTargets[i].rect.GetComponentInChildren<Text>().fontSize=17;
@@ -299,22 +389,22 @@ namespace Frontier.Runtime
                     card("Fog density: "+Mathf.RoundToInt(Board.FogDensity*100)+"%","Visual mist over unseen terrain. Unseen enemies stay hidden.",()=>{Board.SetFogDensity(Board.FogDensity>=1?0:Board.FogDensity+.25f);Rebuild();});
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guides:
-                    card("Control guide","Tap, drag and pinch gestures.",()=>OpenSubmenu(MenuPage.Guide));
+                    card("Control guide","Circle units. Use two fingers to move the camera.",()=>OpenSubmenu(MenuPage.Guide));
                     card("Units","Costs, combat and abilities.",()=>OpenSubmenu(MenuPage.UnitsGuide));
                     card("Structures","Construction, requirements and production.",()=>OpenSubmenu(MenuPage.StructuresGuide));
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guide:
                     card("Select","Tap an ally. Double-tap selects its type.",()=>{});
                     card("Order","Tap a destination. Hold and release on an ally to repair or assist.",()=>{});
-                    card("Camera","Drag to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
-                    card("Select area","Tap Select area, then drag around your army.",()=>{});
-                    card("Groups / actions","Groups: hold to save, tap to select. Actions: tap to use.",()=>{});
+                    card("Camera","Drag with two fingers to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
+                    card("Circle units","Draw around your units with one finger, then release to select them.",()=>{});
+                    card("Groups / actions","Tap Group selection to save. Tap its persistent icon to select the group.",()=>{});
                     card("Back","Return to the previous menu.",Back);break;
             }
             return true;
         }
 
-        private static string MobileTutorialInstruction(string key)
+        private string MobileTutorialInstruction(string key)
         {
             switch(key)
             {
@@ -332,8 +422,10 @@ namespace Frontier.Runtime
                 case "Click Attack Move in the console.":return "Tap Attack Move in the actions.";
                 case "Press {0}, or choose Pause in the console.":return "Tap the menu button at the top of the screen.";
                 case "Choose Resume match, or press {0}.":return "Tap Resume match.";
-                case "Hold {0} and drag a box around your three soldiers.":return "Tap Select area, then drag around your three soldiers.";
-                case "Hold {0} and press {1} to save group 1.":return "Hold group 1 to save your squad.";
+                case "Hold {0} and drag a box around your three soldiers.":return "Draw a circle around your three soldiers, then release.";
+                case "Hold {0} and press {1} to save group 1.":
+                    tutorialCueAction=mobileReplacingGroup?"group:0":"mobile-group";
+                    return mobileReplacingGroup?"Tap group 1 to replace it with your selected soldiers.":"Tap Group selection to save your squad as group 1.";
                 case "Press {0} to select your saved squad.":return "Tap group 1 to select your saved squad.";
                 case "Press {0} to cancel, then select your worker.":return "Tap Cancel / clear, then tap your worker.";
                 case "Press {0} to cancel, then select your squad.":return "Tap Cancel / clear, then select your squad.";

@@ -88,18 +88,78 @@ internal static class Program
             gesture=new MobileGesture();Feed(gesture,Finger(down:true));
             Check(Feed(gesture,new MobileGesture.Sample{AllowMap=true}).Cancelled,"device disappearance without a release edge cannot send a tap/order");
 
-            gesture=new MobileGesture();var area=Finger(down:true);area.AreaSelection=true;
-            result=Feed(gesture,area);
-            Check(result.Kind==MobileGesture.Kind.Area&&result.Down,"explicit area tool begins selection rectangle");
+            gesture=new MobileGesture();var lassoPress=Finger(down:true);lassoPress.LassoSelection=true;
+            result=Feed(gesture,lassoPress);
+            Check(result.Kind==MobileGesture.Kind.None,"default gameplay finger waits to distinguish tap from lasso");
+            result=Feed(gesture,Finger(130,100));
+            Check(result.Kind==MobileGesture.Kind.Lasso&&result.Down&&result.StartX==100&&result.StartY==100,"drag begins lasso at original contact without a mode button");
             result=Feed(gesture,Finger(300,300,up:true));
-            Check(result.Kind==MobileGesture.Kind.Area&&result.Up,"area tool retains ownership through release");
-            Feed(gesture,area);result=Feed(gesture,Pair());
-            Check(result.Kind==MobileGesture.Kind.Pinch&&result.Cancelled,"pinch cancels rectangle before camera navigation");
-            Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.None,"cancelled rectangle cannot select on release");
+            Check(result.Kind==MobileGesture.Kind.Lasso&&result.Up,"lasso completes only on release");
+            Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));
+            result=Feed(gesture,Finger(100,100,up:true));
+            Check(result.Kind==MobileGesture.Kind.Lasso,"returning to start never converts a closed circle into a tap");
+            Feed(gesture,lassoPress);result=Feed(gesture,Finger(up:true));
+            Check(result.Kind==MobileGesture.Kind.Tap,"default lasso still permits ordinary tap selection");
+            lassoPress.Time=20;Feed(gesture,lassoPress);held=Finger(up:true);held.Time=20.7f;
+            Check(Feed(gesture,held).Kind==MobileGesture.Kind.LongPress,"default lasso still permits held contextual order");
+            Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));result=Feed(gesture,Pair());
+            Check(result.Kind==MobileGesture.Kind.Pinch&&result.Cancelled,"second finger cancels lasso before camera navigation");
+            Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.None,"cancelled lasso cannot select on release");
+            Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));var crossing=Finger(140,100);crossing.OverUi=true;
+            Check(Feed(gesture,crossing).Cancelled,"crossing HUD or leaving viewport cancels lasso");
+            Check(Feed(gesture,Finger(140,100,up:true)).Kind==MobileGesture.Kind.None,"release over HUD cannot confirm lasso or activate button");
+            Feed(gesture,lassoPress);Feed(gesture,Finger(130,100));gesture.CancelUntilRelease();
+            Check(Feed(gesture,Finger(140,100,up:true)).Kind==MobileGesture.Kind.None,"focus cancellation cannot complete existing lasso");
+            Feed(gesture,lassoPress);Feed(gesture,Pair());var uiPinch=Pair(140,240);uiPinch.OverUi=true;
+            Check(Feed(gesture,uiPinch).Cancelled,"camera gesture also stops when its primary finger enters HUD");
+            Feed(gesture,Finger(up:true));Feed(gesture,lassoPress);var replaced=Finger(300,300);replaced.Finger=9;
+            Check(Feed(gesture,replaced).Cancelled,"replacement contact cannot jump or complete an earlier finger's lasso");
+
+            CheckLassoGeometry();
 
             Console.WriteLine($"Mobile input checks passed: {checks} (shared gesture classifier, no Unity/device rendering implied).");
             return 0;
         }
         catch(Exception error){Console.Error.WriteLine(error);return 1;}
+    }
+    private static void CheckLassoGeometry()
+    {
+        var lasso=new ScreenLasso();lasso.Begin(0,0,1);lasso.Add(100,0);lasso.Add(100,100);lasso.Add(0,100);
+        Check(lasso.IsValid(24),"open four-point outline automatically closes as a valid lasso");
+        Check(lasso.Contains(50,50),"enclosed center is selected");
+        Check(lasso.Contains(0,50)&&lasso.Contains(100,0),"centers on closing edge and vertex are included");
+        Check(!lasso.Contains(110,50)&&!lasso.Contains(-10,50),"outside centers are excluded");
+        lasso.Add(0,20);
+        Check(lasso.IsValid(24)&&lasso.Contains(50,50),"roughly closed circle need not end on first pixel");
+
+        lasso.Begin(0,0,1);lasso.Add(100,0);lasso.Add(100,100);lasso.Add(70,100);lasso.Add(70,30);
+        lasso.Add(30,30);lasso.Add(30,100);lasso.Add(0,100);
+        Check(lasso.IsValid(24),"concave lasso remains valid");
+        Check(lasso.Contains(15,70)&&lasso.Contains(50,15),"concave arms and base select their contained centers");
+        Check(!lasso.Contains(50,70),"bounding-box center outside actual concave polygon is excluded");
+
+        lasso.Begin(0,0,1);lasso.Add(0,100);lasso.Add(100,100);lasso.Add(100,0);
+        Check(lasso.IsValid(24)&&lasso.Contains(50,50),"clockwise and counterclockwise circles select equally");
+        lasso.Begin(1000,1800,1);lasso.Add(1100,1800);lasso.Add(1100,1900);lasso.Add(1000,1900);
+        Check(lasso.Contains(1050,1850)&&!lasso.Contains(50,50),"screen coordinates work away from the origin");
+
+        lasso.Begin(10,10,1);lasso.Add(14,14);lasso.Add(8,15);
+        Check(!lasso.IsValid(24),"tap jitter cannot clear or replace selection");
+        lasso.Begin(0,0,1);lasso.Add(100,100);lasso.Add(200,200);
+        Check(!lasso.IsValid(24),"diagonal swipe is not a lasso despite wide bounds");
+        lasso.Begin(0,0,1);lasso.Add(500,500);lasso.Add(499,501);lasso.Add(0,2);
+        Check(!lasso.IsValid(24),"long narrow finger wobble cannot select a strip");
+        lasso.Begin(10,10,1);lasso.Add(float.NaN,20);lasso.Add(20,float.PositiveInfinity);
+        Check(lasso.Points.Count==1&&!lasso.Contains(float.NaN,10),"invalid coordinates never poison the path or selection");
+        lasso.Clear();Check(lasso.Points.Count==0&&!lasso.IsValid(24),"cancellation removes the full visible path");
+
+        lasso.Begin(10000,5000,1);
+        for(int i=1;i<=4000;i++)
+        {
+            double angle=i*Math.PI*2/4000;
+            lasso.Add((float)(5000+5000*Math.Cos(angle)),(float)(5000+5000*Math.Sin(angle)),i==4000);
+        }
+        Check(lasso.Points.Count<=ScreenLasso.MaximumPoints,"long gesture has bounded memory and overlay mesh size");
+        Check(lasso.Points[0].X==10000&&lasso.IsValid(24)&&lasso.Contains(5000,5000),"resampling preserves long-circle origin and enclosed center");
     }
 }

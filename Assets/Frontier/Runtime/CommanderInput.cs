@@ -62,7 +62,7 @@ namespace Frontier.Runtime
             if(Board.Content==null)
             {
 #if FRONTIER_BROWSER
-                mobileGesture.CancelUntilRelease();
+                mobileGesture.CancelUntilRelease();ClearMobileLasso();
 #endif
                 ResetMapGestures();Wheel?.TickHint(default,false);return;
             }
@@ -612,23 +612,29 @@ namespace Frontier.Runtime
             if(!focused)
             {
 #if FRONTIER_BROWSER
-                mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;
+                mobileGesture.CancelUntilRelease();ClearMobileLasso();
 #endif
                 placementInputReady=false;placementHeightDirection=0;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
             }
         }
 #if FRONTIER_BROWSER
         private void OnApplicationPause(bool paused)
-        {if(paused){mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;}}
+        {if(paused){mobileGesture.CancelUntilRelease();ClearMobileLasso();}}
 #endif
         private void OnDisable()
         {
 #if FRONTIER_BROWSER
-            mobileGesture.CancelUntilRelease();BrowserMobileInput.AreaSelection=false;
+            mobileGesture.CancelUntilRelease();ClearMobileLasso();
 #endif
             placementInputReady=false;placementHeightDirection=0;controllerVisuals?.Hide();if(laser!=null)laser.enabled=false;StopHaptic();ResetWheelRouting();CancelPanelInput();wheelReleasePending=true;ClearPointer();
         }
-        private void OnDestroy(){if(Session!=null)Session.Feedback-=Haptic;controllerVisuals?.Dispose();if(laser!=null){if(Application.isPlaying){Destroy(laser.sharedMaterial);Destroy(laser.gameObject);}else{DestroyImmediate(laser.sharedMaterial);DestroyImmediate(laser.gameObject);}}}
+        private void OnDestroy()
+        {
+#if FRONTIER_BROWSER
+            DisposeMobileLasso();
+#endif
+            if(Session!=null)Session.Feedback-=Haptic;controllerVisuals?.Dispose();if(laser!=null){if(Application.isPlaying){Destroy(laser.sharedMaterial);Destroy(laser.gameObject);}else{DestroyImmediate(laser.sharedMaterial);DestroyImmediate(laser.gameObject);}}
+        }
         private void ClearPointer()
         {ResetMapGestures();dragging=deselectHoldCandidate=deselectHoldConsumed=areaGesture=false;pressedResource=pressedEntity=0;if(Board!=null){Board.Hovered=0;Board.HoveredResource=0;Board.Pointer=null;Board.DrawSelection(start,start,false);}}
     }

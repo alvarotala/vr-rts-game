@@ -10,7 +10,6 @@ namespace Frontier.Runtime
     {
         private static bool usedTouch;
         private static Vector2 lastPosition;
-        public static bool AreaSelection { get; set; }
         public static bool IsTouchMode
         {
             get
