@@ -1,5 +1,33 @@
 # Registro de validación
 
+## Preparación de entrega iOS / TestFlight — 29 de octubre de 2026
+
+El exportador móvil acepta Release, versión y número de build explícitos.
+El recibo de Unity distingue estos valores para rechazar resultados de otra
+configuración. iOS utiliza Metal, orientación horizontal y una descripción
+del acceso LAN; la firma se configura en Xcode para el equipo elegido.
+
+- Generadores: **11 pruebas móviles y 8 web** aprobadas, incluidas identidad
+  del build, propagación de argumentos, recibos incompatibles y preservación
+  de propiedades al completar el `Info.plist` de iOS.
+- Entrega: **15 pruebas** de `scripts/check-ios-delivery.py` aprobadas con
+  procesos simulados. Verifican instalación al dispositivo explícito, firma
+  del equipo seleccionado, rechazo de artefactos inválidos, carpetas nuevas
+  y distinción entre IPA local y subida. No verifican firma ni servicios reales.
+  Se revisó el plan de subida con el equipo StartNode sin ejecutar Xcode.
+- Intento real: `python3 app/build.py ios --release --version 0.1.0 --build-number 1`
+  preparó las fuentes y terminó con salida 1: falta Unity **6000.3.26f1** con
+  iOS Build Support y licencia activa. No hay proyecto Xcode exportado ni IPA.
+- Esta Mac tiene Xcode **26.6**, Rosetta y una identidad Apple Development.
+  El iPhone 13 mini aparece emparejado, con Developer Mode activo y bloqueado.
+  El equipo StartNode se identificó en la configuración local de Hosanna.
+
+Al revisar había aproximadamente **2,7 GiB libres**; se solicitó liberar
+espacio o indicar un disco externo antes de instalar el Editor y compilar.
+No se borraron simuladores, archivos de otras apps ni credenciales. No se
+validó todavía la firma de distribución, el funcionamiento en el iPhone ni
+una subida a App Store Connect/TestFlight.
+
 ## Selección con lazo y grupos móviles — 28 de octubre de 2026
 
 Un dedo dibuja un contorno que se cierra al soltar y selecciona aliados vivos

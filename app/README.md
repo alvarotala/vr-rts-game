@@ -61,11 +61,83 @@ Elegir equipo y perfil de firma en Xcode y ejecutar en un dispositivo. Este
 comando exporta el proyecto; no firma un IPA, publica en App Store ni configura
 una cuenta de Apple. El nombre e identificador coinciden con Android móvil.
 
+Para exportar una versión release identificada, lista para el paso de archivo
+y firma en Xcode:
+
+```sh
+python3 app/build.py ios --release --version 0.1.0 --build-number 1
+```
+
+`--release` desactiva las opciones de desarrollo y las conexiones HTTP del
+cliente; usar un backend HTTPS. `--version` acepta `X.Y.Z` y `--build-number`
+un entero positivo. Los valores predeterminados siguen siendo `0.1.0` y `1`;
+incrementar el número para cada subida a TestFlight. Estos argumentos también
+funcionan en Android, donde no cambian el firmado de desarrollo del APK.
+El recibo y el manifiesto de fuentes registran plataforma, configuración,
+versión y número; la validación rechaza un recibo que no coincida.
+
+La exportación iOS utiliza Metal y declara pantalla completa para el diseño
+horizontal. Agrega a `Info.plist` la explicación del acceso a servidores de
+partidas en la red local que requiere
+[Apple para conexiones locales, incluidas UDP](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
+El sistema pide permiso cuando se usa esa conexión; no habilita HTTP en release
+ni cambia el equipo o perfil de firma.
+
 Ambos destinos usan IL2CPP, URP y orientación horizontal en ambos sentidos.
 `--editor` o `UNITY_EDITOR` permite indicar otra ubicación del Editor;
 `--output` elige una salida dedicada (dentro del repo debe quedar bajo `Builds/`).
 Logs: `TestResults/unity-mobile-android.log` y `unity-mobile-ios.log`. El comando
 verifica un recibo nuevo y los archivos del destino antes de informar éxito.
+
+## Firma, dispositivo y TestFlight
+
+`app/ios.py` coordina la exportación Unity y la firma automática de Xcode.
+Necesita macOS, Unity 6000.3.26f1 con iOS Build Support y licencia activa,
+Xcode seleccionado, espacio libre para exportar/compilar y la cuenta del equipo
+iniciada en Xcode. El equipo se elige siempre con `--team-id`; el script no lee
+credenciales ni instala herramientas. La firma permite que Xcode actualice los
+perfiles del equipo indicado. Para instalar, conectar y autorizar el iPhone,
+activar Developer Mode y usar su **UDID físico**, visible en Xcode → Devices
+and Simulators o `xcrun xctrace list devices`. El UUID de CoreDevice que muestra
+`devicectl list devices` no sirve como destino de `xcodebuild`; no usarlo aquí.
+
+Revisar primero los comandos sin ejecutar ninguna herramienta ni crear archivos:
+
+```sh
+python3 app/ios.py device --team-id TEAM_ID --device DEVICE_ID --version 0.1.0 --build-number 1 --plan
+python3 app/ios.py testflight --team-id TEAM_ID --version 0.1.0 --build-number 1 --plan
+```
+
+`TEAM_ID` y `DEVICE_ID` son marcadores que deben reemplazarse; `DEVICE_ID` es el
+UDID físico del iPhone. El plan no comprueba
+la disponibilidad del Editor, la licencia, el espacio, la firma ni la cuenta.
+Quitar `--plan` para ejecutar. `device` compila Release, verifica identificador,
+versión, número de build y firma del equipo; luego instala y abre exclusivamente
+en el dispositivo indicado. `--editor /ruta/al/Unity` permite elegir el Editor.
+
+`testflight` genera y valida un archivo Xcode Release y exporta un **IPA local por
+defecto**. La subida requiere `--upload` explícito:
+
+```sh
+python3 app/ios.py testflight --team-id TEAM_ID --version 0.1.0 --build-number 1 --upload --plan
+# Revisar el plan y quitar --plan para archivar, firmar y subir con la cuenta de Xcode.
+```
+
+Cada ejecución usa una carpeta nueva bajo `Builds/Mobile/iOS-delivery/`; conserva
+el proyecto exportado, DerivedData, el archivo y las opciones de exportación.
+No sobrescribe entregas anteriores. El identificador continúa siendo
+`app.sadmonkey.littlelegion.mobile`. El número de build debe ser positivo y
+nuevo para cada entrega a App Store Connect; Xcode no lo incrementa silenciosamente.
+El script valida el archivo antes de exportarlo o subirlo y verifica el IPA local
+antes de informar éxito. Una subida finalizada aún requiere comprobar el
+procesamiento y disponibilidad en TestFlight, los metadatos y el acceso de testers.
+
+Las pruebas del flujo usan procesos simulados y artefactos de prueba; no firman,
+instalan ni publican:
+
+```sh
+python3 scripts/check-ios-delivery.py
+```
 
 ## Web móvil
 
