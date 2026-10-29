@@ -1,5 +1,25 @@
 # Registro de validación
 
+## Instalación y apertura en iPhone 13 mini — 29 de octubre de 2026
+
+- Compilación real de las fuentes de `8c63daa`: Unity **6000.3.26f1** ARM64
+  con iOS Build Support y licencia activa; exportación Release/IL2CPP terminada.
+  Xcode **26.6**, SDK iOS **26.5**: **BUILD SUCCEEDED**.
+- `app/ios.py device` generó **Little Legion 0.1.0 (1)**,
+  `app.sadmonkey.littlelegion.mobile`. Se verificaron metadatos, firma completa
+  con `codesign` y pertenencia al equipo **StartNode** antes de instalar.
+- `devicectl` confirmó instalación y apertura en el **iPhone 13 mini** indicado.
+  La consulta posterior confirmó versión/build instalados, proceso activo más
+  de 50 segundos después de abrir y conexión **wired** por USB.
+- Evidencia local: `TestResults/unity-mobile-ios.log`,
+  `TestResults/ios-device-delivery.log`, `TestResults/ios-device-app.json`,
+  `TestResults/ios-device-process.json` y `TestResults/ios-device-details.json`.
+  Artefactos en `Builds/Mobile/iOS-delivery/20261029T050214Z-device-1-bd8f8f4e7d54/`.
+
+Esto comprueba compilación, firma, instalación y arranque del proceso en hardware.
+No se capturó la pantalla física ni se validaron todavía una partida completa,
+los gestos, audio o rendimiento en el teléfono. Esta ejecución no subió a TestFlight.
+
 ## Preparación de entrega iOS / TestFlight — 29 de octubre de 2026
 
 El exportador móvil acepta Release, versión y número de build explícitos.
