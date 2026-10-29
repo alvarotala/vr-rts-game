@@ -487,7 +487,7 @@ namespace Frontier.Runtime
                     card("Structures","Construction, requirements and production.",()=>OpenSubmenu(MenuPage.StructuresGuide));
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guide:
-                    card("Select","Tap an ally when nothing is selected. Clear selection to choose another unit.",()=>{});
+                    card("Select","Tap an ally to select it. Tap another ally to change selection.",()=>{});
                     card("Order","With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.",()=>{});
                     card("Camera","Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
                     card("Circle units","Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.",()=>{});
@@ -502,9 +502,9 @@ namespace Frontier.Runtime
             switch(key)
             {
                 case "Click Continue. Let's play!":return "Tap Continue. Let's play!";
-                case "Point at this worker and press {0}.":case "First, select this worker with {0}.":return "Clear selection, then tap this worker.";
-                case "Select your headquarters with {0}.":case "First, select your headquarters with {0}.":return "Clear selection, then tap your headquarters.";
-                case "Select this military building with {0}.":return "Clear selection, then tap this military building.";
+                case "Point at this worker and press {0}.":case "First, select this worker with {0}.":return "Tap this worker to select it.";
+                case "Select your headquarters with {0}.":case "First, select your headquarters with {0}.":return "Tap your headquarters to select it.";
+                case "Select this military building with {0}.":return "Tap this military building to select it.";
                 case "Point at the violet marker and press {0}.":case "Point at the violet outline and press {0}.":case "Aim at the ground marker and press {0}.":return "Tap the violet marker on the battlefield.";
                 case "Aim at the enemy marker and press {0}.":return "Tap the enemy marker on the battlefield.";
                 case "Point at this gas deposit and press {0}.":return "Tap this gas deposit to send your worker.";

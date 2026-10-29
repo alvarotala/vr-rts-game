@@ -32,7 +32,9 @@ namespace Frontier.Runtime
         {
             if(targeting)return TapAction.Context;
             if(shifted&&selectedUnits)return TapAction.AttackMove;
-            if(forceOrder||selectedUnits||ownSelection&&!ownTarget)return TapAction.Context;
+            // Ordinary friendly taps replace selection, including after a move.
+            // Holding still explicitly orders workers to repair or assist.
+            if((selectedUnits||ownSelection)&&(forceOrder||!ownTarget))return TapAction.Context;
             return TapAction.Select;
         }
 

@@ -6,11 +6,15 @@ Los controles indicados a continuación son los predeterminados y se pueden pers
 
 En la app móvil y en la web táctil se usa un tablero de pantalla, en vertical u
 horizontal y sin colocación en una habitación. Tocar **Nueva partida**, elegir
-facción/mapa/dificultad y comenzar. Arrastrar con un dedo mueve la cámara. Sin
-unidades seleccionadas, tocar un aliado lo selecciona; con unidades seleccionadas,
-tocar el mapa envía una orden, también sobre aliados para reparar o reanudar
-con trabajadores. **Cancelar / limpiar** quita la selección. Mantener 0,55
-segundos y soltar conserva la orden contextual explícita.
+facción/mapa/dificultad y comenzar. Arrastrar con un dedo mueve la cámara.
+Tocar un aliado cambia la selección a ese aliado, también después de mover otra
+unidad. Con unidades seleccionadas, tocar terreno, enemigos o recursos envía
+una orden. La unidad tocada se conserva hasta soltar el dedo aunque se mueva;
+arrastrar o pellizcar cancela la selección pendiente. Un toque lento sin selección
+previa también selecciona. **Cancelar / limpiar** quita la selección. Mantener 0,55 segundos
+y soltar conserva la orden contextual explícita, como reparar o reanudar un
+edificio aliado con trabajadores. Los modos de apuntado explícitos mantienen
+su prioridad sobre el cambio de selección.
 **Shift** se activa/desactiva con un toque o se mantiene con otro dedo:
 **Shift + arrastrar** rodea aliados con un lazo y los selecciona al soltar;
 **Shift + toque** con unidades seleccionadas ordena **Avanzar atacando**.

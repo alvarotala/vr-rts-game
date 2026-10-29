@@ -137,6 +137,7 @@ namespace Frontier.Mobile.Editor
                 Check(BrowserMobileInput.IsTouchMode, "native mobile input mode is compiled");
 
                 Refresh();
+                ValidateFriendlyTapAfterMove();
                 Check(Mathf.Abs(quest.Navigation.Distance * Mathf.Min(1, quest.Camera.aspect) - 34) < .05f,
                     "initial camera preserves battlefield scale on the short screen edge", "distance=" + quest.Navigation.Distance);
                 ValidateLayout("idle"); Capture("01-idle");
@@ -176,6 +177,65 @@ namespace Frontier.Mobile.Editor
                 IEnumerable<object> Targets() => Field<IList>(panel, "targets").Cast<object>()
                     .Where(target => TargetRect(target) != null && TargetRect(target).gameObject.activeInHierarchy);
                 void Click(object target) => Field<Action>(target, "click")?.Invoke();
+                void ValidateFriendlyTapAfterMove()
+                {
+                    var input = fixture.AddComponent<CommanderInput>();
+                    input.Session = session; input.Board = board; input.Quest = quest; input.Panel = panel;
+                    var units = session.View.entities.Where(entity => entity.owner == session.LocalPlayer
+                        && session.Catalog[entity.definition].role == "worker").Take(2).ToArray();
+                    Ray To(Vector3 world) => new Ray(world + board.transform.up * 10, -board.transform.up);
+                    void TapUnit(int id)
+                    {
+                        Check(board.TryEntityVisualCenter(id, out var center), "tap regression finds the real unit visual");
+                        Call(input, "TapMobileBoard", To(center), false, false);
+                    }
+                    session.CancelMode(); session.Select(0, false);
+                    TapUnit(units[0].id);
+                    Check(session.Selection.SetEquals(new[] { units[0].id }), "ordinary mobile tap selects unit A");
+                    var ground = board.Content.TransformPoint(new Vector3(session.Map.width * .5f, 0, session.Map.height * .5f));
+                    Call(input, "TapMobileBoard", To(ground), false, false);
+                    Check(session.LastCommandKind == CommandKind.Move && session.LastCommandSequence > 0,
+                        "mobile terrain tap orders unit A to move");
+                    int movement = session.LastCommandSequence;
+                    TapUnit(units[1].id);
+                    Check(session.Selection.SetEquals(new[] { units[1].id }), "mobile tap after movement replaces unit A with unit B");
+                    Check(session.LastCommandSequence == movement, "selecting unit B does not send another order to unit A");
+                    session.Select(units[0].id, false);
+                    Check(board.TryEntityVisualCenter(units[1].id, out var touchedCenter), "moving target regression finds unit B");
+                    var touchedRay = To(touchedCenter);
+                    var gesture = Field<MobileGesture>(input, "mobileGesture");
+                    var press = new MobileGesture.Sample { Count = 1, Finger = 42, X = 100, Y = 100,
+                        Down = true, AllowMap = true, SecondOverMap = true, Time = 10 };
+                    Call(input, "TrackMobileSelection", touchedRay, press, gesture.Step(press, 12));
+                    Check(session.Selection.SetEquals(new[] { units[0].id }), "pressing a friendly unit defers selection until release");
+                    var actor = session.Match.Entities[units[1].id];var before = actor.position;
+                    actor.position = new Point(session.Map.width * .5f, session.Map.height * .5f);Refresh();
+                    var release = press;release.Down = false;release.Up = true;release.Count = 0;release.Time = 10.1f;
+                    var tap = gesture.Step(release, 12);
+                    Call(input, "TrackMobileSelection", touchedRay, release, tap);
+                    Call(input, "CompleteMobileTap", touchedRay, false, false);
+                    Check(session.Selection.SetEquals(new[] { units[1].id }) && session.LastCommandSequence == movement,
+                        "unit moving away between press and release remains selected without another order");
+                    actor.position = before;Refresh();
+                    press.Time = 11;
+                    Call(input, "TrackMobileSelection", touchedRay, press, gesture.Step(press, 12));
+                    var drag = press;drag.Down = false;drag.X += 40;
+                    Call(input, "TrackMobileSelection", touchedRay, drag, gesture.Step(drag, 12));
+                    Check(Field<int>(input, "mobilePressedEntity") == 0 && session.LastCommandSequence == movement,
+                        "camera drag cancels the captured unit without sending an order");
+                    var finishDrag = drag;finishDrag.Up = true;finishDrag.Count = 0;
+                    Call(input, "TrackMobileSelection", touchedRay, finishDrag, gesture.Step(finishDrag, 12));
+                    session.Select(0, false);press.Time = 12;
+                    Call(input, "TrackMobileSelection", touchedRay, press, gesture.Step(press, 12));
+                    release.Time = 12.7f;
+                    var held = gesture.Step(release, 12);
+                    Call(input, "TrackMobileSelection", touchedRay, release, held);
+                    Call(input, "CompleteMobileTap", touchedRay, held.Kind == MobileGesture.Kind.LongPress, false);
+                    Check(session.Selection.SetEquals(new[] { units[1].id }) && session.LastCommandSequence == movement,
+                        "slow first touch selects a friendly unit instead of sending an empty order");
+                    Object.DestroyImmediate(input);
+                    session.Select(0, false); Refresh();
+                }
                 void ResizeRuntimeTarget()
                 {
                     var previous = runtimeTarget;

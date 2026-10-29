@@ -1,5 +1,36 @@
 # Registro de validación
 
+## Selección táctil estable — 29 de octubre de 2026
+
+- Tocar una unidad propia reemplaza la selección anterior, también después
+  de moverla. La unidad se captura al apoyar el dedo y se confirma al soltar,
+  aunque se haya desplazado; pan, pinch y cancelación descartan ese candidato.
+  Sin selección previa, un toque lento también selecciona. Shift, las órdenes
+  explícitas y mantener para reparar con trabajadores conservan su prioridad.
+- Regresión reproducida en rojo antes de corregir `ResolveTap`.
+  `tests/MobileInputChecks`: **101 comprobaciones**; `tests/MobileGroupChecks`:
+  **120 comprobaciones**. `git diff --check` sin errores.
+- Unity **6000.3.26f1**, `MobileHudPreview.Run`: **959 comprobaciones / 8 capturas**
+  en horizontal y vertical. La sesión real recorre A → terreno → B, verifica
+  que seleccionar B no emita otra orden, mueve B entre presión y liberación,
+  y comprueba cancelación por pan y selección con un primer toque lento.
+  Evidencia: `TestResults/unity-mobile-selection-fix.log` y
+  `TestResults/MobileSelectionFix/`. Esto no equivale a una prueba táctil física.
+- El intento de entrega **0.1.0 (3)** exportó Unity, pero Xcode falló al escribir
+  `libGameAssembly.a` con `errno=28` (sin espacio).
+  Log inicial: `TestResults/ios-device-delivery-build-3.log`.
+- Tras liberar cachés en la sesión responsable de la limpieza, el reintento
+  exportó las fuentes finales, terminó con **BUILD SUCCEEDED**, verificó la firma
+  y **se instaló 0.1.0 (3) en el iPhone 13 mini**. Se usó el flujo normal de
+  `app/ios.py device`, con la configuración habitual de símbolos. El manifiesto
+  del export coincide con los hashes de las cuatro fuentes de interacción/idioma
+  corregidas. `devicectl` confirmó versión y build instaladas.
+  La apertura automática falló porque el dispositivo estaba bloqueado; el arranque
+  y la comodidad táctil en hardware quedan para abrir y probar en el teléfono.
+  Evidencia: `TestResults/ios-device-delivery-build-3-retry.log`,
+  `TestResults/ios-device-app-build-3.json` y
+  `Builds/Mobile/iOS-delivery/20261029T060552Z-device-3-ec9a99fb6806/`.
+
 ## HUD móvil, Shift táctil y orientación vertical — 29 de octubre de 2026
 
 - El campo conserva el viewport completo. El HUD móvil usa superficies

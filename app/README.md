@@ -172,8 +172,9 @@ y la producción se despliegan desde su botón; los espacios vacíos dejan pasar
 los gestos al mapa. La cámara ajusta su distancia al girar el teléfono.
 
 - Arrastrar con un dedo mueve la cámara, incluso durante la partida.
-- Sin unidades seleccionadas, tocar una unidad o edificio propio lo selecciona.
-- Con unidades seleccionadas, tocar el mapa envía una orden contextual: mover, atacar, recolectar o, con trabajadores, reparar/reanudar un aliado. **Cancelar / limpiar** permite quitar la selección antes de elegir otra unidad. Al seleccionar sólo edificios, tocar otro aliado cambia la selección salvo que haya un destino de acción pendiente.
+- Tocar una unidad o edificio propio cambia la selección a ese aliado, incluso después de dar una orden de movimiento. No hace falta limpiar la selección primero.
+- La unidad se detecta al apoyar el dedo y se selecciona al soltar, aunque se haya movido. Arrastrar o pellizcar cancela esa selección. Sin selección previa, un toque lento también selecciona.
+- Con unidades seleccionadas, tocar terreno, enemigos o recursos envía una orden contextual: mover, atacar o recolectar. Los modos explícitos de construcción, habilidad y destino de acción conservan la prioridad.
 - Mantener y soltar sobre un objetivo: orden contextual explícita; permite reparar o reanudar una construcción propia con trabajadores seleccionados.
 - **Shift** activa/desactiva el modificador táctil; también se puede mantener con otro dedo. El estado se toma al empezar el gesto.
 - **Shift + arrastrar** dibuja un lazo visible alrededor de unidades; al soltar se cierra y selecciona los aliados cuyos centros quedan dentro. No hace falta un círculo perfecto. Un trazo demasiado pequeño o una línea no cambia la selección.

@@ -12,7 +12,7 @@
     {"key":"Idle: {0}","value":"Libres: {0}","template":true},
     {"key":"Drag: camera · Shift + drag: select","value":"Arrastrar: cámara · Shift + arrastrar: seleccionar","template":false},
     {"key":"Drag to move the camera. Use Shift to circle units.","value":"Arrastra para mover la cámara. Usa Shift para rodear unidades.","template":false},
-    {"key":"Tap an ally when nothing is selected. Clear selection to choose another unit.","value":"Toca un aliado sin selección activa. Borra la selección para elegir otra unidad.","template":false},
+    {"key":"Tap an ally to select it. Tap another ally to change selection.","value":"Toca un aliado para seleccionarlo. Toca otro aliado para cambiar la selección.","template":false},
     {"key":"With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.","value":"Con unidades seleccionadas, toca para mover o atacar. Shift + toque mueve y ataca enemigos en el camino.","template":false},
     {"key":"Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra con un dedo para mover la cámara. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
     {"key":"Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.","value":"Toca o mantén Shift y dibuja alrededor de las unidades. Toca Shift otra vez para desactivarlo.","template":false},

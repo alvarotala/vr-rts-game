@@ -193,13 +193,32 @@ internal static class Program
         Check(MobileGesture.ResolveTap(false,false,false,false,false,true)==MobileGesture.TapAction.Select,"tap with no selection selects a friendly target");
         Check(MobileGesture.ResolveTap(true,false,false,false,false,true)==MobileGesture.TapAction.Select,"Shift without selected units can still select a target");
         Check(MobileGesture.ResolveTap(false,false,false,true,true,false)==MobileGesture.TapAction.Context,"selected units tap ground or enemy issues contextual order");
-        Check(MobileGesture.ResolveTap(false,false,false,true,true,true)==MobileGesture.TapAction.Context,"selected units tap ally orders movement or worker repair instead of replacing selection");
+        Check(MobileGesture.ResolveTap(false,false,false,true,true,true)==MobileGesture.TapAction.Select,"ordinary tap on another friendly target replaces the current unit selection");
         Check(MobileGesture.ResolveTap(true,false,false,true,true,false)==MobileGesture.TapAction.AttackMove,"Shift tap with units attacks along route to tapped point");
         Check(MobileGesture.ResolveTap(true,false,false,true,true,true)==MobileGesture.TapAction.AttackMove,"Shift tap ally remains an attack-move destination");
         Check(MobileGesture.ResolveTap(true,false,true,true,true,false)==MobileGesture.TapAction.Context,"explicit build ability or rally targeting has priority over Shift");
         Check(MobileGesture.ResolveTap(false,false,false,false,true,true)==MobileGesture.TapAction.Select,"building-only selection can switch to another friendly target");
         Check(MobileGesture.ResolveTap(false,false,false,false,true,false)==MobileGesture.TapAction.Context,"building-only selection retains ground rally command");
         Check(MobileGesture.ResolveTap(false,true,false,false,true,true)==MobileGesture.TapAction.Context,"held tap retains explicit context order on friendly target");
+        Check(MobileGesture.ResolveTap(false,true,false,false,false,true)==MobileGesture.TapAction.Select,"slow tap without selection still selects the friendly target");
+        Check(MobileGesture.ResolveTap(false,true,true,false,false,true)==MobileGesture.TapAction.Context,"explicit targeting still wins over a slow tap with no selection");
+        Check(MobileGesture.ResolveTap(false,true,false,true,true,true)==MobileGesture.TapAction.Context,"holding a friendly target with selected workers still orders repair or assist");
+        Check(MobileGesture.ResolveTap(false,false,true,true,true,true)==MobileGesture.TapAction.Context,"explicit ability or construction targeting still takes priority on friendly targets");
+
+        // Reproduce select A -> move on terrain -> tap B with real release
+        // classification; issuing the movement must not prevent selecting B.
+        var gesture=new MobileGesture();
+        MobileGesture.TapAction Tap(float x,float time,bool selected,bool ownTarget)
+        {
+            var press=Finger(x,100,down:true);press.Time=time;Feed(gesture,press);
+            var release=Finger(x,100,up:true);release.Time=time+.1f;
+            var result=Feed(gesture,release);
+            Check(result.Kind==MobileGesture.Kind.Tap,"selection/move sequence releases an ordinary tap");
+            return MobileGesture.ResolveTap(result.Shift,result.Kind==MobileGesture.Kind.LongPress,false,selected,selected,ownTarget);
+        }
+        Check(Tap(100,20,false,true)==MobileGesture.TapAction.Select,"sequence selects unit A");
+        Check(Tap(300,21,true,false)==MobileGesture.TapAction.Context,"sequence sends unit A to terrain");
+        Check(Tap(200,22,true,true)==MobileGesture.TapAction.Select,"sequence selects unit B instead of moving A toward B");
     }
 
     private static void CheckLassoGeometry()

@@ -14,12 +14,14 @@ namespace Frontier.Runtime
         private object mobileSession;
         private Rect mobileViewport;
         private Vector2 mobileScreenSize;
+        private int mobilePressedEntity;
 
         private void RouteMobileInput()
         {
             if(!ReferenceEquals(mobileSession,Session.SessionIdentity))
             {
                 mobileSession=Session.SessionIdentity;
+                mobilePressedEntity=0;
                 BrowserMobileInput.ResetShift();
                 if(mobileGesture.Captured)CancelMobileGesture();
                 ClearMobileLasso();ResetMapGestures();
@@ -33,7 +35,7 @@ namespace Frontier.Runtime
             if(!Application.isFocused||Session.HasSystemPause)
             {BrowserMobileInput.ResetShift();CancelMobileGesture();return;}
             if((Session.IsCountingDown||countdownReleasePending)&&BlockCountdownInput(sample.Count>0))
-            {mobileGesture.CancelUntilRelease();ClearMobileLasso();return;}
+            {mobilePressedEntity=0;mobileGesture.CancelUntilRelease();ClearMobileLasso();return;}
             if(HotkeyInput.Read("key:Escape").Down)
             {
                 if(Panel.AcceptsGameInput&&Session.HasTargetingMode)Session.CancelMode();else Panel.Back();
@@ -49,6 +51,7 @@ namespace Frontier.Runtime
             // and native high-density resolutions; absurd/missing DPI is clamped.
             float threshold=Mathf.Clamp(Screen.dpi>0?Screen.dpi*.075f:12,10,36);
             var result=mobileGesture.Step(sample,threshold);
+            TrackMobileSelection(ray,sample,result);
             if(result.Cancelled)
             {Panel.CancelPointerInteraction(false);panelButton=PanelButton.None;panelReleasePending=false;ClearPointer();ClearMobileLasso();}
             if(result.Kind==MobileGesture.Kind.Ui)
@@ -80,8 +83,12 @@ namespace Frontier.Runtime
                 return;
             }
             if((result.Kind==MobileGesture.Kind.Tap||result.Kind==MobileGesture.Kind.LongPress)&&Panel.AcceptsGameInput&&!sample.OverUi)
-            {TapMobileBoard(ray,result.Kind==MobileGesture.Kind.LongPress,result.Shift);return;}
-            if(mobileGesture.Captured&&mapAllowed&&!sample.OverUi)PointReplayBoard(ray);
+            {CompleteMobileTap(ray,result.Kind==MobileGesture.Kind.LongPress,result.Shift);return;}
+            if(mobileGesture.Captured&&mapAllowed&&!sample.OverUi)
+            {
+                PointReplayBoard(ray);
+                if(MobileOwnTarget(mobilePressedEntity)){Board.Hovered=mobilePressedEntity;Board.HoveredResource=0;}
+            }
             else
             {
                 // Removing the hover does not erase double-tap timing between
@@ -108,8 +115,7 @@ namespace Frontier.Runtime
         {
             if(!Board.RayToMap(ray,out var point,out var hit))return;
             Board.ResolvePointerTarget(ray,point,hit,out int entity,out int resource);
-            bool own=entity>0&&Session.View!=null&&System.Array.Exists(Session.View.entities,
-                e=>e.id==entity&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
+            bool own=MobileOwnTarget(entity);
             bool ownSelection=Session.View!=null&&System.Array.Exists(Session.View.entities,
                 e=>Session.Selection.Contains(e.id)&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
             var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own);
@@ -127,9 +133,42 @@ namespace Frontier.Runtime
             // dragging the camera cannot select or issue a targeting-mode order.
             PointBoard(ray,true,true,false,false);
         }
+        private bool MobileOwnTarget(int entity)=>entity>0&&Session.View!=null&&System.Array.Exists(Session.View.entities,
+            e=>e.id==entity&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
+        private void TrackMobileSelection(Ray ray,MobileGesture.Sample sample,MobileGesture.Result result)
+        {
+            if(result.Cancelled||result.Kind==MobileGesture.Kind.Ui||result.Kind==MobileGesture.Kind.Pan
+                ||result.Kind==MobileGesture.Kind.Pinch||result.Kind==MobileGesture.Kind.Lasso)
+            {mobilePressedEntity=0;return;}
+            if(!sample.Down)return;
+            mobilePressedEntity=0;
+            if(sample.Shift||sample.OverUi||!sample.AllowMap||!Panel.AcceptsGameInput||Session.HasTargetingMode
+                ||!mobileGesture.Captured&&result.Kind!=MobileGesture.Kind.Tap)return;
+            if(Board.RayToMap(ray,out var point,out var hit))
+            {
+                Board.ResolvePointerTarget(ray,point,hit,out int entity,out _);
+                if(MobileOwnTarget(entity))mobilePressedEntity=entity;
+            }
+        }
+        private void CompleteMobileTap(Ray ray,bool forceOrder,bool shifted)
+        {
+            int captured=mobilePressedEntity;mobilePressedEntity=0;
+            bool explicitOrder=forceOrder&&Session.Selection.Any(MobileOwnTarget);
+            if(captured>0&&!explicitOrder&&!shifted&&!Session.HasTargetingMode)
+            {
+                // Keep the unit first touched even if it walks away while the
+                // finger is held. A lost unit consumes the tap, never a move.
+                if(!Session.CanIssueOrders||!MobileOwnTarget(captured))return;
+                ResetActionTap();pressedEntity=captured;
+                SelectClick(captured,false,Time.unscaledTime);
+                Board.Hovered=captured;Board.HoveredResource=0;
+                return;
+            }
+            TapMobileBoard(ray,forceOrder,shifted);
+        }
         private void CancelMobileGesture()
         {
-            mobileGesture.CancelUntilRelease();ClearMobileLasso();
+            mobilePressedEntity=0;mobileGesture.CancelUntilRelease();ClearMobileLasso();
             Panel?.CancelPointerInteraction(false);panelButton=PanelButton.None;panelReleasePending=false;ClearPointer();
         }
         private void ClearMobileLasso(){mobileLasso.Clear();mobileLassoOverlay?.Clear();}
