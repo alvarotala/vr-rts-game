@@ -133,6 +133,7 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 
 ## Documentación
 
+- [Landing, imágenes de marca y hosting en Coolify](landing/README.md)
 - [Identidad, skins y primeras razas](docs/identity.md)
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)

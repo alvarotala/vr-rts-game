@@ -4,6 +4,9 @@
 !hosting/
 !hosting/webgl/
 !hosting/webgl/nginx.conf
+!landing/
+!landing/**
+landing/README.md
 !Builds/
 !Builds/WebGL/
 !Builds/WebGL/**

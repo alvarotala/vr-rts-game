@@ -1,0 +1,8 @@
+**
+!Dockerfile.landing
+!landing/
+!landing/**
+landing/README.md
+!hosting/
+!hosting/landing/
+!hosting/landing/**
