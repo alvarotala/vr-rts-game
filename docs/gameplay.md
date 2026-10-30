@@ -6,7 +6,9 @@ Los controles indicados a continuación son los predeterminados y se pueden pers
 
 En la app móvil y en la web táctil se usa un tablero de pantalla, en vertical u
 horizontal y sin colocación en una habitación. Tocar **Nueva partida**, elegir
-facción/mapa/dificultad y comenzar. Arrastrar con un dedo mueve la cámara.
+facción/mapa/dificultad y comenzar. Arrastrar la barra inferior mueve la cámara;
+también se puede desplazar con dos dedos sobre el mapa. Arrastrar con un dedo
+en el mapa sin Shift no mueve la cámara ni envía una orden al soltar.
 Tocar un aliado cambia la selección a ese aliado, también después de mover otra
 unidad. Con unidades seleccionadas, tocar terreno, enemigos o recursos envía
 una orden. La unidad tocada se conserva hasta soltar el dedo aunque se mueva;
@@ -25,6 +27,12 @@ recupera ese grupo. Si los espacios están llenos se elige cuál reemplazar.
 Los grupos conservan sólo sus integrantes vivos y se reinician con cada partida.
 El HUD también ofrece cancelación y minimapa. Controles completos y
 requisitos en [app/README.md](../app/README.md).
+
+Los menús táctiles colocan la acción principal y **Volver** en la parte inferior,
+respetando el área segura del teléfono. Los carteles sobre los edificios muestran
+trabajadores o progreso en formato compacto, separados de las barras de vida.
+Estas adaptaciones de interfaz conservan las mismas reglas y órdenes que los
+clientes de escritorio y Quest.
 
 Al abrir el juego en Quest, el menú principal aparece frente a tu posición actual, a unos 1,25 m, con **New Match**, **Guides** y **Settings**, sin pedir colocar el tablero ni permiso de superficies. Su posición es independiente del ancla guardada. Si lo movés, conserva esa ubicación al terminar una partida, volver desde pausa o resultado y recuperar el foco o seguimiento del visor. Girar la cabeza o moverse cerca no lo recoloca. Solo vuelve automáticamente frente a vos si queda a más de 3,25 m; **Reset position** permite recuperarlo manualmente. Al cerrar y abrir de nuevo la app, el menú aparece frente a la posición actual. Si hay un ancla guardada, se intenta restaurar en segundo plano: tras estabilizarse el seguimiento, se conserva si está cerca y se olvida automáticamente si el tablero queda a más de 3 m en horizontal o en otro nivel con más de 2,5 m de diferencia vertical. En ese caso, se pide colocar el mapa al iniciar la partida. **Settings → Play space → Reposition board** sigue disponible para ajustar una posición cercana. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 

@@ -30,7 +30,7 @@ namespace Frontier.Mobile.Editor
         [Serializable] private sealed class CaptureResult
         {
             public string name, file;
-            public int selectionCount, visibleTargets, drawnGraphics;
+            public int selectionCount, visibleTargets, drawnGraphics, drawnWorldGraphics;
             public float inputBlockedPercent;
         }
         [Serializable] private sealed class Report
@@ -163,6 +163,7 @@ namespace Frontier.Mobile.Editor
                 Refresh();
                 Check(session.View.entities.First(entity => entity.id == hq.id).queue.Length > 0, "production queue is present in the real player view");
                 ValidateLayout("production and saved group"); Capture("03-production-groups");
+                ValidateBuildingBadges();
                 ValidateOrdersPopup();
                 if (Width > Height) ValidateSameSessionRotation();
                 session.CancelMode(); session.AttackMoveMode = true;
@@ -170,6 +171,7 @@ namespace Frontier.Mobile.Editor
                 Check(session.MobileGroupMatchesSelection(0) && !session.HasTargetingMode,
                     "mobile group tap recalls the saved units and clears targeting");
                 ValidateTutorialShift();
+                ValidateMobileMenus();
                 report.passed = report.checks.All(check => check.passed);
 
                 void Check(bool passed, string name, string detail = "")
@@ -177,6 +179,36 @@ namespace Frontier.Mobile.Editor
                 IEnumerable<object> Targets() => Field<IList>(panel, "targets").Cast<object>()
                     .Where(target => TargetRect(target) != null && TargetRect(target).gameObject.activeInHierarchy);
                 void Click(object target) => Field<Action>(target, "click")?.Invoke();
+                void ValidateBuildingBadges()
+                {
+                    void Badge(bool construction)
+                    {
+                        var badge = boardObject.GetComponentsInChildren<Canvas>().FirstOrDefault(item => item.name ==
+                            (construction ? "Construction " : "Mineral workers ") + hq.id);
+                        Check(badge != null, "building badge exists for " + (construction ? "construction" : "workforce"));
+                        if (badge == null) return;
+                        var corners = new Vector3[4]; ((RectTransform)badge.transform).GetWorldCorners(corners);
+                        var projected = corners.Select(point => quest.Camera.WorldToScreenPoint(point)).ToArray();
+                        float height = (projected.Max(point => point.y) - projected.Min(point => point.y))
+                            * 720 / Mathf.Min(Width, Height);
+                        Check(height >= (construction ? 44 : 24) && height <= (construction ? 66 : 40),
+                            "building badge is readable and compact at overview zoom", "short-axis height=" + height);
+                        Check(badge.GetComponentsInChildren<Graphic>().All(graphic => !graphic.raycastTarget),
+                            "building badge never intercepts touch input");
+                        var count = badge.GetComponentsInChildren<Text>().First(text => text.name ==
+                            (construction ? "Construction percent" : "Assigned / optimal"));
+                        Check(count.text.Contains(construction ? "%" : "/"), "building badge retains its actual game value");
+                    }
+                    Badge(false);
+                    var actor = session.Match.Entities[hq.id];
+                    bool complete = actor.complete; int remaining = actor.remaining;
+                    try
+                    {
+                        actor.complete = false; actor.remaining = session.Catalog[actor.definition].duration / 2;
+                        Refresh(); Badge(true); Capture("05-construction");
+                    }
+                    finally { actor.complete = complete; actor.remaining = remaining; Refresh(); }
+                }
                 void ValidateFriendlyTapAfterMove()
                 {
                     var input = fixture.AddComponent<CommanderInput>();
@@ -222,7 +254,7 @@ namespace Frontier.Mobile.Editor
                     var drag = press;drag.Down = false;drag.X += 40;
                     Call(input, "TrackMobileSelection", touchedRay, drag, gesture.Step(drag, 12));
                     Check(Field<int>(input, "mobilePressedEntity") == 0 && session.LastCommandSequence == movement,
-                        "camera drag cancels the captured unit without sending an order");
+                        "one-finger map swipe cancels the captured unit without sending an order");
                     var finishDrag = drag;finishDrag.Up = true;finishDrag.Count = 0;
                     Call(input, "TrackMobileSelection", touchedRay, finishDrag, gesture.Step(finishDrag, 12));
                     session.Select(0, false);press.Time = 12;
@@ -264,9 +296,13 @@ namespace Frontier.Mobile.Editor
                 {
                     Check(quest.Navigation.Viewport == new Rect(0, 0, 1, 1), state + ": battlefield retains full viewport");
                     var actionRect = Bounds(Field<RectTransform>(panel, "actions"));
+                    var footer = Bounds(Field<RectTransform>(panel, "mobileCameraFooter"));
+                    Check(Contains(SafePixels, footer), state + ": camera footer fits the safe area");
+                    Check(panel.BrowserContainsScreenPoint(footer.center) && panel.BrowserCameraPanHandleContains(footer.center),
+                        state + ": footer owns camera touch without leaking to map");
                     float maximumActionHeight = Height > Width ? 280 : 150;
-                    Check(actionRect.height <= maximumActionHeight && actionRect.yMin >= SafePixels.y - 1
-                        && actionRect.yMax <= SafePixels.y + maximumActionHeight + 16,
+                    Check(actionRect.height <= maximumActionHeight && actionRect.yMin >= footer.yMax
+                        && actionRect.yMax <= SafePixels.y + maximumActionHeight + footer.height + 30,
                         state + ": compact action rows stay above the home indicator", actionRect.ToString());
                     foreach (var target in Targets())
                     {
@@ -274,6 +310,8 @@ namespace Frontier.Mobile.Editor
                         string label = rect.GetComponentInChildren<Text>()?.text ?? rect.name;
                         Check(Contains(SafePixels, bounds), state + ": control fits simulated safe area: " + label, bounds.ToString());
                         Check(panel.BrowserContainsScreenPoint(bounds.center), state + ": control consumes its center: " + label);
+                        Check(!bounds.Overlaps(footer), state + ": action does not overlap camera footer: " + label);
+                        Check(!panel.BrowserCameraPanHandleContains(bounds.center), state + ": button cannot start camera drag: " + label);
                     }
                     var activeTargets = Targets().Select(TargetRect).Distinct().ToArray();
                     for (int i = 0; i < activeTargets.Length; i++)
@@ -402,6 +440,61 @@ namespace Frontier.Mobile.Editor
                     }
                     Capture("04-tutorial-shift", false);
                 }
+                void ValidateMobileMenus()
+                {
+                    session.LeaveMatch();
+                    Set(session, "rankingEndpoint", session.PublicBackendUrl);
+                    Set(session, "ranking", new RankSnapshot {
+                        profile = new RankProfile { rating = 1248, games = 12, wins = 7, losses = 5, rank = 4 },
+                        entries = Enumerable.Range(1, 10).Select(i => new RankEntry { rank = i, rating = 1600-i*70,
+                            displayName = "Commander " + i, isSelf = i == 4 }).ToArray()
+                    });
+                    foreach (string locale in new[] { "es", "en" })
+                    {
+                        Localization.SetPreference(locale);
+                        foreach (var page in new[] { CommandPanel.MenuPage.Main, CommandPanel.MenuPage.MatchSetup,
+                            CommandPanel.MenuPage.Settings, CommandPanel.MenuPage.Guide, CommandPanel.MenuPage.OnlineSetup,
+                            CommandPanel.MenuPage.LeaveConfirmation, CommandPanel.MenuPage.Ranking })
+                        {
+                            Call(panel, "Show", page);
+                            Call(panel, "LayoutMobileMenu", CanvasSize, SafeCanvas);
+                            var actions = Field<RectTransform>(panel, "actions");
+                            for (int i = actions.childCount-1; i >= 0; i--) Object.DestroyImmediate(actions.GetChild(i).gameObject);
+                            Field<IList>(panel, "targets").Clear();
+                            Call(panel, "BuildMobileMenu"); Call(panel, "UpdateMenuText");
+                            Canvas.ForceUpdateCanvases();
+                            string context = locale + " " + page;
+                            var menuTargets = Targets().ToArray();
+                            Check(menuTargets.Length > 0, context + ": menu has touch targets");
+                            Check(!panel.BrowserCameraPanHandleContains(SafePixels.center), context + ": menu cannot start footer navigation");
+                            foreach (var target in menuTargets)
+                            {
+                                var bounds = Bounds(TargetRect(target));
+                                Check(Contains(SafePixels, bounds), context + ": menu button fits safe area: " + TargetLabel(TargetRect(target)), bounds.ToString());
+                                Check(bounds.height >= 70, context + ": menu button retains a usable touch height");
+                            }
+                            for (int a = 0; a < menuTargets.Length; a++) for (int b = a+1; b < menuTargets.Length; b++)
+                                Check(!Bounds(TargetRect(menuTargets[a])).Overlaps(Bounds(TargetRect(menuTargets[b]))), context + ": menu buttons do not overlap");
+                            var primary = menuTargets.FirstOrDefault(target => ActionId(target) == "mobile-menu-primary");
+                            if (page == CommandPanel.MenuPage.Main || page == CommandPanel.MenuPage.MatchSetup
+                                || page == CommandPanel.MenuPage.OnlineSetup || page == CommandPanel.MenuPage.LeaveConfirmation)
+                                Check(primary != null && Field<Color>(primary, "normal") == ConsoleTheme.Primary, context + ": primary action is visually distinct");
+                            if (page == CommandPanel.MenuPage.Ranking)
+                            {
+                                Check(actions.GetComponentsInChildren<RectTransform>().Count(rect => rect.name.StartsWith("Mobile ranking entry ")) == 10,
+                                    context + ": all top ten entries are visible");
+                                foreach (var row in actions.GetComponentsInChildren<RectTransform>().Where(rect => rect.name.StartsWith("Mobile ranking entry ")))
+                                    Check(Contains(SafePixels, Bounds(row)), context + ": ranking row fits safe area");
+                                Check(menuTargets.Any(target => ActionId(target) == "mobile-ranking-back")
+                                    && menuTargets.Any(target => ActionId(target) == "mobile-ranking-refresh"), context + ": ranking preserves back and refresh");
+                            }
+                            Capture("menu-" + locale + "-" + page.ToString().ToLowerInvariant(), false);
+                            if (page == CommandPanel.MenuPage.Main && primary != null)
+                            { Click(primary); Check(panel.Page == CommandPanel.MenuPage.MatchSetup, context + ": primary action opens real match setup"); }
+                        }
+                    }
+                    Localization.SetPreference("es");
+                }
                 void Capture(string name, bool checkMapAvailability = true)
                 {
                     var camera = preview.camera; var source = quest.Camera;
@@ -411,7 +504,7 @@ namespace Frontier.Mobile.Editor
                     camera.rect = new Rect(0, 0, 1, 1); camera.aspect = Width / (float)Height;
                     camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = source.backgroundColor;
                     camera.allowHDR = false; camera.allowMSAA = false;
-                    var meshes = new List<Mesh>(); var materials = new List<Material>();
+                    var meshes = new List<Mesh>(); var materials = new List<Material>(); int worldGraphics = 0;
                     Texture2D image = null;
                     try
                     {
@@ -424,6 +517,20 @@ namespace Frontier.Mobile.Editor
                         var pixelToWorld = Matrix4x4.TRS(lowerLeft, camera.transform.rotation,
                             new Vector3(Vector3.Distance(lowerLeft, lowerRight) / Width,
                                 Vector3.Distance(lowerLeft, upperLeft) / Height, 1));
+                        // World-space building badges are not part of the HUD's
+                        // pixel canvas. Submit their actual meshes in world space.
+                        foreach (var graphic in boardObject.GetComponentsInChildren<Graphic>())
+                        {
+                            if (!graphic.isActiveAndEnabled) continue;
+                            graphic.Rebuild(CanvasUpdate.PreRender);
+                            var sourceMesh = graphic.canvasRenderer.GetMesh();
+                            if (sourceMesh == null || sourceMesh.vertexCount == 0) continue;
+                            var mesh = Object.Instantiate(sourceMesh); meshes.Add(mesh);
+                            var material = new Material(graphic.materialForRendering) { mainTexture = graphic.mainTexture, renderQueue = 3000 };
+                            materials.Add(material);
+                            if (graphic is Text) material.SetVector("_TextureSampleAdd", new Vector4(1, 1, 1, 0));
+                            preview.DrawMesh(mesh, graphic.transform.localToWorldMatrix, material, 0); worldGraphics++;
+                        }
                         foreach (var graphic in console.GetComponentsInChildren<Graphic>())
                         {
                             if (!graphic.isActiveAndEnabled) continue;
@@ -447,7 +554,11 @@ namespace Frontier.Mobile.Editor
                         for (int y = Height / 3; y < Height * 2 / 3; y += 11)
                             for (int x = Width / 3; x < Width * 2 / 3; x += 11)
                             { var color = pixels[y * Width + x]; colors.Add(color.r << 16 | color.g << 8 | color.b); }
-                        Check(meshes.Count > 20 && meshes.Sum(mesh => mesh.vertexCount) > 200, name + ": real Canvas generated visible geometry");
+                        int minimumGraphics = panel.Page == CommandPanel.MenuPage.Actions ? 20 : 8;
+                        Check(meshes.Count > minimumGraphics && meshes.Sum(mesh => mesh.vertexCount) > 200, name + ": real Canvas generated visible geometry");
+                        if (panel.Page == CommandPanel.MenuPage.Actions)
+                        {
+                        Check(worldGraphics > 0, name + ": actual world-space building badges are rendered");
                         Check(colors.Count > 32, name + ": center map render contains varied terrain pixels", "colors=" + colors.Count);
                         var minimap = Field<BrowserMinimap>(panel, "browserMinimap");
                         var overview = minimap.mainTexture as Texture2D;
@@ -455,6 +566,7 @@ namespace Frontier.Mobile.Editor
                             && overview.width == session.Map.width && overview.height == session.Map.height
                             && overview.GetPixels32().Select(color => color.r << 16 | color.g << 8 | color.b).Distinct().Take(4).Count() >= 4,
                             name + ": minimap contains actual filtered-view terrain and markers");
+                        }
                         int samples = 0, blocked = 0;
                         for (float y = SafePixels.yMin + 12; y < SafePixels.yMax; y += 24)
                             for (float x = SafePixels.xMin + 12; x < SafePixels.xMax; x += 24)
@@ -463,7 +575,7 @@ namespace Frontier.Mobile.Editor
                         if (checkMapAvailability)
                             Check(blockedPercent < 35, name + ": most of the safe area remains available for map gestures", blockedPercent.ToString("F1") + "% of safe area blocked");
                         report.captures.Add(new CaptureResult { name = name, file = file, selectionCount = session.Selection.Count,
-                            visibleTargets = Targets().Count(), drawnGraphics = meshes.Count, inputBlockedPercent = blockedPercent });
+                            visibleTargets = Targets().Count(), drawnGraphics = meshes.Count, drawnWorldGraphics = worldGraphics, inputBlockedPercent = blockedPercent });
                     }
                     finally
                     {

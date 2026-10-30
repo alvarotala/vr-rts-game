@@ -15,7 +15,7 @@ namespace Frontier.Runtime
         {
             public int Count,Finger,OtherFinger;
             public float X,Y,OtherX,OtherY,Time;
-            public bool Down,Up,Cancelled,OverUi,SecondOverMap,AllowMap,LassoSelection,Shift;
+            public bool Down,Up,Cancelled,OverUi,SecondOverMap,AllowMap,LassoSelection,Shift,CameraPanHandle;
         }
         public struct Result
         {
@@ -23,7 +23,7 @@ namespace Frontier.Runtime
             public bool Down,Up,Held,Cancelled,Shift;
             public float DeltaX,DeltaY,ZoomRatio,StartX,StartY;
         }
-        private bool captured,ui,lasso,shift,moving,multi,draining;
+        private bool captured,ui,panHandle,lasso,shift,moving,multi,draining;
         private float startX,startY,lastX,lastY,lastSpan,pressedAt;
         private int firstFinger,secondFinger;
         public bool Captured=>captured;
@@ -39,7 +39,7 @@ namespace Frontier.Runtime
         }
 
         public void CancelUntilRelease()
-        {captured=ui=lasso=moving=multi=false;draining=true;lastSpan=0;}
+        {captured=ui=panHandle=lasso=moving=multi=false;draining=true;lastSpan=0;}
 
         public Result Step(Sample sample,float dragThreshold)
         {
@@ -54,19 +54,20 @@ namespace Frontier.Runtime
             {
                 // Ignore fingers already held when the app resumes or a page opens.
                 if(!sample.Down)return default;
-                captured=true;ui=sample.OverUi;shift=sample.Shift;lasso=!ui&&shift&&sample.LassoSelection;
+                captured=true;panHandle=sample.CameraPanHandle&&sample.AllowMap;
+                ui=sample.OverUi&&!panHandle;shift=sample.Shift;lasso=!ui&&!panHandle&&shift&&sample.LassoSelection;
                 startX=lastX=sample.X;startY=lastY=sample.Y;
                 firstFinger=sample.Finger;
                 pressedAt=sample.Time;
                 moving=multi=false;lastSpan=0;
             }
-            if(!ui&&(!sample.AllowMap||sample.OverUi))
+            if(!ui&&(!sample.AllowMap||!panHandle&&sample.OverUi))
             {CancelUntilRelease();return new Result{Cancelled=true};}
             if(!multi&&sample.Count==1&&sample.Finger!=firstFinger)
             {CancelUntilRelease();return new Result{Cancelled=true};}
             if(sample.Count>1)
             {
-                if(ui||sample.Count>2||!sample.SecondOverMap)
+                if(ui||panHandle||sample.Count>2||!sample.SecondOverMap)
                 {CancelUntilRelease();return new Result{Cancelled=true};}
                 bool cancelLasso=lasso;lasso=false;multi=true;
                 float x=(sample.X+sample.OtherX)*.5f,y=(sample.Y+sample.OtherY)*.5f;
@@ -93,8 +94,13 @@ namespace Frontier.Runtime
             float distanceX=sample.X-startX,distanceY=sample.Y-startY;
             bool wasMoving=moving;
             moving|=distanceX*distanceX+distanceY*distanceY>=dragThreshold*dragThreshold;
-            var output=new Result{Kind=moving?(lasso?Kind.Lasso:Kind.Pan):released?(sample.Time-pressedAt>=LongPressSeconds?Kind.LongPress:Kind.Tap):Kind.None,
+            // Only the footer owns one-finger camera motion. A plain map swipe
+            // consumes its eventual release, but may still become a two-finger
+            // gesture without requiring the user to lift the first finger.
+            var output=new Result{Kind=panHandle?Kind.Pan:moving?(lasso?Kind.Lasso:Kind.None):released?(sample.Time-pressedAt>=LongPressSeconds?Kind.LongPress:Kind.Tap):Kind.None,
+                Cancelled=moving&&!lasso&&!panHandle,
                 Down=moving&&!wasMoving,Up=released,Held=!released,Shift=shift,StartX=startX,StartY=startY,DeltaX=sample.X-lastX,DeltaY=sample.Y-lastY};
+            if(panHandle&&!moving)output.DeltaX=output.DeltaY=0;
             lastX=sample.X;lastY=sample.Y;
             if(released)captured=false;
             return output;

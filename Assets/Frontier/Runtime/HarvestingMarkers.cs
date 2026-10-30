@@ -19,11 +19,13 @@ namespace Frontier.Runtime
         private readonly List<Rect> occupied = new List<Rect>();
         private readonly Vector3[] corners = new Vector3[4];
         private PlayerView lastView;
+        private bool mobilePresentation;
         private sealed class Marker
         {
             public RectTransform rect;
             public Text count, title;
             public RectTransform progress;
+            public Vector2 progressSize;
             public bool construction;
             public LineRenderer stem;
         }
@@ -37,6 +39,16 @@ namespace Frontier.Runtime
         {
             var session = board.Session; var view = session.View;
             if (view == null || !session.Running || viewer == null || !board.Content.gameObject.activeInHierarchy) { Hide(); return; }
+            bool mobile = false;
+#if FRONTIER_BROWSER
+            mobile = BrowserMobileInput.IsTouchMode;
+#endif
+            if (mobilePresentation != mobile)
+            {
+                mobilePresentation = mobile; lastView = null;
+                foreach (var marker in markers.Values) { marker.rect.gameObject.SetActive(false); Release(marker.rect.gameObject); }
+                markers.Clear();
+            }
             root.gameObject.SetActive(true);
             if (!ReferenceEquals(lastView, view))
             {
@@ -59,7 +71,7 @@ namespace Frontier.Runtime
                         marker.title.text = building.awaitingClearance ? "CLEARING AREA" : "UNDER CONSTRUCTION";
                         float progress = Mathf.Clamp01(building.progress);
                         marker.count.text = Mathf.Min(99, Mathf.FloorToInt(progress * 100)) + "%";
-                        marker.progress.sizeDelta = new Vector2(196 * progress, 7);
+                        marker.progress.sizeDelta = new Vector2(marker.progressSize.x * progress, marker.progressSize.y);
                         continue;
                     }
                     int assigned = deposits.Sum(r => r.assignedWorkers), optimal = deposits.Sum(r => r.optimalWorkers);
@@ -79,11 +91,24 @@ namespace Frontier.Runtime
                 marker.rect.localScale = Vector3.one * (PixelScale / board.CellScale);
                 marker.rect.position = top + board.transform.up * .035f;
                 Face(marker.rect, viewer);
+                float overlapStep = .032f;
+                if (mobilePresentation)
+                {
+                    // Keep text readable at overview zoom, with a cap when the camera is close.
+                    // Health bars sit one content cell above the roof; leave room above them.
+                    var anchor = top + board.Content.TransformVector(Vector3.up * 1.35f);
+                    marker.rect.position = anchor; Face(marker.rect, viewer);
+                    FitMobileHeight(marker.rect, viewer, marker.construction);
+                    float height = marker.rect.TransformVector(Vector3.up * marker.rect.rect.height).magnitude;
+                    marker.rect.position = anchor + viewer.transform.up * (height * .64f); Face(marker.rect, viewer);
+                    marker.stem.widthMultiplier = Mathf.Min(.0006f, height / 48f);
+                    overlapStep = height * 1.12f;
+                }
                 // Keep nearby mineral/gas counters distinct even on a compact board.
                 Rect screen = ScreenRect(marker.rect, viewer);
                 for (int attempt = 0; attempt < 6 && occupied.Any(rect => rect.Overlaps(screen)); attempt++)
                 {
-                    marker.rect.position += viewer.transform.up * .032f; Face(marker.rect, viewer);
+                    marker.rect.position += viewer.transform.up * overlapStep; Face(marker.rect, viewer);
                     screen = ScreenRect(marker.rect, viewer);
                 }
                 bool visible = viewer.WorldToViewportPoint(marker.rect.position).z > 0;
@@ -98,6 +123,7 @@ namespace Frontier.Runtime
         {
             var rect = new GameObject(construction ? "Construction " + id : (gas ? "Gas" : "Mineral") + " workers " + id, typeof(RectTransform), typeof(Canvas)).GetComponent<RectTransform>();
             rect.SetParent(root, false); rect.sizeDelta = construction ? new Vector2(220, 112) : new Vector2(180, 84);
+            if (mobilePresentation) rect.sizeDelta = construction ? new Vector2(200, 60) : new Vector2(104, 36);
             var canvas = rect.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 5;
             var background = rect.gameObject.AddComponent<Image>(); background.color = construction ? new Color(.04f, .04f, .04f, .98f) : new Color(.015f, .035f, .05f, .96f); background.raycastTarget = false;
             var title = Text(rect, construction ? "Construction status" : "Resource", new Vector2(0, construction ? 36 : 24), new Vector2(construction ? 210 : 170, 23), 15);
@@ -105,11 +131,35 @@ namespace Frontier.Runtime
             title.color = construction ? Color.white : gas ? new Color(.83f, .65f, 1) : new Color(.4f, .88f, 1);
             var count = Text(rect, construction ? "Construction percent" : "Assigned / optimal", new Vector2(0, construction ? 4 : -10), new Vector2(170, 48), construction ? 32 : 38);
             count.color = Color.white;
+            if (mobilePresentation)
+            {
+                var tint = background.color; tint.a = .72f; background.color = tint;
+                count.rectTransform.anchoredPosition = construction ? new Vector2(0, -8) : new Vector2(14, 0);
+                count.rectTransform.sizeDelta = construction ? new Vector2(188, 30) : new Vector2(72, 34);
+                count.fontSize = 26; count.resizeTextForBestFit = true; count.resizeTextMinSize = 18; count.resizeTextMaxSize = 26;
+                count.horizontalOverflow = HorizontalWrapMode.Wrap;
+                if (construction)
+                {
+                    title.rectTransform.anchoredPosition = new Vector2(0, 19); title.rectTransform.sizeDelta = new Vector2(188, 22);
+                    title.fontSize = 18; title.resizeTextForBestFit = true; title.resizeTextMinSize = 16; title.resizeTextMaxSize = 18;
+                    title.horizontalOverflow = HorizontalWrapMode.Wrap;
+                }
+                else
+                {
+                    title.gameObject.SetActive(false);
+                    var glyph = new GameObject("Resource symbol", typeof(RectTransform)).AddComponent<ConsoleGlyph>();
+                    glyph.transform.SetParent(rect, false); glyph.rectTransform.anchoredPosition = new Vector2(-37, 0);
+                    glyph.rectTransform.sizeDelta = new Vector2(22, 22); glyph.Glyph = gas ? ConsoleGlyph.Kind.Gas : ConsoleGlyph.Kind.Mineral;
+                    glyph.color = title.color;
+                }
+            }
             RectTransform progress = null;
+            var progressSize = mobilePresentation ? new Vector2(176, 3) : new Vector2(196, 7);
             if (construction)
             {
                 var track = new GameObject("Construction progress track", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                 track.SetParent(rect, false); track.anchoredPosition = new Vector2(0, -24); track.sizeDelta = new Vector2(196, 7);
+                if (mobilePresentation) { track.anchoredPosition = new Vector2(0, -27); track.sizeDelta = progressSize; }
                 track.GetComponent<Image>().color = new Color(.25f, .25f, .25f); track.GetComponent<Image>().raycastTarget = false;
                 progress = new GameObject("Construction progress", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                 progress.SetParent(track, false); progress.anchorMin = progress.anchorMax = progress.pivot = new Vector2(0, .5f);
@@ -117,10 +167,11 @@ namespace Frontier.Runtime
                 var status = Text(rect, "Availability", new Vector2(0, -43), new Vector2(210, 20), 13);
                 status.text = headquarters ? "NO RESOURCE DELIVERY YET" : "NOT OPERATIONAL YET";
                 status.color = Color.white;
+                if (mobilePresentation) status.gameObject.SetActive(false);
             }
             var stem = new GameObject("Attachment").AddComponent<LineRenderer>(); stem.transform.SetParent(rect, false);
             stem.sharedMaterial = stemMaterial; stem.positionCount = 2; stem.useWorldSpace = true; stem.widthMultiplier = .0006f;
-            return new Marker { rect = rect, count = count, title = title, stem = stem, progress = progress, construction = construction };
+            return new Marker { rect = rect, count = count, title = title, stem = stem, progress = progress, progressSize = progressSize, construction = construction };
         }
         private Text Text(Transform parent, string name, Vector2 position, Vector2 size, int fontSize)
         {
@@ -133,6 +184,21 @@ namespace Frontier.Runtime
         {
             var forward = label.position - viewer.transform.position;
             if (forward.sqrMagnitude > .0001f) label.rotation = Quaternion.LookRotation(forward, viewer.transform.up);
+        }
+        private void FitMobileHeight(RectTransform label, Camera viewer, bool construction)
+        {
+            if (viewer.pixelWidth <= 0 || viewer.pixelHeight <= 0 || viewer.WorldToViewportPoint(label.position).z <= 0) return;
+            label.GetWorldCorners(corners); float min = float.MaxValue, max = float.MinValue;
+            foreach (var corner in corners)
+            { float y = viewer.WorldToScreenPoint(corner).y; min = Mathf.Min(min, y); max = Mathf.Max(max, y); }
+            float projectedHeight = max - min;
+            if (projectedHeight <= .001f) return;
+            // Short-axis units keep both orientations equally legible. A continuous clamp
+            // grows only distant badges and shrinks only those exceeding the compact cap.
+            float referenceScale = Mathf.Min(viewer.pixelWidth, viewer.pixelHeight) / 720f;
+            float minimum = (construction ? 48 : 28) * referenceScale;
+            float maximum = label.rect.height * referenceScale;
+            label.localScale *= Mathf.Clamp(projectedHeight, minimum, maximum) / projectedHeight;
         }
         private Rect ScreenRect(RectTransform label, Camera viewer)
         {

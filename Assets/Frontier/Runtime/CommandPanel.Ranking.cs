@@ -19,6 +19,9 @@ namespace Frontier.Runtime
 
         private void BuildRanking()
         {
+#if FRONTIER_BROWSER
+            if(BrowserMobileInput.IsTouchMode){BuildMobileRanking();return;}
+#endif
             var entries=Session.Ranking?.entries;
             if(entries==null||entries.Length==0)
                 Label(actions,Session.IsLoadingRanking?"Loading ranking…":Session.RankingFailed?"Ranking is unavailable. Refresh to try again.":"No ranked players yet. Complete a public match to join the ranking.",
@@ -36,6 +39,51 @@ namespace Frontier.Runtime
             MenuFooter("Back",()=>Show(MenuPage.OnlineSetup),0,512);
             MenuFooter("Refresh ranking",()=>_=Session.RefreshRankingAsync(),528,512,true);
         }
+
+#if FRONTIER_BROWSER
+        private void BuildMobileRanking()
+        {
+            float width=actions.rect.width,height=actions.rect.height;
+            const float gap=12,summaryHeight=56,footerHeight=88;
+            float footerTop=height-footerHeight,listTop=summaryHeight+gap;
+            float listHeight=footerTop-listTop-gap;
+            var summary=Label(actions,RankingSummary,Vector2.zero,new Vector2(width,summaryHeight),24,ConsoleTheme.Ink);
+            summary.gameObject.name="Mobile ranking summary";
+            var entries=Session.Ranking?.entries;
+            int count=entries==null?0:Math.Min(10,entries.Length);
+            if(count==0)
+                Label(actions,Session.IsLoadingRanking?"Loading ranking…":Session.RankingFailed?"Ranking is unavailable. Refresh to try again.":"No ranked players yet. Complete a public match to join the ranking.",
+                    new Vector2(16,-listTop),new Vector2(width-32,listHeight),24,MenuMuted,TextAnchor.MiddleCenter);
+            else
+            {
+                int columns=root.rect.height>root.rect.width?1:2;
+                int rows=Mathf.CeilToInt(count/(float)columns);
+                float cellWidth=(width-(columns-1)*gap)/columns;
+                float rowHeight=Mathf.Min(80,(listHeight-(rows-1)*8)/rows);
+                for(int i=0;i<count;i++)
+                {
+                    var entry=entries[i];if(entry==null)continue;
+                    int column=i/rows,row=i%rows;
+                    var rect=Section(actions,"Mobile ranking entry "+entry.rank,
+                        new Vector2(column*(cellWidth+gap),-listTop-row*(rowHeight+8)),new Vector2(cellWidth,rowHeight),
+                        entry.isSelf?ConsoleTheme.Primary:ConsoleTheme.Card);
+                    Label(rect,"#"+entry.rank,new Vector2(12,0),new Vector2(60,rowHeight),22,MenuMuted);
+                    var name=Label(rect,entry.isSelf?"You":RankingName(entry.displayName),
+                        new Vector2(80,0),new Vector2(cellWidth-192,rowHeight),24,ConsoleTheme.Ink);
+                    name.fontStyle=entry.isSelf?FontStyle.Bold:FontStyle.Normal;
+                    Label(rect,entry.rating.ToString(),new Vector2(cellWidth-104,0),new Vector2(92,rowHeight),
+                        26,entry.isSelf?accent:ConsoleTheme.Ink,TextAnchor.MiddleRight).fontStyle=FontStyle.Bold;
+                }
+            }
+            float buttonWidth=(width-gap)*.5f;
+            var back=BrowserButton(actions,"Back",new Vector2(0,-footerTop),new Vector2(buttonWidth,footerHeight),()=>Show(MenuPage.OnlineSetup));
+            var refresh=BrowserButton(actions,"Refresh ranking",new Vector2(buttonWidth+gap,-footerTop),new Vector2(buttonWidth,footerHeight),()=>_=Session.RefreshRankingAsync());
+            back.actionId="mobile-ranking-back";refresh.actionId="mobile-ranking-refresh";
+            refresh.normal=ConsoleTheme.Primary;refresh.image.color=refresh.normal;
+            foreach(var target in new[]{back,refresh})
+            {target.rect.GetComponentInChildren<Text>().fontSize=24;targets.Add(target);}
+        }
+#endif
 
         private static string RankingName(string value)
         {

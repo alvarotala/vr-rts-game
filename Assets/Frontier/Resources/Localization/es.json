@@ -6,6 +6,12 @@
     "Spanish"
   ],
   "entries": [
+    {"key":"Select","value":"Seleccionar","template":false},
+    {"key":"Order","value":"Ordenar","template":false},
+    {"key":"Drag here to move the camera","value":"Arrastra aquí para mover el mapa","template":false},
+    {"key":"Footer / two fingers: camera · Shift + drag: select","value":"Barra inferior / dos dedos: cámara · Shift + arrastrar: seleccionar","template":false},
+    {"key":"Move the camera with the footer or two fingers. Use Shift to circle units.","value":"Mueve el mapa con la barra inferior o dos dedos. Usa Shift para rodear unidades.","template":false},
+    {"key":"Drag the footer or use two fingers to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra la barra inferior o usa dos dedos para mover el mapa. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
     {"key":"Clear selection, then tap this worker.","value":"Limpia la selección y toca este trabajador.","template":false},
     {"key":"Clear selection, then tap your headquarters.","value":"Limpia la selección y toca tu sede central.","template":false},
     {"key":"Clear selection, then tap this military building.","value":"Limpia la selección y toca este edificio militar.","template":false},
