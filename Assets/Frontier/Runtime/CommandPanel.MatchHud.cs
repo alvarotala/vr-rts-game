@@ -195,9 +195,15 @@ namespace Frontier.Runtime
             LayoutTutorialCard(hud);
             matchHud.sizeDelta=root.sizeDelta;
             LayoutConsoleChrome();
+#if FRONTIER_BROWSER
+            LayoutBrowserPage();
+#endif
         }
         private void UpdateMatchHud()
         {
+#if FRONTIER_BROWSER
+            UpdateBrowserHud();
+#else
             var view=Session.View;
             mineralValue.text=view.minerals.ToString("N0",CultureInfo.InvariantCulture);gasValue.text=view.catalyst.ToString("N0",CultureInfo.InvariantCulture);
             supplyValue.text=$"{view.supply} / {view.capacity}";
@@ -268,6 +274,7 @@ namespace Frontier.Runtime
                 lessonPause&&Session.Tutorial.Briefing?"TUTORIAL PAUSED · Read the lesson and choose Continue.":
                 Session.IsPaused?(Session.IsOnline?"INPUT UNAVAILABLE · The online match continues.":"MATCH PAUSED · Waiting for headset, focus or tracking to resume."):Session.Message;
             UpdateStatusStyle(!Session.IsPaused&&Session.MessageIsError);
+#endif
         }
         private void UpdateCasterStatus(VisibleEntity[] selected)
         {
@@ -347,6 +354,9 @@ namespace Frontier.Runtime
         private float MatchActionsHeight()=>HudActionHeight+HudActionStride*2;
         private void BuildMatchActions()
         {
+#if FRONTIER_BROWSER
+            BuildBrowserActions();return;
+#else
             targets.AddRange(groupTargets);targets.AddRange(matchTargets.Where(t=>t.rect.gameObject.activeSelf));
             BindProductionTargets();BindOrderTargets();BindSelectionTargets();BindHudHelpTargets();
             var available=SelectionActions.For(Session);actionHeading.text=available.Heading;
@@ -389,6 +399,7 @@ namespace Frontier.Runtime
                 if(active){detail.color=ConsoleTheme.Ink;detail.fontStyle=FontStyle.Bold;}
                 targets.Add(target);actionIndex++;
             }
+#endif
         }
         private int MatchActionSlot(SelectionAction action,SelectionActions available)
         {
@@ -425,10 +436,14 @@ namespace Frontier.Runtime
         }
         private void LayoutHudCounters()
         {
+#if FRONTIER_BROWSER
+            return;
+#else
             if(Page!=MenuPage.Actions||root==null||!root.gameObject.activeInHierarchy)return;
             LayoutHudCounter(selectedKind,selection,selectedCard);
             LayoutHudCounter(productionTitle,productionCount,productionStrip);
             LayoutHudCounter(orderPlanTitle,orderPlanCount,orderPlanStrip);
+#endif
         }
         private static string MatchActionDetail(SelectionAction action,bool active)
         {

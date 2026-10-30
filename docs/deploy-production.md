@@ -18,6 +18,12 @@ regenerar credenciales desde cero.
 - [Recuperación de datos](#9-recuperar-datos-desde-un-backup)
 - [Diagnóstico y operación](#10-operación-y-problemas-frecuentes)
 
+## Hosting del cliente Unity WebGL
+
+El cliente de navegador se compila previamente con `python3 scripts/build-webgl.py`. Transferir **toda** la salida `Builds/WebGL` y su manifiesto, o construir la imagen estática con `docker build -f Dockerfile.web -t little-legion-web:local .`. `Dockerfile.web` solo empaqueta el player Unity ya compilado; no genera un segundo cliente. El servicio opcional `web` de `compose.online.yml` sirve esos archivos en el puerto 8080. Ver [hosting y caché](web-client.md#hosting-estático-con-docker).
+
+Esta guía configura HTTPS para Nakama y UDP para Quest. Para admitir el navegador también se requiere un proxy **WSS del servidor de partidas**, `wsPort` público y certificado válido para el host anunciado. Esa conexión es independiente del hosting estático y del WebSocket de Nakama; seguir la [actualización del transporte de navegador](browser-matchmaking-update.md). No reemplazar el endpoint Nakama por el sitio estático.
+
 ## Instalación de referencia
 
 | Elemento | Valor |

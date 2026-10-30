@@ -1,8 +1,30 @@
 # Guía de juego
 
-Los controles indicados a continuación son los predeterminados y se pueden personalizar desde **Settings → Controls → Hotkeys**. **Settings → Controls → Hand: Left/Right** elige un único mando activo (derecho inicialmente); con el izquierdo, X/Y reemplazan A/B y el puntero, gatillo, grip y stick pasan a esa mano. La experiencia de juego está orientada a Quest 3. La rueda unificada se usa únicamente en VR. Su navegación es fija: joystick para elegir y gatillo para confirmar. La versión desktop queda por ahora para desarrollo y prueba de mecánicas: mouse y teclado, acciones desde el panel, teclas **1–4** para recuperar grupos y **Ctrl+1–4** para guardarlos. Comparte las reglas del juego y conserva WASD, rueda del mouse y F para navegar cómodamente durante las pruebas.
+Los controles indicados a continuación son los predeterminados y se pueden personalizar desde **Settings → Controls → Hotkeys**. **Settings → Controls → Hand: Left/Right** elige un único mando activo (derecho inicialmente); con el izquierdo, X/Y reemplazan A/B y el puntero, gatillo, grip y stick pasan a esa mano. La experiencia de juego está orientada a Quest 3. La rueda unificada se usa únicamente en VR. Su navegación es fija: joystick para elegir y gatillo para confirmar. La versión desktop de Unity queda para desarrollo y prueba de mecánicas: mouse y teclado, acciones desde el panel, teclas **1–4** para recuperar grupos y **Ctrl+1–4** para guardarlos. Comparte las reglas del juego y conserva WASD, rueda del mouse y F para navegar cómodamente durante las pruebas. La versión para navegadores se compila desde las mismas fuentes con Unity WebGL y usa una interfaz desktop propia; sus controles están en [cliente Unity WebGL](web-client.md#controles). El juego cruzado con Quest requiere un servidor con WebSocket/WSS compatible.
 
 ## Empezar una partida
+
+En la app móvil y en la web táctil se usa un tablero de pantalla, en vertical u
+horizontal y sin colocación en una habitación. Tocar **Nueva partida**, elegir
+facción/mapa/dificultad y comenzar. Arrastrar con un dedo mueve la cámara.
+Tocar un aliado cambia la selección a ese aliado, también después de mover otra
+unidad. Con unidades seleccionadas, tocar terreno, enemigos o recursos envía
+una orden. La unidad tocada se conserva hasta soltar el dedo aunque se mueva;
+arrastrar o pellizcar cancela la selección pendiente. Un toque lento sin selección
+previa también selecciona. **Cancelar / limpiar** quita la selección. Mantener 0,55 segundos
+y soltar conserva la orden contextual explícita, como reparar o reanudar un
+edificio aliado con trabajadores. Los modos de apuntado explícitos mantienen
+su prioridad sobre el cambio de selección.
+**Shift** se activa/desactiva con un toque o se mantiene con otro dedo:
+**Shift + arrastrar** rodea aliados con un lazo y los selecciona al soltar;
+**Shift + toque** con unidades seleccionadas ordena **Avanzar atacando**.
+El modificador se toma al empezar el gesto. Dos dedos también mueven la cámara
+y pellizcar ajusta el zoom. Las acciones aparecen según la selección;
+**Agrupar** la guarda en uno de cuatro iconos visibles del HUD, y tocar un icono
+recupera ese grupo. Si los espacios están llenos se elige cuál reemplazar.
+Los grupos conservan sólo sus integrantes vivos y se reinician con cada partida.
+El HUD también ofrece cancelación y minimapa. Controles completos y
+requisitos en [app/README.md](../app/README.md).
 
 Al abrir el juego en Quest, el menú principal aparece frente a tu posición actual, a unos 1,25 m, con **New Match**, **Guides** y **Settings**, sin pedir colocar el tablero ni permiso de superficies. Su posición es independiente del ancla guardada. Si lo movés, conserva esa ubicación al terminar una partida, volver desde pausa o resultado y recuperar el foco o seguimiento del visor. Girar la cabeza o moverse cerca no lo recoloca. Solo vuelve automáticamente frente a vos si queda a más de 3,25 m; **Reset position** permite recuperarlo manualmente. Al cerrar y abrir de nuevo la app, el menú aparece frente a la posición actual. Si hay un ancla guardada, se intenta restaurar en segundo plano: tras estabilizarse el seguimiento, se conserva si está cerca y se olvida automáticamente si el tablero queda a más de 3 m en horizontal o en otro nivel con más de 2,5 m de diferencia vertical. En ese caso, se pide colocar el mapa al iniciar la partida. **Settings → Play space → Reposition board** sigue disponible para ajustar una posición cercana. El tablero permanece oculto hasta entrar a la preparación de partida o iniciar su colocación.
 

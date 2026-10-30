@@ -4,6 +4,8 @@ services:
     command:
       - -frontier-port
       - "${FRONTIER_PORT:-7777}"
+      - -frontier-ws-port
+      - "${FRONTIER_WS_PORT:-7877}"
       - -frontier-map
       - "${FRONTIER_MAP:-rift}"
       - -frontier-listen

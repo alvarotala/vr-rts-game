@@ -1,5 +1,211 @@
 # Registro de validación
 
+## Selección táctil estable — 29 de octubre de 2026
+
+- Tocar una unidad propia reemplaza la selección anterior, también después
+  de moverla. La unidad se captura al apoyar el dedo y se confirma al soltar,
+  aunque se haya desplazado; pan, pinch y cancelación descartan ese candidato.
+  Sin selección previa, un toque lento también selecciona. Shift, las órdenes
+  explícitas y mantener para reparar con trabajadores conservan su prioridad.
+- Regresión reproducida en rojo antes de corregir `ResolveTap`.
+  `tests/MobileInputChecks`: **101 comprobaciones**; `tests/MobileGroupChecks`:
+  **120 comprobaciones**. `git diff --check` sin errores.
+- Unity **6000.3.26f1**, `MobileHudPreview.Run`: **959 comprobaciones / 8 capturas**
+  en horizontal y vertical. La sesión real recorre A → terreno → B, verifica
+  que seleccionar B no emita otra orden, mueve B entre presión y liberación,
+  y comprueba cancelación por pan y selección con un primer toque lento.
+  Evidencia: `TestResults/unity-mobile-selection-fix.log` y
+  `TestResults/MobileSelectionFix/`. Esto no equivale a una prueba táctil física.
+- El intento de entrega **0.1.0 (3)** exportó Unity, pero Xcode falló al escribir
+  `libGameAssembly.a` con `errno=28` (sin espacio).
+  Log inicial: `TestResults/ios-device-delivery-build-3.log`.
+- Tras liberar cachés en la sesión responsable de la limpieza, el reintento
+  exportó las fuentes finales, terminó con **BUILD SUCCEEDED**, verificó la firma
+  y **se instaló 0.1.0 (3) en el iPhone 13 mini**. Se usó el flujo normal de
+  `app/ios.py device`, con la configuración habitual de símbolos. El manifiesto
+  del export coincide con los hashes de las cuatro fuentes de interacción/idioma
+  corregidas. `devicectl` confirmó versión y build instaladas.
+  La apertura automática falló porque el dispositivo estaba bloqueado; el arranque
+  y la comodidad táctil en hardware quedan para abrir y probar en el teléfono.
+  Evidencia: `TestResults/ios-device-delivery-build-3-retry.log`,
+  `TestResults/ios-device-app-build-3.json` y
+  `Builds/Mobile/iOS-delivery/20261029T060552Z-device-3-ec9a99fb6806/`.
+
+## HUD móvil, Shift táctil y orientación vertical — 29 de octubre de 2026
+
+- El campo conserva el viewport completo. El HUD móvil usa superficies
+  translúcidas, acciones en una fila horizontal o dos verticales, órdenes
+  desplegables e iconos sólo para los grupos guardados. Los huecos y textos
+  pasivos dejan pasar los gestos al mapa.
+- Un dedo desplaza la cámara; Shift circular admite toque persistente o un
+  dedo mantenido y permite dibujar la selección con el otro. Con unidades
+  seleccionadas, toque contextual y Shift + toque para avanzar atacando.
+  El modificador se reinicia al perder foco; la rotación cancela gestos en curso.
+- `tests/MobileInputChecks`: **91 comprobaciones** del clasificador, separación
+  del contacto Shift, liberación del dedo de mapa, zoom y decisión de órdenes.
+  `tests/MobileGroupChecks`: **120 comprobaciones** de selección y grupos.
+- Generadores: **12 pruebas móviles y 8 web**. Plantilla web: **6 pruebas**,
+  incluyendo rotación sin reiniciar Unity ni tapar el juego. Entrega iOS:
+  **15 pruebas**; el exportador exige portrait y ambos landscapes.
+- `Frontier.Mobile.Editor.MobileHudPreview.Run`: Unity **6000.3.26f1**, Metal,
+  **937 comprobaciones / 8 capturas** en 2340×1080 y 1080×2340. Usa la sesión,
+  tablero, minimapa y geometría real del HUD. Verifica botones dentro del área
+  segura, ausencia de superposiciones, páginas de acciones, producción, grupos,
+  Shift junto al tutorial y conservación de estado/escala al rotar la misma sesión.
+  Con selección mixta, los controles bloquean aproximadamente **21 %** del área
+  segura; el resto acepta gestos. Evidencia: `TestResults/MobileHudCompact/`
+  y `TestResults/unity-mobile-hud-preview.log`.
+- Entrega física: Unity exportó Release/IL2CPP y Xcode terminó con
+  **BUILD SUCCEEDED**. Firma de StartNode verificada; **Little Legion 0.1.0 (2)**
+  instalada y abierta por USB en el **iPhone 13 mini**. `devicectl` confirmó
+  build 2 y proceso activo **88 segundos después de abrirlo**. El `Info.plist`
+  de la app firmada declara vertical y ambos horizontales.
+  Evidencia: `TestResults/ios-device-delivery-build-2.log`,
+  `TestResults/ios-device-app-build-2.json`, `TestResults/ios-device-process-build-2.json`.
+  Artefactos: `Builds/Mobile/iOS-delivery/20261029T053627Z-device-2-82d71bd655bc/`.
+
+Las capturas usan área segura simulada y renderizado de Mac; no son capturas
+del iPhone ni una medición de fluidez o comodidad táctil en hardware. La
+instalación comprueba el arranque; la partida completa y la sensación de los
+gestos quedan para la prueba del usuario en el teléfono. No se subió a TestFlight.
+
+## Instalación y apertura en iPhone 13 mini — 29 de octubre de 2026
+
+- Compilación real de las fuentes de `8c63daa`: Unity **6000.3.26f1** ARM64
+  con iOS Build Support y licencia activa; exportación Release/IL2CPP terminada.
+  Xcode **26.6**, SDK iOS **26.5**: **BUILD SUCCEEDED**.
+- `app/ios.py device` generó **Little Legion 0.1.0 (1)**,
+  `app.sadmonkey.littlelegion.mobile`. Se verificaron metadatos, firma completa
+  con `codesign` y pertenencia al equipo **StartNode** antes de instalar.
+- `devicectl` confirmó instalación y apertura en el **iPhone 13 mini** indicado.
+  La consulta posterior confirmó versión/build instalados, proceso activo más
+  de 50 segundos después de abrir y conexión **wired** por USB.
+- Evidencia local: `TestResults/unity-mobile-ios.log`,
+  `TestResults/ios-device-delivery.log`, `TestResults/ios-device-app.json`,
+  `TestResults/ios-device-process.json` y `TestResults/ios-device-details.json`.
+  Artefactos en `Builds/Mobile/iOS-delivery/20261029T050214Z-device-1-bd8f8f4e7d54/`.
+
+Esto comprueba compilación, firma, instalación y arranque del proceso en hardware.
+No se capturó la pantalla física ni se validaron todavía una partida completa,
+los gestos, audio o rendimiento en el teléfono. Esta ejecución no subió a TestFlight.
+
+## Preparación de entrega iOS / TestFlight — 29 de octubre de 2026
+
+El exportador móvil acepta Release, versión y número de build explícitos.
+El recibo de Unity distingue estos valores para rechazar resultados de otra
+configuración. iOS utiliza Metal, orientación horizontal y una descripción
+del acceso LAN; la firma se configura en Xcode para el equipo elegido.
+
+- Generadores: **11 pruebas móviles y 8 web** aprobadas, incluidas identidad
+  del build, propagación de argumentos, recibos incompatibles y preservación
+  de propiedades al completar el `Info.plist` de iOS.
+- Entrega: **15 pruebas** de `scripts/check-ios-delivery.py` aprobadas con
+  procesos simulados. Verifican instalación al dispositivo explícito, firma
+  del equipo seleccionado, rechazo de artefactos inválidos, carpetas nuevas
+  y distinción entre IPA local y subida. No verifican firma ni servicios reales.
+  Se revisó el plan de subida con el equipo StartNode sin ejecutar Xcode.
+- Intento real: `python3 app/build.py ios --release --version 0.1.0 --build-number 1`
+  preparó las fuentes y terminó con salida 1: falta Unity **6000.3.26f1** con
+  iOS Build Support y licencia activa. No hay proyecto Xcode exportado ni IPA.
+- Esta Mac tiene Xcode **26.6**, Rosetta y una identidad Apple Development.
+  El iPhone 13 mini aparece emparejado, con Developer Mode activo y bloqueado.
+  El equipo StartNode se identificó en la configuración local de Hosanna.
+
+Al revisar había aproximadamente **2,7 GiB libres**; se solicitó liberar
+espacio o indicar un disco externo antes de instalar el Editor y compilar.
+No se borraron simuladores, archivos de otras apps ni credenciales. No se
+validó todavía la firma de distribución, el funcionamiento en el iPhone ni
+una subida a App Store Connect/TestFlight.
+
+## Selección con lazo y grupos móviles — 28 de octubre de 2026
+
+Un dedo dibuja un contorno que se cierra al soltar y selecciona aliados vivos
+visibles por su centro renderizado. La cámara se desplaza con dos dedos. Las
+acciones incluyen **Agrupar**; cuatro iconos persistentes muestran modelo,
+número y cantidad, y recuperan la selección al tocarlos. Cuando están llenos,
+el reemplazo requiere elegir un icono. El tutorial enseña el mismo recorrido.
+
+- `tests/MobileInputChecks`: **63 comprobaciones** aprobadas del clasificador
+  de gestos y geometría de producción. Incluyen contornos cóncavos, bordes,
+  trazos inválidos, límite de memoria, UI, foco, pinch y sustitución de dedos.
+- `tests/MobileGroupChecks`: **120 comprobaciones** aprobadas de las APIs
+  reales de selección/grupos y del núcleo del tutorial. Incluyen filtros de
+  propiedad/visibilidad/salud, selección atómica, grupos repetidos, espacios
+  llenos, reemplazo explícito, bajas, recuperación y ambas facciones. El host
+  sustituye únicamente el estado y efectos Unity; no verifica render ni HUD.
+- Generadores: **6 comprobaciones móviles y 8 web** aprobadas. Proyectos
+  Android, iOS y WebGL preparados nuevamente con estas fuentes.
+
+Sin Editor Unity instalado en esta Mac: no se compiló un player ni se probó
+el HUD, el trazo o su comodidad en un dispositivo real. La validación visual,
+IL2CPP y una partida móvil completa siguen pendientes. No se publicó.
+
+## App móvil Unity y controles web táctiles — 28 de octubre de 2026
+
+Tras actualizar `feature/desktop-web-crossplay` hasta `67be63e`, se agregó
+`app/` para generar proyectos nativos Android/iOS sin Meta/XR, reutilizando
+las fuentes Unity y la presentación de pantalla del navegador. El HUD táctil,
+la cámara y los gestos también se usan en WebGL móvil.
+
+- Generadores: 6 comprobaciones móviles y 8 web, incluidas protección de
+  fuentes locales, conflictos antes de escribir, dependencias fijadas sin XR,
+  configuración de ambos destinos y rechazo de recibos de build obsoletos.
+- Entrada: 37 comprobaciones .NET del clasificador de gestos real; toque,
+  arrastre, pellizco, mantener y soltar, selección de área, propiedad del
+  gesto de UI y cancelación por foco, contacto perdido o dedos adicionales.
+- JavaScript: 10 pruebas de plantilla y puentes; carga por gesto, orientación,
+  resolución, fullscreen fallido, pérdida de contexto y sockets.
+- Cliente C# WebGL: 46 comprobaciones existentes aprobadas.
+- Chromium headless con viewport 390×844/844×390: flujo cargar/listo/jugar,
+  aviso de orientación y cierre, canvas horizontal, fullscreen oculto durante
+  juego y ausencia de errores de script. Capturas locales en
+  `TestResults/MobileWebPreview/`. **El loader era un fixture: no se ejecutó
+  Unity ni se validó gameplay, audio o hardware móvil.**
+
+Se prepararon los proyectos Android/iOS, pero esta Mac no tiene el Editor
+Unity instalado. No se generó APK, proyecto Xcode ni player WebGL. Quedan
+pendientes la compilación IL2CPP, el render/HUD real y pruebas en Android,
+iPhone/iPad y navegadores móviles, incluida una partida completa offline y
+otra online cruzada. Reportes, ranking y catálogo conservan el diseño
+compartido escalado; los controles de replay son pequeños en vertical.
+No se publicó ni se probó contra producción. Instrucciones en
+[app/README.md](../app/README.md).
+
+## Estado del cliente de navegador — 28 de octubre de 2026
+
+El cliente anterior de `web/`, su render y sus herramientas Node/Vite/.NET WebAssembly fueron retirados. El único cliente de navegador se compila con Unity WebGL; ver [compilación](unity-webgl.md) y [hosting](web-client.md). Las dos entradas siguientes conservan evidencia histórica del port retirado y del transporte compartido. Sus comandos npm, capturas y partidas no validan la build Unity WebGL actual; no son instrucciones de ejecución vigentes.
+
+## Integración de ranking y backend de producción en desktop web — 28 de octubre de 2026
+
+Se integró `origin/codex/public-matchmaking` (`4e6d8e2`) en `feature/desktop-web-crossplay`, conservando el transporte y la asignación WebSocket junto con Elo. El cliente web usa `https://server-us-1.littlelegion.app` por defecto; migra las preferencias antiguas sin borrar las identidades ni la configuración LAN y permite guardar un servicio local explícito.
+
+- `go test ./...` del backend: aprobado con el SDK Go local.
+- Núcleo: **2809 comprobaciones**; red: **2188**, incluidas **39 de WebSocket**.
+- Arnés .NET del servidor: **44 comprobaciones**, con una partida completa entre los transportes NGO y WebSocket y el mismo informe final. Las comprobaciones de Editor ejecutables en el arnés aprobaron **38 de admisión/asignación** y **17 de ciclo de vida**.
+- WebAssembly recompilado con `npm run build:core`; `npm run build` y los tipos TypeScript aprobados. Las pruebas unitarias cubren además la migración de preferencias y la conservación de un servicio local elegido después de actualizar.
+- Punta a punta local: **1 prueba aprobada** en `crossplay.test.ts`; la variante contra un servidor externo se omitió porque no se configuró uno. No se ejecutó `public.test.ts` ni se leyó su configuración privada.
+- Chromium headless: el formulario muestra el endpoint HTTPS de producción y una partida offline avanza al menos 20 ticks con el WebAssembly recompilado, sin errores de página. Capturas: `TestResults/web/merge-production-service.png` y `merge-offline-playing.png`.
+
+Estas comprobaciones son locales. No se accedió al servidor desplegado, no se verificó matchmaking público contra producción y no se recompilaron Unity ni el APK. El operador del servidor debe confirmar que su versión incluye las migraciones WebSocket, anuncia `wsPort` y publica la conexión de partida mediante WSS para páginas HTTPS. La configuración del hostname por sí sola no verifica esos requisitos.
+
+## Cliente de escritorio three.js y juego cruzado con Quest — fuentes, sin nuevo APK ni build Unity — 26 de octubre de 2026
+
+Se agregó un transporte WebSocket al servidor dedicado (puertos TCP 7877/7878), el registro de `wsPort` y la regla de asignación con jugadores de escritorio en Nakama, y el cliente web en `web/`: partidas contra la IA con `Frontier.Core` en WebAssembly, conexión directa y matchmaking público. Esta Mac no tiene Unity: no se compilaron el APK, el servidor Linux ni el build de escritorio de Unity.
+
+| Comprobación | Resultado | Evidencia |
+| --- | --- | --- |
+| Núcleo (.NET 8) | 2809 comprobaciones; `Frontier.Core` sin cambios | `TestResults/web-baseline-core.log` |
+| Red (.NET 8) | 2188 comprobaciones, incluidas 39 del servidor WebSocket | `tests/NetworkChecks` |
+| Arnés del servidor | 44 comprobaciones. Partida completa NGO contra WebSocket: ganador 0 en el tick 10493, mismo SHA-256 de informe en ambos transportes. También pérdida abrupta de un navegador, límites del protocolo y admisión asignada de navegador y Quest con eventos ready, started y finished | `TestResults/harness-full.log` |
+| Pruebas de Editor existentes, ejecutadas en el arnés | `AllocatedServerChecks` 38 y `ServerLifecycleChecks` 17, sin modificar sus fuentes | modo `editor-checks` |
+| Backend Nakama 3.41.0 y PostgreSQL 17 en Docker | 190 comprobaciones de integración, 32 nuevas de emparejamiento cruzado | `python3 scripts/online-stack.py test` |
+| Cliente web | 19 pruebas unitarias contra bytes producidos por C# (hash de contenido, fragmentos, resultado, orden de `CommandKind`), órdenes de sesión, construcción y traducciones | `npm test` |
+| Punta a punta | Cliente web contra el arnés con rival por NGO. Matchmaking público real con un jugador tipo Quest (NGO) y el cliente web (WebSocket), con el resultado persistido en PostgreSQL. Dos clientes web contra un servidor externo | `npm run e2e` |
+| Visual en Chromium headless | Menús en inglés y español, partidas contra la IA en los tres mapas, selección, construcción, combate, pausa, resultados y conexión directa | `TestResults/web/*.png` |
+| Imagen Docker del cliente | `Dockerfile.web` compilada y servida en el puerto 8080; una partida contra la IA funcionó desde esa imagen | `online-stack.py web` |
+
+Pendiente: compilar con Unity 6000.3.26f1 el servidor Linux, que necesita el cambio, y el APK, para confirmar que el proyecto compila; repetir la prueba punta a punta contra la imagen Docker real; una partida física Quest contra escritorio; TLS (wss) para un despliegue público; portar al cliente web el tutorial, el historial con replays y la reasignación de teclas.
+
 ## Guía de controles — validación completa y APK 0.1.9 — 21 de octubre de 2026
 
 Se confirmó la corrección ya presente en el directorio de trabajo: las comprobaciones de solapamiento usan `statusBanner`, que comparte el contenedor del panel con la guía y la navegación. El texto `status` es hijo del banner y tiene coordenadas locales distintas; usar su posición producía el falso error `Control guide overlaps footer`. El mismo ajuste aparece en las comprobaciones de hotkeys, historial, informe y espectador.

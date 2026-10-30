@@ -4,6 +4,8 @@
 
 Prototipo nativo de estrategia en realidad mixta: un tablero sobre una mesa o el piso, dos facciones, economía, construcción, producción y combate terrestre. Incluye partidas offline contra IA, conexión LAN directa y partidas públicas 1v1 con ranking y búsqueda por nivel, sobre servidores dedicados NGO. El servicio online es autohospedado con Nakama y PostgreSQL en Docker; offline y LAN no necesitan ese backend. El arte geométrico es provisional.
 
+La versión para navegadores se compila con Unity WebGL y reutiliza las fuentes C# del juego, con interfaz de pantalla, ratón/teclado y controles táctiles. La app móvil en [`app/`](app/README.md) prepara proyectos nativos Android e iOS con esa misma presentación. Todas comparten simulación, IA, catálogo, mapas y render con Quest. El servidor admite ambos transportes para juego cruzado; la compatibilidad del despliegue se verifica por separado. Ver [cliente Unity WebGL y hosting](docs/web-client.md).
+
 La dirección de producto es un juego gratis con venta de skins cosméticas para personalizar los ejércitos. Las primeras razas conceptuales son **Pharaoh Cats** (gatos egipcios), **Gummy Brigade** (ositos de goma) y **Cosmic Crew** (aliens). La monetización y estas colecciones todavía no están implementadas; ver [identidad, skins y primeras razas](docs/identity.md).
 
 ## Requisitos y configuración
@@ -34,7 +36,41 @@ adb shell monkey -p app.sadmonkey.littlelegion 1
 
 El APK usa el firmado de desarrollo local, el identificador `app.sadmonkey.littlelegion` y el nombre visible **Little Legion**. Android lo instala como una aplicación nueva respecto al prototipo anterior; no migra sus datos y ambas instalaciones pueden coexistir. La publicación en una tienda, sus cuentas y su firmado de distribución no están configurados.
 
-La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`.
+La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/unity.sh desktop`, en `Builds/Desktop/LittleLegion.app`. Se conserva como herramienta de desarrollo.
+
+## App móvil (Android e iOS)
+
+La ruta móvil usa Unity sin las dependencias de Quest/XR. Para preparar los proyectos:
+
+```sh
+python3 app/build.py android --prepare-only
+python3 app/build.py ios --prepare-only
+```
+
+Con Unity **6000.3.26f1**, licencia activa y el módulo correspondiente, quitar
+`--prepare-only` genera un APK Android o exporta el proyecto Xcode para iOS en
+`Builds/Mobile/`. El APK móvil tiene un identificador separado del de Quest.
+Los mismos controles táctiles se usan en la web móvil. Requisitos, controles,
+firma y límites de validación en [app/README.md](app/README.md).
+
+## Versión web (escritorio y móvil)
+
+Requiere Unity **6000.3.26f1** con **Web Build Support**, una licencia activada y Python **3.10+**:
+
+```sh
+python3 scripts/build-webgl.py
+python3 -m http.server 4174 --bind 127.0.0.1 --directory Builds/WebGL
+```
+
+Abrir `http://localhost:4174`. El script genera un proyecto reducido en `.cache/unity-webgl`; no cambiar el destino del proyecto raíz de Quest. La salida completa está en `Builds/WebGL`. La compilación y sus comprobaciones están en [docs/unity-webgl.md](docs/unity-webgl.md).
+
+Para empaquetar ese build en nginx y servirlo en el puerto 8080:
+
+```sh
+python3 scripts/online-stack.py web
+```
+
+Docker sirve los archivos ya compilados; no compila Unity ni una segunda implementación del juego. El cliente anterior, su pipeline Node/Vite y su compilación separada de .NET WebAssembly fueron retirados. Para aceptar jugadores de navegador, el backend debe aceptar `websocket: true`, asignar `wsPort` y publicar WSS cuando corresponda. Quest, WebGL y servidor deben coincidir en protocolo, reglas y contenido. Ver [hosting y juego cruzado](docs/web-client.md).
 
 ## Multiplayer y servidor Docker
 
@@ -43,9 +79,10 @@ La versión de prueba para macOS con Apple Silicon se genera con `bash scripts/u
 Los clientes usan **`https://server-us-1.littlelegion.app`** de forma predeterminada.
 Al actualizar desde las pruebas LAN, se deja de usar la preferencia antigua del
 servicio público; la conexión LAN directa y las identidades guardadas se conservan.
-Para probar Nakama local desde desktop, pasar `-frontier-backend http://127.0.0.1:7350`
-(o la IP privada del backend) al abrir el juego. El argumento prevalece sobre las
-preferencias guardadas.
+Para probar Nakama local desde el navegador, editar **Servicio online** en el menú
+Multijugador. En el build Unity de desarrollo, pasar
+`-frontier-backend http://127.0.0.1:7350` (o la IP privada del backend) al abrir el
+juego; el argumento prevalece sobre las preferencias guardadas.
 
 Con Linux Dedicated Server Build Support instalado para el mismo Editor, generar el servidor y levantar el stack online. Reemplazar la IP del ejemplo por la dirección LAN de esta Mac:
 
@@ -57,7 +94,7 @@ python3 scripts/online-stack.py up
 
 Abrir **Multijugador → Buscar partida** en ambos clientes. El tablero se coloca antes de iniciar la búsqueda. Nakama conserva una identidad por instalación, encuentra dos jugadores compatibles y entrega a cada uno un ticket para el mismo servidor NGO. La configuración del servicio online se guarda separada de la conexión LAN. Desde Quest, usar `http://192.168.100.157:7350` como servicio; el endpoint de juego se recibe automáticamente.
 
-Las partidas públicas nuevas son clasificadas. Cada cuenta comienza con **1000 puntos Elo** y el servidor actualiza su puntuación al terminar, con **K=32**. El menú permite consultar el perfil y los diez primeros; una cuenta aparece en la tabla después de su primera partida clasificada. La búsqueda comienza en **±100 puntos**, amplía el rango cada 20 segundos hasta **±400**, y exige que ambos jugadores acepten la diferencia. Las partidas históricas anteriores a esta incorporación se conservan sin puntuación. Reglas y autoridad del resultado en [Ranking y búsqueda por nivel](docs/ranking.md).
+Las partidas públicas nuevas son clasificadas. Cada cuenta comienza con **1000 puntos Elo** y el servidor actualiza su puntuación al terminar, con **K=32**. El menú de Unity permite consultar el perfil y los diez primeros; una cuenta aparece en la tabla después de su primera partida clasificada. La búsqueda comienza en **±100 puntos**, amplía el rango cada 20 segundos hasta **±400**, y exige que ambos jugadores acepten la diferencia. Las partidas históricas anteriores a esta incorporación se conservan sin puntuación. Reglas y autoridad del resultado en [Ranking y búsqueda por nivel](docs/ranking.md).
 
 Para abrir Desktop con búsqueda automática, después de compilarlo:
 
@@ -67,7 +104,7 @@ open -n "/Users/alvaro/Documents/vr-rts-game/Builds/Desktop/LittleLegion.app" --
   -logFile /tmp/little-legion-online.log
 ```
 
-El stack inicial tiene **un slot de partida** en UDP 7778; las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático ni reconexión a una partida en curso. Para actualizar una instalación existente, conservar el volumen, respaldar y comprobar restauración, y ejecutar nuevamente `python3 scripts/online-stack.py init` antes de reconstruir el backend: también actualiza la configuración de búsqueda mutua. El procedimiento está en [Multiplayer público autohospedado](docs/nakama.md), junto con la ampliación manual del pool y el [contrato de asignación](docs/online-contract.md).
+El stack inicial tiene **un slot de partida** en UDP 7778 (TCP 7878 para navegadores); las parejas siguientes esperan capacidad. PostgreSQL mantiene los datos en un volumen persistente. No hay escalado automático ni reconexión a una partida en curso. Para actualizar una instalación existente, conservar el volumen, respaldar y comprobar restauración, y ejecutar nuevamente `python3 scripts/online-stack.py init` antes de reconstruir el backend: también actualiza la configuración de búsqueda mutua. El procedimiento está en [Multiplayer público autohospedado](docs/nakama.md), junto con la ampliación manual del pool y el [contrato de asignación](docs/online-contract.md).
 
 La API HTTP del ejemplo es para pruebas locales. Para instalar y operar el stack público en Ubuntu, seguir la [guía de producción: despliegue, actualizaciones, backups y recuperación](docs/deploy-production.md). Incluye el dominio `server-us-1.littlelegion.app`, HTTPS y el puerto UDP de juego. El estado de los contenedores no equivale a una partida verificada desde Quest.
 
@@ -80,7 +117,7 @@ python3 scripts/build-server.py
 docker compose -f compose.multiplayer.yml up -d --build
 ```
 
-Abrir **Multijugador → Conexión directa** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Compose publica UDP 7777 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú directo permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
+Abrir **Multijugador → Conexión directa** en dos clientes y conectar a `127.0.0.1:7777` desde esta Mac. La partida comienza cuando ambos están conectados. Un jugador de escritorio se une al mismo servidor con **Conexión directa** y la dirección `127.0.0.1:7877`. Compose publica UDP 7777 y TCP 7877 en todas las interfaces (`0.0.0.0`) por defecto. Desde Quest u otra computadora en la misma red, usar la dirección LAN de la Mac; `0.0.0.0` es la dirección de escucha, no la dirección de conexión. El menú directo permite editar dirección y puerto. Para limitar el servidor a esta Mac, iniciar Compose con `FRONTIER_BIND_ADDRESS=127.0.0.1`.
 
 La imagen contiene solamente el servidor Linux y se puede trasladar a un host compatible. Cada proceso directo atiende una partida a la vez; cuando ambos jugadores salen, vuelve a esperar otros dos sin reiniciar el contenedor. Instrucciones, límites y pruebas reproducibles en [Multiplayer y Docker](docs/multiplayer.md).
 
@@ -96,9 +133,11 @@ Por ahora las dos facciones comparten todas las reglas y estadísticas; se difer
 
 ## Documentación
 
+- [Landing, imágenes de marca y hosting en Coolify](landing/README.md)
 - [Identidad, skins y primeras razas](docs/identity.md)
 - [Desarrollo y comprobaciones](docs/development.md)
 - [Arquitectura y próximas etapas](docs/architecture.md)
+- [Cliente Unity WebGL, hosting y juego cruzado con Quest](docs/web-client.md)
 - [Multiplayer, servidor dedicado y Docker](docs/multiplayer.md)
 - [Búsqueda pública con Nakama y PostgreSQL](docs/nakama.md)
 - [Despliegue y operación en producción](docs/deploy-production.md)

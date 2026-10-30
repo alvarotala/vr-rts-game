@@ -8,6 +8,8 @@ namespace Frontier.Networking
         public int protocol, player;
         public string matchId, mapId, faction0, faction1;
         public double startServerTime;
+        // Seconds until the first tick, for transports without NGO's synchronized server clock.
+        public double countdownSeconds;
     }
     [Serializable] public sealed class CommandAck
     {

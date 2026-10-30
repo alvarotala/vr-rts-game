@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <DefineConstants>FRONTIER_BROWSER</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Frontier/Runtime/MobileGesture.cs" Link="MobileGesture.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/MobileTouchRouter.cs" Link="MobileTouchRouter.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/ScreenLasso.cs" Link="ScreenLasso.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>

@@ -4,4 +4,10 @@ Source: https://github.com/heroiclabs/nakama-unity/releases/tag/v3.22.1
 
 Release archive SHA-256: `eafc053d45f477807ecd91ea6a04b748aee9a5a4b381b8d04728cf9c6c91890a`.
 
-Imported runtime, linker preservation, README and license only; sample scenes, snippets and tests are excluded. Upstream files are unmodified.
+Imported runtime, linker preservation, README and license only; sample scenes, snippets and tests are excluded.
+
+Local WebGL fixes in `Runtime/JsWebSocketAdapter.cs` and
+`Runtime/Plugins/UnityWebGLSocketBridge.jslib` add a JavaScript connection timeout,
+complete pending connections on cancellation/early close, bound socket payloads,
+release handlers on close and tolerate application-defined close codes. The SDK
+DLLs are unmodified.

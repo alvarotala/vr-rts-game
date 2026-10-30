@@ -57,7 +57,11 @@ namespace Frontier.Runtime
             MenuCard("Connection","Online service and direct LAN connection.",new Vector2(0,-132),new Vector2(512,116),()=>Show(MenuPage.OnlineConnection));
             Label(actions,"Find an opponent near your rating. The range widens while you wait.",new Vector2(552,-150),new Vector2(464,84),22,MenuMuted,TextAnchor.UpperLeft);
             MenuFooter("Back",CancelOnlineSetup,0,336);
+#if FRONTIER_BROWSER
+            MenuFooter("Full map",()=>Quest.Navigation.Fit(),352,336);
+#else
             MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
+#endif
             MenuFooter("FIND MATCH",()=>{endpointMessage=null;Quest.RequestPublicMatch();Rebuild();},704,336,true);
         }
         private void BuildOnlineConnection()
@@ -81,9 +85,17 @@ namespace Frontier.Runtime
             MenuCard("Server: "+Session.ServerAddress,"Enter the IPv4 address of the computer running the server.",Vector2.zero,new Vector2(512,116),()=>EditOnlineEndpoint(false));
             MenuCard("Port: "+Session.ServerPort,"Use the port configured on the server.",new Vector2(528,0),new Vector2(512,116),()=>EditOnlineEndpoint(true));
             Label(actions,"The server chooses the map and assigns each player's faction.",new Vector2(24,-144),new Vector2(992,52),22,MenuMuted,TextAnchor.MiddleCenter);
+#if FRONTIER_BROWSER
+            Label(actions,"Use your server computer's LAN address. 127.0.0.1 refers to this device.",new Vector2(24,-212),new Vector2(992,72),19,MenuMuted,TextAnchor.MiddleCenter);
+#else
             Label(actions,"On Quest, use your server computer's LAN address. 127.0.0.1 refers to this device.",new Vector2(24,-212),new Vector2(992,72),19,MenuMuted,TextAnchor.MiddleCenter);
+#endif
             MenuFooter("Back",()=>{Quest.CancelStartRequest();Show(MenuPage.OnlineSetup);},0,336);
+#if FRONTIER_BROWSER
+            MenuFooter("Full map",()=>Quest.Navigation.Fit(),352,336);
+#else
             MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},352,336);
+#endif
             MenuFooter("JOIN MATCH",()=>{endpointMessage=null;Quest.RequestOnlineMatch();Rebuild();},704,336,true);
         }
         private void EditOnlineEndpoint(bool port,bool publicService=false)

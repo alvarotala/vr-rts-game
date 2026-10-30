@@ -53,8 +53,16 @@ namespace Frontier.Runtime
             Bindings=HotkeyBindings.Load();
             Quest.Bindings=Bindings;
             font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+#if FRONTIER_BROWSER
+            var shell=new GameObject("Browser interface",typeof(RectTransform),typeof(Canvas),typeof(CanvasScaler));shell.transform.SetParent(transform,false);
+            canvas=shell.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=10;
+            var scaler=shell.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution=new Vector2(1600,900);scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
+            var go=new GameObject("Command panel",typeof(RectTransform));go.transform.SetParent(shell.transform,false);
+#else
             var go=new GameObject("Command console",typeof(RectTransform),typeof(Canvas));go.transform.SetParent(transform,false);
             canvas=go.GetComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=10;
+#endif
             root=go.GetComponent<RectTransform>();root.pivot=Vector2.one*.5f;root.sizeDelta=new Vector2(1100,526);
             baseWindowScale=Mathf.Clamp(Board.Width/1300f,.00065f,.0012f)*HudWorldScale;
             LoadWindowScales();ApplyWindowScale();
@@ -83,6 +91,9 @@ namespace Frontier.Runtime
             CreateHotkeys();
             CreateReferenceGuide();
             CreateConsoleChrome();
+#if FRONTIER_BROWSER
+            CreateBrowserHud();
+#endif
             if(PlayerPrefs.HasKey(PlacementKey))
             {
                 try
@@ -121,6 +132,9 @@ namespace Frontier.Runtime
             {var onlinePage=Session.IsPublicMatch?MenuPage.OnlineSetup:MenuPage.DirectSetup;if(Page!=onlinePage)Show(onlinePage);}
             if(Session.Running&&!Session.IsReplay&&!Session.IsTutorial&&Session.Winner!=-1&&Page!=MenuPage.Result)Show(MenuPage.Result);
             string state=Session.ArchiveFailed+"/"+Page+":"+Quest.Active+":"+Session.IsConnecting+":"+Session.IsMatchmaking+":"+(Session.ResultReport!=null)+":"+Session.OnlineReportUnavailable+":"+Session.BuildDefinition+":"+Session.RallyPointMode+":"+TutorialSignature+":"+string.Join(",",Session.View?.researched??Array.Empty<string>())+":"+string.Join(",",Session.Selection.OrderBy(x=>x))+":"+(Session.View==null?"":string.Join(",",Session.View.entities.Where(e=>Session.Selection.Contains(e.id)).Select(e=>e.definition+e.complete+":"+e.hasRallyPoint+":"+string.Join("/",e.queue.Select(q=>q.id)))));
+#if FRONTIER_BROWSER
+            state+=":"+BrowserMobileInput.IsTouchMode+":"+((RectTransform)canvas.transform).rect.size+":"+Screen.safeArea;
+#endif
             if(Page==MenuPage.Ranking||Page==MenuPage.OnlineSetup||Page==MenuPage.Result)state+=":"+Session.RankingVersion;
             if(state!=signature){signature=state;Rebuild();}
             RefreshOrderTargets();
@@ -135,6 +149,10 @@ namespace Frontier.Runtime
         }
         private bool UpdatePosition(bool headTracked)
         {
+#if FRONTIER_BROWSER
+            LayoutBrowserScreen();
+            return true;
+#else
             if(!headTracked||(Quest.Active&&!Session.Running&&Session.HasSystemPause))
             {
                 if(moving){moving=false;SavePosition();}
@@ -153,6 +171,7 @@ namespace Frontier.Runtime
             root.gameObject.SetActive(true);root.localScale=Vector3.one*windowScale;
             if(!moving){root.position=windowPosition;FaceViewer();}
             return true;
+#endif
         }
         private Quaternion WindowFacing()
         {
@@ -214,19 +233,31 @@ namespace Frontier.Runtime
                 case MenuPage.Main:
                     headline.text="LITTLE LEGION";economy.text="Little armies. Big battles.";
                     selection.text="Lead your faction from a tabletop battlefield. Play offline or find an online opponent.";
+#if FRONTIER_BROWSER
+                    status.text="Choose New Match to begin.";break;
+#else
                     status.text=Board.Placed?"Your saved play space is ready. Adjust it from New Match if needed.":"Open New Match to position your battlefield and start playing.";break;
+#endif
                 case MenuPage.MatchSetup:
                     headline.text="NEW MATCH";economy.text="SKIRMISH / LOCAL AI";
                     selection.text=$"{Session.Catalog.Faction(Session.Faction).name}  vs  {Session.Catalog.Faction(Session.EnemyFaction).name} · {DifficultyLabel} · {Session.Map.title}";
                     harvesting.text=Board.Placed?"BOARD READY":"BOARD NOT PLACED";
                     ((LocalizedText)harvesting).Append(Session.Difficulty=="hard"?" · Sustained attacks from 2:30.":Session.Difficulty=="easy"?" · Attacks from 5 min.":" · Attacks from 3:30.");
+#if FRONTIER_BROWSER
+                    status.text="Both factions start equally. Choose your army, opponent and map, then start the match.";break;
+#else
                     status.text=Board.Placed?"Both factions start equally. Position board lets you adjust your play space.":"Choose Position board to place your battlefield, then Start Match when ready.";break;
+#endif
                 case MenuPage.OnlineSetup:case MenuPage.DirectSetup:case MenuPage.OnlineEndpoint:case MenuPage.PublicEndpoint:case MenuPage.OnlineConnection:
                     UpdateOnlineHeader();break;
                 case MenuPage.Ranking:UpdateRankingHeader();break;
                 case MenuPage.Settings:
                     headline.text="SETTINGS";economy.text=MenuOrigin+" / SETTINGS";
+#if FRONTIER_BROWSER
+                    selection.text=settingsTab==SettingsTab.Controls?"Mouse / keyboard · Camera and gameplay controls.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":"Choose your interface language. System follows this device.";
+#else
                     selection.text=settingsTab==SettingsTab.Controls?Bindings.HandName+" controller active. The "+Bindings.OtherHandName.ToLowerInvariant()+" controller is unused.":settingsTab==SettingsTab.Audio?"Set the balance between music and battlefield sounds.":settingsTab==SettingsTab.Visuals?"Adjust the battlefield's visual effects.":settingsTab==SettingsTab.Language?"Choose your interface language. System follows this device.":"Prepare your battlefield and choose where it sits in your room.";
+#endif
                     status.text=settingsTab==SettingsTab.PlaySpace?(Board.Placed?"Board position saved. Reposition it whenever you change play space.":"No board position set. Placement will open before the match starts."):"Preferences are shared before and during a match, and saved on this device.";break;
                 case MenuPage.Hotkeys:
                     headline.text="HOTKEYS";economy.text=hotkeysTouch?"QUEST · "+Bindings.HandName.ToUpperInvariant()+" TOUCH CONTROLLER":"DESKTOP · MOUSE / KEYBOARD";
@@ -314,6 +345,9 @@ namespace Frontier.Runtime
             HideActionHelp();
             moveHandle.GetComponentInChildren<Text>(true).text=Quest.Active?"MOVE MENU · hold Trigger / "+Bindings.MenuConfirmName+" and drag":"MOVE MENU · hold left mouse and drag";
             LayoutPage();
+#if FRONTIER_BROWSER
+            if(BrowserMobileInput.IsTouchMode&&BuildMobileMenu())return;
+#endif
             BuildControlGuide();
             BuildHotkeys();
             BuildReferenceGuide();
@@ -413,11 +447,11 @@ namespace Frontier.Runtime
         }
         // A shortcut can still recover the shared window if it is out of view.
         public void Recall(){if(Session.IsCountingDown)return;CancelPointerInteraction();ResetPosition();Session.Announce("Menu reset in front of you.");}
-        public void CancelPointerInteraction()
+        public void CancelPointerInteraction(bool closeHelp=true)
         {
             if(moving){moving=false;SavePosition();}
             ResetGroupGesture();
-            CloseSectionHelp();
+            if(closeHelp)CloseSectionHelp();
             CancelReplayScrub();
             ClearSelectionGesture();
             pressed=null;
@@ -427,7 +461,12 @@ namespace Frontier.Runtime
             HideActionHelp();
             UpdateMoveAffordance(false);
         }
-        public bool ContainsPointer(Ray ray)=>SectionHelpOpen||moving||Hit(root,ray,out _)||Hit(moveHandle,ray,out _)||Hit(tutorialCard,ray,out _);
+        public bool ContainsPointer(Ray ray)=>SectionHelpOpen||moving||
+#if FRONTIER_BROWSER
+            BrowserContainsPointer(ray);
+#else
+            Hit(root,ray,out _)||Hit(moveHandle,ray,out _)||Hit(tutorialCard,ray,out _);
+#endif
         private void FaceViewer()
         {
             var direction=root.position-Quest.Camera.transform.position;
@@ -446,6 +485,9 @@ namespace Frontier.Runtime
         {
             if(root==null)return;
             if(focused)return;
+#if FRONTIER_BROWSER
+            CancelMobileGroupReplacement();
+#endif
             if(HotkeyModalOpen)CancelHotkeyChange();
             if(moving){moving=false;SavePosition();}
             CancelPointerInteraction();
@@ -461,6 +503,11 @@ namespace Frontier.Runtime
             if(Session.IsCountingDown&&!Quest.Placing){CancelPointerInteraction();return true;}
             if(root==null||!root.gameObject.activeInHierarchy)return false;
             if(SectionHelpOpen)return PointSectionHelp(ray,down,up);
+#if FRONTIER_BROWSER
+            if(Page==MenuPage.Actions&&!Hit(tutorialCard,ray,out _)&&browserMinimap!=null&&BrowserMobileInput.HasPointer
+                &&browserMinimap.Point(BrowserMobileInput.PointerPosition,down,!up&&BrowserMobileInput.PointerHeld))
+            {CancelPointerInteraction();return true;}
+#endif
             if(moving)
             {
                 UpdateMoveAffordance(true);
@@ -503,13 +550,21 @@ namespace Frontier.Runtime
             if(up&&pressed!=null)
             {var p=pressed;pressed=null;HideActionHelp();if(hit==p){Session.GetComponent<AudioFeedback>()?.Navigation(true);if(Time.unscaledTime-pressedAt>.65f&&p.hold!=null)p.hold();else p.click?.Invoke();}return true;}
             // Empty areas also consume the ray, preventing orders through the panel.
+#if FRONTIER_BROWSER
+            return pressed!=null||onMove||ContainsPointer(ray);
+#else
             return pressed!=null||onMove||Hit(root,ray,out _)||Hit(tutorialCard,ray,out _);
+#endif
         }
         private static bool Hit(RectTransform rect,Ray ray,out float distance)
         {
             distance=0;if(rect==null||!rect.gameObject.activeInHierarchy)return false;
+#if FRONTIER_BROWSER
+            return BrowserMobileInput.HasPointer&&RectTransformUtility.RectangleContainsScreenPoint(rect,BrowserMobileInput.PointerPosition,null);
+#else
             if(!new Plane(rect.forward,rect.position).Raycast(ray,out distance)||distance>8)return false;
             var local=rect.InverseTransformPoint(ray.GetPoint(distance));return rect.rect.Contains(new Vector2(local.x,local.y));
+#endif
         }
         private RectTransform Handle(string name,Vector2 position,Vector2 size,string label,out Image image)
         {

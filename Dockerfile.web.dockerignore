@@ -1,0 +1,16 @@
+# Upload only the precompiled Unity browser player and its hosting configuration.
+**
+!Dockerfile.web
+!hosting/
+!hosting/webgl/
+!hosting/webgl/nginx.conf
+!landing/
+!landing/**
+landing/README.md
+!Builds/
+!Builds/WebGL/
+!Builds/WebGL/**
+Builds/WebGL/*_BackUpThisFolder_ButDontShipItWithYourGame
+Builds/WebGL/*_BackUpThisFolder_ButDontShipItWithYourGame/**
+Builds/WebGL/*_BurstDebugInformation_DoNotShip
+Builds/WebGL/*_BurstDebugInformation_DoNotShip/**

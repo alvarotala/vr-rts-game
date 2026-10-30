@@ -11,6 +11,9 @@
     <Compile Include="../../Assets/Frontier/Networking/NetworkWire.cs" />
     <Compile Include="../../Assets/Frontier/Networking/CommandBoundary.cs" />
     <Compile Include="../../Assets/Frontier/Networking/MatchMessages.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/WebSocketGateway.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/WebSocketMatchCodec.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="WebSocketChecks.cs" />
   </ItemGroup>
 </Project>

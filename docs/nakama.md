@@ -51,6 +51,8 @@ en su log: `FRONTIER_ALLOCATION Registered dedicated server.`
 | Consola Nakama | `127.0.0.1:7351/tcp` | Administración local; usuario `admin`, contraseña en el env privado |
 | PostgreSQL | Red interna Docker, sin publicación | Persistencia |
 | NGO asignado | `0.0.0.0:7778/udp` | Partidas públicas |
+| WebSocket asignado | `0.0.0.0:7878/tcp` | El mismo slot para jugadores de escritorio (navegador) |
+| Cliente Unity WebGL | `0.0.0.0:8080/tcp` (opcional) | `online-stack.py web`: sirve el `Builds/WebGL` ya compilado |
 | NGO LAN existente | `0.0.0.0:7777/udp` en su stack independiente | Conexión directa de desarrollo |
 
 Los clientes usan `http://192.168.100.157:7350` como backend y reciben el endpoint
@@ -249,6 +251,12 @@ agregar capacidad, iniciar más servicios NGO con `serverId` y puerto propios,
 agregar esos IDs a `LL_SERVER_IDS` y publicar sus puertos UDP. Los procesos se
 registran con su hash real de contenido; sólo reciben parejas compatibles. El
 plugin no crea contenedores ni escala la flota automáticamente.
+
+### Juego cruzado con escritorio — 26 de octubre de 2026
+
+Los servidores registran `wsPort` y las búsquedas del navegador declaran `websocket`. Una pareja con un jugador de navegador solo se asigna a un slot con WebSocket; el estado `ready` entrega `port` (UDP) y `wsPort` (TCP). Si un proxy TLS publica el WebSocket en otro puerto, `LL_PUBLIC_WS_PORT` lo anuncia. Las columnas nuevas (`ws_port`, `websocket`) se agregan con `ADD COLUMN IF NOT EXISTS`, sin modificar filas existentes.
+
+Registro histórico del transporte, anterior a la migración del cliente a Unity WebGL: la prueba de integración pasó con 190 comprobaciones contra Nakama 3.41.0 y PostgreSQL 17 en Docker, incluidas las nuevas de emparejamiento cruzado. Además, un jugador tipo Quest (NGO) y el cliente web (WebSocket) fueron emparejados por el matchmaker nativo, asignados por el agente real al mismo servidor y terminaron una partida con el mismo resultado persistido. El servidor de esa prueba fue el arnés .NET, no el build Unity. Esa prueba del cliente retirado no acredita una partida real con el player Unity WebGL actual.
 
 La alta disponibilidad de Nakama, recuperación de una partida en curso y
 ampliación dinámica del pool quedan fuera del pool local inicial. El ranking

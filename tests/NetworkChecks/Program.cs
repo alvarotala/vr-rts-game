@@ -140,3 +140,6 @@ bool duplicateRejected = false;
 try { receipts.Record(new CommandAck { sequence = 4 }); } catch (InvalidOperationException) { duplicateRejected = true; }
 Check(duplicateRejected, "A receipt cannot be replaced after processing.");
 Console.WriteLine("FRONTIER_NETWORK_BOUNDARY passed: " + checks + " total checks");
+
+int websocketChecks = WebSocketChecks.Run(Check);
+Console.WriteLine("FRONTIER_NETWORK_WEBSOCKET passed: " + websocketChecks + " websocket checks (" + checks + " total)");

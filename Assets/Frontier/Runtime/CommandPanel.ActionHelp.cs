@@ -130,6 +130,9 @@ namespace Frontier.Runtime
             helpCategory.text=category+" · FIELD GUIDE";helpCategory.color=tint;
             helpTitle.text=help.Label;helpDescription.text=help.Description;
             helpDetail.text=help.HelpDetail;helpDetail.color=tint;
+#if FRONTIER_BROWSER
+            LayoutBrowserActionHelp();
+#endif
         }
         private static string SectionHelpDescription(string title)
         {

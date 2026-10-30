@@ -1,5 +1,8 @@
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+#if FRONTIER_BROWSER
+using OVRInput = Frontier.Runtime.BrowserTouchInput;
+#endif
 
 namespace Frontier.Runtime
 {

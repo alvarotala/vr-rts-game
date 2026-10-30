@@ -85,7 +85,7 @@ func allocate(ctx context.Context, tx *sql.Tx) error {
 	// Advisory transaction lock makes this FIFO pool assignment atomic with cancellation.
 	for {
 		var matchID, serverID, leaseID string
-		err := tx.QueryRowContext(ctx, `SELECT m.id,s.id,s.lease_id FROM ll_matches m JOIN ll_servers s ON s.protocol=m.protocol AND s.rules=m.rules AND s.content_hash=m.content_hash WHERE m.status='waitingServer' AND s.active AND s.match_id IS NULL AND s.heartbeat_at>=now()-interval '20 seconds' ORDER BY m.created_at,s.id LIMIT 1`).Scan(&matchID, &serverID, &leaseID)
+		err := tx.QueryRowContext(ctx, `SELECT m.id,s.id,s.lease_id FROM ll_matches m JOIN ll_servers s ON s.protocol=m.protocol AND s.rules=m.rules AND s.content_hash=m.content_hash AND (NOT m.websocket OR s.ws_port>0) WHERE m.status='waitingServer' AND s.active AND s.match_id IS NULL AND s.heartbeat_at>=now()-interval '20 seconds' ORDER BY m.created_at,s.id LIMIT 1`).Scan(&matchID, &serverID, &leaseID)
 		if err == sql.ErrNoRows {
 			return nil
 		}

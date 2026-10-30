@@ -14,7 +14,7 @@ namespace Frontier.Runtime
     [Serializable] public sealed class PublicMatchConnection
     {
         public string matchId, host, joinTicket, faction;
-        public int port;
+        public int port, wsPort;
     }
 
     public interface IPublicMatchmaker : IDisposable
@@ -36,6 +36,9 @@ namespace Frontier.Runtime
         private string searchId;
         private bool used, cancelled, joined;
         private readonly string identityOverride;
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private double searchDeadline;
+#endif
 
         // An explicit identity is for isolated process validation; normal clients
         // use a cryptographically random credential persisted per service endpoint.
@@ -48,7 +51,11 @@ namespace Frontier.Runtime
             var endpoint = ValidateEndpoint(backendUrl);
             if (faction != "industrial" && faction != "biological") throw new ArgumentException("Unknown faction.");
             lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            searchDeadline = Time.realtimeSinceStartupAsDouble + 180;
+#else
             lifetime.CancelAfter(TimeSpan.FromMinutes(3));
+#endif
             var token = lifetime.Token;
             ISocket ownedSocket = null;
             IMatchmakerTicket queueTicket = null;
@@ -68,6 +75,9 @@ namespace Frontier.Runtime
                 {
                     faction = faction, protocol = MatchCompatibility.Protocol,
                     rules = MatchCompatibility.Rules, contentHash = MatchCompatibility.ContentHash
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    ,websocket = true
+#endif
                 });
                 searchId = opened.searchId;
                 if (!IsOpaqueId(searchId)) throw new InvalidOperationException("The service returned an invalid search.");
@@ -116,7 +126,14 @@ namespace Frontier.Runtime
                         {
                             if (queueTicket != null)
                             {
-                                try { await ownedSocket.RemoveMatchmakerAsync(queueTicket); }
+                                try
+                                {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                                    await WebGlAsync.WithTimeout(ownedSocket.RemoveMatchmakerAsync(queueTicket), 10000, token);
+#else
+                                    await ownedSocket.RemoveMatchmakerAsync(queueTicket);
+#endif
+                                }
                                 catch (Exception) { CheckCancellation(token); }
                             }
                             CheckCancellation(token);
@@ -128,7 +145,11 @@ namespace Frontier.Runtime
                         catch (OperationCanceledException) { throw; }
                         catch (Exception) { CheckCancellation(token); }
                     }
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    await WebGlAsync.Delay(1000, token);
+#else
                     await Task.Delay(1000, token);
+#endif
                 }
             }
             catch (ApiResponseException)
@@ -149,8 +170,13 @@ namespace Frontier.Runtime
         private Task<IMatchmakerTicket> Enqueue(ISocket value)
         {
             string compatibility = MatchCompatibility.Key;
-            return value.AddMatchmakerAsync("+properties.compat:\"" + compatibility + "\"", 2, 2,
+            var request = value.AddMatchmakerAsync("+properties.compat:\"" + compatibility + "\"", 2, 2,
                 new Dictionary<string, string> { { "compat", compatibility }, { "searchId", searchId } });
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return WebGlAsync.WithTimeout(request, 10000, lifetime.Token);
+#else
+            return request;
+#endif
         }
 
         internal static void ValidateSearchWindow(int rating, int radius, int revision)
@@ -172,7 +198,11 @@ namespace Frontier.Runtime
             joined = true;
             searchId = null;
             // Stop the search timeout after a successful NGO welcome.
+#if UNITY_WEBGL && !UNITY_EDITOR
+            searchDeadline = double.PositiveInfinity;
+#else
             lifetime?.CancelAfter(Timeout.InfiniteTimeSpan);
+#endif
             _ = CloseSocket(socket);
         }
 
@@ -180,6 +210,9 @@ namespace Frontier.Runtime
 
         private void CheckCancellation(CancellationToken token)
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (Time.realtimeSinceStartupAsDouble >= searchDeadline) lifetime?.Cancel();
+#endif
             if (cancelled) throw new OperationCanceledException(token);
             token.ThrowIfCancellationRequested();
         }
@@ -245,6 +278,10 @@ namespace Frontier.Runtime
                 || value.port < 1 || value.port > 65535 || value.faction != faction
                 || string.IsNullOrEmpty(value.joinTicket) || value.joinTicket.Length < 24 || value.joinTicket.Length > 256)
                 throw new InvalidOperationException("The service returned an invalid match connection.");
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (value.wsPort < 1 || value.wsPort > 65535)
+                throw new InvalidOperationException("The assigned server does not accept browser players yet.");
+#endif
         }
 
         internal static bool IsOpaqueId(string value)
@@ -284,7 +321,15 @@ namespace Frontier.Runtime
             }
         }
 
-        [Serializable] private sealed class SearchRequest { public string faction, contentHash; public int protocol, rules; }
+        [Serializable] private sealed class SearchRequest
+        {
+            public string faction, contentHash; public int protocol, rules;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Keep this field absent in native clients: older native-only backends
+            // reject unknown JSON fields even when the value is false.
+            public bool websocket;
+#endif
+        }
         [Serializable] private sealed class SearchReference { public string searchId; }
         [Serializable] private sealed class SearchOpened { public string searchId; public int rating, searchRadius, queueRevision; }
         [Serializable] private sealed class SearchState { public string status, message; public int rating, searchRadius, queueRevision; public PublicMatchConnection connection; }

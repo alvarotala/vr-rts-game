@@ -1,3 +1,4 @@
+#if !FRONTIER_BROWSER
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -326,3 +327,4 @@ namespace Frontier.Runtime
         }
     }
 }
+#endif

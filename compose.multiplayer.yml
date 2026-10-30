@@ -14,12 +14,16 @@ services:
     command:
       - -frontier-port
       - "${FRONTIER_PORT:-7777}"
+      - -frontier-ws-port
+      - "${FRONTIER_WS_PORT:-7877}"
       - -frontier-map
       - "${FRONTIER_MAP:-rift}"
       - -frontier-listen
       - 0.0.0.0
     ports:
       - "${FRONTIER_BIND_ADDRESS:-0.0.0.0}:${FRONTIER_PORT:-7777}:${FRONTIER_PORT:-7777}/udp"
+      # Desktop players join the same match over a websocket (TCP).
+      - "${FRONTIER_BIND_ADDRESS:-0.0.0.0}:${FRONTIER_WS_PORT:-7877}:${FRONTIER_WS_PORT:-7877}/tcp"
     cap_drop:
       - ALL
     security_opt:

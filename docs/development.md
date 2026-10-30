@@ -21,6 +21,15 @@ La escena `Assets/Frontier/Scenes/Frontier.unity` crea sus componentes en ejecuc
 
 ## Comprobaciones
 
+La ruta móvil está en [`app/`](../app/README.md). Comparte las fuentes de Unity;
+`FRONTIER_BROWSER` habilita la presentación de pantalla y `FRONTIER_MOBILE`
+fija entrada táctil en los proyectos nativos. La raíz sigue configurada para
+Quest. `python3 scripts/check-mobile-generator.py` valida la generación sin
+Editor y `dotnet run --project tests/MobileInputChecks` prueba el clasificador
+de gestos y geometría del lazo compartidos. `dotnet run --project
+tests/MobileGroupChecks` ejecuta las partials reales de grupos con un host de
+estado sin Unity. No editar las copias en `app/.generated/`.
+
 ```sh
 bash scripts/check-core.sh
 bash scripts/check-core.sh --caster-only
@@ -299,6 +308,32 @@ unity run . --log-file TestResults/unity-building-roles.log --no-tail -- \
 ```
 
 Guarda diez vistas en `TestResults/BuildingRoles`: galería aliada/enemiga, vista superior/opuesta, comparación entre base central y barraca de ambas facciones, recuerdo bajo niebla, construcción/daño, torre disparando y zoom/giro. Los rótulos son anotaciones de la galería y no se añaden al juego. Comprueba huellas, posición de vida/impactos, restauración de materiales al recuperar visión, orientación de torres y reutilización. También ejecuta las revisiones existentes de daño y armas porque comparten la representación de entidades. No genera ejecutables.
+
+## Cliente Unity WebGL y juego cruzado
+
+El navegador usa el mismo motor Unity y las fuentes del juego. Compilación y pruebas del player en [Unity WebGL](unity-webgl.md); publicación de los archivos en [hosting](web-client.md). No se usa Node/Vite para compilar el juego ni un proyecto separado de simulación .NET WebAssembly.
+
+```sh
+python3 scripts/check-webgl-generator.py
+node --test tests/WebGlClientChecks/bridge.test.mjs
+.cache/dotnet-sdk/dotnet run --project tests/WebGlClientChecks/WebGlClientChecks.csproj
+.cache/dotnet-sdk/dotnet build tests/WebGlClientChecks/WebGlClientChecks.csproj -p:RealBrowserBridge=true
+python3 scripts/build-webgl.py
+```
+
+Node ejecuta únicamente las pruebas de los puentes JavaScript, sin dependencias npm. Los checks C# requieren .NET 8 y usan un socket controlado; no sustituyen una build IL2CPP ni la prueba de navegador.
+
+`tests/ServerHarness` compila las fuentes reales de `Frontier.Core` y `Frontier.Networking` (incluido `AllocatedServerAgent`) contra una capa mínima de UnityEngine/NGO. NGO se reemplaza por un transporte en memoria que conserva la aprobación pendiente, los mensajes por nombre y las desconexiones; el WebSocket usa sockets reales:
+
+```sh
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- check
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- editor-checks
+.cache/dotnet-sdk/dotnet run --project tests/ServerHarness/ServerHarness.csproj -c Release -- serve --bot biological
+```
+
+El arnés valida la lógica del servidor y el transporte del navegador; no reemplaza el build Unity ni prueba el Unity Transport real. `tests/NetworkChecks` conserva las comprobaciones del servidor WebSocket: handshake, fragmentación, límites de tamaño, cierres, desbordamiento de envío y salud HTTP. Estas pruebas siguen siendo pertinentes para Unity WebGL y para el servidor compartido.
+
+Después de compilar, servir `Builds/WebGL` y comprobar en un navegador real: arranque, menús, cámara y entrada, audio tras interacción, IA, tutorial, historial después de recargar y replays. La validación online requiere además un backend compatible, conexión WS/WSS y una partida contra Quest; los resultados del cliente retirado no acreditan este recorrido.
 
 ## Resultados y entregas
 

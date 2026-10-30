@@ -1,5 +1,7 @@
+#if !FRONTIER_BROWSER
 using System;
 using Frontier.Networking;
+#endif
 using UnityEngine;
 
 namespace Frontier.Runtime
@@ -9,6 +11,7 @@ namespace Frontier.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
         {
+#if !FRONTIER_BROWSER
             var args=Environment.GetCommandLineArgs();
             bool server=Array.IndexOf(args,"-frontier-server")>=0;
 #if UNITY_SERVER
@@ -20,34 +23,53 @@ namespace Frontier.Runtime
             bool smoke=Array.IndexOf(args,"-frontier-smoke")>=0;
             if(server)
             {
+                // Browser clients join over TCP; -frontier-ws-port 0 disables the websocket listener.
+                if(!ushort.TryParse(Argument(args,"-frontier-ws-port",(port+NgoMatchServer.WebSocketPortOffset).ToString()),out ushort webSocketPort))
+                {Debug.LogError("Invalid -frontier-ws-port (0..65535 required).");Application.Quit(2);return;}
                 Application.runInBackground=true;Application.targetFrameRate=60;
                 var dedicated=new GameObject("Dedicated match server").AddComponent<NgoMatchServer>();
                 dedicated.EnableNetworkMetrics=Array.IndexOf(args,"-frontier-network-metrics")>=0;
                 if(smoke)dedicated.SimulationSpeed=20;
                 if(Array.IndexOf(args,"-frontier-allocated")>=0)AllocatedServerAgent.Launch(dedicated,port);
-                if(!dedicated.StartServer(port,Argument(args,"-frontier-map","rift"),Argument(args,"-frontier-listen","0.0.0.0")))Application.Quit(1);
+                if(!dedicated.StartServer(port,Argument(args,"-frontier-map","rift"),Argument(args,"-frontier-listen","0.0.0.0"),webSocketPort))Application.Quit(1);
                 return;
             }
             if(Array.IndexOf(args,"-frontier-public-smoke")>=0)
             {MultiplayerSmokeClient.LaunchPublic(Argument(args,"-frontier-backend","http://127.0.0.1:7350"),Argument(args,"-frontier-faction","industrial"));return;}
             if(smoke)
             {MultiplayerSmokeClient.Launch(address,port,Argument(args,"-frontier-faction","industrial"));return;}
+#endif
             if(UnityEngine.Object.FindFirstObjectByType<GameSession>()!=null)return;
-            QualitySettings.vSyncCount=0;Application.targetFrameRate=72;
+            QualitySettings.vSyncCount=0;
+#if FRONTIER_BROWSER
+            Application.targetFrameRate=60;
+            Application.runInBackground=!Application.isMobilePlatform;
+#else
+            Application.targetFrameRate=72;
             Application.runInBackground=Application.platform!=RuntimePlatform.Android;
+#endif
             var session=new GameObject("Game session").AddComponent<GameSession>();
+#if !FRONTIER_BROWSER
             if(Array.IndexOf(args,"-frontier-backend")>=0)
                 session.PublicBackendUrl=Argument(args,"-frontier-backend",GameSession.DefaultPublicBackendUrl);
+#endif
             var board=new GameObject("Physical board").AddComponent<BoardView>();board.Session=session;
             var quest=new GameObject("Platform adapter").AddComponent<QuestBridge>();quest.Session=session;quest.Board=board;
             board.Viewer=quest.Camera;
             var panel=new GameObject("Interface").AddComponent<CommandPanel>();panel.Session=session;panel.Board=board;panel.Quest=quest;
+#if FRONTIER_BROWSER
+            quest.Navigation.Panel=panel;
+#endif
             var wheel=new GameObject("Controller actions").AddComponent<ActionWheel>();wheel.Session=session;wheel.Panel=panel;wheel.Quest=quest;
             var input=new GameObject("Commander input").AddComponent<CommanderInput>();input.Session=session;input.Board=board;input.Panel=panel;input.Quest=quest;input.Wheel=wheel;
             var audio=session.gameObject.AddComponent<AudioFeedback>();audio.Session=session;audio.Board=board;
+#if !FRONTIER_BROWSER
+            // Native playtests export performance files; the browser uses its profiler.
             session.gameObject.AddComponent<FrameMetrics>().Session=session;
+#endif
             var light=new GameObject("Light").AddComponent<Light>();light.type=LightType.Directional;light.transform.rotation=Quaternion.Euler(50,-30,0);light.intensity=.8f;light.shadows=LightShadows.None;
             RenderSettings.ambientLight=new Color(.45f,.55f,.65f);
+#if !FRONTIER_BROWSER
             if(Array.IndexOf(args,"-frontier-matchmake")>=0)
             {
                 session.Faction=Argument(args,"-frontier-faction","industrial");
@@ -59,12 +81,15 @@ namespace Frontier.Runtime
                 session.Faction=Argument(args,"-frontier-faction","industrial");
                 session.StartCoroutine(ConnectAfterStart(quest));
             }
+#endif
         }
+#if !FRONTIER_BROWSER
         private static string Argument(string[] args,string key,string fallback)
         {int index=Array.IndexOf(args,key);return index>=0&&index+1<args.Length?args[index+1]:fallback;}
         private static System.Collections.IEnumerator ConnectAfterStart(QuestBridge quest)
         {yield return null;quest.RequestOnlineMatch();}
         private static System.Collections.IEnumerator FindAfterStart(QuestBridge quest)
         {yield return null;quest.RequestPublicMatch();}
+#endif
     }
 }

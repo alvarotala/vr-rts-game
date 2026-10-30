@@ -37,13 +37,19 @@ namespace Frontier.Runtime
                     if(IsMatchmaking&&CurrentPublicSearch(generation,cancellation))OnlineStatus(status);
                 });
                 if(!CurrentPublicSearch(generation,cancellation))return;
-                if(connection==null||string.IsNullOrWhiteSpace(connection.host)||connection.port<1||connection.port>65535
+                int gamePort=connection==null?0:
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    connection.wsPort;
+#else
+                    connection.port;
+#endif
+                if(connection==null||string.IsNullOrWhiteSpace(connection.host)||gamePort<1||gamePort>65535
                     ||string.IsNullOrEmpty(connection.matchId)||string.IsNullOrEmpty(connection.joinTicket)
                     ||connection.faction!="industrial"&&connection.faction!="biological")
                     throw new InvalidOperationException("Invalid allocation.");
                 IsMatchmaking=false;
                 publicAllocatedMatchId=connection.matchId;
-                ConnectRemote(connection.host,(ushort)connection.port,connection.faction,connection.matchId,connection.joinTicket);
+                ConnectRemote(connection.host,(ushort)gamePort,connection.faction,connection.matchId,connection.joinTicket);
             }
             catch(OperationCanceledException)
             {

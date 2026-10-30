@@ -165,9 +165,11 @@ def pair(first=None, second=None):
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, ws_port=None):
         self.identity = {"serverId": "local-1", "bootId": "test-" + uuid.uuid4().hex}
-        result = rpc("ll_server_register", {**self.identity, **COMPAT, "host": "127.0.0.1", "port": 7778}, server=True)
+        # Builds before the browser transport omit wsPort; the backend stores 0 for them.
+        websocket = {} if ws_port is None else {"wsPort": ws_port}
+        result = rpc("ll_server_register", {**self.identity, **COMPAT, "host": "127.0.0.1", "port": 7778, **websocket}, server=True)
         self.identity["leaseId"] = result["leaseId"]
         self.running = True
         self.errors = []
@@ -324,7 +326,39 @@ def main():
         expect_denied(lambda: rpc("ll_server_poll", old, server=True), "Expired lease cannot heartbeat back to life")
         agent = Agent()
         check("assignment" not in agent.poll(), "Expired slot can register a fresh lease")
-        print(f"NAKAMA_INTEGRATION passed: {CHECKS} checks; native queue, trusted admission, backlog, cancellation, results, two sessions, restart, expiry, spoof rejection")
+
+        # Cross-play: a Quest search (UDP) and a desktop search (websocket) form one pair,
+        # which only a server with a websocket listener may receive.
+        agent.stop()
+        agent = Agent(ws_port=0)
+        quest, desktop = login(), login()
+        sq = open_search(quest)
+        sd = rpc("ll_search_open", {**COMPAT, "faction": "biological", "websocket": True}, desktop)["searchId"]
+        wq, wd = WebSocket(quest), WebSocket(desktop)
+        queue(wq, sq)
+        queue(wd, sd)
+        mq, md = wq.matched(), wd.matched()
+        check(mq.get("match_id") == md.get("match_id") and bool(mq.get("match_id")), "Quest and desktop searches are matched together")
+        check("assignment" not in agent.poll(), "A server without a websocket listener never receives a desktop pair")
+        check(status(quest, sq)["status"] == status(desktop, sd)["status"] == "waitingServer", "The mixed pair waits for a websocket-capable slot")
+        expect_denied(lambda: rpc("ll_server_register", {"serverId": "local-1", "bootId": agent.identity["bootId"], **COMPAT, "host": "127.0.0.1", "port": 7778, "wsPort": 9999}, server=True),
+                      "An active process cannot change its websocket port")
+        expect_denied(lambda: Agent(ws_port=70000), "Websocket port must be a valid TCP port")
+        agent.stop()
+        agent = Agent(ws_port=7878)
+        assignment = agent.poll()["assignment"]
+        check(assignment["matchId"] == mq["match_id"], "The websocket-capable slot receives the mixed pair")
+        agent.event(assignment["matchId"], "ready")
+        cq, cd = status(quest, sq)["connection"], status(desktop, sd)["connection"]
+        check(cq["port"] == cd["port"] == 7778 and cq["wsPort"] == cd["wsPort"] == 7878, "Status advertises the UDP game port and the websocket port")
+        check(agent.admit(cq)["playerId"] == quest["uid"] and agent.admit(cd)["playerId"] == desktop["uid"], "Both transports are admitted with the same scoped tickets")
+        agent.event(assignment["matchId"], "started")
+        agent.event(assignment["matchId"], "finished", winner=1, tick=640)
+        check(status(desktop, sd)["status"] == "finished", "The mixed match result closes both searches")
+        agent.event(assignment["matchId"], "released")
+        regular = pair()
+        check(agent.poll()["assignment"]["matchId"] == regular[4], "A websocket-capable slot still serves Quest-only pairs")
+        print(f"NAKAMA_INTEGRATION passed: {CHECKS} checks; native queue, trusted admission, backlog, cancellation, results, two sessions, restart, expiry, spoof rejection, cross-play allocation")
     finally:
         if agent:
             agent.stop()

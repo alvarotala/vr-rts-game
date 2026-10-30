@@ -35,7 +35,7 @@ namespace Frontier.Runtime
             string groups=touch?"":string.Join(" / ",new[]{bindings.Name(false,"group1"),bindings.Name(false,"group2"),bindings.Name(false,"group3"),bindings.Name(false,"group4")});
             string click=touch?"Trigger / "+bindings.MenuConfirmName:"Left-click";
             string stick=bindings.HandName.ToLowerInvariant()+" stick";
-            return new[]{
+            var topics=new[]{
                 new Topic("Selection",new[]{
                     new Command("selection.single","Select an item",select+" on map","Select an allied unit, building or resource."),
                     new Command("selection.area","Select an area","Hold "+select+" + drag","Enclose your units and buildings in the flat rectangle. The drag can start outside the map."),
@@ -101,6 +101,47 @@ namespace Frontier.Runtime
                     new Command("board.height","Placement height","Page Up raise / Page Down lower","Tap for 2.5 cm; hold to keep adjusting while placing the board."),
                     new Command("board.cancel-placement","Cancel board placement","Escape while placing","Restore the previous board position, height and size."))
             };
+#if FRONTIER_BROWSER
+            if(!touch)return BrowserGuide(topics,bindings);
+#endif
+            return topics;
         }
+
+#if FRONTIER_BROWSER
+        private static Topic[] BrowserGuide(Topic[] topics,HotkeyBindings bindings)
+        {
+            string select=bindings.Name(false,"select"),add=bindings.Name(false,"add");
+            return topics.Select(topic=>
+            {
+                if(topic.Name=="Board")return new Topic("Camera",
+                    new Command("board.pan","Pan the camera",string.Join(" / ",new[]{bindings.Name(false,"pan-up"),bindings.Name(false,"pan-left"),bindings.Name(false,"pan-down"),bindings.Name(false,"pan-right")}),"Move the camera across the battlefield."),
+                    new Command("board.drag","Drag the camera","Hold middle mouse + drag","Drag over the battlefield to move the camera."),
+                    new Command("board.zoom","Zoom the camera","Mouse wheel over the battlefield","Move closer for detail or farther away to see more of the map."),
+                    new Command("board.fit","See the full map",bindings.Name(false,"fit"),"Fit the whole battlefield in the available view."),
+                    new Command("board.minimap","Navigate with the minimap","Left-click or drag on the minimap","Center the camera on that location. Enemy markers follow your army's vision."));
+                var commands=topic.Commands.Select(command=>
+                {
+                    switch(command.Id)
+                    {
+                        case "selection.remove":return new Command(command.Id,command.Name,add+" + hold "+select+" on an ally","Hold for 0.5 s to remove that item from selection. Units keep their orders.");
+                        case "selection.same-type":return new Command(command.Id,command.Name,"Double "+select+" on an ally","Select the same type within 12 cells. Hold "+add+" to add them to the current selection.");
+                        case "menus.pause":return new Command(command.Id,command.Name,bindings.Name(false,"back")+" / "+bindings.Name(false,"pause")+" / Menu button","Cancel an armed action first, or open the game menu. Escape goes back; Resume match continues playing.");
+                        case "menus.leave":return new Command(command.Id,command.Name,"Menu > Return to main menu",command.Description);
+                        case "production.build":return new Command(command.Id,command.Name,"Select a worker > choose a building",command.Description);
+                        case "production.cancel-item":return new Command(command.Id,command.Name,"Click its production card","Cancel that exact item and refund its resource cost. Other items keep their order; cancelling the current item advances the queue.");
+                        default:return command;
+                    }
+                }).ToList();
+                if(topic.Name=="Selection")
+                {
+                    commands.Add(new Command("selection.idle-workers","Select idle workers","Click Idle workers in the top bar","Select all idle workers. Moving, working and queued workers stay out. An empty result keeps your selection."));
+                    commands.Add(new Command("selection.army","Select all army","Click Army in the top bar","Select your military units, including scouts and casters. Workers and buildings stay out."));
+                }
+                if(topic.Name=="Orders")
+                    commands.Add(new Command("orders.cancel-item","Remove a planned order","Click an order below the selection","Remove that command from selected units that share it. Cancelling the current order starts the next; Cancel all stops the units and clears their plans."));
+                return new Topic(topic.Name,commands.ToArray());
+            }).ToArray();
+        }
+#endif
     }
 }

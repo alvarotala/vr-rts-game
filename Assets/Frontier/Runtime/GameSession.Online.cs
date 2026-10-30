@@ -4,6 +4,11 @@ using System.Linq;
 using Frontier.Core;
 using Frontier.Networking;
 using UnityEngine;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using MatchClient = Frontier.Networking.BrowserMatchClient;
+#else
+using MatchClient = Frontier.Networking.NgoMatchClient;
+#endif
 
 namespace Frontier.Runtime
 {
@@ -20,9 +25,14 @@ namespace Frontier.Runtime
         public bool CanIssueOrders => Running && !IsReplay && !IsPaused && View != null && Winner == -1
             && (!IsOnline || remoteClient != null && remoteClient.IsConnected);
         public string ServerAddress = "127.0.0.1";
-        public ushort ServerPort = 7777;
+        public ushort ServerPort =
+#if UNITY_WEBGL && !UNITY_EDITOR
+            7877;
+#else
+            7777;
+#endif
         public string NetworkStatus { get; private set; } = "Choose Find Match for online play or connect directly to a server.";
-        private NgoMatchClient remoteClient;
+        private MatchClient remoteClient;
         private object remoteIdentity = new object();
         private MatchReport remoteReport;
         private readonly Dictionary<int, GameCommand> pendingCommands = new Dictionary<int, GameCommand>();
@@ -56,7 +66,7 @@ namespace Frontier.Runtime
 
         private void ConnectRemote(string address,ushort port,string faction,string matchId=null,string joinTicket=null)
         {
-            remoteClient=new GameObject("NGO match client").AddComponent<NgoMatchClient>();
+            remoteClient=new GameObject("Match client").AddComponent<MatchClient>();
             remoteClient.Started+=OnlineStarted;
             remoteClient.StateReceived+=OnlineState;
             remoteClient.CommandAcknowledged+=OnlineAcknowledged;
@@ -64,7 +74,11 @@ namespace Frontier.Runtime
             remoteClient.StatusChanged+=OnlineStatus;
             remoteClient.Disconnected+=OnlineDisconnected;
             OnlineStatus(IsPublicMatch?"Opponent found. Connecting to your match…":"Connecting to "+address+":"+port+"…");
-            if(!remoteClient.Connect(address,port,faction,matchId,joinTicket))
+            if(!remoteClient.Connect(address,port,faction,matchId,joinTicket
+#if UNITY_WEBGL && !UNITY_EDITOR
+                ,IsPublicMatch&&NakamaMatchmaker.ValidateEndpoint(PublicBackendUrl).Scheme=="https"
+#endif
+                ))
                 OnlineDisconnected(IsPublicMatch?"Could not join the match. Search again.":"Could not connect. Check the server address and port.");
         }
 

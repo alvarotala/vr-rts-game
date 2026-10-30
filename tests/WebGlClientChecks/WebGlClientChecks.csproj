@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Exercises the real WebGL game client with a deterministic browser-socket
+       stand-in. Browser JS is checked separately; this is not a Unity build. -->
+  <PropertyGroup>
+    <OutputType Condition="'$(RealBrowserBridge)' != 'true'">Exe</OutputType>
+    <OutputType Condition="'$(RealBrowserBridge)' == 'true'">Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_WEBGL</DefineConstants>
+    <NoWarn>CS0649;CS0414;CS0169;SYSLIB0050</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Frontier/Core/*.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/BrowserMatchClient.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/MatchProtocol.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/MatchMessages.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/NetworkWire.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/WebSocketMatchCodec.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/WebGlAsync.cs" />
+    <Compile Include="../ServerHarness/Shim/UnityEngine.cs" />
+    <Compile Include="../ServerHarness/Shim/JsonUtility.cs" />
+    <Compile Include="../ServerHarness/Shim/Netcode.cs" />
+    <Compile Include="../ServerHarness/Shim/ShimRuntime.cs" />
+    <Compile Include="BrowserSocketStandIn.cs" Condition="'$(RealBrowserBridge)' != 'true'" />
+    <Compile Include="Program.cs" Condition="'$(RealBrowserBridge)' != 'true'" />
+    <Compile Include="../../Assets/Frontier/Networking/BrowserMatchSocket.cs" Condition="'$(RealBrowserBridge)' == 'true'" />
+    <Compile Include="PreserveAttribute.cs" Condition="'$(RealBrowserBridge)' == 'true'" />
+  </ItemGroup>
+</Project>
