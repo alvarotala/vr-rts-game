@@ -17,9 +17,15 @@ previa también selecciona. **Cancelar / limpiar** quita la selección. Mantener
 y soltar conserva la orden contextual explícita, como reparar o reanudar un
 edificio aliado con trabajadores. Los modos de apuntado explícitos mantienen
 su prioridad sobre el cambio de selección.
-**Shift** se activa/desactiva con un toque o se mantiene con otro dedo:
+**Shift** cambia entre **Mover** (normal), **Atacar** (un toque) y **En cola**
+(doble toque sobre el botón). La flecha, mira o ruta con `+` indican el estado.
+Un toque posterior sale del modo activo. Mantener **Shift** con otro dedo
+encadena tareas temporalmente y al soltar recupera el modo previo.
 **Shift + arrastrar** rodea aliados con un lazo y los selecciona al soltar;
-**Shift + toque** con unidades seleccionadas ordena **Avanzar atacando**.
+en modo **Atacar**, tocar un destino ordena **Avanzar atacando**; en **En cola**
+agrega movimiento, ataque, recolección, reparación o construcción sin reemplazar
+las tareas anteriores. Habilidades y puntos de reunión siguen siendo inmediatos.
+El tutorial conserva sus controles guiados y no permite encolar.
 El modificador se toma al empezar el gesto. Dos dedos también mueven la cámara
 y pellizcar ajusta el zoom. Las acciones aparecen según la selección;
 **Agrupar** la guarda en uno de cuatro iconos visibles del HUD, y tocar un icono

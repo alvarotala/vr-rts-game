@@ -7,6 +7,8 @@ namespace Frontier.Runtime
     // This keeps a held modifier from becoming the primary pointer or a pinch.
     public sealed class MobileTouchRouter
     {
+        public enum ShiftMode { Normal, Attack, Queue }
+        public const float DoubleTapSeconds=.32f;
         public struct Contact
         {
             public int Id;
@@ -14,23 +16,27 @@ namespace Frontier.Runtime
             public bool Held,Down,Up,Cancelled,OnShift;
         }
         private int shiftFinger=-1,pointerFinger=-1;
-        private bool latched,shiftUsed;
-        private float pointerX,pointerY;
-        public bool ShiftActive { get=>latched||shiftFinger>=0;set=>latched=value; }
+        private ShiftMode latched;
+        private bool shiftUsed,queueAvailable=true;
+        private float pointerX,pointerY,shiftPressedAt,lastShiftTap=-1;
+        public ShiftMode Mode=>shiftFinger>=0?(queueAvailable?ShiftMode.Queue:ShiftMode.Attack):latched;
+        public bool ShiftActive { get=>Mode!=ShiftMode.Normal;set{latched=value?ShiftMode.Attack:ShiftMode.Normal;lastShiftTap=-1;} }
 
-        public void ResetShift(){latched=false;shiftFinger=-1;shiftUsed=false;}
+        public void ResetShift(){latched=ShiftMode.Normal;shiftFinger=-1;shiftUsed=false;lastShiftTap=-1;}
 
-        public MobileGesture.Sample Read(IReadOnlyList<Contact> contacts,float time,bool shiftAvailable)
+        public MobileGesture.Sample Read(IReadOnlyList<Contact> contacts,float time,bool shiftAvailable,bool allowQueue=true)
         {
+            queueAvailable=allowQueue;
+            if(!allowQueue&&latched==ShiftMode.Queue){latched=ShiftMode.Attack;lastShiftTap=-1;}
             if(!shiftAvailable)ResetShift();
             if(shiftAvailable&&shiftFinger<0)
                 for(int i=0;i<contacts.Count;i++)
                 {
                     var contact=contacts[i];
                     if(!contact.Down||!contact.OnShift||contact.Cancelled)continue;
-                    shiftFinger=contact.Id;shiftUsed=false;break;
+                    shiftFinger=contact.Id;shiftUsed=false;shiftPressedAt=time;break;
                 }
-            bool shifted=ShiftActive,foundShift=false;
+            bool shifted=ShiftActive,append=Mode==ShiftMode.Queue,foundShift=false;
             int modifier=shiftFinger,count=0;
             Contact primary=default,secondary=default,release=default;
             bool hasPrimary=false,hasRelease=false,cancelled=false;
@@ -43,7 +49,8 @@ namespace Frontier.Runtime
                     if(contact.Cancelled)cancelled=true;
                     continue;
                 }
-                if(shiftFinger>=0&&(contact.Held||contact.Down))shiftUsed=true;
+                if(contact.Held||contact.Down)
+                {lastShiftTap=-1;if(shiftFinger>=0)shiftUsed=true;}
                 cancelled|=contact.Cancelled;
                 if(contact.Held)
                 {
@@ -55,8 +62,8 @@ namespace Frontier.Runtime
                 else if(contact.Up&&(contact.Id==pointerFinger||!hasRelease&&contact.Down))
                 {release=contact;hasRelease=true;}
             }
-            // A Shift tap latches; using another finger while it is held makes
-            // it momentary, retaining whichever latched state existed before.
+            // Tap: attack/lasso; double tap: contextual queue. Holding is a
+            // momentary queue and restores the previous mode on release.
             if(modifier>=0)
             {
                 for(int i=0;i<contacts.Count;i++)
@@ -64,14 +71,23 @@ namespace Frontier.Runtime
                     var contact=contacts[i];if(contact.Id!=modifier)continue;
                     if(contact.Up||contact.Cancelled)
                     {
-                        if(contact.Up&&!contact.Cancelled&&!shiftUsed&&contact.OnShift)latched=!latched;
+                        if(contact.Up&&!contact.Cancelled&&!shiftUsed&&contact.OnShift
+                            &&time>=shiftPressedAt&&time-shiftPressedAt<MobileGesture.LongPressSeconds)
+                        {
+                            bool twice=allowQueue&&latched==ShiftMode.Attack&&lastShiftTap>=0
+                                &&time>=lastShiftTap&&time-lastShiftTap<=DoubleTapSeconds;
+                            if(twice){latched=ShiftMode.Queue;lastShiftTap=-1;}
+                            else if(latched==ShiftMode.Normal){latched=ShiftMode.Attack;lastShiftTap=time;}
+                            else {latched=ShiftMode.Normal;lastShiftTap=-1;}
+                        }
+                        else lastShiftTap=-1;
                         shiftFinger=-1;shiftUsed=false;
                     }
                     break;
                 }
-                if(!foundShift){shiftFinger=-1;shiftUsed=false;cancelled=true;}
+                if(!foundShift){shiftFinger=-1;shiftUsed=false;lastShiftTap=-1;cancelled=true;}
             }
-            var sample=new MobileGesture.Sample{Count=count,Time=time,Shift=shifted,Cancelled=cancelled};
+            var sample=new MobileGesture.Sample{Count=count,Time=time,Shift=shifted,Append=append,Cancelled=cancelled};
             if(hasPrimary)
             {
                 sample.Finger=primary.Id;sample.X=primary.X;sample.Y=primary.Y;sample.Down=primary.Down;

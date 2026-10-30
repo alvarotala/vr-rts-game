@@ -183,9 +183,10 @@ y conserva visibles el perfil, **Actualizar** y **Volver**.
 - La unidad se detecta al apoyar el dedo y se selecciona al soltar, aunque se haya movido. Arrastrar o pellizcar cancela esa selección. Sin selección previa, un toque lento también selecciona.
 - Con unidades seleccionadas, tocar terreno, enemigos o recursos envía una orden contextual: mover, atacar o recolectar. Los modos explícitos de construcción, habilidad y destino de acción conservan la prioridad.
 - Mantener y soltar sobre un objetivo: orden contextual explícita; permite reparar o reanudar una construcción propia con trabajadores seleccionados.
-- **Shift** activa/desactiva el modificador táctil; también se puede mantener con otro dedo. El estado se toma al empezar el gesto.
+- **Shift** tiene tres estados: **Mover** (flecha, normal), **Atacar** (mira, un toque) y **En cola** (ruta con `+`, doble toque sobre Shift en 0,32 s). Un toque posterior desactiva el modo; un doble toque rápido desde normal activa la cola. El estado se toma al empezar el gesto en el mapa.
+- **Mantener Shift** mientras otro dedo toca destinos encadena temporalmente las órdenes; al soltar recupera el estado anterior. Mantenerlo sin usar el mapa no fija ningún modo. En el tutorial no hay cola y mantener Shift conserva ataque/lazo.
 - **Shift + arrastrar** dibuja un lazo visible alrededor de unidades; al soltar se cierra y selecciona los aliados cuyos centros quedan dentro. No hace falta un círculo perfecto. Un trazo demasiado pequeño o una línea no cambia la selección.
-- **Shift + toque**, con unidades seleccionadas, ordena **Avanzar atacando** hacia el punto. Sin unidades seleccionadas, el toque permite seleccionar.
+- Con **Atacar** activo, tocar con unidades seleccionadas ordena **Avanzar atacando** hacia el punto. En **En cola**, cada toque agrega una tarea contextual: mover, atacar un enemigo, recolectar o reparar. Las construcciones elegidas también admiten cola; habilidades y puntos de reunión conservan su ejecución inmediata. Sin unidades seleccionadas, el toque permite seleccionar.
 - Dos dedos también desplazan la cámara; pellizcar acerca o aleja.
 - Acciones del HUD: construir, producir, atacar y habilidades del catálogo compartido.
 - Los destinos de construcción/ataque/habilidad se confirman con un toque; cancelar está en el HUD.

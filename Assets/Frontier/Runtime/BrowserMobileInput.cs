@@ -16,6 +16,7 @@ namespace Frontier.Runtime
         private static bool pointerHeld;
         public static RectTransform ShiftButton { get;set; }
         public static bool ShiftActive { get=>touchRouter.ShiftActive;set=>touchRouter.ShiftActive=value; }
+        public static MobileTouchRouter.ShiftMode ShiftMode=>touchRouter.Mode;
         public static void ResetShift()=>touchRouter.ResetShift();
         public static bool IsTouchMode
         {
@@ -44,7 +45,7 @@ namespace Frontier.Runtime
                 return lastPosition;
             }
         }
-        public static MobileGesture.Sample Read(bool allowShift)
+        public static MobileGesture.Sample Read(bool allowShift,bool allowQueue=true)
         {
             var screen=Touchscreen.current;
             bool shiftAvailable=allowShift&&ShiftButton!=null&&ShiftButton.gameObject.activeInHierarchy;
@@ -58,7 +59,7 @@ namespace Frontier.Runtime
                     Cancelled=touch.phase.ReadValue()==UnityEngine.InputSystem.TouchPhase.Canceled,
                     OnShift=shiftAvailable&&RectTransformUtility.RectangleContainsScreenPoint(ShiftButton,point,null)});
             }
-            var sample=touchRouter.Read(contacts,Time.unscaledTime,shiftAvailable);
+            var sample=touchRouter.Read(contacts,Time.unscaledTime,shiftAvailable,allowQueue);
             pointerFrame=Time.frameCount;pointerHeld=sample.Count>0;lastPosition=new Vector2(sample.X,sample.Y);
             return sample;
         }

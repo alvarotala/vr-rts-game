@@ -8,7 +8,7 @@ namespace Frontier.Runtime
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class ConsoleGlyph : MaskableGraphic
     {
-        public enum Kind { Mineral, Gas, Supply, Reset, Pause, Group, Tutorial, Guide, History }
+        public enum Kind { Mineral, Gas, Supply, Reset, Pause, Group, Tutorial, Guide, History, Move, Attack, Queue }
 
         [SerializeField] private Kind glyph;
         public Kind Glyph
@@ -91,6 +91,28 @@ namespace Frontier.Runtime
                     }
                     Stroke(Vector2.zero,new Vector2(0,.23f),.07f,ink);
                     Stroke(Vector2.zero,new Vector2(.18f,-.10f),.07f,ink);
+                    break;
+                case Kind.Move:
+                    Stroke(new Vector2(-.30f,-.30f),new Vector2(.20f,.20f),.16f,shade);
+                    Triangle(new Vector2(-.04f,.32f),new Vector2(.40f,.40f),new Vector2(.32f,-.04f),ink);
+                    break;
+                case Kind.Attack:
+                    for(int i=0;i<28;i++)
+                    {
+                        float from=2*Mathf.PI*i/28,to=2*Mathf.PI*(i+1)/28;
+                        Quad(Radial(from,.22f),Radial(to,.22f),Radial(to,.31f),Radial(from,.31f),shade);
+                    }
+                    Box(-.05f,.17f,.05f,.44f,ink);Box(-.05f,-.44f,.05f,-.17f,ink);
+                    Box(-.44f,-.05f,-.17f,.05f,ink);Box(.17f,-.05f,.44f,.05f,ink);
+                    Disc(Vector2.zero,.06f,ink);
+                    break;
+                case Kind.Queue:
+                    Stroke(new Vector2(-.31f,-.29f),new Vector2(-.31f,.25f),.10f,shade);
+                    Stroke(new Vector2(-.31f,.25f),new Vector2(.22f,.25f),.10f,shade);
+                    Disc(new Vector2(-.31f,-.29f),.10f,ink);
+                    Disc(new Vector2(-.31f,.25f),.10f,ink);
+                    Disc(new Vector2(.22f,.25f),.10f,ink);
+                    Box(.03f,-.27f,.41f,-.17f,ink);Box(.17f,-.41f,.27f,-.03f,ink);
                     break;
             }
 

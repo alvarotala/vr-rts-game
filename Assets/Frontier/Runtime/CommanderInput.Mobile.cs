@@ -26,7 +26,7 @@ namespace Frontier.Runtime
                 if(mobileGesture.Captured)CancelMobileGesture();
                 ClearMobileLasso();ResetMapGestures();
             }
-            var sample=BrowserMobileInput.Read(Panel.AcceptsGameInput&&Panel.BrowserShiftAvailable);
+            var sample=BrowserMobileInput.Read(Panel.AcceptsGameInput&&Panel.BrowserShiftAvailable,!Session.IsTutorial);
             var screenSize=new Vector2(Screen.width,Screen.height);
             if((mobileViewport!=Quest.Camera.pixelRect||mobileScreenSize!=screenSize)&&mobileGesture.Captured)CancelMobileGesture();
             mobileViewport=Quest.Camera.pixelRect;mobileScreenSize=screenSize;
@@ -85,7 +85,7 @@ namespace Frontier.Runtime
                 return;
             }
             if((result.Kind==MobileGesture.Kind.Tap||result.Kind==MobileGesture.Kind.LongPress)&&Panel.AcceptsGameInput&&!sample.OverUi)
-            {CompleteMobileTap(ray,result.Kind==MobileGesture.Kind.LongPress,result.Shift);return;}
+            {CompleteMobileTap(ray,result.Kind==MobileGesture.Kind.LongPress,result.Shift,result.Append);return;}
             if(mobileGesture.Captured&&mapAllowed&&!sample.OverUi)
             {
                 PointReplayBoard(ray);
@@ -113,22 +113,24 @@ namespace Frontier.Runtime
             }
             Session.SelectVisibleEntities(mobileLassoSelection);
         }
-        private void TapMobileBoard(Ray ray,bool forceOrder,bool shifted)
+        private void TapMobileBoard(Ray ray,bool forceOrder,bool shifted,bool append=false)
         {
             if(!Board.RayToMap(ray,out var point,out var hit))return;
             Board.ResolvePointerTarget(ray,point,hit,out int entity,out int resource);
             bool own=MobileOwnTarget(entity);
             bool ownSelection=Session.View!=null&&System.Array.Exists(Session.View.entities,
                 e=>Session.Selection.Contains(e.id)&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
-            var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own);
+            append&=!Session.IsTutorial;
+            var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own,append);
             if(action!=MobileGesture.TapAction.Select)
             {
                 // Touch orders are explicit: repeated normal taps remain moves,
-                // while Shift always attacks along the route to the tapped point.
+                // while attack mode attacks along the route. Queue mode reuses
+                // the shared contextual order and its existing append flag.
                 // Explicit building/ability/rally targeting retains its priority.
                 ResetMapGestures();Board.Pointer=point;Board.Hovered=entity;Board.HoveredResource=resource;
-                if(action==MobileGesture.TapAction.AttackMove)Session.Send(CommandKind.AttackMove,position:point);
-                else Session.Context(point,entity,resource);
+                if(action==MobileGesture.TapAction.AttackMove)Session.Send(CommandKind.AttackMove,position:point,append:append);
+                else Session.Context(point,entity,resource,append:append);
                 return;
             }
             // Both edges are delivered together only after a confirmed tap, so
@@ -152,7 +154,7 @@ namespace Frontier.Runtime
                 if(MobileOwnTarget(entity))mobilePressedEntity=entity;
             }
         }
-        private void CompleteMobileTap(Ray ray,bool forceOrder,bool shifted)
+        private void CompleteMobileTap(Ray ray,bool forceOrder,bool shifted,bool append=false)
         {
             int captured=mobilePressedEntity;mobilePressedEntity=0;
             bool explicitOrder=forceOrder&&Session.Selection.Any(MobileOwnTarget);
@@ -166,7 +168,7 @@ namespace Frontier.Runtime
                 Board.Hovered=captured;Board.HoveredResource=0;
                 return;
             }
-            TapMobileBoard(ray,forceOrder,shifted);
+            TapMobileBoard(ray,forceOrder,shifted,append);
         }
         private void CancelMobileGesture()
         {

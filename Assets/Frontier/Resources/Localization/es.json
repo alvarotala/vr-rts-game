@@ -6,6 +6,9 @@
     "Spanish"
   ],
   "entries": [
+    {"key":"Tap an ally to select. Tap a destination to move. Tap Shift once for attack-move.","value":"Toca un aliado para seleccionarlo y un destino para moverlo. Toca Shift una vez para avanzar atacando.","template":false},
+    {"key":"Double-tap Shift to queue tasks, or hold Shift while tapping targets. Tap it once to leave queue mode. Unavailable in the tutorial.","value":"Doble toque en Shift para encadenar tareas, o mantenlo pulsado al tocar destinos. Un toque sale del modo cola. No disponible en el tutorial.","template":false},
+    {"key":"Activate either Shift mode or hold Shift, then draw around allies to select them.","value":"Activa un modo de Shift o mantenlo pulsado y rodea a los aliados para seleccionarlos.","template":false},
     {"key":"Select","value":"Seleccionar","template":false},
     {"key":"Order","value":"Ordenar","template":false},
     {"key":"Drag here to move the camera","value":"Arrastra aquí para mover el mapa","template":false},

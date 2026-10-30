@@ -126,6 +126,7 @@ internal static class Program
             Check(!Feed(gesture,lateRelease).Shift,"modifier is captured at initial contact only");
 
             CheckShiftRouting();
+            CheckShiftModes();
             CheckCameraFooter();
             CheckTapIntent();
             CheckLassoGeometry();
@@ -229,6 +230,10 @@ internal static class Program
 
     private static void CheckTapIntent()
     {
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,false,true)==MobileGesture.TapAction.Context,"queue mode on terrain keeps contextual movement instead of attack-move");
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,true,true)==MobileGesture.TapAction.Context,"queue mode on a friendly building orders repair without replacing selection");
+        Check(MobileGesture.ResolveTap(true,false,true,true,true,true,true)==MobileGesture.TapAction.Context,"queue mode respects explicit build and ability targeting");
+        Check(MobileGesture.ResolveTap(true,false,false,false,false,true,true)==MobileGesture.TapAction.Select,"queue mode without units still allows selection");
         Check(MobileGesture.ResolveTap(false,false,false,false,false,true)==MobileGesture.TapAction.Select,"tap with no selection selects a friendly target");
         Check(MobileGesture.ResolveTap(true,false,false,false,false,true)==MobileGesture.TapAction.Select,"Shift without selected units can still select a target");
         Check(MobileGesture.ResolveTap(false,false,false,true,true,false)==MobileGesture.TapAction.Context,"selected units tap ground or enemy issues contextual order");
@@ -258,6 +263,76 @@ internal static class Program
         Check(Tap(100,20,false,true)==MobileGesture.TapAction.Select,"sequence selects unit A");
         Check(Tap(300,21,true,false)==MobileGesture.TapAction.Context,"sequence sends unit A to terrain");
         Check(Tap(200,22,true,true)==MobileGesture.TapAction.Select,"sequence selects unit B instead of moving A toward B");
+    }
+
+    private static void CheckShiftModes()
+    {
+        var router=new MobileTouchRouter();
+        void Tap(float start,bool allowQueue=true)
+        {
+            var down=router.Read(new[]{Contact(5,down:true,shift:true)},start,true,allowQueue);
+            var up=router.Read(new[]{Contact(5,up:true,shift:true)},start+.05f,true,allowQueue);
+            Check(down.Count==0&&!down.Down&&up.Count==0&&!up.Up,"Shift taps never send map edges");
+        }
+        Tap(1);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Attack,"single Shift tap selects attack mode");
+        Tap(1.15f);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Queue,"double Shift tap selects persistent contextual queue");
+        var sample=router.Read(new[]{Contact(8,down:true)},1.3f,true);
+        Check(sample.Append&&sample.Shift,"latched queue supplies append and lasso modifier to map contacts");
+        router.Read(new[]{Contact(8,up:true)},1.4f,true);
+        Tap(2);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"single tap leaves queue mode");
+        Tap(3);Tap(3.6f);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"two separated taps toggle attack off instead of activating queue");
+        Tap(4);
+        router.Read(new[]{Contact(8,down:true)},4.1f,true);
+        router.Read(new[]{Contact(8,up:true)},4.15f,true);Tap(4.2f);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"using the map between Shift taps invalidates the double-tap history");
+
+        router.Read(new[]{Contact(5,down:true,shift:true)},5,true);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Queue,"held Shift gives immediate temporary queue feedback");
+        router.Read(new[]{Contact(5,up:true,shift:true)},5.7f,true);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"unused long hold does not latch an attack or queue mode");
+        Tap(6);
+        router.Read(new[]{Contact(5,down:true,shift:true)},7,true);
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,down:true)},7.1f,true);
+        Check(sample.Append,"held Shift appends tasks even when attack mode was latched");
+        var gesture=new MobileGesture();sample.AllowMap=true;sample.LassoSelection=true;Feed(gesture,sample);
+        sample=router.Read(new[]{Contact(5,up:true,shift:true),Contact(8)},7.2f,true);
+        sample.AllowMap=true;sample.LassoSelection=true;Feed(gesture,sample);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Attack,"releasing held Shift restores its earlier attack mode");
+        sample=router.Read(new[]{Contact(8,up:true)},7.25f,true);sample.AllowMap=true;
+        var release=Feed(gesture,sample);
+        Check(release.Kind==MobileGesture.Kind.Tap&&release.Append&&release.Shift,
+            "map release keeps queue captured at press after the Shift finger is released");
+        router.ResetShift();
+        gesture=new MobileGesture();sample=router.Read(new[]{Contact(8,down:true)},8,true);sample.AllowMap=true;Feed(gesture,sample);
+        sample=router.Read(new[]{Contact(8),Contact(5,down:true,shift:true)},8.1f,true);sample.AllowMap=true;Feed(gesture,sample);
+        sample=router.Read(new[]{Contact(8,up:true),Contact(5,shift:true)},8.2f,true);sample.AllowMap=true;
+        release=Feed(gesture,sample);
+        Check(!release.Append&&!release.Shift,"pressing Shift halfway through a map tap cannot turn replacement into queued order");
+        router.Read(new[]{Contact(5,up:true,shift:true)},8.3f,true);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"temporary queue returns to normal after use");
+
+        Tap(9);Tap(9.15f);
+        router.Read(Array.Empty<MobileTouchRouter.Contact>(),10,true,false);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Attack,"tutorial entry replaces queued mode with supported attack and lasso");
+        router.ResetShift();Tap(11,false);Tap(11.15f,false);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"tutorial double tap cannot latch unavailable queue");
+        router.Read(new[]{Contact(5,down:true,shift:true)},12,true,false);
+        sample=router.Read(new[]{Contact(5,shift:true),Contact(8,down:true)},12.1f,true,false);
+        Check(sample.Shift&&!sample.Append,"held Shift in tutorial preserves attack and lasso without appending");
+
+        router.ResetShift();Tap(13);Tap(13.15f);
+        router.Read(Array.Empty<MobileTouchRouter.Contact>(),14,false);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"menu and input blocking clear persistent queue");
+        Tap(15);router.Read(new[]{Contact(5,down:true,shift:true)},15.1f,true);
+        var cancelled=Contact(5,up:true,shift:true);cancelled.Cancelled=true;
+        sample=router.Read(new[]{cancelled},15.2f,true);
+        Check(sample.Cancelled&&router.Mode==MobileTouchRouter.ShiftMode.Attack,"cancelled second Shift tap cannot lock queue or lose the earlier mode");
+        Tap(15.25f);
+        Check(router.Mode==MobileTouchRouter.ShiftMode.Normal,"cancelled modifier clears double-tap timing");
     }
 
     private static void CheckLassoGeometry()

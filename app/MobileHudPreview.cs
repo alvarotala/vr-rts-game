@@ -138,6 +138,7 @@ namespace Frontier.Mobile.Editor
 
                 Refresh();
                 ValidateFriendlyTapAfterMove();
+                ValidateShiftQueue();
                 Check(Mathf.Abs(quest.Navigation.Distance * Mathf.Min(1, quest.Camera.aspect) - 34) < .05f,
                     "initial camera preserves battlefield scale on the short screen edge", "distance=" + quest.Navigation.Distance);
                 ValidateLayout("idle"); Capture("01-idle");
@@ -219,13 +220,13 @@ namespace Frontier.Mobile.Editor
                     void TapUnit(int id)
                     {
                         Check(board.TryEntityVisualCenter(id, out var center), "tap regression finds the real unit visual");
-                        Call(input, "TapMobileBoard", To(center), false, false);
+                        Call(input, "TapMobileBoard", To(center), false, false, false);
                     }
                     session.CancelMode(); session.Select(0, false);
                     TapUnit(units[0].id);
                     Check(session.Selection.SetEquals(new[] { units[0].id }), "ordinary mobile tap selects unit A");
                     var ground = board.Content.TransformPoint(new Vector3(session.Map.width * .5f, 0, session.Map.height * .5f));
-                    Call(input, "TapMobileBoard", To(ground), false, false);
+                    Call(input, "TapMobileBoard", To(ground), false, false, false);
                     Check(session.LastCommandKind == CommandKind.Move && session.LastCommandSequence > 0,
                         "mobile terrain tap orders unit A to move");
                     int movement = session.LastCommandSequence;
@@ -245,7 +246,7 @@ namespace Frontier.Mobile.Editor
                     var release = press;release.Down = false;release.Up = true;release.Count = 0;release.Time = 10.1f;
                     var tap = gesture.Step(release, 12);
                     Call(input, "TrackMobileSelection", touchedRay, release, tap);
-                    Call(input, "CompleteMobileTap", touchedRay, false, false);
+                    Call(input, "CompleteMobileTap", touchedRay, false, false, false);
                     Check(session.Selection.SetEquals(new[] { units[1].id }) && session.LastCommandSequence == movement,
                         "unit moving away between press and release remains selected without another order");
                     actor.position = before;Refresh();
@@ -262,11 +263,140 @@ namespace Frontier.Mobile.Editor
                     release.Time = 12.7f;
                     var held = gesture.Step(release, 12);
                     Call(input, "TrackMobileSelection", touchedRay, release, held);
-                    Call(input, "CompleteMobileTap", touchedRay, held.Kind == MobileGesture.Kind.LongPress, false);
+                    Call(input, "CompleteMobileTap", touchedRay, held.Kind == MobileGesture.Kind.LongPress, false, false);
                     Check(session.Selection.SetEquals(new[] { units[1].id }) && session.LastCommandSequence == movement,
                         "slow first touch selects a friendly unit instead of sending an empty order");
                     Object.DestroyImmediate(input);
                     session.Select(0, false); Refresh();
+                }
+                void ValidateShiftQueue()
+                {
+                    var input = fixture.AddComponent<CommanderInput>();
+                    input.Session = session; input.Board = board; input.Quest = quest; input.Panel = panel;
+                    var router = (MobileTouchRouter)typeof(BrowserMobileInput).GetField("touchRouter",
+                        BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                    var gesture = Field<MobileGesture>(input, "mobileGesture");
+                    var queueWorker = session.View.entities.First(entity => entity.owner == session.LocalPlayer
+                        && session.Catalog[entity.definition].role == "worker");
+                    var workerState = session.Match.Entities[queueWorker.id];
+                    var headquarters = session.Match.Entities.Values.First(entity => entity.owner == session.LocalPlayer
+                        && session.Catalog[entity.definition].role == "hq");
+                    float health = headquarters.health;
+                    Ray To(Vector3 world) => new Ray(world + board.transform.up * 10, -board.transform.up);
+                    Ray Ground(float x, float y) => To(board.Content.TransformPoint(new Vector3(x, 0, y)));
+                    MobileTouchRouter.Contact Contact(int id, Vector2 position, bool down = false, bool up = false, bool shift = false)
+                        => new MobileTouchRouter.Contact { Id = id, X = position.x, Y = position.y,
+                            Held = !up, Down = down, Up = up, OnShift = shift };
+                    MobileTouchRouter.Contact Shift(bool down = false, bool up = false)
+                        => Contact(700, Bounds(BrowserMobileInput.ShiftButton).center, down, up, true);
+                    void ShiftTap(float time)
+                    {
+                        router.Read(new[] { Shift(down: true) }, time, true);
+                        router.Read(new[] { Shift(up: true) }, time + .05f, true);
+                    }
+                    MobileGesture.Result Feed(Ray ray, MobileGesture.Sample sample)
+                    {
+                        sample.AllowMap = true; sample.SecondOverMap = true; sample.LassoSelection = true;
+                        var result = gesture.Step(sample, 12);
+                        Call(input, "TrackMobileSelection", ray, sample, result);
+                        return result;
+                    }
+                    void Tap(Ray ray, float time, bool heldShift = false)
+                    {
+                        // Synthetic contacts exercise the actual shared router, classifier
+                        // and tap dispatcher; no command is issued by a fixture shortcut.
+                        var position = new Vector2(Width * .5f, Height * .55f);
+                        var down = Contact(701, position, down: true);
+                        Feed(ray, router.Read(heldShift ? new[] { Shift(), down } : new[] { down }, time, true));
+                        var up = Contact(701, position, up: true);
+                        var tap = Feed(ray, router.Read(heldShift ? new[] { Shift(), up } : new[] { up }, time + .08f, true));
+                        Check(tap.Kind == MobileGesture.Kind.Tap, "queue fixture releases one confirmed map tap");
+                        if (tap.Kind == MobileGesture.Kind.Tap)
+                            Call(input, "CompleteMobileTap", ray, false, tap.Shift, tap.Append);
+                    }
+                    void Mode(MobileTouchRouter.ShiftMode expected, ConsoleGlyph.Kind icon, string capture)
+                    {
+                        Refresh();
+                        Check(BrowserMobileInput.ShiftMode == expected, "real Shift router enters " + expected);
+                        var glyph = BrowserMobileInput.ShiftButton.GetComponentsInChildren<ConsoleGlyph>().FirstOrDefault();
+                        Check(glyph != null && glyph.Glyph == icon && glyph.isActiveAndEnabled,
+                            "Shift displays the actual " + expected + " icon");
+                        ValidateLayout("Shift " + expected); Capture(capture);
+                    }
+                    try
+                    {
+                        BrowserMobileInput.ResetShift(); session.CancelMode(); session.Select(0, false); Refresh();
+                        Check(board.TryEntityVisualCenter(queueWorker.id, out var center), "queue fixture finds its real worker visual");
+                        int beforeSelect = Field<int>(session, "sequence");
+                        Tap(To(center), 20);
+                        Check(session.Selection.SetEquals(new[] { queueWorker.id }) && Field<int>(session, "sequence") == beforeSelect,
+                            "normal router tap selects one worker without dispatching an order");
+                        Tap(Ground(24, 24), 21);
+                        int firstSequence = workerState.activeOrderSequence;
+                        Point firstDestination = workerState.destination;
+                        Check(workerState.order == CommandKind.Move && firstSequence == beforeSelect + 1
+                            && workerState.pendingOrders.Count == 0, "normal mobile tap dispatches exactly one initial Move");
+                        Mode(MobileTouchRouter.ShiftMode.Normal, ConsoleGlyph.Kind.Move, "06-shift-normal");
+                        ShiftTap(22);
+                        Mode(MobileTouchRouter.ShiftMode.Attack, ConsoleGlyph.Kind.Attack, "07-shift-attack");
+                        ShiftTap(22.15f);
+                        Mode(MobileTouchRouter.ShiftMode.Queue, ConsoleGlyph.Kind.Queue, "08-shift-queue");
+                        Check(Field<int>(session, "sequence") == firstSequence && session.Selection.SetEquals(new[] { queueWorker.id }),
+                            "Shift tap and double tap change mode without dispatching or changing selection");
+                        Tap(Ground(27, 24), 23); Tap(Ground(27, 27), 24);
+                        Check(workerState.activeOrderSequence == firstSequence && workerState.order == CommandKind.Move
+                            && workerState.destination.Distance(firstDestination) < .001f,
+                            "queued mobile waypoints preserve the initial active movement and destination");
+                        Check(workerState.pendingOrders.Count == 2 && workerState.pendingOrders.All(order => order.kind == CommandKind.Move)
+                            && workerState.pendingOrders.Select(order => order.sourceSequence).SequenceEqual(new[] { firstSequence + 1, firstSequence + 2 })
+                            && Field<int>(session, "sequence") == firstSequence + 2,
+                            "two queued taps append exactly two FIFO moves without duplicate dispatch");
+                        var resource = session.View.resources.First(item => item.kind == "mineral" && item.remaining != 0);
+                        Tap(Ground(resource.position.x, resource.position.y), 25);
+                        Check(workerState.pendingOrders.Count == 3 && workerState.pendingOrders[2].kind == CommandKind.Gather
+                            && workerState.pendingOrders[2].target == resource.id && workerState.pendingOrders[2].sourceSequence == firstSequence + 3,
+                            "queue mode appends one contextual Gather after movement");
+                        headquarters.health = health - 50; Refresh();
+                        Check(board.TryEntityVisualCenter(headquarters.id, out var repairCenter), "queue fixture finds the damaged headquarters visual");
+                        Tap(To(repairCenter), 26);
+                        Check(workerState.pendingOrders.Count == 4 && workerState.pendingOrders[3].kind == CommandKind.Repair
+                            && workerState.pendingOrders[3].target == headquarters.id && workerState.pendingOrders[3].sourceSequence == firstSequence + 4,
+                            "queued friendly tap repairs the building without selecting it");
+                        BrowserMobileInput.ResetShift();
+                        router.Read(new[] { Shift(down: true) }, 27, true);
+                        Tap(Ground(24, 27), 27.6f, heldShift: true);
+                        router.Read(new[] { Shift(up: true) }, 27.8f, true);
+                        Check(BrowserMobileInput.ShiftMode == MobileTouchRouter.ShiftMode.Normal
+                            && workerState.pendingOrders.Count == 5 && workerState.pendingOrders[4].kind == CommandKind.Move,
+                            "holding Shift appends one move and release restores normal mode");
+                        Check(workerState.activeOrderSequence == firstSequence && workerState.order == CommandKind.Move
+                            && workerState.destination.Distance(firstDestination) < .001f
+                            && workerState.pendingOrders.Select(order => order.sourceSequence).SequenceEqual(Enumerable.Range(firstSequence + 1, 5))
+                            && Field<int>(session, "sequence") == firstSequence + 5 && session.Selection.SetEquals(new[] { queueWorker.id }),
+                            "all queued actions preserve selection and active order with one dispatch per tap");
+                        Refresh();
+                        var orders = Targets().FirstOrDefault(target => ActionId(target) == "mobile-orders");
+                        Check(orders != null, "queued unit actions expose the real Orders popup");
+                        if (orders != null) { Click(orders); Refresh(); }
+                        Check(Field<RectTransform>(panel, "browserQueue").gameObject.activeInHierarchy
+                            && Field<IList>(panel, "browserQueueTargets").Count > 0,
+                            "queued unit actions are visible in the existing cancellable queue UI");
+                        // Expanded order details intentionally cover more map than the
+                        // compact HUD; validate the compact area budget after closing.
+                        ValidateLayout("queued unit actions"); Capture("09-mobile-queued-orders", false);
+                        if (orders != null) { Click(orders); Refresh(); }
+                        Check(!Field<RectTransform>(panel, "browserQueue").gameObject.activeInHierarchy,
+                            "Orders control returns to compact gameplay after inspecting queued tasks");
+                        Capture("10-mobile-queue-collapsed");
+                    }
+                    finally
+                    {
+                        headquarters.health = health;
+                        BrowserMobileInput.ResetShift();
+                        session.CancelMode(); session.Select(queueWorker.id, false); session.Send(CommandKind.Stop);
+                        Object.DestroyImmediate(input);
+                        session.Select(0, false); Refresh();
+                    }
                 }
                 void ResizeRuntimeTarget()
                 {

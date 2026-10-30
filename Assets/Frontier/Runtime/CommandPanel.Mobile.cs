@@ -13,6 +13,7 @@ namespace Frontier.Runtime
     {
         private RectTransform mobileToolbar,mobileQueuePanel,mobileCameraFooter;
         private Target mobileClear,mobileQueueToggle,mobileShift;
+        private ConsoleGlyph mobileShiftGlyph;
         private bool mobileQueueExpanded;
         private int mobileQueueCount,mobileActionColumns=6;
         private bool mobileLayoutApplied,mobileReplacingGroup;
@@ -58,10 +59,13 @@ namespace Frontier.Runtime
             mobileQueueToggle=BrowserButton(browserInfo,"Orders",Vector2.zero,new Vector2(136,64),()=>
             {mobileQueueExpanded=!mobileQueueExpanded;browserQueueSignature=null;RefreshBrowserQueues();});
             mobileQueueToggle.actionId="mobile-orders";
-            // The input adapter owns tap-to-toggle and held Shift contacts, so
+            // The input adapter owns tap, double-tap and held Shift contacts, so
             // this visual target must not toggle again on the UI click callback.
             mobileShift=BrowserButton(browserHud,"Shift",Vector2.zero,new Vector2(88,88),()=>{});
             mobileShift.actionId="mobile-shift";BrowserMobileInput.ShiftButton=mobileShift.rect;
+            mobileShiftGlyph=Glyph(mobileShift.rect,ConsoleGlyph.Kind.Move,new Vector2(24,-23),40,ConsoleTheme.Ink);
+            mobileShiftGlyph.gameObject.name="Shift mode icon";
+            Label(mobileShift.rect,"Shift",new Vector2(6,-3),new Vector2(76,18),12,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
             mobileQueuePanel=Section(browserHud,"Touch orders popover",Vector2.zero,new Vector2(720,112),MobileGlass(ConsoleTheme.Background,.86f));
             mobileQueuePanel.gameObject.SetActive(false);mobileQueueToggle.rect.gameObject.SetActive(false);
             for(int i=0;i<groupTargets.Length;i++)
@@ -132,10 +136,15 @@ namespace Frontier.Runtime
             mobileClear.rect.GetComponentInChildren<Text>().text=mobileReplacingGroup?"Cancel":"Clear selection";
             LayoutMobileButton(mobileShift,new Vector2(left+width-88,-(top+safe.height*.46f)),new Vector2(88,88));
             ConsoleTheme.StylePill(mobileShift.image);
-            mobileShift.normal=MobileGlass(BrowserMobileInput.ShiftActive?ConsoleTheme.Accent:ConsoleTheme.Track,.84f);
+            var shiftMode=BrowserMobileInput.ShiftMode;
+            bool queueMode=shiftMode==MobileTouchRouter.ShiftMode.Queue,attackMode=shiftMode==MobileTouchRouter.ShiftMode.Attack;
+            mobileShift.normal=MobileGlass(queueMode?ConsoleTheme.Primary:attackMode?ConsoleTheme.Danger:ConsoleTheme.Track,.92f);
             mobileShift.image.color=mobileShift.normal;
-            var shiftLabel=mobileShift.rect.GetComponentInChildren<Text>();shiftLabel.fontSize=22;
-            shiftLabel.color=BrowserMobileInput.ShiftActive?ConsoleTheme.HoverInk:ConsoleTheme.Ink;
+            var shiftLabel=mobileShift.rect.GetComponentInChildren<Text>();shiftLabel.fontSize=17;
+            TopLeft(shiftLabel.rectTransform,new Vector2(4,-63),new Vector2(80,23));
+            shiftLabel.text=Localization.Text(queueMode?"Queued":attackMode?"Attack":"Move");shiftLabel.color=ConsoleTheme.Ink;
+            mobileShiftGlyph.Glyph=queueMode?ConsoleGlyph.Kind.Queue:attackMode?ConsoleGlyph.Kind.Attack:ConsoleGlyph.Kind.Move;
+            mobileShiftGlyph.color=ConsoleTheme.Ink;
             mobileShift.rect.gameObject.SetActive(true);
 
             const float groupWidth=84,groupHeight=72;
@@ -500,9 +509,10 @@ namespace Frontier.Runtime
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guide:
                     card("Select","Tap an ally to select it. Tap another ally to change selection.",()=>{});
-                    card("Order","With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.",()=>{});
+                    card("Order","Tap an ally to select. Tap a destination to move. Tap Shift once for attack-move.",()=>{});
+                    card("Queue orders","Double-tap Shift to queue tasks, or hold Shift while tapping targets. Tap it once to leave queue mode. Unavailable in the tutorial.",()=>{});
                     card("Camera","Drag the footer or use two fingers to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
-                    card("Circle units","Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.",()=>{});
+                    card("Circle units","Activate either Shift mode or hold Shift, then draw around allies to select them.",()=>{});
                     card("Groups / actions","Tap Group selection to save. Tap its persistent icon to select the group.",()=>{});
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Ranking:BuildRanking();return true;
