@@ -37,3 +37,4 @@ Assets/Resources/PerformanceTestRunSettings.json.meta
 # NGO's editor-generated sample prefab catalog; sessions use an explicit runtime config.
 Assets/DefaultNetworkPrefabs.asset
 Assets/DefaultNetworkPrefabs.asset.meta
+/app/.generated
