@@ -171,7 +171,14 @@ translúcidos: una fila de acciones en horizontal y dos en vertical. Las órdene
 y la producción se despliegan desde su botón; los espacios vacíos dejan pasar
 los gestos al mapa. La cámara ajusta su distancia al girar el teléfono.
 
-- Arrastrar con un dedo mueve la cámara, incluso durante la partida.
+La barra inferior reserva una zona para arrastrar la cámara sin tocar unidades.
+Los indicadores de trabajadores y construcción usan carteles compactos con
+tamaño mínimo legible al alejarse y se separan de las barras de vida.
+Los menús mantienen la acción principal y **Volver** en el borde inferior:
+una columna en vertical, dos en horizontal. Ranking también adapta sus filas
+y conserva visibles el perfil, **Actualizar** y **Volver**.
+
+- Arrastrar la barra inferior mueve la cámara. El gesto se conserva aunque el dedo salga de esa barra; al soltar no activa botones ni envía órdenes. Arrastrar con un dedo en el mapa sin Shift no mueve la cámara ni cambia la selección.
 - Tocar una unidad o edificio propio cambia la selección a ese aliado, incluso después de dar una orden de movimiento. No hace falta limpiar la selección primero.
 - La unidad se detecta al apoyar el dedo y se selecciona al soltar, aunque se haya movido. Arrastrar o pellizcar cancela esa selección. Sin selección previa, un toque lento también selecciona.
 - Con unidades seleccionadas, tocar terreno, enemigos o recursos envía una orden contextual: mover, atacar o recolectar. Los modos explícitos de construcción, habilidad y destino de acción conservan la prioridad.
@@ -223,7 +230,9 @@ e iPhone: selección y órdenes, construcción, producción, combate, menús, gi
 El proyecto generado también incluye `Frontier.Mobile.Editor.MobileHudPreview.Run`.
 Ejecutarlo con Unity en `-batchmode -force-metal -quit` (sin `-nographics`),
 `-projectPath app/.generated/ios`, `-buildTarget iOS` y `-executeMethod` con ese
-nombre. `-frontier-preview-output` acepta una carpeta absoluta para las ocho
-capturas y el informe JSON de ambas orientaciones, rotación, minimapa y tutorial.
+nombre. `-frontier-preview-output` acepta una carpeta absoluta para las
+capturas y el informe JSON de ambas orientaciones, rotación, minimapa, tutorial,
+carteles de edificios y menús en español e inglés. Comprueba el área segura,
+los botones inferiores, su separación y los callbacks de navegación.
 Es renderizado real de Unity con área segura simulada; no reemplaza los gestos
 ni las mediciones de rendimiento en el teléfono.

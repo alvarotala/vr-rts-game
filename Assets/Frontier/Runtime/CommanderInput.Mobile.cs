@@ -44,6 +44,7 @@ namespace Frontier.Runtime
             bool mapAllowed=Panel.AcceptsGameInput||Panel.AcceptsReplayInput||Panel.Page==CommandPanel.MenuPage.MatchSetup;
             sample.OverUi=Panel.ContainsPointer(ray)||!Quest.Camera.pixelRect.Contains(position);
             sample.AllowMap=mapAllowed&&!Panel.SectionHelpOpen;
+            sample.CameraPanHandle=Panel.BrowserCameraPanHandleContains(position);
             var secondPosition=new Vector2(sample.OtherX,sample.OtherY);
             sample.SecondOverMap=Quest.Camera.pixelRect.Contains(secondPosition)&&!Panel.BrowserContainsScreenPoint(secondPosition);
             sample.LassoSelection=Panel.AcceptsGameInput;
@@ -54,6 +55,7 @@ namespace Frontier.Runtime
             TrackMobileSelection(ray,sample,result);
             if(result.Cancelled)
             {Panel.CancelPointerInteraction(false);panelButton=PanelButton.None;panelReleasePending=false;ClearPointer();ClearMobileLasso();}
+            if(result.Cancelled&&result.Kind==MobileGesture.Kind.None)return;
             if(result.Kind==MobileGesture.Kind.Ui)
             {
                 RoutePanel(ray,result.Down,result.Up,result.Held,false,false,false,0);

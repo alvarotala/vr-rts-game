@@ -170,6 +170,7 @@ namespace Frontier.Runtime
         {
             bool Inside(RectTransform rect)=>rect!=null&&rect.gameObject.activeInHierarchy&&RectTransformUtility.RectangleContainsScreenPoint(rect,position,null);
             if(Inside(tutorialCard)||Inside(actionHelp))return true;
+            if(Inside(mobileCameraFooter))return true;
             if(browserMinimap!=null&&browserMinimap.isActiveAndEnabled&&Inside(browserMinimap.rectTransform))return true;
             // Floating controls own their bounds; transparent layout containers
             // and passive labels leave the map available to both fingers and lasso.
@@ -303,7 +304,7 @@ namespace Frontier.Runtime
             }
             else
             {
-                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Drag: camera · Shift + drag: select"):
+                browserQueueTitle.text=BrowserMobileInput.IsTouchMode?(orders.Length>0?"QUEUED ORDERS · Tap to remove":"Footer / two fingers: camera · Shift + drag: select"):
                     orders.Length>0?"QUEUED ORDERS · Click an item to remove":"Left-click: select · Right-click: order · Shift: queue";
                 var signatureAtBind=OrderPlanSignature();
                 int count=orders.Length+(orders.Length>1?1:0);

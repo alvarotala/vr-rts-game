@@ -30,9 +30,9 @@ internal static class Program
             Check(Feed(gesture,held).Kind==MobileGesture.Kind.LongPress,"hold and release yields explicit contextual order despite slight jitter");
             held=Finger(down:true);held.Time=11;Feed(gesture,held);
             held=Finger(125,100);held.Time=12;
-            Check(Feed(gesture,held).Kind==MobileGesture.Kind.Pan,"moving after a long hold cancels contextual order");
+            Check(Feed(gesture,held).Cancelled,"moving after a long hold cancels contextual order without moving camera");
             held=Finger(125,100,up:true);held.Time=12.1f;
-            Check(Feed(gesture,held).Kind==MobileGesture.Kind.Pan,"long hold drag release never emits contextual order");
+            Check(Feed(gesture,held).Cancelled,"long hold drag release never emits contextual order");
             held=Finger(down:true);held.Time=13;Feed(gesture,held);
             held=Finger(up:true);held.Time=13.1f;
             Check(Feed(gesture,held).Kind==MobileGesture.Kind.Tap,"short tap after long hold remains an ordinary tap");
@@ -42,8 +42,8 @@ internal static class Program
 
             gesture=new MobileGesture();Feed(gesture,Finger(down:true));
             var drag=Feed(gesture,Finger(125,100));
-            Check(drag.Kind==MobileGesture.Kind.Pan&&drag.DeltaX==25,"drag pans from the previous position");
-            Check(Feed(gesture,Finger(126,100,up:true)).Kind==MobileGesture.Kind.Pan,"pan release cannot become a selection/order");
+            Check(drag.Kind==MobileGesture.Kind.None&&drag.Cancelled,"ordinary one-finger map swipe does not pan or select");
+            Check(Feed(gesture,Finger(126,100,up:true)).Cancelled,"map swipe release cannot become a selection/order");
 
             gesture=new MobileGesture();Feed(gesture,Finger(down:true));
             var pinch=Feed(gesture,Pair());
@@ -90,8 +90,8 @@ internal static class Program
 
             gesture=new MobileGesture();var ordinaryPress=Finger(down:true);ordinaryPress.LassoSelection=true;
             Feed(gesture,ordinaryPress);
-            Check(Feed(gesture,Finger(130,100)).Kind==MobileGesture.Kind.Pan,"ordinary gameplay drag pans even when lasso selection is available");
-            Check(Feed(gesture,Finger(130,100,up:true)).Kind==MobileGesture.Kind.Pan,"ordinary pan release never selects units");
+            Check(Feed(gesture,Finger(130,100)).Cancelled,"ordinary gameplay drag does not pan even when lasso selection is available");
+            Check(Feed(gesture,Finger(130,100,up:true)).Cancelled,"ordinary swipe release never selects units");
 
             gesture=new MobileGesture();var lassoPress=Finger(down:true);lassoPress.LassoSelection=true;lassoPress.Shift=true;
             result=Feed(gesture,lassoPress);
@@ -121,11 +121,12 @@ internal static class Program
             Check(Feed(gesture,replaced).Cancelled,"replacement contact cannot jump or complete an earlier finger's lasso");
 
             gesture=new MobileGesture();Feed(gesture,ordinaryPress);var lateShift=Finger(130,100);lateShift.Shift=true;lateShift.LassoSelection=true;
-            Check(Feed(gesture,lateShift).Kind==MobileGesture.Kind.Pan,"pressing Shift after a pan starts cannot change it into selection");
+            Check(Feed(gesture,lateShift).Cancelled,"pressing Shift after a map swipe starts cannot change it into selection");
             var lateRelease=Finger(130,100,up:true);lateRelease.Shift=true;
             Check(!Feed(gesture,lateRelease).Shift,"modifier is captured at initial contact only");
 
             CheckShiftRouting();
+            CheckCameraFooter();
             CheckTapIntent();
             CheckLassoGeometry();
 
@@ -133,6 +134,44 @@ internal static class Program
             return 0;
         }
         catch(Exception error){Console.Error.WriteLine(error);return 1;}
+    }
+
+    private static void CheckCameraFooter()
+    {
+        MobileGesture.Sample Footer(bool down=false,bool up=false)
+        {var sample=Finger(down:down,up:up);sample.OverUi=true;sample.CameraPanHandle=true;return sample;}
+        var gesture=new MobileGesture();
+        var result=Feed(gesture,Footer(down:true));
+        Check(result.Kind==MobileGesture.Kind.Pan&&result.DeltaX==0,"footer owns contact immediately without a camera jump");
+        result=Feed(gesture,Finger(105,103));
+        Check(result.Kind==MobileGesture.Kind.Pan&&result.DeltaX==0&&result.DeltaY==0,"footer ignores finger jitter below drag threshold");
+        result=Feed(gesture,Finger(130,110));
+        Check(result.Kind==MobileGesture.Kind.Pan&&result.Down&&result.DeltaX==25&&result.DeltaY==7,"footer drag moves camera after crossing threshold outside the footer");
+        var overButton=Finger(145,120);overButton.OverUi=true;
+        result=Feed(gesture,overButton);
+        Check(result.Kind==MobileGesture.Kind.Pan&&!result.Cancelled&&result.DeltaX==15,"footer retains ownership across HUD without clicking controls");
+        result=Feed(gesture,Finger(145,120,up:true));
+        Check(result.Kind==MobileGesture.Kind.Pan&&result.Up,"footer release cannot select or issue an order");
+        Feed(gesture,Footer(down:true));result=Feed(gesture,Footer(up:true));
+        Check(result.Kind==MobileGesture.Kind.Pan&&result.DeltaX==0,"footer tap is consumed without a gameplay action");
+        var shifted=Footer(down:true);shifted.Shift=true;shifted.LassoSelection=true;
+        Feed(gesture,shifted);
+        Check(Feed(gesture,Finger(140,100)).Kind==MobileGesture.Kind.Pan,"Shift cannot turn footer navigation into a lasso");
+        Check(Feed(gesture,Pair()).Cancelled,"second footer contact cancels instead of jumping into map pinch");
+        Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.None,"cancelled footer release is drained");
+        Feed(gesture,Footer(down:true));var paused=Finger(140,100);paused.AllowMap=false;
+        Check(Feed(gesture,paused).Cancelled,"pause or help cancels captured footer navigation");
+        Feed(gesture,Finger(up:true));Feed(gesture,Footer(down:true));gesture.CancelUntilRelease();
+        Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.None,"orientation or focus cancellation cannot send a footer release to map");
+        Feed(gesture,Finger(down:true));result=Feed(gesture,Footer());
+        Check(result.Cancelled&&result.Kind==MobileGesture.Kind.None,"a map contact cannot acquire the footer by sliding onto it");
+        Feed(gesture,Finger(up:true));Feed(gesture,Finger(down:true));Feed(gesture,Finger(140,100));
+        result=Feed(gesture,Pair(140,240));
+        Check(result.Kind==MobileGesture.Kind.Pinch&&result.ZoomRatio==1,"adding second finger to suppressed map swipe starts navigation without a jump");
+        result=Feed(gesture,Pair(160,260));
+        Check(result.Kind==MobileGesture.Kind.Pinch&&result.DeltaX==20&&result.ZoomRatio==1,"two-finger translation pans without changing zoom");
+        Feed(gesture,Finger(up:true));Feed(gesture,Finger(down:true));
+        Check(Feed(gesture,Finger(up:true)).Kind==MobileGesture.Kind.Tap,"normal selection still works after camera gestures");
     }
     private static MobileTouchRouter.Contact Contact(int id,float x=100,float y=100,bool down=false,bool up=false,bool shift=false)
         =>new MobileTouchRouter.Contact{Id=id,X=x,Y=y,Held=!up,Down=down,Up=up,OnShift=shift};

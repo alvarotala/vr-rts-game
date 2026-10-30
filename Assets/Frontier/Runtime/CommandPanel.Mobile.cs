@@ -11,7 +11,7 @@ namespace Frontier.Runtime
     // stay in canvas units; the safe area also protects browser landscape notches.
     public sealed partial class CommandPanel
     {
-        private RectTransform mobileToolbar,mobileQueuePanel;
+        private RectTransform mobileToolbar,mobileQueuePanel,mobileCameraFooter;
         private Target mobileClear,mobileQueueToggle,mobileShift;
         private bool mobileQueueExpanded;
         private int mobileQueueCount,mobileActionColumns=6;
@@ -22,13 +22,14 @@ namespace Frontier.Runtime
         private readonly ConsoleGlyph[] mobileGroupGlyphs=new ConsoleGlyph[GameSession.ControlGroupCount];
         private Vector2 mobileActionPosition,mobileActionSize;
         private const float MobileActionHeight=88;
+        private const float MobileCameraFooterHeight=72;
         private const string MobileGroupReplaceMessage="All four groups are occupied. Tap a group icon to replace it, or Cancel.";
         private const string MobileTutorialGroupReplaceMessage="Group 1 already contains a squad. Tap group 1 to replace it with your selected soldiers, or Cancel.";
         private string MobileGroupReplacementPrompt=>Session.IsTutorial&&Session.Tutorial.Step==TutorialStep.SaveGroup
             ?MobileTutorialGroupReplaceMessage:MobileGroupReplaceMessage;
         private bool IsMobileMenu=>Page==MenuPage.Main||Page==MenuPage.MatchSetup||Page==MenuPage.Pause
             ||Page==MenuPage.Settings||Page==MenuPage.LeaveConfirmation||Page==MenuPage.Guide||Page==MenuPage.Guides
-            ||Page==MenuPage.OnlineSetup||Page==MenuPage.OnlineConnection||Page==MenuPage.DirectSetup;
+            ||Page==MenuPage.OnlineSetup||Page==MenuPage.OnlineConnection||Page==MenuPage.DirectSetup||Page==MenuPage.Ranking;
 
         private void ConfigureMobileCanvas()
         {
@@ -70,6 +71,13 @@ namespace Frontier.Runtime
                 mobileGroupGlyphs[i].gameObject.SetActive(false);mobileGroupPortraits[i].gameObject.SetActive(false);
             }
             mobileToolbar.gameObject.SetActive(false);
+            mobileCameraFooter=Section(browserHud,"Touch camera footer",Vector2.zero,new Vector2(720,MobileCameraFooterHeight),MobileGlass(ConsoleTheme.Background,.8f));
+            var grip=Section(mobileCameraFooter,"Camera grip",new Vector2(-28,-10),new Vector2(56,4),ConsoleTheme.Muted);
+            grip.anchorMin=grip.anchorMax=new Vector2(.5f,1);
+            var cameraHint=Label(mobileCameraFooter,"Drag here to move the camera",new Vector2(12,-22),new Vector2(696,40),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter);
+            cameraHint.rectTransform.anchorMin=new Vector2(0,0);cameraHint.rectTransform.anchorMax=Vector2.one;
+            cameraHint.rectTransform.offsetMin=new Vector2(12,4);cameraHint.rectTransform.offsetMax=new Vector2(-12,-20);
+            mobileCameraFooter.gameObject.SetActive(false);
         }
 
         private void LayoutMobileHud(Vector2 size)
@@ -80,6 +88,9 @@ namespace Frontier.Runtime
             mobileLayoutApplied=true;
             bool portrait=safe.height>safe.width;
             float left=safe.x+8,top=size.y-safe.yMax+8,width=safe.width-16,bottom=size.y-safe.y-8;
+            mobileCameraFooter.gameObject.SetActive(true);
+            TopLeft(mobileCameraFooter,new Vector2(left,-bottom+MobileCameraFooterHeight),new Vector2(width,MobileCameraFooterHeight));
+            bottom-=MobileCameraFooterHeight+8;
             float mapSide=portrait?120:136,commandX=portrait?left:left+mapSide+12;
             float commandWidth=left+width-commandX,actionHeight=portrait?MobileActionHeight*2+8:MobileActionHeight;
             float actionTop=bottom-actionHeight,infoTop=actionTop-(portrait?144:76);
@@ -182,6 +193,13 @@ namespace Frontier.Runtime
 
         private static Color MobileGlass(Color color,float opacity=.68f)
         {color.a=opacity;return color;}
+
+        public bool BrowserCameraPanHandleContains(Vector2 position)
+        {
+            bool Inside(RectTransform rect)=>rect!=null&&rect.gameObject.activeInHierarchy&&RectTransformUtility.RectangleContainsScreenPoint(rect,position,null);
+            return BrowserMobileInput.IsTouchMode&&AcceptsGameInput&&!SectionHelpOpen
+                &&Inside(mobileCameraFooter)&&!Inside(tutorialCard)&&!Inside(actionHelp);
+        }
 
         // The modifier is captured separately from the normal UI pointer. It
         // must still respect help cards drawn above the battlefield controls.
@@ -346,6 +364,7 @@ namespace Frontier.Runtime
             if(!mobileLayoutApplied)return;mobileLayoutApplied=false;
             mobileQueuePanel.gameObject.SetActive(false);mobileQueueToggle.rect.gameObject.SetActive(false);
             mobileShift.rect.gameObject.SetActive(false);
+            mobileCameraFooter.gameObject.SetActive(false);
             mobileToolbar.gameObject.SetActive(false);browserGroupBar.gameObject.SetActive(true);
             browserInfo.gameObject.SetActive(true);browserCommandTitle.gameObject.SetActive(true);browserMinimap.color=Color.white;
             foreach(var surface in new[]{browserBar,browserMapCard,browserInfo,browserCommandCard})surface.GetComponent<Image>().color=ConsoleTheme.Background;
@@ -385,8 +404,11 @@ namespace Frontier.Runtime
         }
 
         private void LayoutMobileMenu(Vector2 size)
+            =>LayoutMobileMenu(size,BrowserSafeArea(size));
+
+        private void LayoutMobileMenu(Vector2 size,Rect safe)
         {
-            var safe=BrowserSafeArea(size);root.localScale=Vector3.one;root.sizeDelta=safe.size-new Vector2(16,16);
+            root.localScale=Vector3.one;root.sizeDelta=safe.size-new Vector2(16,16);
             root.anchoredPosition=safe.center-size*.5f;
             root.GetComponent<Image>().color=background;
             consoleBrand.gameObject.SetActive(false);consoleBrandSmall.gameObject.SetActive(false);
@@ -405,18 +427,8 @@ namespace Frontier.Runtime
             if(!IsMobileMenu)return false;
             controlGuide.gameObject.SetActive(false);hotkeys.gameObject.SetActive(false);
             BuildReferenceGuide();BuildTutorialCard();
-            float width=actions.rect.width;bool portrait=root.rect.height>root.rect.width;
-            int columns=portrait?1:2;
-            float cellWidth=(width-(columns-1)*12)/columns;
-            int index=0;
-            Action<string,string,Action> card=(title,description,click)=>
-            {
-                int item=index++;const float height=104;
-                var rect=Section(actions,title,new Vector2(item%columns*(cellWidth+12),-item/columns*(height+12)),new Vector2(cellWidth,height),button);
-                Label(rect,title,new Vector2(16,-10),new Vector2(cellWidth-32,34),26,ConsoleTheme.Ink).fontStyle=FontStyle.Bold;
-                Label(rect,description,new Vector2(16,-50),new Vector2(cellWidth-32,46),19,ConsoleTheme.Muted,TextAnchor.UpperLeft);
-                targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=button,click=click});
-            };
+            var cards=new System.Collections.Generic.List<(string title,string description,Action click)>();
+            Action<string,string,Action> card=(title,description,click)=>cards.Add((title,description,click));
             switch(Page)
             {
                 case MenuPage.Main:
@@ -482,19 +494,64 @@ namespace Frontier.Runtime
                     card("Fog density: "+Mathf.RoundToInt(Board.FogDensity*100)+"%","Visual mist over unseen terrain. Unseen enemies stay hidden.",()=>{Board.SetFogDensity(Board.FogDensity>=1?0:Board.FogDensity+.25f);Rebuild();});
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guides:
-                    card("Control guide","Drag to move the camera. Use Shift to circle units.",()=>OpenSubmenu(MenuPage.Guide));
+                    card("Control guide","Move the camera with the footer or two fingers. Use Shift to circle units.",()=>OpenSubmenu(MenuPage.Guide));
                     card("Units","Costs, combat and abilities.",()=>OpenSubmenu(MenuPage.UnitsGuide));
                     card("Structures","Construction, requirements and production.",()=>OpenSubmenu(MenuPage.StructuresGuide));
                     card("Back","Return to the previous menu.",Back);break;
                 case MenuPage.Guide:
                     card("Select","Tap an ally to select it. Tap another ally to change selection.",()=>{});
                     card("Order","With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.",()=>{});
-                    card("Camera","Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
+                    card("Camera","Drag the footer or use two fingers to pan. Pinch to zoom. Tap the minimap to travel.",()=>{});
                     card("Circle units","Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.",()=>{});
                     card("Groups / actions","Tap Group selection to save. Tap its persistent icon to select the group.",()=>{});
                     card("Back","Return to the previous menu.",Back);break;
+                case MenuPage.Ranking:BuildRanking();return true;
             }
+            BuildMobileMenuCards(cards);
             return true;
+        }
+
+        private void BuildMobileMenuCards(System.Collections.Generic.List<(string title,string description,Action click)> cards)
+        {
+            // Stable thumb targets and a distinct primary action; all callbacks
+            // remain the same shared game/menu actions used before this layout.
+            string primaryTitle=Page==MenuPage.Main?"New Match":Page==MenuPage.MatchSetup?"START MATCH":
+                Page==MenuPage.Pause?"Resume match":Page==MenuPage.OnlineSetup?"FIND MATCH":
+                Page==MenuPage.DirectSetup?"JOIN MATCH":Page==MenuPage.LeaveConfirmation?"Keep playing":null;
+            int primary=cards.FindIndex(item=>item.title==primaryTitle);
+            int back=cards.FindIndex(item=>item.title=="Back"||item.title=="Cancel search"||item.title=="Cancel connection");
+            float width=actions.rect.width,height=actions.rect.height;
+            const float gap=12,footerHeight=76;
+            bool footer=primary>=0||back>=0,portrait=root.rect.height>root.rect.width;
+            int columns=portrait?1:2;
+            int count=cards.Count-(primary>=0?1:0)-(back>=0?1:0),rows=Mathf.Max(1,Mathf.CeilToInt(count/(float)columns));
+            float bodyHeight=height-(footer?footerHeight+gap:0),cellWidth=(width-(columns-1)*gap)/columns;
+            float cellHeight=Mathf.Min(116,(bodyHeight-(rows-1)*gap)/rows);
+            int slot=0;
+            for(int i=0;i<cards.Count;i++)
+            {
+                if(i==primary||i==back)continue;
+                var item=cards[i];int cell=slot++;
+                var tint=item.title=="Leave match"?ConsoleTheme.Danger:button;
+                var rect=Section(actions,item.title,new Vector2(cell%columns*(cellWidth+gap),-cell/columns*(cellHeight+gap)),new Vector2(cellWidth,cellHeight),tint);
+                var title=Label(rect,item.title,new Vector2(16,-8),new Vector2(cellWidth-32,32),24,ConsoleTheme.Ink);
+                title.fontStyle=FontStyle.Bold;title.resizeTextForBestFit=true;title.resizeTextMinSize=20;title.resizeTextMaxSize=24;
+                var detail=Label(rect,item.description,new Vector2(16,-44),new Vector2(cellWidth-32,cellHeight-50),19,ConsoleTheme.Muted,TextAnchor.UpperLeft);
+                detail.resizeTextForBestFit=true;detail.resizeTextMinSize=17;detail.resizeTextMaxSize=19;
+                targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=tint,click=item.click});
+            }
+            float backWidth=primary>=0?width*.34f:width;
+            void Footer(int index,float x,float buttonWidth,bool isPrimary)
+            {
+                if(index<0)return;
+                var target=BrowserButton(actions,cards[index].title,new Vector2(x,-height+footerHeight),new Vector2(buttonWidth,footerHeight),cards[index].click);
+                target.actionId=isPrimary?"mobile-menu-primary":"mobile-menu-back";
+                target.normal=isPrimary?ConsoleTheme.Primary:button;target.image.color=target.normal;
+                var label=target.rect.GetComponentInChildren<Text>();label.fontSize=26;label.resizeTextForBestFit=true;label.resizeTextMinSize=20;label.resizeTextMaxSize=26;
+                targets.Add(target);
+            }
+            Footer(back,0,backWidth,false);
+            Footer(primary,back>=0?backWidth+gap:0,back>=0?width-backWidth-gap:width,true);
         }
 
         private string MobileTutorialInstruction(string key)
