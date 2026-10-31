@@ -73,10 +73,14 @@ namespace Frontier.Runtime
 
         private void RefreshOrderTargets()
         {
+#if FRONTIER_BROWSER
+            RefreshBrowserQueues();
+#else
             if(Page!=MenuPage.Actions||boundOrderSignature==OrderPlanSignature())return;
             // Advancing a unit's plan only rebinds these cards, preserving unrelated
             // buttons and pointer gestures elsewhere in the fixed HUD.
             ClearOrderTargets();BindOrderTargets();nextText=0;
+#endif
         }
 
         private void BindOrderTargets()

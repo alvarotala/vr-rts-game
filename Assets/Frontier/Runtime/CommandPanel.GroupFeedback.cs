@@ -15,7 +15,8 @@ namespace Frontier.Runtime
 
         private void CreateGroupFeedback(int index,Target target)
         {
-            // Group assignment is a modifier click, never a duration-based action.
+            // Desktop/Quest assignment uses a modifier. Mobile assignment is an
+            // explicit contextual action; a group icon always recalls on a tap.
             target.hold=null;
         }
 
@@ -50,6 +51,9 @@ namespace Frontier.Runtime
                 // cannot turn a recall into an assignment, or the reverse.
                 bool assign=groupGestureAssign;int index=Array.IndexOf(groupTargets,target);
                 pressed=null;ResetGroupGesture();
+#if FRONTIER_BROWSER
+                if(BrowserMobileInput.IsTouchMode){HandleMobileGroupTap(index);return true;}
+#endif
                 if(assign)AssignControlGroup(index);
                 else
                 {
@@ -94,6 +98,9 @@ namespace Frontier.Runtime
         private void RenderGroupFeedback()
         {
             if(Session==null)return;
+#if FRONTIER_BROWSER
+            if(BrowserMobileInput.IsTouchMode){RenderMobileGroupFeedback();return;}
+#endif
             for(int index=0;index<groupTargets.Length;index++)
             {
                 var target=groupTargets[index];if(target==null||target.image==null)continue;

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
+#if FRONTIER_BROWSER
+using OVRInput = Frontier.Runtime.BrowserTouchInput;
+#endif
 
 namespace Frontier.Runtime
 {
@@ -48,7 +51,11 @@ namespace Frontier.Runtime
             new Definition("pan-left","Pan left","key:A","Hold to move the desktop view left."),
             new Definition("pan-right","Pan right","key:D","Hold to move the desktop view right."),
             new Definition("fit","Full map","key:F","Fit the whole battlefield in the desktop view."),
+#if FRONTIER_BROWSER
+            new Definition("menu","Menu","key:M","Open pause or resume. Escape always works inside menus.")
+#else
             new Definition("menu","Recover menu","key:M","Return the console above the board.")
+#endif
         };
         private readonly Dictionary<string,string> touch=new Dictionary<string,string>(),desktop=new Dictionary<string,string>();
         [Serializable] private sealed class Saved { public int version=1; public bool leftHand; public Entry[] entries; }

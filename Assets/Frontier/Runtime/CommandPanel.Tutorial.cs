@@ -2,6 +2,9 @@ using System.Linq;
 using Frontier.Core;
 using UnityEngine;
 using UnityEngine.UI;
+#if FRONTIER_BROWSER
+using OVRInput = Frontier.Runtime.BrowserTouchInput;
+#endif
 
 namespace Frontier.Runtime
 {
@@ -25,10 +28,17 @@ namespace Frontier.Runtime
         private void CreateTutorialCard()
         {
             // A separate world-space window. It never changes the console's layout.
+#if FRONTIER_BROWSER
+            var go=new GameObject("Tutorial instructions",typeof(RectTransform),typeof(Image));
+            tutorialCard=go.GetComponent<RectTransform>();tutorialCard.SetParent(canvas.transform,false);
+#else
             var go=new GameObject("Tutorial instructions",typeof(RectTransform),typeof(Canvas),typeof(Image));
             tutorialCard=go.GetComponent<RectTransform>();tutorialCard.SetParent(transform,false);
+#endif
             tutorialCard.pivot=Vector2.one*.5f;tutorialCard.sizeDelta=new Vector2(TutorialCardWidth,TutorialCardHeight);
+#if !FRONTIER_BROWSER
             var tutorialCanvas=go.GetComponent<Canvas>();tutorialCanvas.renderMode=RenderMode.WorldSpace;tutorialCanvas.sortingOrder=22;
+#endif
             var fill=go.GetComponent<Image>();fill.color=TutorialDark;fill.raycastTarget=false;ConsoleTheme.StyleSurface(fill);
             var badge=Section(tutorialCard,"Lesson badge",new Vector2(24,-22),new Vector2(48,48),TutorialButtonFill);
             ConsoleTheme.StylePill(badge.GetComponent<Image>());
@@ -133,6 +143,10 @@ namespace Frontier.Runtime
             Vector3 destination=Vector3.zero;
             bool connected=!Session.Tutorial.Complete&&TryTutorialCue(out destination);
             PositionTutorialCard(destination,connected);
+#if FRONTIER_BROWSER
+            tutorialConnector.gameObject.SetActive(false);tutorialDestination.gameObject.SetActive(false);
+            return;
+#else
             tutorialConnector.gameObject.SetActive(connected);tutorialDestination.gameObject.SetActive(connected);
             if(!connected)return;
             if(tutorialCueTargetRect!=null)destination=TutorialTargetEdge();
@@ -160,6 +174,7 @@ namespace Frontier.Runtime
                     tutorialDestination.SetPosition(i,destination+(Quest.Camera.transform.right*Mathf.Cos(angle)+Quest.Camera.transform.up*Mathf.Sin(angle))*radius);
                 }
             }
+#endif
         }
 
         private Vector3 TutorialTargetEdge()

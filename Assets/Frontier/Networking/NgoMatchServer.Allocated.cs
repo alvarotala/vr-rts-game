@@ -16,7 +16,10 @@ namespace Frontier.Networking
             public int generation;
             public string matchId, requestId;
             public double deadline;
+            // NGO completes its pending approval response; a websocket attaches or closes
+            // through its callback. Exactly one of them is set.
             public NetworkManager.ConnectionApprovalResponse response;
+            public Action<bool, string> complete;
         }
         public bool AllocatedMode { get; private set; }
         public string AllocationId => allocation?.matchId;
@@ -62,22 +65,25 @@ namespace Frontier.Networking
             return true;
         }
 
-        private void BeginAllocatedApproval(NetworkManager.ConnectionApprovalRequest request,
-            NetworkManager.ConnectionApprovalResponse response, ConnectionHello hello)
+        // Returns false with a reason when admission cannot start; otherwise the NGO
+        // response or the websocket callback receives the backend's verdict exactly once.
+        private bool BeginAllocatedAdmission(ulong client, ConnectionHello hello, NetworkManager.ConnectionApprovalResponse response,
+            Action<bool, string> complete, out string reason)
         {
+            reason = null;
             if (allocation == null || allocationAborted || allocationStartRequested || Time.realtimeSinceStartupAsDouble >= allocationDeadline
                 || hello.matchId != allocation.matchId || string.IsNullOrEmpty(hello.joinTicket) || hello.joinTicket.Length > 128)
-            { response.Reason = "This connection has no active match assignment."; return; }
+            { reason = "This connection has no active match assignment."; return false; }
             double now = Time.realtimeSinceStartupAsDouble;
             admissionTokens = Math.Min(8, admissionTokens + Math.Max(0, now - admissionTokenTime) * 4); admissionTokenTime = now;
-            if (pendingAdmissions.Count >= 8 || admissionTokens < 1 || pendingAdmissions.ContainsKey(request.ClientNetworkId))
-            { response.Reason = "Admission is busy. Try again."; return; }
+            if (pendingAdmissions.Count >= 8 || admissionTokens < 1 || pendingAdmissions.ContainsKey(client))
+            { reason = "Admission is busy. Try again."; return false; }
             admissionTokens--;
-            var context = new PendingAdmission { client = request.ClientNetworkId, generation = allocationGeneration,
-                matchId = allocation.matchId, requestId = Guid.NewGuid().ToString("N"), deadline = now + 5, response = response };
+            var context = new PendingAdmission { client = client, generation = allocationGeneration,
+                matchId = allocation.matchId, requestId = Guid.NewGuid().ToString("N"), deadline = now + 5, response = response, complete = complete };
             pendingAdmissions.Add(context.client, context);
-            response.Pending = true;
             StartCoroutine(ValidateAdmission(context, hello.joinTicket));
+            return true;
         }
 
         private IEnumerator ValidateAdmission(PendingAdmission context, string ticket)
@@ -98,21 +104,31 @@ namespace Frontier.Networking
             seats.Add(context.client, new Seat { client = context.client, player = expected.seat, faction = expected.faction,
                 playerId = expected.playerId, connectedAt = clock.Elapsed.TotalSeconds });
             pendingAdmissions.Remove(context.client);
-            context.response.Approved = true; context.response.CreatePlayerObject = false;
-            context.response.Pending = false;
+            Resolve(context, true, null);
+        }
+
+        private static void Resolve(PendingAdmission context, bool approved, string reason)
+        {
+            if (context.response != null)
+            {
+                context.response.Approved = approved; context.response.CreatePlayerObject = false;
+                if (!approved) context.response.Reason = reason;
+                context.response.Pending = false;
+            }
+            context.complete?.Invoke(approved, reason);
         }
 
         private bool AdmissionIsCurrent(PendingAdmission context) => !closing && manager != null && allocation != null
             && !allocationAborted && !allocationStartRequested && Match == null && allocationGeneration == context.generation
             && allocation.matchId == context.matchId && Time.realtimeSinceStartupAsDouble < context.deadline
-            && manager.PendingClients.ContainsKey(context.client)
+            && ClientIsPending(context.client)
             && pendingAdmissions.TryGetValue(context.client, out var current) && ReferenceEquals(current, context);
 
         private void DenyAdmission(PendingAdmission context, string reason)
         {
             if (!pendingAdmissions.TryGetValue(context.client, out var current) || !ReferenceEquals(current, context)) return;
             pendingAdmissions.Remove(context.client);
-            context.response.Reason = reason; context.response.Approved = false; context.response.Pending = false;
+            Resolve(context, false, reason);
         }
 
         private void CancelPendingApproval(ulong client, string reason)
@@ -172,7 +188,7 @@ namespace Frontier.Networking
             InvalidateApprovals();
             if (manager == null) return;
             foreach (var seat in seats.Values.ToArray())
-                if (seat.connected) manager.DisconnectClient(seat.client, reason);
+                if (seat.connected) Kick(seat.client, reason);
         }
 
         public bool ReleaseAllocation(string id)
@@ -188,7 +204,7 @@ namespace Frontier.Networking
         {
             double now = Time.realtimeSinceStartupAsDouble;
             foreach (var context in pendingAdmissions.Values.ToArray())
-                if (now >= context.deadline || manager == null || !manager.PendingClients.ContainsKey(context.client))
+                if (now >= context.deadline || !ClientIsPending(context.client))
                     DenyAdmission(context, "Match admission timed out.");
             if (!AllocatedMode || allocation == null) return;
             if (Match == null && !allocationAborted && now >= allocationDeadline)

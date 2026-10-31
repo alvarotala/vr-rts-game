@@ -31,7 +31,7 @@ var UnityWebGLSocketBridge = {
         ERROR_METHOD_NAME = "NKBridgeOnError";
     },
 
-    NKCreateSocket: function(socketRef, addressPtr) {
+    NKCreateSocket: function(socketRef, addressPtr, timeoutMilliseconds) {
         if (!(SOCKET_REF_MAP instanceof Map)) {
             INITIALIZE();
         }
@@ -42,25 +42,51 @@ var UnityWebGLSocketBridge = {
         }
 
         var address = UTF8ToString(addressPtr);
-        var ws = new WebSocket(address);
+        var ws;
+        try { ws = new WebSocket(address); }
+        catch (error) {
+            // Defer callback until C# has stored the returned socket reference.
+            setTimeout(function() {
+                SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "Could not open the matchmaking connection.");
+            }, 0);
+            return;
+        }
+        var timeout = setTimeout(function() {
+            if (SOCKET_REF_MAP.get(socketRef) !== ws || ws.readyState !== WebSocket.CONNECTING) return;
+            SOCKET_REF_MAP.delete(socketRef);
+            ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+            try { ws.close(); } catch (error) { }
+            SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "The matchmaking connection timed out.");
+        }, timeoutMilliseconds);
+        ws.nakamaConnectTimeout = timeout;
         ws.onmessage = function(e) {
-            if (typeof e.data == 'string') {
+            if (SOCKET_REF_MAP.get(socketRef) !== ws) return;
+            if (typeof e.data == 'string' && e.data.length <= 65536) {
                 SendMessage(BRIDGE_NAME, MESSAGE_METHOD_NAME, socketRef + "_" + e.data);
             } else {
+                clearTimeout(timeout);
+                SOCKET_REF_MAP.delete(socketRef);
+                try { ws.close(); } catch (error) { }
                 SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "Received invalid data from remote.");
             }
           };
         ws.onopen = function(e) {
+            clearTimeout(timeout);
+            if (SOCKET_REF_MAP.get(socketRef) !== ws) return;
             SendMessage(BRIDGE_NAME, OPEN_METHOD_NAME, socketRef + "_");
         };
         ws.onclose = function(e) {
+            clearTimeout(timeout);
+            if (SOCKET_REF_MAP.get(socketRef) !== ws) return;
             SOCKET_REF_MAP.delete(socketRef);
             SendMessage(BRIDGE_NAME, CLOSE_METHOD_NAME, socketRef + "_" + e.code + "_" + e.reason);
         };
         ws.onerror = function(e) {
-            // https://stackoverflow.com/questions/18803971/websocket-onerror-how-to-read-error-description
+            clearTimeout(timeout);
+            if (SOCKET_REF_MAP.get(socketRef) !== ws) return;
             SOCKET_REF_MAP.delete(socketRef);
-            SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "WebSocket error: " + e.reason);
+            try { ws.close(); } catch (error) { }
+            SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "The matchmaking connection failed.");
         };
         SOCKET_REF_MAP.set(socketRef, ws);
     },
@@ -82,11 +108,12 @@ var UnityWebGLSocketBridge = {
             INITIALIZE();
         }
 
-        if(!SOCKET_REF_MAP.has(socketRef)) {
-            SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "Did not find websocket with given reference.");
-        } else {
-            SOCKET_REF_MAP.get(socketRef).close();
-        }
+        var ws = SOCKET_REF_MAP.get(socketRef);
+        if (!ws) return;
+        SOCKET_REF_MAP.delete(socketRef);
+        clearTimeout(ws.nakamaConnectTimeout);
+        ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
+        try { ws.close(); } catch (error) { }
     },
 
     NKSendData: function (socketRef, msg) {
@@ -98,7 +125,17 @@ var UnityWebGLSocketBridge = {
             SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "Did not find websocket with given reference.");
         } else {
             var data = UTF8ToString(msg);
-            SOCKET_REF_MAP.get(socketRef).send(data);
+            var ws = SOCKET_REF_MAP.get(socketRef);
+            try {
+                if (ws.readyState !== WebSocket.OPEN || data.length > 65536 || ws.bufferedAmount > 65536)
+                    throw new Error('Unavailable');
+                ws.send(data);
+            } catch (error) {
+                clearTimeout(ws.nakamaConnectTimeout);
+                SOCKET_REF_MAP.delete(socketRef);
+                try { ws.close(); } catch (closeError) { }
+                SendMessage(BRIDGE_NAME, ERROR_METHOD_NAME, socketRef + "_" + "The matchmaking connection failed.");
+            }
         }
     },
 };

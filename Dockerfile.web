@@ -1,0 +1,10 @@
+# Static hosting only. Compile the shared Unity client first with:
+# python3 scripts/build-webgl.py
+FROM nginx:1.27-alpine
+COPY hosting/webgl/nginx.conf /etc/nginx/conf.d/default.conf
+COPY Builds/WebGL/ /usr/share/nginx/html/
+COPY landing/ /usr/share/nginx/html/landing/
+RUN test -s /usr/share/nginx/html/index.html \
+    && test -s /usr/share/nginx/html/source-manifest.json \
+    && test -s /usr/share/nginx/html/build-receipt.json
+EXPOSE 8080

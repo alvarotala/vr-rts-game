@@ -84,7 +84,11 @@ namespace Frontier.Runtime
             {
                 case MenuPage.Main:
                     MenuCard("New Match","Choose your army and map.\nPlay offline against the AI.",new Vector2(264,0),new Vector2(512,116),()=>Show(MenuPage.MatchSetup),true,ConsoleTheme.Secondary);
+#if FRONTIER_BROWSER
+                    MenuCard("Settings","Camera, controls, sound and visuals.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+#else
                     MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(264,-136),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Settings));
+#endif
                     MainMenuTile("Guided tutorial",ConsoleGlyph.Kind.Tutorial,0,()=>Quest.RequestTutorial());
                     MainMenuTile("Multiplayer",ConsoleGlyph.Kind.Group,1,()=>Show(MenuPage.OnlineSetup),true);
                     MainMenuTile("Guides",ConsoleGlyph.Kind.Guide,2,()=>OpenSubmenu(MenuPage.Guides));
@@ -104,17 +108,33 @@ namespace Frontier.Runtime
                     MenuCard("AI: "+DifficultyLabel,Session.Difficulty=="easy"?"More time to build and learn the controls.":Session.Difficulty=="hard"?"Fast economy and sustained pressure.":"Steady attacks, reinforcements and abilities.",new Vector2(0,-132),new Vector2(512,116),()=>{Session.Difficulty=Session.Difficulty=="easy"?"normal":Session.Difficulty=="normal"?"hard":"easy";Rebuild();});
                     MenuCard("Map: "+Session.Map.title,MapDescription,new Vector2(528,-132),new Vector2(512,116),()=>{Session.CycleMap();Board.Rebuild();Rebuild();});
                     MenuFooter("Back",Back,0,208);
+#if FRONTIER_BROWSER
+                    MenuFooter("Full map",()=>Quest.Navigation.Fit(),224,296);
+#else
                     MenuFooter("Position board",()=>{Quest.CancelStartRequest();PlaceRequested?.Invoke();},224,296);
+#endif
                     MenuFooter("START MATCH",Quest.RequestStartMatch,536,504,true,80);
                     return true;
                 case MenuPage.Pause:
+#if FRONTIER_BROWSER
+                    MenuCard("Resume match",TutorialResumeBriefing?"Choose Continue in the guide first.":"Return to the battlefield.",Vector2.zero,new Vector2(1040,116),()=>Show(MenuPage.Actions),!TutorialResumeBriefing);
+#else
                     MenuCard("Resume match",TutorialResumeBriefing?"Choose Continue in the floating guide first.":"Return to the battlefield.",Vector2.zero,new Vector2(1040,116),()=>Show(MenuPage.Actions),!TutorialResumeBriefing);
+#endif
                     MenuCard("Guides","Controls, units and structures.",new Vector2(0,-132),new Vector2(512,144),()=>OpenSubmenu(MenuPage.Guides));
+#if FRONTIER_BROWSER
+                    MenuCard("Settings","Camera, controls, sound and visuals.",new Vector2(528,-132),new Vector2(512,144),()=>OpenSubmenu(MenuPage.Settings));
+#else
                     MenuCard("Settings","Controls, sound, visuals and play space.",new Vector2(528,-132),new Vector2(512,144),()=>OpenSubmenu(MenuPage.Settings));
+#endif
                     MenuFooter("Return to main menu",()=>Show(MenuPage.LeaveConfirmation),0,512);
                     return true;
                 case MenuPage.Guides:
+#if FRONTIER_BROWSER
+                    MenuCard("Control guide","Selection, orders and camera controls.",Vector2.zero,new Vector2(336,280),()=>OpenSubmenu(MenuPage.Guide));
+#else
                     MenuCard("Control guide","Selection, orders and board gestures.",Vector2.zero,new Vector2(336,280),()=>OpenSubmenu(MenuPage.Guide));
+#endif
                     MenuCard("Units","Costs, combat and abilities.",new Vector2(352,0),new Vector2(336,280),()=>OpenSubmenu(MenuPage.UnitsGuide));
                     MenuCard("Structures","Construction, requirements and production.",new Vector2(704,0),new Vector2(336,280),()=>OpenSubmenu(MenuPage.StructuresGuide));
                     MenuFooter("Back",Back);return true;
@@ -133,17 +153,33 @@ namespace Frontier.Runtime
 
         private void BuildSettingsPage()
         {
+#if FRONTIER_BROWSER
+            var names=new[]{"Controls","Audio","Visuals","Language"};
+            var tabs=new[]{SettingsTab.Controls,SettingsTab.Audio,SettingsTab.Visuals,SettingsTab.Language};
+#else
             var names=new[]{"Controls","Audio","Visuals","Play space","Language"};
+#endif
             for(int i=0;i<names.Length;i++)
             {
+#if FRONTIER_BROWSER
+                var tab=tabs[i];bool active=settingsTab==tab;
+                float stride=1056f/names.Length;
+                var rect=Section(actions,names[i],new Vector2(i*stride,0),new Vector2(stride-16,52),active?ConsoleTheme.Primary:button);
+                Label(rect,names[i],Vector2.zero,new Vector2(stride-16,52),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=active?FontStyle.Bold:FontStyle.Normal;
+#else
                 var tab=(SettingsTab)i;bool active=settingsTab==tab;
                 var rect=Section(actions,names[i],new Vector2(i*211.2f,0),new Vector2(195.2f,52),active?ConsoleTheme.Primary:button);
                 Label(rect,names[i],Vector2.zero,new Vector2(195.2f,52),20,ConsoleTheme.Ink,TextAnchor.MiddleCenter).fontStyle=active?FontStyle.Bold:FontStyle.Normal;
+#endif
                 targets.Add(new Target{rect=rect,image=rect.GetComponent<Image>(),normal=rect.GetComponent<Image>().color,click=()=>{settingsTab=tab;Rebuild();UpdateMenuText();}});
             }
             if(settingsTab==SettingsTab.Controls)
             {
+#if FRONTIER_BROWSER
+                MenuCard("Camera edges: "+(Quest.Navigation.EdgeScroll?"On":"Off"),"Move the camera at the edge of the battlefield.",new Vector2(0,-68),new Vector2(512,116),()=>{Quest.Navigation.EdgeScroll=!Quest.Navigation.EdgeScroll;Rebuild();});
+#else
                 MenuCard("Hand: "+Bindings.HandName,"Switch the active controller and its button hints.",new Vector2(0,-68),new Vector2(512,116),ToggleControllerHand);
+#endif
                 MenuCard("Hotkeys","Customize gameplay buttons and keyboard shortcuts.",new Vector2(528,-68),new Vector2(512,116),()=>OpenSubmenu(MenuPage.Hotkeys));
                 MenuCard("Selection: "+(Board.BaseTargeting?"Bases":"Bodies"),Board.BaseTargeting?"Aim at ground areas. Units take priority over buildings and resources.":"Aim at models or ground areas. Units take priority over buildings and resources.",new Vector2(0,-200),new Vector2(1040,116),()=>{Board.SetBaseTargeting(!Board.BaseTargeting);Rebuild();});
             }

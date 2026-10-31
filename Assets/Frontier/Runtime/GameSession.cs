@@ -210,24 +210,6 @@ namespace Frontier.Runtime
             UpdateTutorial();
             Announce(ids.Length+" "+label+" selected.");Feedback?.Invoke(true);Changed?.Invoke();return true;
         }
-        public void Group(int index, bool save)
-        {
-            if(IsCountingDown)return;
-            if(View==null||index<0||index>=groups.Length)return;
-            if(IsTutorial && (!CanIssueOrders || index!=0 || (save?Tutorial.Step!=TutorialStep.SaveGroup:Tutorial.Step!=TutorialStep.RecallGroup)))
-            { TutorialRejectOrder(); return; }
-            if (save) { groups[index].Clear(); groups[index].AddRange(Selection.Where(OwnGroupMember)); Announce("Group " + (index + 1) + " saved."); }
-            else { Selection.Clear(); SelectedResource = 0; foreach (int id in groups[index]) if (OwnGroupMember(id)) Selection.Add(id);
-                Announce("Group " + (index + 1) + (Selection.Count>0?" selected.":" is empty."),Selection.Count==0); }
-            if(IsTutorial)
-            {
-                Tutorial.NotifyGroup(index,save); UpdateTutorial();
-                if(save && Tutorial.Step==TutorialStep.RecallGroup)Selection.Clear();
-            }
-            ValidateAbilitySelection();Feedback?.Invoke(save||Selection.Count>0);Changed?.Invoke();
-        }
-        private bool OwnGroupMember(int id)=>View!=null&&View.entities.Any(e=>e.id==id&&e.owner==View.player&&!e.remembered);
-        public int GroupSize(int index) => index>=0&&index<groups.Length?groups[index].Count(OwnGroupMember):0;
         public void ChooseBuild(string id) { if(IsReplay||IsCountingDown)return; if(!TutorialCanChooseBuild(id)){TutorialRejectOrder();return;} rallySelection=null; BuildDefinition = id; AttackMoveMode = false; AbilityDefinitionId = null; Announce("Place " + Catalog[id].name + " · Point at the terrain and confirm construction."); Changed?.Invoke(); }
         public void ChooseAttackMove()
         {
@@ -400,7 +382,23 @@ namespace Frontier.Runtime
         private static bool IsMobileCommand(CommandKind kind) => kind==CommandKind.Move||kind==CommandKind.Attack||kind==CommandKind.AttackMove
             ||kind==CommandKind.Gather||kind==CommandKind.Repair||kind==CommandKind.Build||kind==CommandKind.Stop||kind==CommandKind.Hold
             ||kind==CommandKind.Cast||kind==CommandKind.CancelUnitOrder;
-        private void OnApplicationFocus(bool focused) { if(!focused)UpdateArchive(true); if (Application.platform != RuntimePlatform.Android || Application.isEditor) return; Pause("focus", !focused); }
-        private void OnApplicationPause(bool paused) { if(paused)UpdateArchive(true); if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused); }
+        private void OnApplicationFocus(bool focused)
+        {
+            if(!focused)UpdateArchive(true);
+#if FRONTIER_BROWSER
+            Pause("focus", !focused);
+#else
+            if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("focus", !focused);
+#endif
+        }
+        private void OnApplicationPause(bool paused)
+        {
+            if(paused)UpdateArchive(true);
+#if FRONTIER_BROWSER
+            Pause("application", paused);
+#else
+            if (Application.platform == RuntimePlatform.Android && !Application.isEditor) Pause("application", paused);
+#endif
+        }
     }
 }

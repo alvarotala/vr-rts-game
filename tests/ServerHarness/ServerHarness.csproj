@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Development harness: compiles the real Frontier.Core and Frontier.Networking sources
+       against a minimal UnityEngine/NGO shim. It validates server logic and the browser
+       transport without the Unity Editor; it is not a replacement for the Unity server build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>FrontierServerHarness</AssemblyName>
+    <RootNamespace>Frontier.Harness</RootNamespace>
+    <NoWarn>CS0649;CS0414;CS0169;SYSLIB0050</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Frontier/Core/*.cs" />
+    <Compile Include="../../Assets/Frontier/Networking/*.cs" />
+    <Compile Include="Shim/*.cs" />
+    <!-- Unity Editor checks that exercise the server through reflection run unchanged. -->
+    <Compile Include="../../Assets/Frontier/Editor/AllocatedServerChecks.cs" />
+    <Compile Include="../../Assets/Frontier/Editor/ServerLifecycleChecks.cs" />
+    <Compile Include="Harness/*.cs" />
+  </ItemGroup>
+</Project>

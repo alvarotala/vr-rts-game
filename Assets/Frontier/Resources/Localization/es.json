@@ -6,6 +6,75 @@
     "Spanish"
   ],
   "entries": [
+    {"key":"Clear selection, then tap this worker.","value":"Limpia la selección y toca este trabajador.","template":false},
+    {"key":"Clear selection, then tap your headquarters.","value":"Limpia la selección y toca tu sede central.","template":false},
+    {"key":"Clear selection, then tap this military building.","value":"Limpia la selección y toca este edificio militar.","template":false},
+    {"key":"Idle: {0}","value":"Libres: {0}","template":true},
+    {"key":"Drag: camera · Shift + drag: select","value":"Arrastrar: cámara · Shift + arrastrar: seleccionar","template":false},
+    {"key":"Drag to move the camera. Use Shift to circle units.","value":"Arrastra para mover la cámara. Usa Shift para rodear unidades.","template":false},
+    {"key":"Tap an ally to select it. Tap another ally to change selection.","value":"Toca un aliado para seleccionarlo. Toca otro aliado para cambiar la selección.","template":false},
+    {"key":"With units selected, tap to move or attack. Shift + tap moves and attacks enemies along the way.","value":"Con unidades seleccionadas, toca para mover o atacar. Shift + toque mueve y ataca enemigos en el camino.","template":false},
+    {"key":"Drag with one finger to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra con un dedo para mover la cámara. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
+    {"key":"Tap or hold Shift, then draw around units to select them. Tap Shift again to turn it off.","value":"Toca o mantén Shift y dibuja alrededor de las unidades. Toca Shift otra vez para desactivarlo.","template":false},
+    {"key":"Activate Shift, draw around your three soldiers, then release. Turn Shift off when done.","value":"Activa Shift, rodea los tres soldados y suelta. Desactiva Shift al terminar.","template":false},
+    {"key":"Group 1 already contains a squad. Tap group 1 to replace it with your selected soldiers, or Cancel.","value":"El grupo 1 ya tiene un escuadrón. Toca el grupo 1 para reemplazarlo con los soldados seleccionados o Cancelar.","template":false},
+    {"key":"Tap group 1 to replace it with your selected soldiers.","value":"Toca el grupo 1 para reemplazarlo con los soldados seleccionados.","template":false},
+    {"key":"Group selection","value":"Agrupar","template":false},
+    {"key":"Cancel replacement","value":"Cancelar reemplazo","template":false},
+    {"key":"All four groups are occupied. Tap a group icon to replace it, or Cancel.","value":"Los cuatro grupos están ocupados. Toca el icono que quieras reemplazar o Cancelar.","template":false},
+    {"key":"Circle units. Use two fingers to move the camera.","value":"Rodea las unidades. Usa dos dedos para mover la cámara.","template":false},
+    {"key":"Drag with two fingers to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra con dos dedos para mover la cámara. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
+    {"key":"Circle units","value":"Rodear unidades","template":false},
+    {"key":"Draw around your units with one finger, then release to select them.","value":"Rodea tus unidades con un dedo y suelta para seleccionarlas.","template":false},
+    {"key":"Tap Group selection to save. Tap its persistent icon to select the group.","value":"Toca Agrupar para guardar. Toca su icono permanente para seleccionar el grupo.","template":false},
+    {"key":"Draw a circle around your three soldiers, then release.","value":"Dibuja un círculo alrededor de tus tres soldados y suelta.","template":false},
+    {"key":"Tap Group selection to save your squad as group 1.","value":"Toca Agrupar para guardar tu escuadrón como grupo 1.","template":false},
+    {"key":"Circle: select · Two fingers: camera / zoom","value":"Rodea: seleccionar · Dos dedos: cámara / zoom","template":false},
+    {"key":"Tap a destination. Hold and release on an ally to repair or assist.","value":"Toca un destino. Mantén y suelta sobre un aliado para reparar o ayudar.","template":false},
+    {"key":"Select area","value":"Seleccionar área","template":false},
+    {"key":"Cancel / clear","value":"Cancelar / limpiar","template":false},
+    {"key":"Choose your army and map.","value":"Elige tu ejército y mapa.","template":false},
+    {"key":"Find an online opponent.","value":"Encuentra un rival en línea.","template":false},
+    {"key":"Learn to command your army.","value":"Aprende a dirigir tu ejército.","template":false},
+    {"key":"Sound, visuals and language.","value":"Sonido, gráficos e idioma.","template":false},
+    {"key":"Touch controls, units and structures.","value":"Controles táctiles, unidades y edificios.","template":false},
+    {"key":"Review your matches and replays.","value":"Revisa tus partidas y repeticiones.","template":false},
+    {"key":"Select to change difficulty.","value":"Toca para cambiar la dificultad.","template":false},
+    {"key":"Center the camera on the battlefield.","value":"Centra la cámara en el campo de batalla.","template":false},
+    {"key":"Leave this match.","value":"Sal de esta partida.","template":false},
+    {"key":"Select to change volume.","value":"Toca para cambiar el volumen.","template":false},
+    {"key":"Select to change the interface language.","value":"Toca para cambiar el idioma de la interfaz.","template":false},
+    {"key":"Select to change unit targeting.","value":"Toca para cambiar cómo seleccionar unidades.","template":false},
+    {"key":"Tap, drag and pinch gestures.","value":"Gestos de toque, arrastre y pellizco.","template":false},
+    {"key":"Return to the previous menu.","value":"Vuelve al menú anterior.","template":false},
+    {"key":"Tap an ally. Double-tap selects its type.","value":"Toca un aliado. Toca dos veces para seleccionar su tipo.","template":false},
+    {"key":"Select units, then tap terrain, an enemy or resources.","value":"Selecciona unidades y toca el terreno, un enemigo o recursos.","template":false},
+    {"key":"Drag to pan. Pinch to zoom. Tap the minimap to travel.","value":"Arrastra para mover la cámara. Pellizca para zoom. Toca el minimapa para ir allí.","template":false},
+    {"key":"Tap Select area, then drag around your army.","value":"Toca Seleccionar área y arrastra alrededor de tu ejército.","template":false},
+    {"key":"Groups / actions","value":"Grupos / acciones","template":false},
+    {"key":"Groups: hold to save, tap to select. Actions: tap to use.","value":"Grupos: mantén para guardar, toca para seleccionar. Acciones: toca para usar.","template":false},
+    {"key":"PRODUCTION · Tap to cancel and refund","value":"PRODUCCIÓN · Toca para cancelar y reembolsar","template":false},
+    {"key":"QUEUED ORDERS · Tap to remove","value":"ÓRDENES EN COLA · Toca para quitar","template":false},
+    {"key":"Tap: select / order · Drag: camera · Pinch: zoom","value":"Toca: seleccionar / ordenar · Arrastra: cámara · Pellizca: zoom","template":false},
+    {"key":"Tap Continue. Let's play!","value":"Toca Continuar. ¡A jugar!","template":false},
+    {"key":"Tap this worker to select it.","value":"Toca este trabajador para seleccionarlo.","template":false},
+    {"key":"Tap your headquarters to select it.","value":"Toca tu base central para seleccionarla.","template":false},
+    {"key":"Tap this military building to select it.","value":"Toca este edificio militar para seleccionarlo.","template":false},
+    {"key":"Tap the violet marker on the battlefield.","value":"Toca la marca violeta en el campo de batalla.","template":false},
+    {"key":"Tap the enemy marker on the battlefield.","value":"Toca la marca del enemigo en el campo de batalla.","template":false},
+    {"key":"Tap this gas deposit to send your worker.","value":"Toca este depósito de gas para enviar a tu trabajador.","template":false},
+    {"key":"Tap these minerals to send your worker.","value":"Toca estos minerales para enviar a tu trabajador.","template":false},
+    {"key":"Tap {0} in the actions.","value":"Toca {0} en las acciones.","template":true},
+    {"key":"Tap {0} once in the actions.","value":"Toca {0} una vez en las acciones.","template":true},
+    {"key":"Tap {0} {1} times in the actions.","value":"Toca {0} {1} veces en las acciones.","template":true},
+    {"key":"Tap Attack Move in the actions.","value":"Toca Avanzar atacando en las acciones.","template":false},
+    {"key":"Tap the menu button at the top of the screen.","value":"Toca el botón de menú en la parte superior de la pantalla.","template":false},
+    {"key":"Tap Resume match.","value":"Toca Reanudar partida.","template":false},
+    {"key":"Tap Select area, then drag around your three soldiers.","value":"Toca Seleccionar área y arrastra alrededor de tus tres soldados.","template":false},
+    {"key":"Hold group 1 to save your squad.","value":"Mantén presionado el grupo 1 para guardar tu escuadrón.","template":false},
+    {"key":"Tap group 1 to select your saved squad.","value":"Toca el grupo 1 para seleccionar tu escuadrón guardado.","template":false},
+    {"key":"Tap Cancel / clear, then tap your worker.","value":"Toca Cancelar / limpiar y luego toca tu trabajador.","template":false},
+    {"key":"Tap Cancel / clear, then select your squad.","value":"Toca Cancelar / limpiar y luego selecciona tu escuadrón.","template":false},
     {
       "key": "75% refund",
       "value": "Reembolso del 75 %",
@@ -9582,6 +9651,251 @@
     {
       "key": "OPPONENT - - -",
       "value": "RIVAL - - -",
+      "template": false
+    },
+    {
+      "key": "Idle workers: {0}",
+      "value": "Inactivos: {0}",
+      "template": true
+    },
+    {
+      "key": "Army: {0}",
+      "value": "Ejército: {0}",
+      "template": true
+    },
+    {
+      "key": "Under construction",
+      "value": "En construcción",
+      "template": false
+    },
+    {
+      "key": "Selected: {0}",
+      "value": "Seleccionados: {0}",
+      "template": true
+    },
+    {
+      "key": "remaining",
+      "value": "restantes",
+      "template": false
+    },
+    {
+      "key": "Select a unit or building to see its name and available actions.",
+      "value": "Selecciona una unidad o edificio para ver su nombre y las acciones disponibles.",
+      "template": false
+    },
+    {
+      "key": "PRODUCTION · Click an item to cancel",
+      "value": "PRODUCCIÓN · Clic para cancelar",
+      "template": false
+    },
+    {
+      "key": "QUEUED ORDERS · Click an item to remove",
+      "value": "ÓRDENES EN COLA · Clic para quitar",
+      "template": false
+    },
+    {
+      "key": "Left-click: select · Right-click: order · Shift: queue",
+      "value": "Clic izq.: seleccionar · Clic der.: ordenar · Shift: encolar",
+      "template": false
+    },
+    {
+      "key": "Camera edges: On",
+      "value": "Cámara en bordes: activada",
+      "template": false
+    },
+    {
+      "key": "Camera edges: Off",
+      "value": "Cámara en bordes: desactivada",
+      "template": false
+    },
+    {
+      "key": "Move the camera at the edge of the battlefield.",
+      "value": "Mueve la cámara al llevar el cursor al borde del campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "{0} HP",
+      "value": "{0} PV",
+      "template": true
+    },
+    {
+      "key": "Camera, controls, sound and visuals.",
+      "value": "Cámara, controles, sonido y opciones visuales.",
+      "template": false
+    },
+    {
+      "key": "Choose Continue in the guide first.",
+      "value": "Elige Continuar en la guía primero.",
+      "template": false
+    },
+    {
+      "key": "Selection, orders and camera controls.",
+      "value": "Selección, órdenes y controles de cámara.",
+      "template": false
+    },
+    {
+      "key": "Both factions start equally. Choose your army, opponent and map, then start the match.",
+      "value": "Ambas facciones comienzan en igualdad. Elige tu ejército, rival y mapa, e inicia la partida.",
+      "template": false
+    },
+    {
+      "key": "Mouse / keyboard · Camera and gameplay controls.",
+      "value": "Ratón / teclado · Controles de cámara y del juego.",
+      "template": false
+    },
+    {
+      "key": "Camera",
+      "value": "Cámara",
+      "template": false
+    },
+    {
+      "key": "Pan the camera",
+      "value": "Desplazar la cámara",
+      "template": false
+    },
+    {
+      "key": "Move the camera across the battlefield.",
+      "value": "Mueve la cámara por el campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "Drag the camera",
+      "value": "Arrastrar la cámara",
+      "template": false
+    },
+    {
+      "key": "Hold middle mouse + drag",
+      "value": "Mantén el botón central + arrastra",
+      "template": false
+    },
+    {
+      "key": "Drag over the battlefield to move the camera.",
+      "value": "Arrastra sobre el campo de batalla para mover la cámara.",
+      "template": false
+    },
+    {
+      "key": "Zoom the camera",
+      "value": "Acercar o alejar la cámara",
+      "template": false
+    },
+    {
+      "key": "Mouse wheel over the battlefield",
+      "value": "Rueda del ratón sobre el campo de batalla",
+      "template": false
+    },
+    {
+      "key": "Move closer for detail or farther away to see more of the map.",
+      "value": "Acerca la cámara para ver detalles o aléjala para ver más del mapa.",
+      "template": false
+    },
+    {
+      "key": "Fit the whole battlefield in the available view.",
+      "value": "Ajusta la cámara para ver todo el campo de batalla.",
+      "template": false
+    },
+    {
+      "key": "Navigate with the minimap",
+      "value": "Navegar con el minimapa",
+      "template": false
+    },
+    {
+      "key": "Left-click or drag on the minimap",
+      "value": "Clic izquierdo o arrastrar sobre el minimapa",
+      "template": false
+    },
+    {
+      "key": "Center the camera on that location. Enemy markers follow your army's vision.",
+      "value": "Centra la cámara en ese lugar. Los marcadores enemigos respetan la visión de tu ejército.",
+      "template": false
+    },
+    {
+      "key": "Hold for 0.5 s to remove that item from selection. Units keep their orders.",
+      "value": "Mantén 0,5 s para quitar ese elemento de la selección. Las unidades conservan sus órdenes.",
+      "template": false
+    },
+    {
+      "key": "Select the same type within 12 cells. Hold {0} to add them to the current selection.",
+      "value": "Selecciona el mismo tipo en un radio de 12 celdas. Mantén {0} para añadirlo a la selección actual.",
+      "template": true
+    },
+    {
+      "key": "{0} / {1} / Menu button",
+      "value": "{0} / {1} / botón Menú",
+      "template": true
+    },
+    {
+      "key": "Cancel an armed action first, or open the game menu. Escape goes back; Resume match continues playing.",
+      "value": "Cancela primero la acción preparada o abre el menú del juego. Escape vuelve atrás; Reanudar partida permite seguir jugando.",
+      "template": false
+    },
+    {
+      "key": "Menu > Return to main menu",
+      "value": "Menú > Volver al menú principal",
+      "template": false
+    },
+    {
+      "key": "Select a worker > choose a building",
+      "value": "Selecciona un trabajador > elige un edificio",
+      "template": false
+    },
+    {
+      "key": "Click its production card",
+      "value": "Haz clic en su tarjeta de producción",
+      "template": false
+    },
+    {
+      "key": "Cancel that exact item and refund its resource cost. Other items keep their order; cancelling the current item advances the queue.",
+      "value": "Cancela ese elemento y recupera su costo en recursos. Los demás mantienen su orden; al cancelar el elemento actual, avanza la cola.",
+      "template": false
+    },
+    {
+      "key": "Click Idle workers in the top bar",
+      "value": "Haz clic en Inactivos en la barra superior",
+      "template": false
+    },
+    {
+      "key": "Select all idle workers. Moving, working and queued workers stay out. An empty result keeps your selection.",
+      "value": "Selecciona todos los trabajadores inactivos. Excluye los que se mueven, trabajan o tienen órdenes en cola. Si no hay, conserva la selección.",
+      "template": false
+    },
+    {
+      "key": "Click Army in the top bar",
+      "value": "Haz clic en Ejército en la barra superior",
+      "template": false
+    },
+    {
+      "key": "Select your military units, including scouts and casters. Workers and buildings stay out.",
+      "value": "Selecciona tus unidades militares, incluidos exploradores y especialistas. Excluye trabajadores y edificios.",
+      "template": false
+    },
+    {
+      "key": "Remove a planned order",
+      "value": "Quitar una orden del plan",
+      "template": false
+    },
+    {
+      "key": "Click an order below the selection",
+      "value": "Haz clic en una orden debajo de la selección",
+      "template": false
+    },
+    {
+      "key": "Remove that command from selected units that share it. Cancelling the current order starts the next; Cancel all stops the units and clears their plans.",
+      "value": "Quita esa orden de las unidades seleccionadas que la comparten. Cancelar la orden actual inicia la siguiente; Cancelar todo detiene las unidades y borra sus planes.",
+      "template": false
+    },
+    {
+      "key": "PRODUCTION · Click an item to cancel and refund",
+      "value": "PRODUCCIÓN · Clic para cancelar y reembolsar",
+      "template": false
+    },
+    {
+      "key": "Left-click open terrain to set a rally point for the selected production buildings. Newly trained units move there. A context order on terrain also sets or replaces the rally point directly.",
+      "value": "Haz clic izquierdo en terreno libre para fijar un punto de reunión para los edificios de producción seleccionados. Las nuevas unidades irán allí. Una orden contextual en terreno también fija o reemplaza el punto directamente.",
+      "template": false
+    },
+    {
+      "key": "Use your server computer's LAN address. 127.0.0.1 refers to this device.",
+      "value": "Usa la dirección LAN del equipo servidor. 127.0.0.1 se refiere a este dispositivo.",
       "template": false
     }
   ]

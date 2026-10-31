@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <DefineConstants>FRONTIER_BROWSER</DefineConstants>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Frontier/Core/*.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/GameSession.Groups.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/GameSession.MobileGroups.cs" />
+    <Compile Include="../../Assets/Frontier/Runtime/GameSession.MobileSelection.cs" />
+    <Compile Include="SessionHost.cs" />
+    <Compile Include="Program.cs" />
+    <None Include="../../Assets/Frontier/Resources/catalog.json" Link="Fixtures/catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Assets/Frontier/Resources/Maps/training.json" Link="Fixtures/training.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

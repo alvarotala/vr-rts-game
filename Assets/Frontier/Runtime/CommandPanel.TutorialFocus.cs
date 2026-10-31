@@ -26,12 +26,18 @@ namespace Frontier.Runtime
         private void ResetTutorialFocus()
         {
             if(tutorialMenuDim!=null)tutorialMenuDim.gameObject.SetActive(false);
+#if FRONTIER_BROWSER
+            foreach(var edge in browserTutorialEdges)if(edge!=null)edge.gameObject.SetActive(false);
+#endif
             tutorialPositionReady=false;
             if(!Session.IsTutorial)tutorialAttentionState=null;
         }
 
         private void PositionTutorialCard(Vector3 destination,bool connected)
         {
+#if FRONTIER_BROWSER
+            PositionBrowserTutorial();
+#else
             var lesson=Session.Tutorial;var camera=Quest.Camera;
             tutorialFocus=lesson.Briefing||lesson.Complete?TutorialFocus.Briefing:
                 tutorialCueTargetRect!=null?TutorialFocus.Menu:tutorialCueWheel?TutorialFocus.Wheel:
@@ -97,6 +103,7 @@ namespace Frontier.Runtime
             tutorialMenuDim.color=new Color(0,0,0,alpha);
             tutorialMenuDim.gameObject.SetActive(alpha>.001f);
             tutorialMenuDim.transform.SetAsLastSibling();
+#endif
         }
 
         private void KeepTutorialInView(Camera camera,ref Vector3 position,ref Vector3 scale)
