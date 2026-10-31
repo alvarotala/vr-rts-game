@@ -9,9 +9,13 @@ horizontal y sin colocación en una habitación. Tocar **Nueva partida**, elegir
 facción/mapa/dificultad y comenzar. Arrastrar la barra inferior mueve la cámara;
 también se puede desplazar con dos dedos sobre el mapa. Arrastrar con un dedo
 en el mapa sin Shift no mueve la cámara ni envía una orden al soltar.
-Tocar un aliado cambia la selección a ese aliado, también después de mover otra
-unidad. Con unidades seleccionadas, tocar terreno, enemigos o recursos envía
-una orden. La unidad tocada se conserva hasta soltar el dedo aunque se mueva;
+Tocar otra unidad aliada cambia la selección, también después de mover otra
+unidad. Con peones seleccionados, tocar una refinería recolecta de ella; tocar
+un edificio propio incompleto o dañado reanuda su construcción o lo repara,
+sin perder la selección de peones. Para seleccionar ese edificio, usar primero
+**Cancelar / limpiar**. Los edificios sanos sin una tarea para los peones se
+seleccionan normalmente. Con unidades seleccionadas, tocar terreno, enemigos
+o recursos envía una orden. La unidad tocada se conserva hasta soltar el dedo aunque se mueva;
 arrastrar o pellizcar cancela la selección pendiente. Un toque lento sin selección
 previa también selecciona. **Cancelar / limpiar** quita la selección. Mantener 0,55 segundos
 y soltar conserva la orden contextual explícita, como reparar o reanudar un

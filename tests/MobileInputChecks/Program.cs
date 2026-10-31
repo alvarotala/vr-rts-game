@@ -238,6 +238,11 @@ internal static class Program
         Check(MobileGesture.ResolveTap(true,false,false,false,false,true)==MobileGesture.TapAction.Select,"Shift without selected units can still select a target");
         Check(MobileGesture.ResolveTap(false,false,false,true,true,false)==MobileGesture.TapAction.Context,"selected units tap ground or enemy issues contextual order");
         Check(MobileGesture.ResolveTap(false,false,false,true,true,true)==MobileGesture.TapAction.Select,"ordinary tap on another friendly target replaces the current unit selection");
+        Check(MobileGesture.ResolveTap(false,false,false,true,true,true,workerActionTarget:true)==MobileGesture.TapAction.Context,"workers tap an actionable friendly building to gather or repair without replacing selection");
+        Check(MobileGesture.ResolveTap(false,false,false,false,false,true,workerActionTarget:true)==MobileGesture.TapAction.Select,"actionable building still selects when there are no workers selected");
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,true,workerActionTarget:true)==MobileGesture.TapAction.AttackMove,"explicit attack mode takes priority over a worker building action");
+        Check(MobileGesture.ResolveTap(true,false,false,true,true,true,append:true,workerActionTarget:true)==MobileGesture.TapAction.Context,"queue mode retains the contextual worker action");
+        Check(MobileGesture.ResolveTap(false,false,true,true,true,true,workerActionTarget:true)==MobileGesture.TapAction.Context,"explicit targeting retains priority over automatic worker actions");
         Check(MobileGesture.ResolveTap(true,false,false,true,true,false)==MobileGesture.TapAction.AttackMove,"Shift tap with units attacks along route to tapped point");
         Check(MobileGesture.ResolveTap(true,false,false,true,true,true)==MobileGesture.TapAction.AttackMove,"Shift tap ally remains an attack-move destination");
         Check(MobileGesture.ResolveTap(true,false,true,true,true,false)==MobileGesture.TapAction.Context,"explicit build ability or rally targeting has priority over Shift");

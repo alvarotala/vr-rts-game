@@ -28,13 +28,14 @@ namespace Frontier.Runtime
         private int firstFinger,secondFinger;
         public bool Captured=>captured;
 
-        public static TapAction ResolveTap(bool shifted,bool forceOrder,bool targeting,bool selectedUnits,bool ownSelection,bool ownTarget,bool append=false)
+        public static TapAction ResolveTap(bool shifted,bool forceOrder,bool targeting,bool selectedUnits,bool ownSelection,bool ownTarget,bool append=false,bool workerActionTarget=false)
         {
             if(targeting)return TapAction.Context;
             if(append&&selectedUnits)return TapAction.Context;
             if(shifted&&selectedUnits)return TapAction.AttackMove;
-            // Ordinary friendly taps replace selection, including after a move.
-            // Holding still explicitly orders workers to repair or assist.
+            if(selectedUnits&&ownTarget&&workerActionTarget)return TapAction.Context;
+            // Other friendly taps replace selection, including after a move.
+            // Holding still explicitly requests a contextual order.
             if((selectedUnits||ownSelection)&&(forceOrder||!ownTarget))return TapAction.Context;
             return TapAction.Select;
         }

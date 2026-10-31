@@ -179,7 +179,8 @@ una columna en vertical, dos en horizontal. Ranking también adapta sus filas
 y conserva visibles el perfil, **Actualizar** y **Volver**.
 
 - Arrastrar la barra inferior mueve la cámara. El gesto se conserva aunque el dedo salga de esa barra; al soltar no activa botones ni envía órdenes. Arrastrar con un dedo en el mapa sin Shift no mueve la cámara ni cambia la selección.
-- Tocar una unidad o edificio propio cambia la selección a ese aliado, incluso después de dar una orden de movimiento. No hace falta limpiar la selección primero.
+- Tocar otra unidad propia cambia la selección a ese aliado, incluso después de dar una orden de movimiento. No hace falta limpiar la selección primero.
+- Con peones seleccionados, un toque normal en una refinería ordena recolectar; en un edificio propio incompleto o dañado ordena reanudar la construcción o reparar. Conserva los peones seleccionados. Para seleccionar ese edificio, usar antes **Cancelar / limpiar**; los edificios sanos sin tareas para peones se seleccionan normalmente. Esta prioridad requiere que todas las unidades seleccionadas sean peones.
 - La unidad se detecta al apoyar el dedo y se selecciona al soltar, aunque se haya movido. Arrastrar o pellizcar cancela esa selección. Sin selección previa, un toque lento también selecciona.
 - Con unidades seleccionadas, tocar terreno, enemigos o recursos envía una orden contextual: mover, atacar o recolectar. Los modos explícitos de construcción, habilidad y destino de acción conservan la prioridad.
 - Mantener y soltar sobre un objetivo: orden contextual explícita; permite reparar o reanudar una construcción propia con trabajadores seleccionados.

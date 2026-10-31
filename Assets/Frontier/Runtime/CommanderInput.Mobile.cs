@@ -121,16 +121,14 @@ namespace Frontier.Runtime
             bool ownSelection=Session.View!=null&&System.Array.Exists(Session.View.entities,
                 e=>Session.Selection.Contains(e.id)&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
             append&=!Session.IsTutorial;
-            var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own,append);
+            var action=MobileGesture.ResolveTap(shifted,forceOrder,Session.HasTargetingMode,Session.SelectedMobileUnits.Any(),ownSelection,own,append,MobileWorkerActionTarget(entity)!=null);
             if(action!=MobileGesture.TapAction.Select)
             {
                 // Touch orders are explicit: repeated normal taps remain moves,
                 // while attack mode attacks along the route. Queue mode reuses
                 // the shared contextual order and its existing append flag.
                 // Explicit building/ability/rally targeting retains its priority.
-                ResetMapGestures();Board.Pointer=point;Board.Hovered=entity;Board.HoveredResource=resource;
-                if(action==MobileGesture.TapAction.AttackMove)Session.Send(CommandKind.AttackMove,position:point,append:append);
-                else Session.Context(point,entity,resource,append:append);
+                OrderMobileTarget(point,entity,resource,action,append);
                 return;
             }
             // Both edges are delivered together only after a confirmed tap, so
@@ -139,6 +137,25 @@ namespace Frontier.Runtime
         }
         private bool MobileOwnTarget(int entity)=>entity>0&&Session.View!=null&&System.Array.Exists(Session.View.entities,
             e=>e.id==entity&&e.owner==Session.LocalPlayer&&!e.remembered&&e.health>0);
+        private VisibleEntity MobileWorkerActionTarget(int entity)
+        {
+            if(!MobileOwnTarget(entity))return null;
+            var target=Session.View.entities.First(e=>e.id==entity);
+            var definition=Session.Catalog[target.definition];
+            if(!definition.building)return null;
+            var workers=Session.SelectedMobileUnits;
+            if(!workers.Any()||workers.Any(e=>Session.Catalog[e.definition].role!="worker"))return null;
+            // Match the shared context command's gather/repair capabilities.
+            // Friendly units and healthy ordinary buildings remain selectable.
+            return !target.complete||target.health<definition.health
+                ||definition.role=="extractor"&&Session.View.resources.Any(r=>r.extractorId==entity)?target:null;
+        }
+        private void OrderMobileTarget(Point point,int entity,int resource,MobileGesture.TapAction action,bool append)
+        {
+            ResetMapGestures();Board.Pointer=point;Board.Hovered=entity;Board.HoveredResource=resource;
+            if(action==MobileGesture.TapAction.AttackMove)Session.Send(CommandKind.AttackMove,position:point,append:append);
+            else Session.Context(point,entity,resource,append:append);
+        }
         private void TrackMobileSelection(Ray ray,MobileGesture.Sample sample,MobileGesture.Result result)
         {
             if(result.Cancelled||result.Kind==MobileGesture.Kind.Ui||result.Kind==MobileGesture.Kind.Pan
@@ -163,6 +180,14 @@ namespace Frontier.Runtime
                 // Keep the unit first touched even if it walks away while the
                 // finger is held. A lost unit consumes the tap, never a move.
                 if(!Session.CanIssueOrders||!MobileOwnTarget(captured))return;
+                var workTarget=MobileWorkerActionTarget(captured);
+                if(workTarget!=null)
+                {
+                    // Use the building captured on DOWN, even if the finger
+                    // drifts off its footprint before the confirmed release.
+                    OrderMobileTarget(workTarget.position,captured,0,MobileGesture.TapAction.Context,append&&!Session.IsTutorial);
+                    return;
+                }
                 ResetActionTap();pressedEntity=captured;
                 SelectClick(captured,false,Time.unscaledTime);
                 Board.Hovered=captured;Board.HoveredResource=0;

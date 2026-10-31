@@ -134,11 +134,15 @@ namespace Frontier.Mobile.Editor
                 canvasRect.SetPositionAndRotation(new Vector3(Width * .5f, Height * .5f, 0), Quaternion.identity);
                 canvasRect.localScale = Vector3.one * Scale;
                 session.StartMatch();
+                // Record fixture commands in memory only, so input regressions can
+                // inspect the submitted intent as well as the resulting unit task.
+                session.Match.BeginRecording();
                 Check(BrowserMobileInput.IsTouchMode, "native mobile input mode is compiled");
 
                 Refresh();
                 ValidateFriendlyTapAfterMove();
                 ValidateShiftQueue();
+                ValidateWorkerBuildingTaps();
                 Check(Mathf.Abs(quest.Navigation.Distance * Mathf.Min(1, quest.Camera.aspect) - 34) < .05f,
                     "initial camera preserves battlefield scale on the short screen edge", "distance=" + quest.Navigation.Distance);
                 ValidateLayout("idle"); Capture("01-idle");
@@ -395,6 +399,162 @@ namespace Frontier.Mobile.Editor
                         BrowserMobileInput.ResetShift();
                         session.CancelMode(); session.Select(queueWorker.id, false); session.Send(CommandKind.Stop);
                         Object.DestroyImmediate(input);
+                        session.Select(0, false); Refresh();
+                    }
+                }
+                void ValidateWorkerBuildingTaps()
+                {
+                    var input = fixture.AddComponent<CommanderInput>();
+                    input.Session = session; input.Board = board; input.Quest = quest; input.Panel = panel;
+                    var gesture = Field<MobileGesture>(input, "mobileGesture");
+                    var workers = session.Match.Entities.Values.Where(entity => entity.owner == session.LocalPlayer
+                        && session.Catalog[entity.definition].role == "worker").Take(3).ToArray();
+                    var selectedWorkers = workers.Take(2).ToArray();
+                    int[] workerIds = selectedWorkers.Select(entity => entity.id).ToArray();
+                    var previousGather = selectedWorkers.Where(entity => entity.order == CommandKind.Gather)
+                        .Select(entity => (id: entity.id, resource: entity.resourceId)).ToArray();
+                    var temporary = new List<EntityState>();
+                    int nextFixtureId = session.Match.Entities.Keys.Max() + 1000;
+                    float inputTime = 50;
+                    EntityState Add(string role, Point point)
+                    {
+                        var type = session.Catalog.Role(session.Faction, role);
+                        if (type.building && !session.Match.Map.CanPlace(point, type.footprint))
+                            throw new InvalidOperationException("Worker tap fixture needs an unoccupied building footprint.");
+                        var entity = new EntityState { id = nextFixtureId++, owner = session.LocalPlayer,
+                            definition = type.id, position = point, health = type.health };
+                        session.Match.Entities.Add(entity.id, entity); temporary.Add(entity);
+                        if (type.building) session.Match.Map.Occupy(point, type.footprint, entity.id);
+                        return entity;
+                    }
+                    void SelectForCase(params int[] ids)
+                    {
+                        session.CancelMode(); session.SelectVisibleEntities(ids);
+                        Call(input, "ResetMapGestures"); Refresh();
+                    }
+                    Ray Aim(int targetId, string context)
+                    {
+                        Check(board.TryEntityVisualCenter(targetId, out var center), context + ": target has a visible model");
+                        var candidates = new List<Vector3> { center };
+                        var target = session.Match.Entities[targetId]; var type = session.Catalog[target.definition];
+                        if (type.building)
+                        {
+                            float middle = type.footprint * .5f;
+                            foreach (var offset in new[] { new Vector2(.25f, middle), new Vector2(type.footprint - .25f, middle),
+                                new Vector2(middle, .25f), new Vector2(middle, type.footprint - .25f) })
+                                candidates.Add(board.Content.TransformPoint(new Vector3(target.position.x + offset.x, 0, target.position.y + offset.y)));
+                        }
+                        foreach (var candidate in candidates)
+                        {
+                            var ray = new Ray(candidate + board.transform.up * 10, -board.transform.up);
+                            if (!board.RayToMap(ray, out var point, out var hit)) continue;
+                            board.ResolvePointerTarget(ray, point, hit, out int entity, out int resource);
+                            if (entity != targetId || resource != 0) continue;
+                            Check(true, context + ": ray resolves the intended entity, not its resource deposit");
+                            return ray;
+                        }
+                        throw new InvalidOperationException(context + ": no ray resolves the intended entity.");
+                    }
+                    RecordedCommand[] Touch(int targetId, string context, bool swipe = false)
+                    {
+                        var ray = Aim(targetId, context);
+                        int before = session.Match.RecordedCommandCount, sequence = Field<int>(session, "sequence");
+                        int[] selection = session.Selection.ToArray();
+                        var press = new MobileGesture.Sample { Count = 1, Finger = 801, X = Width * .5f, Y = Height * .55f,
+                            Down = true, AllowMap = true, SecondOverMap = true, LassoSelection = true, Time = inputTime++ };
+                        Call(input, "TrackMobileSelection", ray, press, gesture.Step(press, 12));
+                        Check(session.Selection.SetEquals(selection) && session.Match.RecordedCommandCount == before
+                            && Field<int>(session, "sequence") == sequence, context + ": DOWN does not select or dispatch early");
+                        var release = press; release.Down = false; release.Up = true; release.Count = 0; release.Time += .1f;
+                        if (swipe)
+                        {
+                            var drag = press; drag.Down = false; drag.X += 40; drag.Time += .05f;
+                            var moved = gesture.Step(drag, 12); Call(input, "TrackMobileSelection", ray, drag, moved);
+                            Check(moved.Cancelled, context + ": map swipe cancels the pending tap");
+                            if (moved.Cancelled) Call(input, "CancelMobileGesture");
+                            release.X = drag.X;
+                        }
+                        var result = gesture.Step(release, 12);
+                        Call(input, "TrackMobileSelection", ray, release, result);
+                        Check(swipe ? result.Kind != MobileGesture.Kind.Tap : result.Kind == MobileGesture.Kind.Tap,
+                            context + ": release has the expected gesture classification");
+                        if (result.Kind == MobileGesture.Kind.Tap)
+                            Call(input, "CompleteMobileTap", ray, false, result.Shift, result.Append);
+                        var commands = session.Match.CopyRecordedCommands(before);
+                        Check(Field<int>(session, "sequence") - sequence == commands.Length,
+                            context + ": sequence and recorded dispatch counts agree");
+                        return commands;
+                    }
+                    void WorkOrder(EntityState target, CommandKind intent, CommandKind task, int commandTarget, string context)
+                    {
+                        SelectForCase(workerIds);
+                        var commands = Touch(target.id, context);
+                        Check(commands.Length == 1 && commands[0].accepted && commands[0].command.kind == intent
+                            && commands[0].command.target == commandTarget && !commands[0].command.append
+                            && commands[0].command.entities.OrderBy(id => id).SequenceEqual(workerIds.OrderBy(id => id)),
+                            context + ": one accepted contextual command addresses only the selected workers");
+                        Check(session.Selection.SetEquals(workerIds), context + ": workers remain selected");
+                        Check(commands.Length == 1 && selectedWorkers.All(entity => entity.order == task && entity.target == commandTarget
+                            && entity.activeOrderSequence == commands[0].command.sequence && entity.pendingOrders.Count == 0),
+                            context + ": every worker starts the expected task without queued duplicates");
+                    }
+                    void SelectionOnly(int targetId, int[] selection, string context)
+                    {
+                        SelectForCase(selection);
+                        var commands = Touch(targetId, context);
+                        Check(commands.Length == 0 && session.Selection.SetEquals(new[] { targetId }),
+                            context + ": normal tap changes selection without issuing work orders");
+                    }
+                    try
+                    {
+                        BrowserMobileInput.ResetShift();
+                        var gas = session.View.resources.First(resource => resource.kind == "catalyst" && resource.remaining > 0);
+                        var extractorType = session.Catalog.Role(session.Faction, "extractor");
+                        var extractor = Add("extractor", new Point(gas.position.x - extractorType.footprint * .5f,
+                            gas.position.y - extractorType.footprint * .5f));
+                        var factory = Add("barracks", new Point(19, 12));
+                        var soldier = Add("melee", new Point(20.5f, 17.5f));
+                        var factoryType = session.Catalog[factory.definition];
+                        Refresh();
+                        Check(session.View.resources.Any(resource => resource.id == gas.id && resource.extractorId == extractor.id),
+                            "worker tap fixture exposes the real extractor-to-gas link in PlayerView");
+                        WorkOrder(extractor, CommandKind.Gather, CommandKind.Gather, gas.id, "workers tap completed refinery");
+                        factory.complete = false; factory.remaining = factoryType.duration / 2; factory.health = factoryType.health * .5f;
+                        WorkOrder(factory, CommandKind.Repair, CommandKind.Build, factory.id, "workers tap incomplete construction");
+                        factory.complete = true; factory.remaining = 0; factory.health = factoryType.health - 50;
+                        WorkOrder(factory, CommandKind.Repair, CommandKind.Repair, factory.id, "workers tap damaged factory");
+                        factory.health = factoryType.health;
+                        SelectionOnly(factory.id, workerIds, "workers tap healthy completed factory");
+                        SelectionOnly(workers[2].id, workerIds, "workers tap another friendly unit");
+                        int[] mixed = workerIds.Concat(new[] { soldier.id }).ToArray();
+                        SelectionOnly(extractor.id, mixed, "mixed workers and soldier tap refinery");
+                        factory.complete = false; factory.remaining = factoryType.duration / 2;
+                        SelectionOnly(factory.id, mixed, "mixed workers and soldier tap construction");
+                        factory.complete = true; factory.remaining = 0; factory.health = factoryType.health - 50;
+                        SelectionOnly(factory.id, mixed, "mixed workers and soldier tap damaged factory");
+                        SelectForCase(workerIds);
+                        int[] active = selectedWorkers.Select(entity => entity.activeOrderSequence).ToArray();
+                        var cancelled = Touch(extractor.id, "workers swipe over refinery", swipe: true);
+                        Check(cancelled.Length == 0 && session.Selection.SetEquals(workerIds)
+                            && selectedWorkers.Select(entity => entity.activeOrderSequence).SequenceEqual(active),
+                            "cancelled building swipe preserves worker selection and current orders");
+                    }
+                    finally
+                    {
+                        session.CancelMode(); session.SelectVisibleEntities(workerIds); session.Send(CommandKind.Stop);
+                        foreach (var entity in temporary)
+                        {
+                            var type = session.Catalog[entity.definition];
+                            session.Match.Entities.Remove(entity.id);
+                            if (type.building) session.Match.Map.Occupy(entity.position, type.footprint, 0);
+                        }
+                        // Keep subsequent screenshots' original mining assignments.
+                        foreach (var assignment in previousGather)
+                        {
+                            session.Select(assignment.id, false);
+                            session.Send(CommandKind.Gather, target: assignment.resource);
+                        }
+                        BrowserMobileInput.ResetShift(); Object.DestroyImmediate(input);
                         session.Select(0, false); Refresh();
                     }
                 }
